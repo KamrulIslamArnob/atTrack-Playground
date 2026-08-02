@@ -72,14 +72,63 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     `, { count: "exact" })
     .eq("user_id", userId);
 
-  // Apply status filter (on job status)
+  // Apply status filter - find matching job IDs
+  let matchingJobIds: string[] | null = null;
   if (status && status !== "all") {
-    query = query.eq("job.status", status);
+    const { data: statusJobs } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("status", status);
+    
+    if (!statusJobs || statusJobs.length === 0) {
+      return { applications: [], total: 0, page, perPage, totalPages: 0 };
+    }
+    
+    matchingJobIds = statusJobs.map((j) => j.id);
+    query = query.in("job_id", matchingJobIds);
   }
 
-  // Apply search filter
+  // Apply search filter - find matching job IDs and intersect
   if (search) {
-    query = query.or(`job.title.ilike.%${search}%,job.company.name.ilike.%${search}%,job.company.location.ilike.%${search}%`);
+    const term = `%${search}%`;
+    const { data: matchingJobs } = await supabase
+      .from("jobs")
+      .select("id")
+      .or(`title.ilike.${term},location.ilike.${term}`);
+    
+    const { data: matchingCompanies } = await supabase
+      .from("companies")
+      .select("id")
+      .ilike("name", term);
+    
+    const jobIds = new Set<string>();
+    matchingJobs?.forEach((j) => jobIds.add(j.id));
+    
+    if (matchingCompanies && matchingCompanies.length > 0) {
+      const { data: companyJobs } = await supabase
+        .from("jobs")
+        .select("id")
+        .in("company_id", matchingCompanies.map((c) => c.id));
+      companyJobs?.forEach((j) => jobIds.add(j.id));
+    }
+    
+    const searchIds = [...jobIds];
+    
+    if (searchIds.length === 0) {
+      return { applications: [], total: 0, page, perPage, totalPages: 0 };
+    }
+    
+    // Intersect with status filter if both exist
+    if (matchingJobIds !== null) {
+      matchingJobIds = matchingJobIds.filter((id) => searchIds.includes(id));
+      if (matchingJobIds.length === 0) {
+        return { applications: [], total: 0, page, perPage, totalPages: 0 };
+      }
+    } else {
+      matchingJobIds = searchIds;
+    }
+    
+    query = query.in("job_id", matchingJobIds);
   }
 
   // Apply sorting
@@ -102,12 +151,8 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
 
-  if (status && status !== "all") {
-    countQuery = countQuery.eq("job.status", status);
-  }
-
-  if (search) {
-    countQuery = countQuery.or(`job.title.ilike.%${search}%,job.company.name.ilike.%${search}%,job.company.location.ilike.%${search}%`);
+  if (matchingJobIds !== null) {
+    countQuery = countQuery.in("job_id", matchingJobIds);
   }
 
   const { count } = await countQuery;

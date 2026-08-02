@@ -40,7 +40,7 @@ export async function createJob(formData: FormData) {
       .single();
 
     if (companyError) {
-      redirect("/applications?error=" + encodeURIComponent("Failed to save company."));
+      redirect("/jobs?error=" + encodeURIComponent("Failed to save company."));
     }
     companyId = newCompany.id;
   }
@@ -65,7 +65,7 @@ export async function createJob(formData: FormData) {
     .single();
 
   if (jobError) {
-    redirect("/applications?error=" + encodeURIComponent("Failed to save job."));
+    redirect("/jobs?error=" + encodeURIComponent("Failed to save job."));
   }
 
   const { error: appError } = await supabase
@@ -77,9 +77,9 @@ export async function createJob(formData: FormData) {
     });
 
   if (appError) {
-    redirect("/applications?error=" + encodeURIComponent("Failed to create application."));
+    redirect("/jobs?error=" + encodeURIComponent("Failed to create job."));
   }
 
-  revalidatePath("/applications");
-  redirect("/applications/" + job.id);
+  revalidatePath("/jobs");
+  redirect("/jobs/" + job.id);
 }

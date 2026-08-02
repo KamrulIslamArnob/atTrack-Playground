@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import {
@@ -14,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, MapPin, Building2, Briefcase, Clock, ExternalLink } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight, MapPin, Building2, ExternalLink } from "lucide-react";
 
 interface Application {
   id: string;
@@ -60,6 +59,18 @@ const statusColors: Record<string, string> = {
   withdrawn: "bg-muted text-muted-foreground",
 };
 
+const statusLabels: Record<string, string> = {
+  saved: "Saved",
+  interested: "Interested",
+  preparing: "Preparing",
+  applied: "Applied",
+  interview: "Interview",
+  offer: "Offer",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+};
+
 const statusOptions = [
   "saved",
   "interested",
@@ -85,7 +96,6 @@ export function ApplicationsGrid({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(initialSearch);
-  const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [sort, setSort] = useState(initialSort);
 
@@ -149,18 +159,35 @@ export function ApplicationsGrid({
             className="h-10 pl-9"
           />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters(true)}
-          className="relative h-10 gap-2"
-        >
-          <SlidersHorizontal className="size-4" />
-          Filters
-          {hasActiveFilters && (
-            <span className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Status</span>
+          <Select value={statusFilter} onValueChange={(v) => handleStatusChange(v ?? "all")}>
+            <SelectTrigger className="h-10 w-[130px]">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {statusOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {statusLabels[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Sort</span>
+          <Select value={sort} onValueChange={(v) => handleSortChange(v ?? "newest")}>
+            <SelectTrigger className="h-10 w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="company">Company name</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex items-center gap-1 ml-auto">
           <span className="text-xs text-muted-foreground">Per page</span>
           <Select
@@ -242,7 +269,7 @@ export function ApplicationsGrid({
           <button
             onClick={() => {
               setSearch("");
-              router.push("/applications");
+              router.push("/jobs");
             }}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
@@ -262,7 +289,7 @@ export function ApplicationsGrid({
           {applications.map((app) => (
             <Link
               key={app.id}
-              href={`/applications/${app.id}`}
+              href={`/jobs/${app.id}`}
               className="group rounded-4xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
             >
               <div className="flex items-start justify-between gap-3">
@@ -275,8 +302,8 @@ export function ApplicationsGrid({
                     <span>{app.job?.company?.name ?? "Unknown company"}</span>
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium capitalize ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
-                  {app.job?.status ?? "saved"}
+                <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
+                  {statusLabels[app.job?.status ?? "saved"] ?? "Saved"}
                 </span>
               </div>
 
@@ -329,74 +356,6 @@ export function ApplicationsGrid({
               : "No applications yet."}
           </p>
           {!hasActiveFilters && <AddJobDialog />}
-        </div>
-      )}
-
-      {/* Filters dialog */}
-      {showFilters && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-4xl border border-border bg-card p-6 shadow-md">
-            <div className="flex items-center justify-between">
-              <h2 className="font-heading text-lg font-semibold">Filters</h2>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-5">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={statusFilter} onValueChange={(v) => handleStatusChange(v ?? "all")}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {statusOptions.map((s) => (
-                      <SelectItem key={s} value={s} className="capitalize">
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Sort by</Label>
-                <Select value={sort} onValueChange={(v) => handleSortChange(v ?? "newest")}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest first</SelectItem>
-                    <SelectItem value="oldest">Oldest first</SelectItem>
-                    <SelectItem value="company">Company name</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setSort("newest");
-                  router.push("/applications");
-                  setShowFilters(false);
-                }}
-              >
-                Reset
-              </Button>
-              <Button size="sm" onClick={() => setShowFilters(false)}>
-                Apply
-              </Button>
-            </div>
-          </div>
         </div>
       )}
     </div>

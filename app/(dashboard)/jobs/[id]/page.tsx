@@ -21,7 +21,7 @@ export default async function ApplicationDetailPage(props: {
     .single();
 
   if (!application) {
-    redirect("/applications");
+    redirect("/jobs");
   }
 
   const job = application.job as Record<string, unknown> | null;
@@ -30,7 +30,7 @@ export default async function ApplicationDetailPage(props: {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/applications" className={buttonVariants({ variant: "ghost", size: "icon" })}>
+        <Link href="/jobs" className={buttonVariants({ variant: "ghost", size: "icon" })}>
           <ArrowLeft className="size-4" />
         </Link>
         <div className="flex-1">

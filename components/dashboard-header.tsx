@@ -49,7 +49,7 @@ export function DashboardHeader() {
           <nav className="hidden items-center gap-1 md:flex">
             {[
               { name: "Overview", href: "/overview" },
-              { name: "Applications", href: "/applications" },
+              { name: "Jobs", href: "/jobs" },
               { name: "Saved", href: "/saved" },
               { name: "Interviews", href: "/interviews" },
             ].map((item) => (
@@ -131,7 +131,7 @@ export function DashboardHeader() {
                   <CommandItem
                     value="applications"
                     onItemSelect={() => {
-                      window.location.href = "/applications";
+                      window.location.href = "/jobs";
                       setOpen(false);
                     }}
                   >

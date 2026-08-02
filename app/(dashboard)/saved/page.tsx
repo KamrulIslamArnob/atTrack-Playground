@@ -23,7 +23,7 @@ export default async function SavedJobsPage() {
               Jobs you&apos;ve saved for later.
             </p>
           </div>
-          <Link href="/applications/new" className={buttonVariants({ size: "sm" })}>
+          <Link href="/jobs/new" className={buttonVariants({ size: "sm" })}>
             <Plus className="mr-1 size-4" />
             Add Job
           </Link>
@@ -45,7 +45,7 @@ export default async function SavedJobsPage() {
               {jobs.map((job) => (
                 <tr key={job.id} className="border-b last:border-0 hover:bg-muted/50">
                   <td className="px-4 py-3">
-                    <Link href={`/applications/${job.id}`} className="text-sm font-medium hover:underline">
+                    <Link href={`/jobs/${job.id}`} className="text-sm font-medium hover:underline">
                       {job.title}
                     </Link>
                   </td>
@@ -66,7 +66,7 @@ export default async function SavedJobsPage() {
       ) : (
         <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">No saved jobs yet.</p>
-          <Link href="/applications/new" className={buttonVariants({ size: "sm", className: "mt-4" })}>
+          <Link href="/jobs/new" className={buttonVariants({ size: "sm", className: "mt-4" })}>
             <Plus className="mr-1 size-4" />
             Add a job
           </Link>

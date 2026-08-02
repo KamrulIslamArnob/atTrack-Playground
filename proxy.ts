@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const protectedRoutes = ["/overview", "/applications", "/jobs", "/interviews", "/documents", "/settings"];
+const protectedRoutes = ["/overview", "/jobs", "/interviews", "/documents", "/settings"];
 const authRoutes = ["/login", "/signup"];
 
 export async function proxy(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
 
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/applications";
+    url.pathname = "/jobs";
     return NextResponse.redirect(url);
   }
 

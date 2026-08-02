@@ -75,7 +75,7 @@ export default async function OverviewPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-medium text-muted-foreground">Recent Applications</h2>
-            <Link href="/applications" className="text-sm text-primary hover:underline">
+            <Link href="/jobs" className="text-sm text-primary hover:underline">
               View all
             </Link>
           </div>
@@ -87,7 +87,7 @@ export default async function OverviewPage() {
                 return (
                   <Link
                     key={app.id}
-                    href={`/applications/${app.id}`}
+                    href={`/jobs/${app.id}`}
                     className="flex items-center justify-between rounded-4xl border border-border p-3 transition-colors hover:bg-muted/50"
                   >
                     <div>
