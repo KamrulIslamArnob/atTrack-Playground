@@ -13,7 +13,7 @@ import { Plus, X, Trash2 } from "lucide-react";
 interface JobNote {
   id: string;
   title: string;
-  description: string;
+  bullets: string[];
 }
 
 export function AddJobDialog() {
@@ -22,26 +22,42 @@ export function AddJobDialog() {
   const [notes, setNotes] = useState<JobNote[]>([]);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
-  const [noteDescription, setNoteDescription] = useState("");
+  const [noteBullets, setNoteBullets] = useState<string[]>([""]);
   const router = useRouter();
 
   const addNote = () => {
     if (!noteTitle.trim()) return;
+    const filteredBullets = noteBullets.filter((b) => b.trim());
     setNotes([
       ...notes,
       {
         id: crypto.randomUUID(),
         title: noteTitle.trim(),
-        description: noteDescription.trim(),
+        bullets: filteredBullets,
       },
     ]);
     setNoteTitle("");
-    setNoteDescription("");
+    setNoteBullets([""]);
     setShowNoteForm(false);
   };
 
   const removeNote = (id: string) => {
     setNotes(notes.filter((n) => n.id !== id));
+  };
+
+  const addBullet = () => {
+    setNoteBullets([...noteBullets, ""]);
+  };
+
+  const updateBullet = (index: number, value: string) => {
+    const updated = [...noteBullets];
+    updated[index] = value;
+    setNoteBullets(updated);
+  };
+
+  const removeBullet = (index: number) => {
+    if (noteBullets.length <= 1) return;
+    setNoteBullets(noteBullets.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -149,8 +165,15 @@ export function AddJobDialog() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{note.title}</p>
-                            {note.description && (
-                              <p className="mt-1 text-xs text-muted-foreground">{note.description}</p>
+                            {note.bullets.length > 0 && (
+                              <ul className="mt-1 space-y-0.5">
+                                {note.bullets.map((bullet, i) => (
+                                  <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                                    <span className="mt-1 size-1 shrink-0 rounded-full bg-muted-foreground" />
+                                    {bullet}
+                                  </li>
+                                ))}
+                              </ul>
                             )}
                           </div>
                           <button
@@ -167,21 +190,41 @@ export function AddJobDialog() {
                 )}
 
                 {showNoteForm ? (
-                  <div className="space-y-2 rounded-4xl border border-border p-3">
+                  <div className="space-y-3 rounded-4xl border border-border p-3">
                     <Input
                       value={noteTitle}
                       onChange={(e) => setNoteTitle(e.target.value)}
                       placeholder="Title (e.g. Backend Integration)"
                       className="h-9"
                     />
-                    <Textarea
-                      value={noteDescription}
-                      onChange={(e) => setNoteDescription(e.target.value)}
-                      rows={2}
-                      placeholder="Description (optional)"
-                    />
+                    <div className="space-y-2">
+                      {noteBullets.map((bullet, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="mt-1 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                          <Input
+                            value={bullet}
+                            onChange={(e) => updateBullet(index, e.target.value)}
+                            placeholder="Add a bullet point..."
+                            className="h-8"
+                          />
+                          {noteBullets.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeBullet(index)}
+                              className="flex size-6 shrink-0 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" className="w-full" onClick={addBullet}>
+                      <Plus className="mr-1 size-3" />
+                      Add bullet
+                    </Button>
                     <div className="flex justify-end gap-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => { setShowNoteForm(false); setNoteTitle(""); setNoteDescription(""); }}>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setShowNoteForm(false); setNoteTitle(""); setNoteBullets([""]); }}>
                         Cancel
                       </Button>
                       <Button type="button" size="sm" onClick={addNote} disabled={!noteTitle.trim()}>
