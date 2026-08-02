@@ -126,3 +126,49 @@ export async function signInWithMagicLink(formData: FormData) {
 
   redirect("/login?message=" + encodeURIComponent("Check your email for the login link."));
 }
+
+export async function uploadAvatar(formData: FormData) {
+  const supabase = await createClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const file = formData.get("avatar") as File;
+
+  if (!file || file.size === 0) {
+    redirect("/settings?error=" + encodeURIComponent("No file selected."));
+  }
+
+  if (file.size > 500 * 1024) {
+    redirect("/settings?error=" + encodeURIComponent("File size must be less than 500KB."));
+  }
+
+  const fileExt = file.name.split(".").pop();
+  const filePath = `${user.id}/avatar.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatar")
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) {
+    redirect("/settings?error=" + encodeURIComponent("Failed to upload avatar."));
+  }
+
+  const { data: urlData } = supabase.storage
+    .from("avatar")
+    .getPublicUrl(filePath);
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: urlData.publicUrl })
+    .eq("id", user.id);
+
+  if (updateError) {
+    redirect("/settings?error=" + encodeURIComponent("Failed to update profile with avatar."));
+  }
+
+  redirect("/settings?message=" + encodeURIComponent("Avatar uploaded successfully."));
+}

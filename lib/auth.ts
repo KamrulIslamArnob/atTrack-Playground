@@ -9,5 +9,5 @@ export async function getUser() {
     redirect("/login");
   }
 
-  return { supabase, userId: session.session.user.id };
+  return { supabase, userId: session.session.user.id, user: session.session.user };
 }

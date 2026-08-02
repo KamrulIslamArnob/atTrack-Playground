@@ -1,4 +1,5 @@
 import { getUser } from "@/lib/auth";
+import { DashboardHeader } from "@/components/dashboard-header";
 import { Sidebar } from "@/components/sidebar";
 
 export default async function DashboardLayout({
@@ -6,14 +7,21 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await getUser();
+  const { user } = await getUser();
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
-      </main>
+    <div className="flex h-screen flex-col bg-background p-3">
+      <DashboardHeader />
+
+      <div className="flex flex-1 gap-3 overflow-hidden pt-3">
+        <div className="hidden md:block">
+          <Sidebar user={user} />
+        </div>
+
+        <main className="flex-1 overflow-y-auto rounded-4xl border border-border bg-card">
+          <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

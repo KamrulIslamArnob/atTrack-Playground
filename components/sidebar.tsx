@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import {
@@ -14,7 +15,9 @@ import {
   Lightbulb,
   Settings,
   LogOut,
-  Plus,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 
 const navigation = [
@@ -30,70 +33,147 @@ const secondaryNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  user: {
+    id: string;
+    email?: string;
+    user_metadata?: {
+      full_name?: string;
+      avatar_url?: string;
+    };
+  };
+}
+
+export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
+  const fullName = user.user_metadata?.full_name || "User";
+  const initials = fullName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
-    <aside className="flex h-full w-60 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <Briefcase className="size-5 text-sidebar-primary" />
-        <span className="font-heading text-lg font-medium">Aven</span>
-      </div>
+    <>
+      <aside className="flex h-full w-56 flex-col rounded-4xl border border-border bg-card">
+        <div className="border-b border-border/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium leading-none truncate">
+                {fullName}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground truncate">
+                {user.email || "No email"}
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <div className="px-3">
-        <Link
-          href="/applications/new"
-          className="flex w-full items-center gap-2 rounded-4xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          <Plus className="size-4" />
-          Add Job
-        </Link>
-      </div>
+        <nav className="flex-1 overflow-y-auto px-3 py-2">
+          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+            Workspace
+          </div>
+          <div className="space-y-0.5">
+            {navigation.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
 
-      <nav className="mt-6 flex-1 space-y-0.5 px-3">
-        {navigation.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              )}
-            >
-              <item.icon className="size-4 shrink-0" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+          <div className="my-4 h-px bg-border/50" />
 
-      <div className="mt-auto border-t border-border/50 px-3 py-3">
-        <nav className="space-y-0.5">
-          {secondaryNavigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                )}
-              >
-                <item.icon className="size-4 shrink-0" />
-                {item.name}
-              </Link>
-            );
-          })}
+          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+            Account
+          </div>
+          <div className="space-y-0.5">
+            {secondaryNavigation.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        <div className="border-t border-border/50 p-3">
+          <div className="mb-3">
+            <div className="flex items-center justify-between px-3">
+              <span className="text-xs font-medium text-muted-foreground">
+                Theme
+              </span>
+              <div className="flex items-center gap-1 rounded-4xl border border-border p-1">
+                <button
+                  onClick={() => setTheme("light")}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-4xl transition-colors",
+                    theme === "light"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Sun className="size-3" />
+                </button>
+                <button
+                  onClick={() => setTheme("dark")}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-4xl transition-colors",
+                    theme === "dark"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Moon className="size-3" />
+                </button>
+                <button
+                  onClick={() => setTheme("system")}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-4xl transition-colors",
+                    theme === "system"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Monitor className="size-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div
             role="button"
             tabIndex={0}
@@ -101,13 +181,13 @@ export function Sidebar() {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") setOpen(true);
             }}
-            className="flex w-full cursor-pointer items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium text-sidebar-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="flex w-full cursor-pointer items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="size-4 shrink-0" />
             Sign out
           </div>
-        </nav>
-      </div>
+        </div>
+      </aside>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -137,6 +217,6 @@ export function Sidebar() {
           </div>
         </div>
       )}
-    </aside>
+    </>
   );
 }
