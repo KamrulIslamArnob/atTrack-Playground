@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 
-export function MagicLinkForm() {
+function SubmitButton() {
   const { pending } = useFormStatus();
 
+  return (
+    <Button type="submit" className="h-10 w-full" disabled={pending}>
+      {pending ? <Spinner className="mr-2" /> : null}
+      Send magic link
+    </Button>
+  );
+}
+
+export function MagicLinkForm() {
   return (
     <form action={signInWithMagicLink} className="space-y-4">
       <div className="space-y-2">
@@ -22,14 +31,10 @@ export function MagicLinkForm() {
           type="email"
           placeholder="you@example.com"
           required
-          disabled={pending}
           className="h-10"
         />
       </div>
-      <Button type="submit" className="h-10 w-full" disabled={pending}>
-        {pending ? <Spinner className="mr-2" /> : null}
-        Send magic link
-      </Button>
+      <SubmitButton />
     </form>
   );
 }

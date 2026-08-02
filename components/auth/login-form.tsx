@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 
-export function LoginForm() {
+function SubmitButton() {
   const { pending } = useFormStatus();
 
+  return (
+    <Button type="submit" className="h-10 w-full" disabled={pending}>
+      {pending ? <Spinner className="mr-2" /> : null}
+      Sign in
+    </Button>
+  );
+}
+
+export function LoginForm() {
   return (
     <form action={signIn} className="space-y-4">
       <div className="space-y-2">
@@ -22,7 +31,6 @@ export function LoginForm() {
           type="email"
           placeholder="you@example.com"
           required
-          disabled={pending}
           className="h-10"
         />
       </div>
@@ -36,14 +44,10 @@ export function LoginForm() {
           type="password"
           placeholder="Enter your password"
           required
-          disabled={pending}
           className="h-10"
         />
       </div>
-      <Button type="submit" className="h-10 w-full" disabled={pending}>
-        {pending ? <Spinner className="mr-2" /> : null}
-        Sign in
-      </Button>
+      <SubmitButton />
     </form>
   );
 }
