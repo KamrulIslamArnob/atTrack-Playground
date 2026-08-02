@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, X, Trash2 } from "lucide-react";
 
 interface JobNote {
@@ -23,6 +30,7 @@ export function AddJobDialog() {
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBullets, setNoteBullets] = useState<string[]>([""]);
+  const [workLocation, setWorkLocation] = useState("");
   const router = useRouter();
 
   const addNote = () => {
@@ -66,10 +74,12 @@ export function AddJobDialog() {
 
     const formData = new FormData(e.currentTarget);
     formData.append("notes", JSON.stringify(notes));
+    formData.append("work_location", workLocation);
     await createJob(formData);
     setOpen(false);
     setPending(false);
     setNotes([]);
+    setWorkLocation("");
     router.refresh();
   };
 
@@ -123,16 +133,16 @@ export function AddJobDialog() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="work_location">Work location</Label>
-                  <select
-                    id="work_location"
-                    name="work_location"
-                    className="flex h-10 w-full rounded-3xl border border-transparent bg-input/50 px-3 py-2 text-base transition-[color,box-shadow,background-color] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                  >
-                    <option value="">Select...</option>
-                    <option value="remote">Remote</option>
-                    <option value="onsite">Onsite</option>
-                    <option value="hybrid">Hybrid</option>
-                  </select>
+                  <Select value={workLocation} onValueChange={(v) => setWorkLocation(v ?? "")}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="remote">Remote</SelectItem>
+                      <SelectItem value="onsite">Onsite</SelectItem>
+                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
