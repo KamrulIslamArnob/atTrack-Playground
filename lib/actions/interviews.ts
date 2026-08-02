@@ -4,6 +4,7 @@ import { getUser } from "@/lib/auth";
 
 export interface Interview {
   id: string;
+  job_id: string;
   scheduled_at: string | null;
   type: string | null;
   location: string | null;
@@ -28,15 +29,30 @@ export interface Interview {
   } | null;
 }
 
-export async function getInterviews(): Promise<{
-  upcoming: Interview[];
-  past: Interview[];
+export async function getInterviews(params?: {
+  search?: string;
+  status?: string;
+  sort?: string;
+  page?: number;
+  perPage?: number;
+}): Promise<{
+  interviews: Interview[];
+  total: number;
+  page: number;
+  totalPages: number;
+  perPage: number;
 }> {
   const { supabase, userId } = await getUser();
+  const search = params?.search ?? "";
+  const status = params?.status ?? "all";
+  const sort = params?.sort ?? "newest";
+  const page = params?.page ?? 1;
+  const perPage = params?.perPage ?? 30;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("interviews")
-    .select(`
+    .select(
+      `
       id,
       scheduled_at,
       type,
@@ -49,6 +65,7 @@ export async function getInterviews(): Promise<{
       status,
       duration_minutes,
       created_at,
+      job_id,
       job:jobs(
         id,
         title,
@@ -57,27 +74,82 @@ export async function getInterviews(): Promise<{
         employment_type,
         company:companies(name, location)
       )
-    `)
-    .eq("user_id", userId)
-    .order("scheduled_at", { ascending: true, nullsFirst: true });
+    `,
+      { count: "exact" }
+    )
+    .eq("user_id", userId);
+
+  // Apply status filter
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  // Apply search filter - fetch matching job IDs first
+  if (search) {
+    const term = `%${search}%`;
+
+    const { data: matchingJobs } = await supabase
+      .from("jobs")
+      .select("id")
+      .ilike("title", term);
+
+    const { data: matchingCompanies } = await supabase
+      .from("companies")
+      .select("id")
+      .ilike("name", term);
+
+    const jobIds = new Set<string>();
+    matchingJobs?.forEach((j) => jobIds.add(j.id));
+
+    if (matchingCompanies && matchingCompanies.length > 0) {
+      const { data: companyJobs } = await supabase
+        .from("jobs")
+        .select("id")
+        .in("company_id", matchingCompanies.map((c) => c.id));
+      companyJobs?.forEach((j) => jobIds.add(j.id));
+    }
+
+    const searchIds = [...jobIds];
+
+    if (searchIds.length === 0) {
+      return { interviews: [], total: 0, page: 1, totalPages: 0, perPage };
+    }
+
+    query = query.in("job_id", searchIds);
+  }
+
+  // Apply sorting
+  const sortMap: Record<string, { column: string; ascending: boolean }> = {
+    newest: { column: "created_at", ascending: false },
+    oldest: { column: "created_at", ascending: true },
+    "date-asc": { column: "scheduled_at", ascending: true },
+    "date-desc": { column: "scheduled_at", ascending: false },
+  };
+  const s = sortMap[sort] ?? sortMap.newest;
+  query = query.order(s.column, { ascending: s.ascending, nullsFirst: true });
+
+  // Get total count for pagination
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("Error fetching interviews:", error);
-    return { upcoming: [], past: [] };
+    return { interviews: [], total: 0, page: 1, totalPages: 0, perPage };
   }
 
-  const interviews = (data as unknown as Interview[]) ?? [];
-  const now = new Date();
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / perPage);
 
-  const upcoming = interviews.filter(
-    (i) => i.status === "scheduled" && (!i.scheduled_at || new Date(i.scheduled_at) >= now)
-  );
-
-  const past = interviews.filter(
-    (i) => i.status !== "scheduled" || (i.scheduled_at && new Date(i.scheduled_at) < now)
-  );
-
-  return { upcoming, past };
+  return {
+    interviews: (data as unknown as Interview[]) ?? [],
+    total,
+    page,
+    totalPages,
+    perPage,
+  };
 }
 
 export async function updateInterview(
