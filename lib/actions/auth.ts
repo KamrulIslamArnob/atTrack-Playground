@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -204,12 +205,14 @@ export async function deleteAccount(formData: FormData) {
   await supabase.from("companies").delete().eq("user_id", user.id);
   await supabase.from("profiles").delete().eq("id", user.id);
 
-  // Delete auth user
-  const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+  // Delete auth user using secret key (bypasses RLS)
+  const admin = createAdminClient();
+  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
 
   if (deleteError) {
     redirect("/settings?error=" + encodeURIComponent("Failed to delete account. Please try again."));
   }
 
+  await supabase.auth.signOut();
   redirect("/login?message=" + encodeURIComponent("Account deleted successfully."));
 }
