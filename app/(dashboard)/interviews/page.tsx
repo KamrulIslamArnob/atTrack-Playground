@@ -4,9 +4,10 @@ import { useState } from "react";
 import { getInterviews, type Interview } from "@/lib/actions/interviews";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { InterviewForm } from "@/components/interview-form";
-import { Calendar, Clock, MapPin, Video, Building2, User } from "lucide-react";
+import { Calendar, Clock, MapPin, Video, Building2, User, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getCalendarLinkFromInterview } from "@/lib/calendar";
 import { useEffect } from "react";
 
 const typeColors: Record<string, string> = {
@@ -141,70 +142,87 @@ function InterviewCard({
   onClick: () => void;
   dimmed?: boolean;
 }) {
+  const calendarUrl = getCalendarLinkFromInterview(interview);
+
   return (
-    <button
-      onClick={onClick}
-      className={`w-full rounded-4xl border border-border p-4 text-left transition-colors hover:bg-muted/50 ${dimmed ? "opacity-60" : ""}`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-muted">
-            <Building2 className="size-5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-medium">{interview.job?.title ?? "Interview"}</p>
-            <p className="text-sm text-muted-foreground">
-              {interview.job?.company?.name ?? "Unknown company"}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Calendar className="size-3" />
-                {formatDate(interview.scheduled_at)}
-              </span>
-              {interview.location && (
+    <div className={`rounded-4xl border border-border p-4 transition-colors hover:bg-muted/50 ${dimmed ? "opacity-60" : ""}`}>
+      <button onClick={onClick} className="w-full text-left">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-muted">
+              <Building2 className="size-5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium">{interview.job?.title ?? "Interview"}</p>
+              <p className="text-sm text-muted-foreground">
+                {interview.job?.company?.name ?? "Unknown company"}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <MapPin className="size-3" />
-                  {interview.location}
+                  <Calendar className="size-3" />
+                  {formatDate(interview.scheduled_at)}
                 </span>
-              )}
-              {interview.meeting_url && (
-                <span className="flex items-center gap-1">
-                  <Video className="size-3" />
-                  Video call
-                </span>
-              )}
-              {interview.interviewer_name && (
-                <span className="flex items-center gap-1">
-                  <User className="size-3" />
-                  {interview.interviewer_name}
-                </span>
-              )}
-              {interview.duration_minutes && (
-                <span className="flex items-center gap-1">
-                  <Clock className="size-3" />
-                  {interview.duration_minutes}min
-                </span>
-              )}
+                {interview.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="size-3" />
+                    {interview.location}
+                  </span>
+                )}
+                {interview.meeting_url && (
+                  <span className="flex items-center gap-1">
+                    <Video className="size-3" />
+                    Video call
+                  </span>
+                )}
+                {interview.interviewer_name && (
+                  <span className="flex items-center gap-1">
+                    <User className="size-3" />
+                    {interview.interviewer_name}
+                  </span>
+                )}
+                {interview.duration_minutes && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="size-3" />
+                    {interview.duration_minutes}min
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          {interview.type && (
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {interview.type && (
+              <Badge
+                variant="secondary"
+                className={`text-xs ${typeColors[interview.type] ?? ""}`}
+              >
+                {interview.type}
+              </Badge>
+            )}
             <Badge
               variant="secondary"
-              className={`text-xs ${typeColors[interview.type] ?? ""}`}
+              className={`text-xs ${statusColors[interview.status] ?? ""}`}
             >
-              {interview.type}
+              {interview.status}
             </Badge>
-          )}
-          <Badge
-            variant="secondary"
-            className={`text-xs ${statusColors[interview.status] ?? ""}`}
-          >
-            {interview.status}
-          </Badge>
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+
+      {calendarUrl && interview.status === "scheduled" && (
+        <div className="mt-3 flex justify-end">
+          <a
+            href={calendarUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 rounded-4xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Calendar className="size-3" />
+            Add to Google Calendar
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
+      )}
+    </div>
   );
 }

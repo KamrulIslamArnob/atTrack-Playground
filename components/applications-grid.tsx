@@ -288,7 +288,7 @@ export function ApplicationsGrid({
           {applications.map((app) => (
             <Link
               key={app.id}
-              href={`/jobs/${app.id}`}
+              href={`/jobs/${app.job?.id}`}
               className="group rounded-4xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
             >
               <div className="flex items-start justify-between gap-3">

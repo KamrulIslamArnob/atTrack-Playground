@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { X, Check, XIcon, RotateCcw, ChevronRight } from "lucide-react";
-import { generateMCQTest } from "@/lib/actions/mcq";
+import { generateMCQTest, saveMCQResult } from "@/lib/actions/mcq";
 import type { MCQTest, MCQQuestion } from "@/lib/types/mcq";
 
 interface MCQTestProps {
@@ -38,7 +38,10 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
     setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!test) return;
+    const { correct, total } = getScore();
+    await saveMCQResult(jobId, correct, total, answers, test.questions);
     setSubmitted(true);
   };
 

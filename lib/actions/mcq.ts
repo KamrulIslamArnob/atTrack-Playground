@@ -2,7 +2,17 @@
 
 import { getUser } from "@/lib/auth";
 import { generateMCQQuestions } from "@/lib/ai/mcq";
-import type { MCQTest } from "@/lib/types/mcq";
+import type { MCQTest, MCQQuestion } from "@/lib/types/mcq";
+
+export interface MCQResult {
+  id: string;
+  job_id: string;
+  score: number;
+  total: number;
+  answers: Record<string, number>;
+  questions: MCQQuestion[];
+  created_at: string;
+}
 
 export async function generateMCQTest(jobId: string): Promise<MCQTest> {
   const { supabase, userId } = await getUser();
@@ -43,4 +53,45 @@ export async function generateMCQTest(jobId: string): Promise<MCQTest> {
     questions,
     generatedAt: new Date().toISOString(),
   };
+}
+
+export async function saveMCQResult(
+  jobId: string,
+  score: number,
+  total: number,
+  answers: Record<string, number>,
+  questions: MCQQuestion[]
+): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase.from("mcq_results").insert({
+    user_id: userId,
+    job_id: jobId,
+    score,
+    total,
+    answers,
+    questions,
+  });
+
+  if (error) {
+    console.error("Failed to save MCQ result:", error);
+  }
+}
+
+export async function getMCQResults(jobId: string): Promise<MCQResult[]> {
+  const { supabase, userId } = await getUser();
+
+  const { data, error } = await supabase
+    .from("mcq_results")
+    .select("*")
+    .eq("job_id", jobId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch MCQ results:", error);
+    return [];
+  }
+
+  return (data as MCQResult[]) ?? [];
 }

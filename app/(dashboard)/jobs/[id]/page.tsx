@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EditJobDialog } from "@/components/edit-job-dialog";
 import { PracticeButton } from "@/components/practice-button";
+import { MCQHistory } from "@/components/mcq-history";
 import {
   ArrowLeft,
   ExternalLink,
@@ -53,7 +54,7 @@ export default async function JobDetailPage(props: {
   const { data: application } = await supabase
     .from("applications")
     .select("*, job:jobs(*, company:companies(*))")
-    .eq("id", id)
+    .eq("job_id", id)
     .eq("user_id", userId)
     .single();
 
@@ -99,6 +100,21 @@ export default async function JobDetailPage(props: {
   const companyName = str(company?.name);
   const companyLocation = str(company?.location);
   const notes = Array.isArray(job?.notes) ? (job.notes as Array<{ title: string; bullets: string[] }>) : [];
+
+  // Fetch MCQ results for this job
+  const { data: mcqResults } = await supabase
+    .from("mcq_results")
+    .select("score, total")
+    .eq("job_id", id)
+    .eq("user_id", userId);
+
+  const totalTests = mcqResults?.length ?? 0;
+  const avgScore = totalTests > 0
+    ? Math.round(mcqResults!.reduce((sum, r) => sum + (r.score / r.total), 0) / totalTests * 100)
+    : null;
+  const bestScore = totalTests > 0
+    ? Math.round(Math.max(...mcqResults!.map(r => r.score / r.total)) * 100)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -270,6 +286,9 @@ export default async function JobDetailPage(props: {
               </div>
             </div>
           )}
+
+          {/* MCQ History */}
+          <MCQHistory jobId={id} />
         </div>
 
         {/* Sidebar */}
@@ -331,6 +350,37 @@ export default async function JobDetailPage(props: {
               </div>
             </div>
           </div>
+
+          {/* Practice Test Stats */}
+          {totalTests > 0 && (
+            <div className="rounded-4xl border border-border bg-card p-6">
+              <h2 className="font-heading text-lg font-semibold">Practice Stats</h2>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Tests taken</span>
+                  <span className="text-sm font-medium">{totalTests}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Average score</span>
+                  <span className={`text-sm font-bold ${
+                    avgScore! >= 70
+                      ? "text-green-600 dark:text-green-400"
+                      : avgScore! >= 50
+                        ? "text-yellow-600 dark:text-yellow-400"
+                        : "text-red-600 dark:text-red-400"
+                  }`}>
+                    {avgScore}%
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Best score</span>
+                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                    {bestScore}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
