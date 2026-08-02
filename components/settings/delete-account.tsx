@@ -57,9 +57,9 @@ export function DeleteAccount({ email }: DeleteAccountProps) {
             </p>
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label htmlFor="confirm-email" className="text-sm font-medium">
-                  Type <span className="font-mono text-foreground">{email}</span> to confirm
+                  Type <span className="inline-flex items-center rounded-4xl bg-muted px-2 py-0.5 font-mono text-sm text-foreground">{email}</span> to confirm
                 </label>
                 <input
                   id="confirm-email"
@@ -67,7 +67,7 @@ export function DeleteAccount({ email }: DeleteAccountProps) {
                   value={confirmEmail}
                   onChange={(e) => setConfirmEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="flex h-10 w-full rounded-4xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="mt-2 flex h-10 w-full rounded-4xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 

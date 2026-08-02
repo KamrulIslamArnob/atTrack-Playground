@@ -4,6 +4,7 @@ import { signOut } from "@/lib/actions/auth";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { LogOut } from "lucide-react";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -56,8 +57,9 @@ export default async function SettingsPage() {
             <form action={signOut}>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
+                <LogOut className="size-4" />
                 Sign out
               </button>
             </form>
