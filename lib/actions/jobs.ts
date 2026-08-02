@@ -14,32 +14,49 @@ export async function createJob(formData: FormData) {
   const salaryRange = formData.get("salary_range") as string | null;
   const description = formData.get("description") as string | null;
   const employmentType = formData.get("employment_type") as string | null;
+  const workLocation = formData.get("work_location") as string | null;
   const deadline = formData.get("deadline") as string | null;
   const source = formData.get("source") as string | null;
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
 
-  const { data: company, error: companyError } = await supabase
+  // Find or create company
+  let companyId: string;
+
+  const { data: existingCompany } = await supabase
     .from("companies")
-    .upsert({ user_id: userId, name: companyName }, { onConflict: "user_id,name" })
     .select("id")
+    .eq("user_id", userId)
+    .eq("name", companyName)
     .single();
 
-  if (companyError) {
-    redirect("/applications?error=" + encodeURIComponent("Failed to save company."));
+  if (existingCompany) {
+    companyId = existingCompany.id;
+  } else {
+    const { data: newCompany, error: companyError } = await supabase
+      .from("companies")
+      .insert({ user_id: userId, name: companyName })
+      .select("id")
+      .single();
+
+    if (companyError) {
+      redirect("/applications?error=" + encodeURIComponent("Failed to save company."));
+    }
+    companyId = newCompany.id;
   }
 
   const { data: job, error: jobError } = await supabase
     .from("jobs")
     .insert({
       user_id: userId,
-      company_id: company.id,
+      company_id: companyId,
       title,
       application_url: applicationUrl || null,
       location: location || null,
       salary_range: salaryRange || null,
       description: description || null,
       employment_type: employmentType || null,
+      work_location: workLocation || null,
       deadline: deadline || null,
       source: source || null,
       notes: notes.length > 0 ? notes : null,

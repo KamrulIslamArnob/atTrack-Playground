@@ -6,6 +6,7 @@ import { createJob } from "@/lib/actions/jobs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { Plus, X, Trash2 } from "lucide-react";
 
@@ -105,21 +106,35 @@ export function AddJobDialog() {
                   <Input id="employment_type" name="employment_type" placeholder="e.g. Full-time" className="h-10" />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="work_location">Work location</Label>
+                  <select
+                    id="work_location"
+                    name="work_location"
+                    className="flex h-10 w-full rounded-3xl border border-transparent bg-input/50 px-3 py-2 text-base transition-[color,box-shadow,background-color] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  >
+                    <option value="">Select...</option>
+                    <option value="remote">Remote</option>
+                    <option value="onsite">Onsite</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="deadline">Deadline</Label>
+                  <Input id="deadline" name="deadline" type="date" className="h-10" />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="source">Source</Label>
                   <Input id="source" name="source" placeholder="e.g. LinkedIn" className="h-10" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deadline">Deadline</Label>
-                <Input id="deadline" name="deadline" type="date" className="h-10" />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="description">Job description</Label>
-                <textarea
+                <Textarea
                   id="description"
                   name="description"
                   rows={4}
-                  className="flex w-full rounded-4xl border border-border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="Paste the job description here..."
                 />
               </div>
@@ -159,11 +174,10 @@ export function AddJobDialog() {
                       placeholder="Title (e.g. Backend Integration)"
                       className="h-9"
                     />
-                    <textarea
+                    <Textarea
                       value={noteDescription}
                       onChange={(e) => setNoteDescription(e.target.value)}
                       rows={2}
-                      className="flex w-full rounded-4xl border border-border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       placeholder="Description (optional)"
                     />
                     <div className="flex justify-end gap-2">
