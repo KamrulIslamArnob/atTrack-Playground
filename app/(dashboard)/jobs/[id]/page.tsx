@@ -4,6 +4,7 @@ import { getUser } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { EditJobDialog } from "@/components/edit-job-dialog";
 import {
   ArrowLeft,
   ExternalLink,
@@ -206,13 +207,20 @@ export default async function JobDetailPage(props: {
                   <ExternalLink className="size-3.5" />
                 </a>
               )}
-              <Link
-                href={`/jobs/${id}`}
-                className={buttonVariants({ variant: "outline", size: "sm", className: "gap-2" })}
-              >
-                <FileText className="size-3.5" />
-                Edit job
-              </Link>
+              <EditJobDialog job={{
+                id,
+                title: jobTitle,
+                description: str(job?.description) || null,
+                application_url: jobUrl || null,
+                location: jobLocation || null,
+                salary_range: jobSalaryRange || null,
+                employment_type: jobEmploymentType || null,
+                work_location: jobWorkLocation || null,
+                deadline: jobDeadline || null,
+                source: jobSource || null,
+                notes: Array.isArray(job?.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
+                company: companyName ? { name: companyName } : null,
+              }} />
             </div>
           </div>
         </div>
