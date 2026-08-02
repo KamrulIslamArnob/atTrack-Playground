@@ -270,7 +270,7 @@ export function ApplicationsGrid({
                   <h3 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors">
                     {app.job?.title ?? "Untitled"}
                   </h3>
-                  <p className="mt-1.5 text-sm text-muted-foreground flex items-center gap-1.5">
+                  <p className="mt-3 text-sm text-muted-foreground flex items-center gap-1.5">
                     <Building2 className="size-3.5 shrink-0" />
                     <span>{app.job?.company?.name ?? "Unknown company"}</span>
                   </p>
@@ -280,7 +280,7 @@ export function ApplicationsGrid({
                 </span>
               </div>
 
-              <div className="mt-4 space-y-1.5">
+              <div className="mt-1 space-y-1.5">
                 {app.job?.location && (
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <MapPin className="size-3.5 shrink-0" />
@@ -292,7 +292,7 @@ export function ApplicationsGrid({
                     {app.job.salary_range}
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
+                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
                   {app.job?.employment_type && (
                     <span className="rounded-4xl bg-muted px-2 py-0.5">
                       {app.job.employment_type}
