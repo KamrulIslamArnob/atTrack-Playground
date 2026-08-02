@@ -17,29 +17,34 @@ export default async function LoginPage(props: {
   const message = params.message;
 
   return (
-    <Card>
-      <CardHeader className="justify-items-center gap-6 text-center">
-        <div className="flex items-center gap-2.5">
+    <Card className="w-full max-w-sm">
+      <CardHeader className="items-center justify-items-center gap-4 text-center">
+        <div className="flex items-center gap-2">
           <Image
             src="/logo.png"
             alt="Aven"
-            width={32}
-            height={32}
+            width={28}
+            height={28}
             priority
           />
-          <span className="font-heading text-lg font-medium">Aven</span>
+          <span className="font-heading text-xl font-semibold">Aven</span>
         </div>
-        <CardTitle className="text-xl">Sign in to your account</CardTitle>
+        <div className="space-y-1">
+          <CardTitle className="text-xl font-semibold">Welcome back</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Sign in to your account to continue
+          </p>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-2">
         {error && (
-          <div className="mb-4 flex items-start gap-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="mb-4 flex items-start gap-3 rounded-4xl bg-destructive/10 p-3 text-sm text-destructive">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {message && (
-          <div className="mb-4 flex items-start gap-3 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+          <div className="mb-4 flex items-start gap-3 rounded-4xl bg-muted p-3 text-sm text-muted-foreground">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             <span>{message}</span>
           </div>
@@ -48,17 +53,23 @@ export default async function LoginPage(props: {
         <div className="space-y-3">
           <LoginForm />
 
-          <Link href="/magic-link" className="inline-flex w-full items-center justify-center rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted">
+          <Link
+            href="/magic-link"
+            className="inline-flex w-full items-center justify-center rounded-4xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-muted"
+          >
             Sign in with magic link
           </Link>
         </div>
 
-        <p className="mt-4 text-center text-sm text-muted-foreground">
+        <div className="mt-6 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-foreground underline underline-offset-4 hover:no-underline">
+          <Link
+            href="/signup"
+            className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
+          >
             Sign up
           </Link>
-        </p>
+        </div>
       </CardContent>
     </Card>
   );

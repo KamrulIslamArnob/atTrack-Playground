@@ -146,7 +146,9 @@ export function SignupForm() {
       className="space-y-4"
     >
       <div className="space-y-2">
-        <Label htmlFor="full_name">Full name *</Label>
+        <Label htmlFor="full_name" className="text-sm font-medium">
+          Full name *
+        </Label>
         <Input
           id="full_name"
           name="full_name"
@@ -156,22 +158,28 @@ export function SignupForm() {
           onChange={handleChange}
           onBlur={handleBlur}
           aria-invalid={!!getFieldError("full_name")}
+          className="h-10"
         />
         {getFieldError("full_name") && (
           <p className="text-xs text-destructive">{getFieldError("full_name")}</p>
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="headline">Professional headline</Label>
+        <Label htmlFor="headline" className="text-sm font-medium">
+          Professional headline
+        </Label>
         <Input
           id="headline"
           name="headline"
           placeholder="e.g. Senior Frontend Engineer"
           disabled={pending}
+          className="h-10"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="email">Email *</Label>
+        <Label htmlFor="email" className="text-sm font-medium">
+          Email *
+        </Label>
         <Input
           id="email"
           name="email"
@@ -182,13 +190,16 @@ export function SignupForm() {
           onChange={handleChange}
           onBlur={handleBlur}
           aria-invalid={!!getFieldError("email")}
+          className="h-10"
         />
         {getFieldError("email") && (
           <p className="text-xs text-destructive">{getFieldError("email")}</p>
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password *</Label>
+        <Label htmlFor="password" className="text-sm font-medium">
+          Password *
+        </Label>
         <Input
           id="password"
           name="password"
@@ -199,6 +210,7 @@ export function SignupForm() {
           onChange={handleChange}
           onBlur={handleBlur}
           aria-invalid={!!getFieldError("password")}
+          className="h-10"
         />
         {getFieldError("password") && (
           <p className="text-xs text-destructive">{getFieldError("password")}</p>
@@ -206,27 +218,35 @@ export function SignupForm() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
+          <Label htmlFor="location" className="text-sm font-medium">
+            Location
+          </Label>
           <Input
             id="location"
             name="location"
             placeholder="e.g. San Francisco, CA"
             disabled={pending}
+            className="h-10"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
+          <Label htmlFor="phone" className="text-sm font-medium">
+            Phone
+          </Label>
           <Input
             id="phone"
             name="phone"
             type="tel"
             placeholder="e.g. +1 555 0123"
             disabled={pending}
+            className="h-10"
           />
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="website">Website</Label>
+        <Label htmlFor="website" className="text-sm font-medium">
+          Website
+        </Label>
         <Input
           id="website"
           name="website"
@@ -236,12 +256,13 @@ export function SignupForm() {
           onChange={handleChange}
           onBlur={handleBlur}
           aria-invalid={!!getFieldError("website")}
+          className="h-10"
         />
         {getFieldError("website") && (
           <p className="text-xs text-destructive">{getFieldError("website")}</p>
         )}
       </div>
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="h-10 w-full" disabled={pending}>
         {pending ? <Spinner className="mr-2" /> : null}
         Create account
       </Button>

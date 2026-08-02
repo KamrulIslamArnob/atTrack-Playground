@@ -13,7 +13,9 @@ export function MagicLinkForm() {
   return (
     <form action={signInWithMagicLink} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">
+          Email
+        </Label>
         <Input
           id="email"
           name="email"
@@ -21,9 +23,10 @@ export function MagicLinkForm() {
           placeholder="you@example.com"
           required
           disabled={pending}
+          className="h-10"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="h-10 w-full" disabled={pending}>
         {pending ? <Spinner className="mr-2" /> : null}
         Send magic link
       </Button>
