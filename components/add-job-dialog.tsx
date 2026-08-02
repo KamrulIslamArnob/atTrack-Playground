@@ -118,14 +118,18 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     formData.append("work_location", workLocation);
     formData.append("employment_type", employmentType);
     formData.append("status", status);
-    await createJob(formData);
+    const result = await createJob(formData);
     setOpen(false);
     setPending(false);
     setNotes([]);
     setWorkLocation("");
     setEmploymentType("Full-time");
     setStatus("saved");
-    router.refresh();
+    if (result?.jobId) {
+      router.push("/jobs/" + result.jobId);
+    } else {
+      router.refresh();
+    }
   };
 
   return (

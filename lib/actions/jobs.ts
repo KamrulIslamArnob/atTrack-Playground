@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 
@@ -41,7 +40,7 @@ export async function createJob(formData: FormData) {
       .single();
 
     if (companyError) {
-      redirect("/jobs?error=" + encodeURIComponent("Failed to save company."));
+      throw new Error("Failed to save company.");
     }
     companyId = newCompany.id;
   }
@@ -67,7 +66,7 @@ export async function createJob(formData: FormData) {
     .single();
 
   if (jobError) {
-    redirect("/jobs?error=" + encodeURIComponent("Failed to save job."));
+    throw new Error("Failed to save job.");
   }
 
   const { error: applicationError } = await supabase
@@ -83,7 +82,7 @@ export async function createJob(formData: FormData) {
   }
 
   revalidatePath("/jobs");
-  redirect("/jobs/" + job.id);
+  return { jobId: job.id };
 }
 
 export async function updateJob(formData: FormData) {
@@ -124,7 +123,7 @@ export async function updateJob(formData: FormData) {
       .single();
 
     if (companyError) {
-      redirect("/jobs?error=" + encodeURIComponent("Failed to save company."));
+      throw new Error("Failed to save company.");
     }
     companyId = newCompany.id;
   }
@@ -149,7 +148,7 @@ export async function updateJob(formData: FormData) {
     .eq("user_id", userId);
 
   if (jobError) {
-    redirect("/jobs?error=" + encodeURIComponent("Failed to update job."));
+    throw new Error("Failed to update job.");
   }
 
   // Sync applications table status
