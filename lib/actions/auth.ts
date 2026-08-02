@@ -128,10 +128,9 @@ export async function signInWithMagicLink(formData: FormData) {
 
 export async function uploadAvatar(formData: FormData) {
   const supabase = await createClient();
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !user) {
     redirect("/login");
   }
 

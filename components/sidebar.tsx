@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,11 @@ export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fullName = user.user_metadata?.full_name || "User";
   const initials = fullName
@@ -136,41 +141,43 @@ export function Sidebar({ user }: SidebarProps) {
               <span className="text-xs font-medium text-muted-foreground">
                 Theme
               </span>
-              <div className="flex items-center gap-1 rounded-4xl border border-border p-1">
-                <button
-                  onClick={() => setTheme("light")}
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-4xl transition-colors",
-                    theme === "light"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Sun className="size-3" />
-                </button>
-                <button
-                  onClick={() => setTheme("dark")}
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-4xl transition-colors",
-                    theme === "dark"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Moon className="size-3" />
-                </button>
-                <button
-                  onClick={() => setTheme("system")}
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-4xl transition-colors",
-                    theme === "system"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Monitor className="size-3" />
-                </button>
-              </div>
+              {mounted && (
+                <div className="flex items-center gap-1 rounded-4xl border border-border p-1">
+                  <button
+                    onClick={() => setTheme("light")}
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-4xl transition-colors",
+                      theme === "light"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Sun className="size-3" />
+                  </button>
+                  <button
+                    onClick={() => setTheme("dark")}
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-4xl transition-colors",
+                      theme === "dark"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Moon className="size-3" />
+                  </button>
+                  <button
+                    onClick={() => setTheme("system")}
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-4xl transition-colors",
+                      theme === "system"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Monitor className="size-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
