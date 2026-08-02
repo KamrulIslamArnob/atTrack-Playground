@@ -3,11 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function getUser() {
   const supabase = await createClient();
-  const { data: session } = await supabase.auth.getSession();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (!session?.session?.user) {
+  if (error || !user) {
     redirect("/login");
   }
 
-  return { supabase, userId: session.session.user.id, user: session.session.user };
+  return { supabase, userId: user.id, user };
 }
