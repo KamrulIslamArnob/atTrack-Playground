@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
+import { ToastHandler } from "@/components/toast-handler";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
