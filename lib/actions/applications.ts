@@ -28,6 +28,10 @@ export interface Application {
     status: string;
     location: string | null;
     salary_range: string | null;
+    employment_type: string | null;
+    work_location: string | null;
+    deadline: string | null;
+    application_url: string | null;
     company: {
       name: string;
       location: string | null;
@@ -59,6 +63,10 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
         status,
         location,
         salary_range,
+        employment_type,
+        work_location,
+        deadline,
+        application_url,
         company:companies(name, location)
       )
     `, { count: "exact" })

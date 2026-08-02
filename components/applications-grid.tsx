@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, MapPin, Building2, Briefcase, Clock, ExternalLink } from "lucide-react";
 
 interface Application {
   id: string;
@@ -26,6 +26,10 @@ interface Application {
     status: string;
     location: string | null;
     salary_range: string | null;
+    employment_type: string | null;
+    work_location: string | null;
+    deadline: string | null;
+    application_url: string | null;
     company: {
       name: string;
       location: string | null;
@@ -259,33 +263,60 @@ export function ApplicationsGrid({
             <Link
               key={app.id}
               href={`/applications/${app.id}`}
-              className="group rounded-4xl border border-border bg-card p-4 transition-all hover:shadow-md hover:border-primary/20"
+              className="group rounded-4xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold leading-none truncate group-hover:text-primary transition-colors">
+                  <h3 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors">
                     {app.job?.title ?? "Untitled"}
                   </h3>
-                  <p className="mt-1.5 text-xs text-muted-foreground truncate">
-                    {app.job?.company?.name ?? "Unknown company"}
+                  <p className="mt-1.5 text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Building2 className="size-3.5 shrink-0" />
+                    <span>{app.job?.company?.name ?? "Unknown company"}</span>
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-4xl px-2 py-0.5 text-[10px] font-medium capitalize ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
+                <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium capitalize ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
                   {app.job?.status ?? "saved"}
                 </span>
               </div>
-              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-                {app.job?.company?.location && (
-                  <span className="truncate">{app.job.company.location}</span>
+
+              <div className="mt-4 space-y-1.5">
+                {app.job?.location && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="size-3.5 shrink-0" />
+                    <span>{app.job.location}</span>
+                  </div>
                 )}
                 {app.job?.salary_range && (
-                  <span className="truncate">{app.job.salary_range}</span>
+                  <div className="text-sm text-muted-foreground">
+                    {app.job.salary_range}
+                  </div>
                 )}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
+                  {app.job?.employment_type && (
+                    <span className="rounded-4xl bg-muted px-2 py-0.5">
+                      {app.job.employment_type}
+                    </span>
+                  )}
+                  {app.job?.work_location && (
+                    <span className="rounded-4xl bg-muted px-2 py-0.5">
+                      {app.job.work_location}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="mt-2 text-[10px] text-muted-foreground/60">
-                {app.applied_at
-                  ? `Applied ${new Date(app.applied_at).toLocaleDateString()}`
-                  : `Added ${new Date(app.created_at).toLocaleDateString()}`}
+
+              <div className="mt-3.5 flex items-center justify-between text-xs text-muted-foreground/60">
+                <span className={app.applied_at ? "" : "text-red-500 dark:text-red-400"}>
+                  {app.applied_at
+                    ? `Applied ${new Date(app.applied_at).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
+                    : app.job?.deadline
+                      ? `Deadline ${new Date(app.job.deadline).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
+                      : ""}
+                </span>
+                {app.job?.application_url && (
+                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                )}
               </div>
             </Link>
           ))}
