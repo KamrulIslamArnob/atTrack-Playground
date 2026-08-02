@@ -12,6 +12,7 @@ export async function createJob(formData: FormData) {
   const applicationUrl = formData.get("application_url") as string | null;
   const location = formData.get("location") as string | null;
   const salaryRange = formData.get("salary_range") as string | null;
+  const description = formData.get("description") as string | null;
   const employmentType = formData.get("employment_type") as string | null;
   const deadline = formData.get("deadline") as string | null;
   const source = formData.get("source") as string | null;
@@ -37,6 +38,7 @@ export async function createJob(formData: FormData) {
       application_url: applicationUrl || null,
       location: location || null,
       salary_range: salaryRange || null,
+      description: description || null,
       employment_type: employmentType || null,
       deadline: deadline || null,
       source: source || null,
