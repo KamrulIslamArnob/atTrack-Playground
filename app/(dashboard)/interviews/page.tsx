@@ -1,73 +1,210 @@
-import { getUser } from "@/lib/auth";
-import { Badge } from "@/components/ui/badge";
+"use client";
+
+import { useState } from "react";
+import { getInterviews, type Interview } from "@/lib/actions/interviews";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { Calendar, Clock } from "lucide-react";
+import { InterviewForm } from "@/components/interview-form";
+import { Calendar, Clock, MapPin, Video, Building2, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 
-export default async function InterviewsPage() {
-  const { supabase, userId } = await getUser();
+const typeColors: Record<string, string> = {
+  phone: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  video: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  onsite: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  technical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  behavioral: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  panel: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+};
 
-  const { data: interviews } = await supabase
-    .from("interviews")
-    .select("id, scheduled_at, type, location, notes, application:applications(id, job:jobs(title, company:companies(name)))")
-    .eq("user_id", userId)
-    .order("scheduled_at", { ascending: true });
+const statusColors: Record<string, string> = {
+  scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  rescheduled: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+};
+
+export default function InterviewsPage() {
+  const [upcoming, setUpcoming] = useState<Interview[]>([]);
+  const [past, setPast] = useState<Interview[]>([]);
+  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchInterviews = async () => {
+    setLoading(true);
+    const data = await getInterviews();
+    setUpcoming(data.upcoming);
+    setPast(data.past);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchInterviews();
+  }, []);
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "Not scheduled";
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div className="-mx-6 border-b border-border pb-6">
-        <div className="px-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Interviews</h1>
-          <p className="text-sm text-muted-foreground">
-            Your upcoming and past interviews.
-          </p>
+        <div className="flex items-center justify-between px-6">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Interviews</h1>
+            <p className="text-sm text-muted-foreground">
+              Your upcoming and past interviews.
+            </p>
+          </div>
         </div>
       </div>
 
       <Breadcrumbs />
 
-      {interviews && interviews.length > 0 ? (
-        <div className="space-y-3">
-          {interviews.map((interview) => {
-            const app = interview.application as unknown as Record<string, unknown> | null;
-            const job = app?.job as unknown as Record<string, unknown> | null;
-            const company = job?.company as unknown as Record<string, unknown> | null;
-
-            return (
-              <div key={interview.id} className="flex items-center justify-between rounded-4xl border border-border p-4">
-                <div className="flex items-center gap-4">
-                  <Calendar className="size-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      {(job?.title as string) ?? "Interview"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {(company?.name as string) ?? "Unknown company"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="flex items-center gap-1 text-sm">
-                      <Clock className="size-3" />
-                      {new Date(interview.scheduled_at).toLocaleDateString()}
-                    </p>
-                    {interview.location && (
-                      <p className="text-xs text-muted-foreground">{interview.location}</p>
-                    )}
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {(interview.type as string) ?? "TBD"}
-                  </Badge>
-                </div>
-              </div>
-            );
-          })}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="size-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
-          <p className="text-sm text-muted-foreground">No interviews scheduled yet.</p>
-        </div>
+        <>
+          {/* Upcoming */}
+          <div>
+            <h2 className="mb-3 text-sm font-medium text-muted-foreground">Upcoming</h2>
+            {upcoming.length > 0 ? (
+              <div className="space-y-3">
+                {upcoming.map((interview) => (
+                  <InterviewCard
+                    key={interview.id}
+                    interview={interview}
+                    formatDate={formatDate}
+                    onClick={() => setSelectedInterview(interview)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-4xl border border-dashed border-border p-8 text-center">
+                <p className="text-sm text-muted-foreground">No upcoming interviews.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Past */}
+          {past.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-sm font-medium text-muted-foreground">Past</h2>
+              <div className="space-y-3">
+                {past.map((interview) => (
+                  <InterviewCard
+                    key={interview.id}
+                    interview={interview}
+                    formatDate={formatDate}
+                    onClick={() => setSelectedInterview(interview)}
+                    dimmed
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {selectedInterview && (
+        <InterviewForm
+          interview={selectedInterview}
+          onClose={() => {
+            setSelectedInterview(null);
+            fetchInterviews();
+          }}
+        />
       )}
     </div>
+  );
+}
+
+function InterviewCard({
+  interview,
+  formatDate,
+  onClick,
+  dimmed = false,
+}: {
+  interview: Interview;
+  formatDate: (iso: string | null) => string;
+  onClick: () => void;
+  dimmed?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full rounded-4xl border border-border p-4 text-left transition-colors hover:bg-muted/50 ${dimmed ? "opacity-60" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-muted">
+            <Building2 className="size-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium">{interview.job?.title ?? "Interview"}</p>
+            <p className="text-sm text-muted-foreground">
+              {interview.job?.company?.name ?? "Unknown company"}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar className="size-3" />
+                {formatDate(interview.scheduled_at)}
+              </span>
+              {interview.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="size-3" />
+                  {interview.location}
+                </span>
+              )}
+              {interview.meeting_url && (
+                <span className="flex items-center gap-1">
+                  <Video className="size-3" />
+                  Video call
+                </span>
+              )}
+              {interview.interviewer_name && (
+                <span className="flex items-center gap-1">
+                  <User className="size-3" />
+                  {interview.interviewer_name}
+                </span>
+              )}
+              {interview.duration_minutes && (
+                <span className="flex items-center gap-1">
+                  <Clock className="size-3" />
+                  {interview.duration_minutes}min
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {interview.type && (
+            <Badge
+              variant="secondary"
+              className={`text-xs ${typeColors[interview.type] ?? ""}`}
+            >
+              {interview.type}
+            </Badge>
+          )}
+          <Badge
+            variant="secondary"
+            className={`text-xs ${statusColors[interview.status] ?? ""}`}
+          >
+            {interview.status}
+          </Badge>
+        </div>
+      </div>
+    </button>
   );
 }

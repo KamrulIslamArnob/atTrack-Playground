@@ -70,6 +70,18 @@ export async function createJob(formData: FormData) {
     redirect("/jobs?error=" + encodeURIComponent("Failed to save job."));
   }
 
+  const { error: applicationError } = await supabase
+    .from("applications")
+    .insert({
+      user_id: userId,
+      job_id: job.id,
+      status,
+    });
+
+  if (applicationError) {
+    console.error("Failed to create application record:", applicationError);
+  }
+
   revalidatePath("/jobs");
   redirect("/jobs/" + job.id);
 }
@@ -140,6 +152,32 @@ export async function updateJob(formData: FormData) {
     redirect("/jobs?error=" + encodeURIComponent("Failed to update job."));
   }
 
+  // Sync applications table status
+  await supabase
+    .from("applications")
+    .update({ status })
+    .eq("job_id", jobId)
+    .eq("user_id", userId);
+
+  // Auto-create interview when status changes to "interview"
+  if (status === "interview") {
+    const { data: existingInterview } = await supabase
+      .from("interviews")
+      .select("id")
+      .eq("job_id", jobId)
+      .eq("user_id", userId)
+      .single();
+
+    if (!existingInterview) {
+      await supabase.from("interviews").insert({
+        user_id: userId,
+        job_id: jobId,
+        status: "scheduled",
+      });
+    }
+  }
+
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
+  revalidatePath("/interviews");
 }

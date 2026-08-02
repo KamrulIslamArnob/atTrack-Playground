@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EditJobDialog } from "@/components/edit-job-dialog";
+import { PracticeButton } from "@/components/practice-button";
 import {
   ArrowLeft,
   ExternalLink,
@@ -136,9 +137,9 @@ export default async function JobDetailPage(props: {
                 </p>
               </div>
               <span
-                className={`shrink-0 rounded-4xl px-3 py-1.5 text-xs font-medium ${statusColors[application.status] ?? "bg-muted text-muted-foreground"}`}
+                className={`shrink-0 rounded-4xl px-3 py-1.5 text-xs font-medium ${statusColors[jobStatus] ?? "bg-muted text-muted-foreground"}`}
               >
-                {statusLabels[application.status] ?? application.status}
+                {statusLabels[jobStatus] ?? jobStatus}
               </span>
             </div>
 
@@ -223,6 +224,7 @@ export default async function JobDetailPage(props: {
                 notes: Array.isArray(job?.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
                 company: companyName ? { name: companyName } : null,
               }} />
+              {jobStatus === "interview" && <PracticeButton jobId={id} />}
             </div>
           </div>
         </div>
