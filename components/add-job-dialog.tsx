@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, X, Trash2 } from "lucide-react";
+import type { ExtractionResult } from "@/lib/ai/schema";
 
 interface JobNote {
   id: string;
@@ -46,15 +47,30 @@ const statusOptions = [
   { value: "withdrawn", label: "Withdrawn" },
 ];
 
-export function AddJobDialog() {
-  const [open, setOpen] = useState(false);
+interface AddJobDialogProps {
+  initialData?: ExtractionResult;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpenChange }: AddJobDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [pending, setPending] = useState(false);
-  const [notes, setNotes] = useState<JobNote[]>([]);
+  const [notes, setNotes] = useState<JobNote[]>(
+    initialData?.notes?.map((n) => ({
+      id: crypto.randomUUID(),
+      title: n.title,
+      bullets: n.bullets,
+    })) ?? []
+  );
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBullets, setNoteBullets] = useState<string[]>([""]);
-  const [workLocation, setWorkLocation] = useState("");
-  const [employmentType, setEmploymentType] = useState("Full-time");
+  const [workLocation, setWorkLocation] = useState(initialData?.work_location ?? "");
+  const [employmentType, setEmploymentType] = useState(initialData?.employment_type ?? "Full-time");
   const [status, setStatus] = useState("saved");
   const router = useRouter();
 
@@ -114,10 +130,14 @@ export function AddJobDialog() {
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="mr-1 size-4" />
-        Add Job
-      </Button>
+      {trigger ? (
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+      ) : (
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="mr-1 size-4" />
+          Add Job
+        </Button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -135,24 +155,24 @@ export function AddJobDialog() {
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Job title *</Label>
-                <Input id="title" name="title" required placeholder="e.g. Senior Frontend Engineer" className="h-10" />
+                <Input id="title" name="title" required placeholder="e.g. Senior Frontend Engineer" defaultValue={initialData?.title ?? ""} className="h-10" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company">Company *</Label>
-                <Input id="company" name="company" required placeholder="e.g. Acme Technologies" className="h-10" />
+                <Input id="company" name="company" required placeholder="e.g. Acme Technologies" defaultValue={initialData?.company ?? ""} className="h-10" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="application_url">Job URL</Label>
-                <Input id="application_url" name="application_url" type="url" placeholder="https://..." className="h-10" />
+                <Input id="application_url" name="application_url" type="url" placeholder="https://..." defaultValue={initialData?.application_url ?? ""} className="h-10" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
-                  <Input id="location" name="location" placeholder="e.g. San Francisco, CA" className="h-10" />
+                  <Input id="location" name="location" placeholder="e.g. San Francisco, CA" defaultValue={initialData?.location ?? ""} className="h-10" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salary_range">Salary range</Label>
-                  <Input id="salary_range" name="salary_range" placeholder="e.g. $150k - $200k" className="h-10" />
+                  <Input id="salary_range" name="salary_range" placeholder="e.g. $150k - $200k" defaultValue={initialData?.salary_range ?? ""} className="h-10" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -203,12 +223,12 @@ export function AddJobDialog() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="deadline">Deadline</Label>
-                  <Input id="deadline" name="deadline" type="date" className="h-10" />
+                  <Input id="deadline" name="deadline" type="date" defaultValue={initialData?.deadline ?? ""} className="h-10" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="source">Source</Label>
-                <Input id="source" name="source" placeholder="e.g. LinkedIn" className="h-10" />
+                <Input id="source" name="source" placeholder="e.g. LinkedIn" defaultValue={initialData?.source ?? ""} className="h-10" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Job description</Label>
@@ -217,6 +237,7 @@ export function AddJobDialog() {
                   name="description"
                   rows={4}
                   placeholder="Paste the job description here..."
+                  defaultValue={initialData?.description ?? ""}
                 />
               </div>
 

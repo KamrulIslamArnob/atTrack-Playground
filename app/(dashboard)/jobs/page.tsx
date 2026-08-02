@@ -1,6 +1,6 @@
 import { getApplications } from "@/lib/actions/applications";
 import { ApplicationsGrid } from "@/components/applications-grid";
-import { AddJobDialog } from "@/components/add-job-dialog";
+import { ImportChoice } from "@/components/import-choice";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 
 interface PageProps {
@@ -40,7 +40,7 @@ export default async function ApplicationsPage(props: PageProps) {
               Track and manage your job applications.
             </p>
           </div>
-          <AddJobDialog />
+          <ImportChoice />
         </div>
       </div>
 
