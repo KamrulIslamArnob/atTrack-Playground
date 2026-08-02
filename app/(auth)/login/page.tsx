@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import {
   Card,
@@ -18,9 +19,18 @@ export default async function LoginPage(props: {
 
   return (
     <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your account</CardDescription>
+      <CardHeader className="justify-items-center gap-6 text-center">
+        <div className="flex items-center gap-2.5">
+          <Image
+            src="/logo.png"
+            alt="Aven"
+            width={32}
+            height={32}
+            priority
+          />
+          <span className="font-heading text-lg font-medium">Aven</span>
+        </div>
+        <CardTitle className="text-xl">Sign in to your account</CardTitle>
       </CardHeader>
       <CardContent>
         {error && (
