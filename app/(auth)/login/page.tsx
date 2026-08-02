@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,13 +8,7 @@ import {
 } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/login-form";
 
-export default async function LoginPage(props: {
-  searchParams: Promise<{ error?: string; message?: string }>;
-}) {
-  const params = await props.searchParams;
-  const error = params.error;
-  const message = params.message;
-
+export default function LoginPage() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="items-center justify-items-center gap-4 text-center">
@@ -37,19 +30,6 @@ export default async function LoginPage(props: {
         </div>
       </CardHeader>
       <CardContent className="pt-2">
-        {error && (
-          <div className="mb-4 flex items-start gap-3 rounded-4xl bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 size-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-        {message && (
-          <div className="mb-4 flex items-start gap-3 rounded-4xl bg-muted p-3 text-sm text-muted-foreground">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-            <span>{message}</span>
-          </div>
-        )}
-
         <div className="space-y-3">
           <LoginForm />
 
