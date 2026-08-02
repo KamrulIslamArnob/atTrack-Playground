@@ -1,0 +1,61 @@
+import Link from "next/link";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { LoginForm, MagicLinkForm } from "@/components/auth/login-form";
+
+export default async function LoginPage(props: {
+  searchParams: Promise<{ error?: string; message?: string }>;
+}) {
+  const params = await props.searchParams;
+  const error = params.error;
+  const message = params.message;
+
+  return (
+    <Card>
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">Welcome back</CardTitle>
+        <CardDescription>Sign in to your account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <div className="mb-4 flex items-start gap-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+        {message && (
+          <div className="mb-4 flex items-start gap-3 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+            <span>{message}</span>
+          </div>
+        )}
+
+        <LoginForm />
+
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-2 text-muted-foreground">or</span>
+          </div>
+        </div>
+
+        <MagicLinkForm />
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-foreground underline underline-offset-4 hover:no-underline">
+            Sign up
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

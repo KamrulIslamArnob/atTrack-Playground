@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { SignupForm } from "@/components/auth/signup-form";
+
+export default async function SignupPage(props: {
+  searchParams: Promise<{ error?: string; message?: string }>;
+}) {
+  const params = await props.searchParams;
+  const error = params.error;
+  const message = params.message;
+
+  return (
+    <Card>
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">Create an account</CardTitle>
+        <CardDescription>Get started with your career workspace</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <div className="mb-4 flex items-start gap-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+        {message && (
+          <div className="mb-4 flex items-start gap-3 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+            <span>{message}</span>
+          </div>
+        )}
+
+        <SignupForm />
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/login" className="text-foreground underline underline-offset-4 hover:no-underline">
+            Sign in
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
