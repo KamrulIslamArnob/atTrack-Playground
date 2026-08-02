@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { signOut } from "@/lib/actions/auth";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ProfileForm } from "@/components/settings/profile-form";
+import { DeleteAccount } from "@/components/settings/delete-account";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -60,6 +61,23 @@ export default async function SettingsPage() {
                 Sign out
               </button>
             </form>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/20">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold text-destructive">Danger Zone</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Delete account</p>
+              <p className="text-xs text-muted-foreground">
+                Permanently delete your account and all associated data.
+              </p>
+            </div>
+            <DeleteAccount email={user.email || ""} />
           </div>
         </CardContent>
       </Card>

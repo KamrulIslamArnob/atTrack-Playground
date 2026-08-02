@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -42,16 +43,18 @@ interface SidebarProps {
       avatar_url?: string;
     };
   };
+  avatarUrl?: string | null;
 }
 
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar({ user, avatarUrl }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timeout = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const fullName = user.user_metadata?.full_name || "User";
@@ -67,9 +70,19 @@ export function Sidebar({ user }: SidebarProps) {
       <aside className="flex h-full w-56 flex-col rounded-4xl border border-border bg-card">
         <div className="border-b border-border/50 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-              {initials}
-            </div>
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={fullName}
+                width={36}
+                height={36}
+                className="size-9 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                {initials}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium leading-none truncate">
                 {fullName}

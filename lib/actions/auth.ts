@@ -170,3 +170,46 @@ export async function uploadAvatar(formData: FormData) {
 
   redirect("/settings?message=" + encodeURIComponent("Avatar uploaded successfully."));
 }
+
+export async function deleteAccount(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  const email = formData.get("email") as string;
+
+  if (email !== user.email) {
+    redirect("/settings?error=" + encodeURIComponent("Email does not match. Account not deleted."));
+  }
+
+  // Delete storage files (avatar and documents)
+  await supabase.storage.from("avatar").remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`, `${user.id}/avatar.gif`]);
+  await supabase.storage.from("documents").list(user.id).then(({ data }) => {
+    if (data) {
+      const files = data.map((f) => `${user.id}/${f.name}`);
+      supabase.storage.from("documents").remove(files);
+    }
+  });
+
+  // Delete database records (order matters due to foreign keys)
+  await supabase.from("interviews").delete().eq("user_id", user.id);
+  await supabase.from("notes").delete().eq("user_id", user.id);
+  await supabase.from("timeline_events").delete().eq("user_id", user.id);
+  await supabase.from("documents").delete().eq("user_id", user.id);
+  await supabase.from("applications").delete().eq("user_id", user.id);
+  await supabase.from("jobs").delete().eq("user_id", user.id);
+  await supabase.from("companies").delete().eq("user_id", user.id);
+  await supabase.from("profiles").delete().eq("id", user.id);
+
+  // Delete auth user
+  const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+
+  if (deleteError) {
+    redirect("/settings?error=" + encodeURIComponent("Failed to delete account. Please try again."));
+  }
+
+  redirect("/login?message=" + encodeURIComponent("Account deleted successfully."));
+}
