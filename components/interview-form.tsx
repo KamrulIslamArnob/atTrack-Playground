@@ -14,8 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, Calendar, ExternalLink } from "lucide-react";
 import { updateInterview, deleteInterview } from "@/lib/actions/interviews";
+import { getCalendarLinkFromInterview } from "@/lib/calendar";
 import type { Interview } from "@/lib/actions/interviews";
 
 const interviewTypes = [
@@ -50,9 +51,11 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
     setPending(true);
 
     const formData = new FormData(e.currentTarget);
+    const scheduledAtRaw = formData.get("scheduled_at") as string;
+    const scheduled_at = scheduledAtRaw ? new Date(scheduledAtRaw).toISOString() : null;
 
     await updateInterview(interview.id, {
-      scheduled_at: formData.get("scheduled_at") as string || null,
+      scheduled_at,
       type: type || null,
       location: formData.get("location") as string || null,
       meeting_url: formData.get("meeting_url") as string || null,
@@ -81,7 +84,12 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
   const formatDateTimeLocal = (iso: string | null) => {
     if (!iso) return "";
     const d = new Date(iso);
-    return d.toISOString().slice(0, 16);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
   return (
@@ -228,6 +236,26 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
               placeholder="Topics to prepare, questions to ask..."
             />
           </div>
+
+          {/* Calendar link preview */}
+          {interview.scheduled_at && (
+            <div className="rounded-4xl border border-border bg-muted/50 p-3">
+              <p className="text-xs text-muted-foreground mb-2">Calendar event preview</p>
+              <a
+                href={getCalendarLinkFromInterview({
+                  ...interview,
+                  type: type || interview.type,
+                }) ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+              >
+                <Calendar className="size-3" />
+                Open in Google Calendar
+                <ExternalLink className="size-3" />
+              </a>
+            </div>
+          )}
 
           <div className="flex justify-between pt-2">
             <Button
