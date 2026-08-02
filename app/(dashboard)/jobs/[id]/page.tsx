@@ -94,6 +94,7 @@ export default async function JobDetailPage(props: {
   const jobDescription = str(job?.description);
   const jobUrl = str(job?.application_url);
   const jobCreatedAt = str(job?.created_at);
+  const jobStatus = str(job?.status) || "saved";
   const companyName = str(company?.name);
   const companyLocation = str(company?.location);
   const notes = Array.isArray(job?.notes) ? (job.notes as Array<{ title: string; bullets: string[] }>) : [];
@@ -218,6 +219,7 @@ export default async function JobDetailPage(props: {
                 work_location: jobWorkLocation || null,
                 deadline: jobDeadline || null,
                 source: jobSource || null,
+                status: jobStatus,
                 notes: Array.isArray(job?.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
                 company: companyName ? { name: companyName } : null,
               }} />

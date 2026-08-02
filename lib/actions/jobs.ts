@@ -17,6 +17,7 @@ export async function createJob(formData: FormData) {
   const workLocation = formData.get("work_location") as string | null;
   const deadline = formData.get("deadline") as string | null;
   const source = formData.get("source") as string | null;
+  const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
 
@@ -59,6 +60,7 @@ export async function createJob(formData: FormData) {
       work_location: workLocation || null,
       deadline: deadline || null,
       source: source || null,
+      status,
       notes: notes.length > 0 ? notes : null,
     })
     .select("id")
@@ -66,18 +68,6 @@ export async function createJob(formData: FormData) {
 
   if (jobError) {
     redirect("/jobs?error=" + encodeURIComponent("Failed to save job."));
-  }
-
-  const { error: appError } = await supabase
-    .from("applications")
-    .insert({
-      user_id: userId,
-      job_id: job.id,
-      status: "draft",
-    });
-
-  if (appError) {
-    redirect("/jobs?error=" + encodeURIComponent("Failed to create job."));
   }
 
   revalidatePath("/jobs");
@@ -98,6 +88,7 @@ export async function updateJob(formData: FormData) {
   const workLocation = formData.get("work_location") as string | null;
   const deadline = formData.get("deadline") as string | null;
   const source = formData.get("source") as string | null;
+  const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
 
@@ -139,6 +130,7 @@ export async function updateJob(formData: FormData) {
       work_location: workLocation || null,
       deadline: deadline || null,
       source: source || null,
+      status,
       notes: notes.length > 0 ? notes : null,
     })
     .eq("id", jobId)

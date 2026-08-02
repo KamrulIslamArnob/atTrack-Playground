@@ -23,6 +23,29 @@ interface JobNote {
   bullets: string[];
 }
 
+const employmentTypes = [
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Freelance",
+  "Internship",
+  "Temporary",
+  "Apprenticeship",
+  "Volunteer",
+];
+
+const statusOptions = [
+  { value: "saved", label: "Saved" },
+  { value: "interested", label: "Interested" },
+  { value: "preparing", label: "Preparing" },
+  { value: "applied", label: "Applied" },
+  { value: "interview", label: "Interview" },
+  { value: "offer", label: "Offer" },
+  { value: "accepted", label: "Accepted" },
+  { value: "rejected", label: "Rejected" },
+  { value: "withdrawn", label: "Withdrawn" },
+];
+
 export function AddJobDialog() {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -31,6 +54,8 @@ export function AddJobDialog() {
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBullets, setNoteBullets] = useState<string[]>([""]);
   const [workLocation, setWorkLocation] = useState("");
+  const [employmentType, setEmploymentType] = useState("Full-time");
+  const [status, setStatus] = useState("saved");
   const router = useRouter();
 
   const addNote = () => {
@@ -75,11 +100,15 @@ export function AddJobDialog() {
     const formData = new FormData(e.currentTarget);
     formData.append("notes", JSON.stringify(notes));
     formData.append("work_location", workLocation);
+    formData.append("employment_type", employmentType);
+    formData.append("status", status);
     await createJob(formData);
     setOpen(false);
     setPending(false);
     setNotes([]);
     setWorkLocation("");
+    setEmploymentType("Full-time");
+    setStatus("saved");
     router.refresh();
   };
 
@@ -129,7 +158,18 @@ export function AddJobDialog() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="employment_type">Employment type</Label>
-                  <Input id="employment_type" name="employment_type" placeholder="e.g. Full-time" className="h-10" />
+                  <Select value={employmentType} onValueChange={(v) => setEmploymentType(v ?? "Full-time")}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employmentTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="work_location">Work location</Label>
@@ -147,13 +187,28 @@ export function AddJobDialog() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v ?? "saved")}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="deadline">Deadline</Label>
                   <Input id="deadline" name="deadline" type="date" className="h-10" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="source">Source</Label>
-                  <Input id="source" name="source" placeholder="e.g. LinkedIn" className="h-10" />
-                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="source">Source</Label>
+                <Input id="source" name="source" placeholder="e.g. LinkedIn" className="h-10" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Job description</Label>
