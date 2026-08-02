@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { signIn, signInWithMagicLink } from "@/lib/actions/auth";
+import { signIn } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,30 +30,6 @@ export function LoginForm() {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? <Spinner className="mr-2" /> : null}
         Sign in
-      </Button>
-    </form>
-  );
-}
-
-export function MagicLinkForm() {
-  const { pending } = useFormStatus();
-
-  return (
-    <form action={signInWithMagicLink} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="magic-email">Email</Label>
-        <Input
-          id="magic-email"
-          name="email"
-          type="email"
-          placeholder="you@example.com"
-          required
-          disabled={pending}
-        />
-      </div>
-      <Button type="submit" variant="outline" className="w-full" disabled={pending}>
-        {pending ? <Spinner className="mr-2" /> : null}
-        Send magic link
       </Button>
     </form>
   );

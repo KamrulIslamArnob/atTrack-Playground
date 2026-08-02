@@ -4,11 +4,10 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LoginForm, MagicLinkForm } from "@/components/auth/login-form";
+import { LoginForm } from "@/components/auth/login-form";
 
 export default async function LoginPage(props: {
   searchParams: Promise<{ error?: string; message?: string }>;
@@ -46,18 +45,13 @@ export default async function LoginPage(props: {
           </div>
         )}
 
-        <LoginForm />
+        <div className="space-y-3">
+          <LoginForm />
 
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-card px-2 text-muted-foreground">or</span>
-          </div>
+          <Link href="/magic-link" className="inline-flex w-full items-center justify-center rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted">
+            Sign in with magic link
+          </Link>
         </div>
-
-        <MagicLinkForm />
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}

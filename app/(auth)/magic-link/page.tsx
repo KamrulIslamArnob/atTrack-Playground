@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -49,11 +49,10 @@ export default async function MagicLinkPage(props: {
 
         <MagicLinkForm />
 
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          <Link href="/login" className="text-foreground underline underline-offset-4 hover:no-underline">
-            Back to sign in
-          </Link>
-        </p>
+        <Link href="/login" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted">
+          <ArrowLeft className="size-4" />
+          Back to sign in
+        </Link>
       </CardContent>
     </Card>
   );
