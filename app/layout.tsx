@@ -51,7 +51,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers>
+          <ToastHandler />
+          {children}
+        </Providers>
       </body>
     </html>
   );
