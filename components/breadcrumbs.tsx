@@ -14,7 +14,6 @@ import {
 const routeLabels: Record<string, string> = {
   overview: "Overview",
   jobs: "Jobs",
-  saved: "Saved",
   interviews: "Interviews",
   documents: "Documents",
   settings: "Settings",

@@ -50,7 +50,6 @@ export function DashboardHeader() {
             {[
               { name: "Overview", href: "/overview" },
               { name: "Jobs", href: "/jobs" },
-              { name: "Saved", href: "/saved" },
               { name: "Interviews", href: "/interviews" },
             ].map((item) => (
               <Link
@@ -136,15 +135,6 @@ export function DashboardHeader() {
                     }}
                   >
                     Applications
-                  </CommandItem>
-                  <CommandItem
-                    value="saved"
-                    onItemSelect={() => {
-                      window.location.href = "/saved";
-                      setOpen(false);
-                    }}
-                  >
-                    Saved Jobs
                   </CommandItem>
                   <CommandItem
                     value="interviews"
