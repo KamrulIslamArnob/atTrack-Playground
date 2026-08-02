@@ -88,11 +88,21 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
       break;
   }
 
-  // Get total count for pagination
-  const { count } = await supabase
+  // Get total count for pagination (with same filters)
+  let countQuery = supabase
     .from("applications")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
+
+  if (status && status !== "all") {
+    countQuery = countQuery.eq("job.status", status);
+  }
+
+  if (search) {
+    countQuery = countQuery.or(`job.title.ilike.%${search}%,job.company.name.ilike.%${search}%,job.company.location.ilike.%${search}%`);
+  }
+
+  const { count } = await countQuery;
 
   const total = count ?? 0;
   const totalPages = Math.ceil(total / perPage);
