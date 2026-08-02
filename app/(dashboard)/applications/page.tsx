@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { AddJobDialog } from "@/components/add-job-dialog";
 
 export default async function ApplicationsPage() {
   const { supabase, userId } = await getUser();
@@ -23,10 +22,7 @@ export default async function ApplicationsPage() {
               Track and manage your job applications.
             </p>
           </div>
-          <Link href="/applications/new" className={buttonVariants({ size: "sm" })}>
-            <Plus className="mr-1 size-4" />
-            Add Job
-          </Link>
+          <AddJobDialog />
         </div>
       </div>
 
@@ -34,7 +30,7 @@ export default async function ApplicationsPage() {
         <div className="rounded-4xl border border-border">
           <table className="w-full">
             <thead>
-              <tr className="border-b bg-muted/50">
+              <tr className="border-b border-border bg-muted/50">
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Role</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Company</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Location</th>
@@ -47,7 +43,7 @@ export default async function ApplicationsPage() {
                 const job = app.job as unknown as Record<string, unknown> | null;
                 const company = job?.company as unknown as Record<string, unknown> | null;
                 return (
-                  <tr key={app.id} className="border-b last:border-0 hover:bg-muted/50">
+                  <tr key={app.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                     <td className="px-4 py-3">
                       <Link href={`/applications/${app.id}`} className="text-sm font-medium hover:underline">
                         {(job?.title as string) ?? "Untitled"}
@@ -76,10 +72,7 @@ export default async function ApplicationsPage() {
       ) : (
         <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">No applications yet.</p>
-          <Link href="/applications/new" className={buttonVariants({ size: "sm", className: "mt-4" })}>
-            <Plus className="mr-1 size-4" />
-            Add your first job
-          </Link>
+          <AddJobDialog />
         </div>
       )}
     </div>

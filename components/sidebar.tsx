@@ -44,9 +44,10 @@ interface SidebarProps {
     };
   };
   avatarUrl?: string | null;
+  fullName?: string | null;
 }
 
-export function Sidebar({ user, avatarUrl }: SidebarProps) {
+export function Sidebar({ user, avatarUrl, fullName: profileName }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -57,7 +58,7 @@ export function Sidebar({ user, avatarUrl }: SidebarProps) {
     return () => clearTimeout(timeout);
   }, []);
 
-  const fullName = user.user_metadata?.full_name || "User";
+  const fullName = profileName || user.user_metadata?.full_name || "User";
   const initials = fullName
     .split(" ")
     .map((n) => n[0])
@@ -70,19 +71,22 @@ export function Sidebar({ user, avatarUrl }: SidebarProps) {
       <aside className="flex h-full w-56 flex-col rounded-4xl border border-border bg-card">
         <div className="border-b border-border/50 p-4">
           <div className="flex items-center gap-3">
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt={fullName}
-                width={36}
-                height={36}
-                className="size-9 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                {initials}
-              </div>
-            )}
+            <div className="relative">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={fullName}
+                  width={36}
+                  height={36}
+                  className="size-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                  {initials}
+                </div>
+              )}
+              <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-card bg-emerald-500" />
+            </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium leading-none truncate">
                 {fullName}

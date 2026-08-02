@@ -1,26 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 export function ToastHandler() {
-  useEffect(() => {
-    const cookie = document.cookie
-      .split("; ")
-      .find((c) => c.startsWith("toast="));
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-    if (cookie) {
-      try {
-        const data = JSON.parse(decodeURIComponent(cookie.split("=")[1]));
-        if (data.type === "error") {
-          toast.error(data.message);
-        } else {
-          toast.success(data.message);
-        }
-      } catch {}
-      document.cookie = "toast=; path=/; max-age=0";
+  useEffect(() => {
+    const error = searchParams.get("error");
+    const message = searchParams.get("message");
+
+    if (error) {
+      toast.error(error);
+      router.replace(window.location.pathname);
+    } else if (message) {
+      toast.success(message);
+      router.replace(window.location.pathname);
     }
-  }, []);
+  }, [searchParams, router]);
 
   return null;
 }

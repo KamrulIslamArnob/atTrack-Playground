@@ -1,9 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { setToast } from "./toast";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -16,8 +16,7 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data);
 
   if (error) {
-    await setToast("error", error.message);
-    redirect("/login");
+    redirect("/login?error=" + encodeURIComponent(error.message));
   }
 
   redirect("/overview");
@@ -49,8 +48,7 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    await setToast("error", error.message);
-    redirect("/signup");
+    redirect("/signup?error=" + encodeURIComponent(error.message));
   }
 
   if (authData.user) {
@@ -66,13 +64,11 @@ export async function signUp(formData: FormData) {
       });
 
     if (profileError) {
-      await setToast("error", "Failed to create profile. Please try again.");
-      redirect("/signup");
+      redirect("/signup?error=" + encodeURIComponent("Failed to create profile. Please try again."));
     }
   }
 
-  await setToast("success", "Check your email to confirm your account.");
-  redirect("/login");
+  redirect("/login?message=" + encodeURIComponent("Check your email to confirm your account."));
 }
 
 export async function signOut() {
@@ -107,12 +103,12 @@ export async function updateProfile(formData: FormData) {
     .eq("id", user.id);
 
   if (error) {
-    await setToast("error", "Failed to update profile.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("Failed to update profile."));
   }
 
-  await setToast("success", "Profile updated successfully.");
-  redirect("/settings");
+  revalidatePath("/settings");
+  revalidatePath("/overview");
+  redirect("/settings?message=" + encodeURIComponent("Profile updated successfully."));
 }
 
 export async function signInWithMagicLink(formData: FormData) {
@@ -128,12 +124,10 @@ export async function signInWithMagicLink(formData: FormData) {
   });
 
   if (error) {
-    await setToast("error", error.message);
-    redirect("/login");
+    redirect("/login?error=" + encodeURIComponent(error.message));
   }
 
-  await setToast("success", "Check your email for the login link.");
-  redirect("/login");
+  redirect("/login?message=" + encodeURIComponent("Check your email for the login link."));
 }
 
 export async function uploadAvatar(formData: FormData) {
@@ -147,13 +141,11 @@ export async function uploadAvatar(formData: FormData) {
   const file = formData.get("avatar") as File;
 
   if (!file || file.size === 0) {
-    await setToast("error", "No file selected.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("No file selected."));
   }
 
   if (file.size > 500 * 1024) {
-    await setToast("error", "File size must be less than 500KB.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("File size must be less than 500KB."));
   }
 
   const fileExt = file.name.split(".").pop();
@@ -164,8 +156,7 @@ export async function uploadAvatar(formData: FormData) {
     .upload(filePath, file, { upsert: true });
 
   if (uploadError) {
-    await setToast("error", "Failed to upload avatar.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("Failed to upload avatar."));
   }
 
   const { data: urlData } = supabase.storage
@@ -178,12 +169,12 @@ export async function uploadAvatar(formData: FormData) {
     .eq("id", user.id);
 
   if (updateError) {
-    await setToast("error", "Failed to update profile with avatar.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("Failed to update profile with avatar."));
   }
 
-  await setToast("success", "Avatar uploaded successfully.");
-  redirect("/settings");
+  revalidatePath("/settings");
+  revalidatePath("/overview");
+  redirect("/settings?message=" + encodeURIComponent("Avatar uploaded successfully."));
 }
 
 export async function deleteAccount(formData: FormData) {
@@ -197,8 +188,7 @@ export async function deleteAccount(formData: FormData) {
   const email = formData.get("email") as string;
 
   if (email !== user.email) {
-    await setToast("error", "Email does not match. Account not deleted.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("Email does not match. Account not deleted."));
   }
 
   // Delete storage files (avatar and documents)
@@ -225,11 +215,9 @@ export async function deleteAccount(formData: FormData) {
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
 
   if (deleteError) {
-    await setToast("error", "Failed to delete account. Please try again.");
-    redirect("/settings");
+    redirect("/settings?error=" + encodeURIComponent("Failed to delete account. Please try again."));
   }
 
   await supabase.auth.signOut();
-  await setToast("success", "Account deleted successfully.");
-  redirect("/login");
+  redirect("/login?message=" + encodeURIComponent("Account deleted successfully."));
 }

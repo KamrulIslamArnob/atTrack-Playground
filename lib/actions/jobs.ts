@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 
 export async function createJob(formData: FormData) {
@@ -8,20 +9,13 @@ export async function createJob(formData: FormData) {
 
   const title = formData.get("title") as string;
   const companyName = formData.get("company") as string;
-  const url = formData.get("url") as string | null;
+  const applicationUrl = formData.get("application_url") as string | null;
   const location = formData.get("location") as string | null;
-  const salary = formData.get("salary") as string | null;
+  const salaryRange = formData.get("salary_range") as string | null;
   const description = formData.get("description") as string | null;
-
-  let salaryMin: number | null = null;
-  let salaryMax: number | null = null;
-  if (salary) {
-    const parts = salary.split("-").map((s) => parseInt(s.trim(), 10));
-    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-      salaryMin = parts[0];
-      salaryMax = parts[1];
-    }
-  }
+  const employmentType = formData.get("employment_type") as string | null;
+  const deadline = formData.get("deadline") as string | null;
+  const source = formData.get("source") as string | null;
 
   const { data: company, error: companyError } = await supabase
     .from("companies")
@@ -30,7 +24,7 @@ export async function createJob(formData: FormData) {
     .single();
 
   if (companyError) {
-    redirect("/applications/new?error=" + encodeURIComponent("Failed to save company."));
+    redirect("/applications?error=" + encodeURIComponent("Failed to save company."));
   }
 
   const { data: job, error: jobError } = await supabase
@@ -39,17 +33,19 @@ export async function createJob(formData: FormData) {
       user_id: userId,
       company_id: company.id,
       title,
-      url: url || null,
+      application_url: applicationUrl || null,
       location: location || null,
-      salary_min: salaryMin,
-      salary_max: salaryMax,
+      salary_range: salaryRange || null,
       description: description || null,
+      employment_type: employmentType || null,
+      deadline: deadline || null,
+      source: source || null,
     })
     .select("id")
     .single();
 
   if (jobError) {
-    redirect("/applications/new?error=" + encodeURIComponent("Failed to save job."));
+    redirect("/applications?error=" + encodeURIComponent("Failed to save job."));
   }
 
   const { error: appError } = await supabase
@@ -61,8 +57,9 @@ export async function createJob(formData: FormData) {
     });
 
   if (appError) {
-    redirect("/applications/new?error=" + encodeURIComponent("Failed to create application."));
+    redirect("/applications?error=" + encodeURIComponent("Failed to create application."));
   }
 
+  revalidatePath("/applications");
   redirect("/applications/" + job.id);
 }
