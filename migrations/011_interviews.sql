@@ -1,4 +1,7 @@
--- Interviews table
+-- Drop existing interviews table (old schema with application_id)
+DROP TABLE IF EXISTS interviews CASCADE;
+
+-- Recreate with new schema (job_id based)
 CREATE TABLE interviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -24,7 +27,7 @@ CREATE INDEX idx_interviews_scheduled_at ON interviews(scheduled_at);
 
 -- Updated_at trigger
 CREATE TRIGGER set_interviews_updated_at BEFORE UPDATE ON interviews
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- RLS
 ALTER TABLE interviews ENABLE ROW LEVEL SECURITY;
