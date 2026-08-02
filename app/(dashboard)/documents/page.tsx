@@ -13,21 +13,23 @@ export default async function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-          <p className="text-sm text-muted-foreground">
-            Your resumes, cover letters, and other files.
-          </p>
+      <div className="-mx-6 border-b border-border pb-6">
+        <div className="flex items-center justify-between px-6">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+            <p className="text-sm text-muted-foreground">
+              Your resumes, cover letters, and other files.
+            </p>
+          </div>
+          <button className={buttonVariants({ size: "sm" })}>
+            <Upload className="mr-1 size-4" />
+            Upload
+          </button>
         </div>
-        <button className={buttonVariants({ size: "sm" })}>
-          <Upload className="mr-1 size-4" />
-          Upload
-        </button>
       </div>
 
       {documents && documents.length > 0 ? (
-        <div className="border rounded-lg">
+        <div className="rounded-4xl border border-border">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -57,7 +59,7 @@ export default async function DocumentsPage() {
           </table>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
           <FileText className="size-10 text-muted-foreground/50" />
           <p className="mt-4 text-sm text-muted-foreground">No documents uploaded yet.</p>
           <button className={buttonVariants({ size: "sm", className: "mt-4" })}>

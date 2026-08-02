@@ -34,7 +34,7 @@ const Command = React.forwardRef<HTMLDivElement, CommandProps>(
         <div
           ref={ref}
           className={cn(
-            "flex h-full w-full flex-col overflow-hidden rounded-4xl border border-border bg-card text-card-foreground shadow-md",
+            "flex w-full flex-col overflow-hidden rounded-4xl border border-border bg-card text-card-foreground shadow-md",
             className
           )}
           {...props}
@@ -52,7 +52,7 @@ const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps>(
     const { value, onValueChange } = useCommand();
 
     return (
-      <div className="flex items-center border-b border-border px-3">
+      <div className="flex items-center border-b border-border px-4">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -90,7 +90,7 @@ const CommandList = React.forwardRef<HTMLDivElement, CommandListProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden p-1", className)}
+      className={cn("max-h-[200px] overflow-y-auto overflow-x-hidden py-1", className)}
       {...props}
     />
   )
@@ -125,7 +125,7 @@ const CommandGroup = React.forwardRef<HTMLDivElement, CommandGroupProps>(
       {...props}
     >
       {heading && (
-        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+        <div className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">
           {heading}
         </div>
       )}
@@ -149,7 +149,7 @@ const CommandItem = React.forwardRef<HTMLDivElement, CommandItemProps>(
       <div
         ref={ref}
         className={cn(
-          "relative flex cursor-pointer select-none items-center rounded-4xl px-2 py-2 text-sm outline-none transition-colors",
+          "relative flex cursor-pointer select-none items-center rounded-4xl px-3 py-2 text-sm outline-none transition-colors",
           isSelected && "bg-primary/10 text-primary",
           "hover:bg-muted hover:text-foreground",
           className

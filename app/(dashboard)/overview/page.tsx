@@ -48,11 +48,13 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground">
-          What requires your attention right now.
-        </p>
+      <div className="-mx-6 border-b border-border pb-6">
+        <div className="px-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            What requires your attention right now.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -86,7 +88,7 @@ export default async function OverviewPage() {
                   <Link
                     key={app.id}
                     href={`/applications/${app.id}`}
-                    className="flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-muted/50"
+                    className="flex items-center justify-between rounded-4xl border border-border p-3 transition-colors hover:bg-muted/50"
                   >
                     <div>
                       <p className="text-sm font-medium">
@@ -121,7 +123,7 @@ export default async function OverviewPage() {
                 const app = interview.application as unknown as Record<string, unknown> | null;
                 const job = app?.job as unknown as Record<string, unknown> | null;
                 return (
-                  <div key={interview.id} className="rounded-md border p-3">
+                    <div key={interview.id} className="rounded-4xl border border-border p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">
                         {(job?.title as string) ?? "Interview"}

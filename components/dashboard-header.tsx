@@ -68,7 +68,7 @@ export function DashboardHeader() {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1.5 rounded-4xl border-[1px] border-solid border-border px-2.5 text-muted-foreground"
+            className="gap-1.5 rounded-4xl border border-border px-2.5 text-muted-foreground"
             onClick={() => setOpen(true)}
           >
             <Search className="size-4" />
@@ -84,8 +84,8 @@ export function DashboardHeader() {
       </header>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm pt-[20vh]">
-          <Command className="w-full max-w-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <Command className="w-full max-w-lg">
             <div className="flex items-center border-b border-border px-3">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -105,17 +105,19 @@ export function DashboardHeader() {
               <input
                 autoFocus
                 placeholder="Search..."
-                className="flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                className="flex h-10 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
               />
+              <kbd className="pointer-events-none ml-1 hidden select-none rounded-4xl border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground md:inline">
+                esc
+              </kbd>
               <button
                 onClick={() => setOpen(false)}
-                className="ml-2 flex size-6 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="ml-1 flex size-6 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
             </div>
             <CommandList>
-                <CommandEmpty>No results found.</CommandEmpty>
                 <CommandGroup heading="Navigation">
                   <CommandItem
                     value="overview"

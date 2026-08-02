@@ -13,11 +13,13 @@ export default async function InterviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Interviews</h1>
-        <p className="text-sm text-muted-foreground">
-          Your upcoming and past interviews.
-        </p>
+      <div className="-mx-6 border-b border-border pb-6">
+        <div className="px-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Interviews</h1>
+          <p className="text-sm text-muted-foreground">
+            Your upcoming and past interviews.
+          </p>
+        </div>
       </div>
 
       {interviews && interviews.length > 0 ? (
@@ -28,7 +30,7 @@ export default async function InterviewsPage() {
             const company = job?.company as unknown as Record<string, unknown> | null;
 
             return (
-              <div key={interview.id} className="flex items-center justify-between rounded-md border p-4">
+              <div key={interview.id} className="flex items-center justify-between rounded-4xl border border-border p-4">
                 <div className="flex items-center gap-4">
                   <Calendar className="size-5 text-muted-foreground" />
                   <div>
@@ -59,7 +61,7 @@ export default async function InterviewsPage() {
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">No interviews scheduled yet.</p>
         </div>
       )}

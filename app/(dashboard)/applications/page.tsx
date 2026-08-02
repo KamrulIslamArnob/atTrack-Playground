@@ -15,21 +15,23 @@ export default async function ApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
-          <p className="text-sm text-muted-foreground">
-            Track and manage your job applications.
-          </p>
+      <div className="-mx-6 border-b border-border pb-6">
+        <div className="flex items-center justify-between px-6">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
+            <p className="text-sm text-muted-foreground">
+              Track and manage your job applications.
+            </p>
+          </div>
+          <Link href="/applications/new" className={buttonVariants({ size: "sm" })}>
+            <Plus className="mr-1 size-4" />
+            Add Job
+          </Link>
         </div>
-        <Link href="/applications/new" className={buttonVariants({ size: "sm" })}>
-          <Plus className="mr-1 size-4" />
-          Add Job
-        </Link>
       </div>
 
       {applications && applications.length > 0 ? (
-        <div className="border rounded-lg">
+        <div className="rounded-4xl border border-border">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -72,7 +74,7 @@ export default async function ApplicationsPage() {
           </table>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">No applications yet.</p>
           <Link href="/applications/new" className={buttonVariants({ size: "sm", className: "mt-4" })}>
             <Plus className="mr-1 size-4" />
