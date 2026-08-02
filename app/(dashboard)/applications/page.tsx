@@ -1,8 +1,6 @@
-import { Suspense } from "react";
 import { getApplications } from "@/lib/actions/applications";
 import { ApplicationsGrid } from "@/components/applications-grid";
 import { AddJobDialog } from "@/components/add-job-dialog";
-import { Pagination } from "@/components/pagination";
 
 interface PageProps {
   searchParams: Promise<{
@@ -51,17 +49,10 @@ export default async function ApplicationsPage(props: PageProps) {
         initialSearch={search}
         initialStatus={status}
         initialSort={sort}
+        page={result.page}
+        totalPages={result.totalPages}
+        perPage={result.perPage}
       />
-
-      {result.totalPages > 1 && (
-        <Suspense>
-          <Pagination
-            page={result.page}
-            totalPages={result.totalPages}
-            perPage={result.perPage}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }

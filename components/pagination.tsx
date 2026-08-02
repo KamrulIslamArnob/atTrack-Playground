@@ -38,7 +38,7 @@ export function Pagination({ page, totalPages, perPage }: PaginationProps) {
   };
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="sticky bottom-0 flex items-center justify-between border-t border-border bg-background py-3">
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground">Per page</span>
         <Select

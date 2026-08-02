@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Application {
   id: string;
@@ -39,6 +39,9 @@ interface ApplicationsGridProps {
   initialSearch: string;
   initialStatus: string;
   initialSort: string;
+  page: number;
+  totalPages: number;
+  perPage: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -71,6 +74,9 @@ export function ApplicationsGrid({
   initialSearch,
   initialStatus,
   initialSort,
+  page,
+  totalPages,
+  perPage,
 }: ApplicationsGridProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -151,6 +157,55 @@ export function ApplicationsGrid({
             <span className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
           )}
         </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          <span className="text-xs text-muted-foreground">Per page</span>
+          <Select
+            value={String(perPage)}
+            onValueChange={(v) => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("perPage", v ?? "30");
+              params.set("page", "1");
+              router.push(`?${params.toString()}`);
+            }}
+          >
+            <SelectTrigger className="h-10 w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[20, 30, 50, 100].map((opt) => (
+                <SelectItem key={opt} value={String(opt)}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("page", String(Math.max(1, page - 1)));
+              router.push(`?${params.toString()}`);
+            }}
+            disabled={page <= 1}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("page", String(Math.min(totalPages, page + 1)));
+              router.push(`?${params.toString()}`);
+            }}
+            disabled={page >= totalPages}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Active filters display */}
