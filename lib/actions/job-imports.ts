@@ -2,7 +2,8 @@
 
 import { getUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { extractJobFromScreenshot } from "@/lib/ai/gemini";
+import { extractJobFromScreenshot } from "@/lib/ai/ai";
+import { createExtractionLogger } from "@/lib/ai/logger";
 import type { ExtractionResult } from "@/lib/ai/schema";
 
 const BUCKET = "job-imports";
@@ -48,6 +49,9 @@ export async function extractFromScreenshot(
     throw new Error("Unauthorized");
   }
 
+  const extractionLog = createExtractionLogger(screenshotId, userId);
+  extractionLog.start();
+
   const supabase = createAdminClient();
 
   const { data: fileData, error: downloadError } = await supabase.storage
@@ -55,14 +59,29 @@ export async function extractFromScreenshot(
     .download(screenshotId);
 
   if (downloadError) {
+    const { duration, error } = extractionLog.error(downloadError);
+    await saveLog(supabase, userId, screenshotId, "error", duration, undefined, error);
     throw new Error(`Download failed: ${downloadError.message}`);
   }
 
   const arrayBuffer = await fileData.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
 
-  const result = await extractJobFromScreenshot(base64);
-  return result;
+  try {
+    const result = await extractJobFromScreenshot(base64);
+    const extractedFields = Object.entries(result)
+      .filter(([, v]) => v !== null && v !== undefined)
+      .map(([k]) => k);
+
+    const { duration } = extractionLog.success(extractedFields);
+    await saveLog(supabase, userId, screenshotId, "success", duration, extractedFields);
+
+    return result;
+  } catch (err) {
+    const { duration, error } = extractionLog.error(err);
+    await saveLog(supabase, userId, screenshotId, "error", duration, undefined, error);
+    throw err;
+  }
 }
 
 export async function deleteScreenshot(screenshotId: string): Promise<void> {
@@ -80,5 +99,29 @@ export async function deleteScreenshot(screenshotId: string): Promise<void> {
 
   if (error) {
     console.error("Failed to delete screenshot:", error.message);
+  }
+}
+
+async function saveLog(
+  supabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  screenshotId: string,
+  status: "success" | "error",
+  durationMs: number,
+  extractedFields?: string[],
+  errorMessage?: string
+) {
+  const { error } = await supabase.from("ai_extraction_logs").insert({
+    user_id: userId,
+    screenshot_id: screenshotId,
+    status,
+    model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    duration_ms: durationMs,
+    extracted_fields: extractedFields ?? null,
+    error_message: errorMessage ?? null,
+  });
+
+  if (error) {
+    console.error("Failed to save extraction log:", error.message);
   }
 }

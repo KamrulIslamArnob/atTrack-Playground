@@ -82,6 +82,7 @@ export function ImportChoice() {
       )}
 
       <AddJobDialog
+        trigger={<span className="hidden" />}
         open={choice === "manual"}
         onOpenChange={(o) => {
           if (!o) {

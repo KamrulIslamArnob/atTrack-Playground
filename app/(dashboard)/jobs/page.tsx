@@ -40,7 +40,9 @@ export default async function ApplicationsPage(props: PageProps) {
               Track and manage your job applications.
             </p>
           </div>
-          <ImportChoice />
+          <div className="flex items-center">
+            <ImportChoice />
+          </div>
         </div>
       </div>
 

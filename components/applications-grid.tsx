@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AddJobDialog } from "@/components/add-job-dialog";
 import {
   Select,
   SelectContent,
@@ -355,7 +354,6 @@ export function ApplicationsGrid({
               ? "No applications match your filters."
               : "No applications yet."}
           </p>
-          {!hasActiveFilters && <AddJobDialog />}
         </div>
       )}
     </div>
