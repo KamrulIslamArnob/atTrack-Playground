@@ -4,6 +4,7 @@ import { signOut } from "@/lib/actions/auth";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { LogOut } from "lucide-react";
 
 export default async function SettingsPage() {
@@ -25,6 +26,8 @@ export default async function SettingsPage() {
           </p>
         </div>
       </div>
+
+      <Breadcrumbs />
 
       <Card>
         <CardContent className="pt-0">

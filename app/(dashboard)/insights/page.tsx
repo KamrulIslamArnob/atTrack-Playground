@@ -1,4 +1,5 @@
 import { getUser } from "@/lib/auth";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export default async function InsightsPage() {
   await getUser();
@@ -13,6 +14,8 @@ export default async function InsightsPage() {
           </p>
         </div>
       </div>
+
+      <Breadcrumbs />
 
       <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
         <p className="text-sm text-muted-foreground">

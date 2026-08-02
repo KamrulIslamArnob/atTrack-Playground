@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Plus } from "lucide-react";
 
 export default async function SavedJobsPage() {
@@ -29,6 +30,8 @@ export default async function SavedJobsPage() {
           </Link>
         </div>
       </div>
+
+      <Breadcrumbs />
 
       {jobs && jobs.length > 0 ? (
         <div className="rounded-4xl border border-border">

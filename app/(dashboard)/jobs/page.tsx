@@ -1,6 +1,7 @@
 import { getApplications } from "@/lib/actions/applications";
 import { ApplicationsGrid } from "@/components/applications-grid";
 import { AddJobDialog } from "@/components/add-job-dialog";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 interface PageProps {
   searchParams: Promise<{
@@ -42,6 +43,8 @@ export default async function ApplicationsPage(props: PageProps) {
           <AddJobDialog />
         </div>
       </div>
+
+      <Breadcrumbs />
 
       <ApplicationsGrid
         applications={result.applications}

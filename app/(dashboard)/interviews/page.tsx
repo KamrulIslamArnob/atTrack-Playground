@@ -1,5 +1,6 @@
 import { getUser } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Calendar, Clock } from "lucide-react";
 
 export default async function InterviewsPage() {
@@ -21,6 +22,8 @@ export default async function InterviewsPage() {
           </p>
         </div>
       </div>
+
+      <Breadcrumbs />
 
       {interviews && interviews.length > 0 ? (
         <div className="space-y-3">

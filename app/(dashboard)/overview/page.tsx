@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Briefcase, Bookmark, Calendar, Clock } from "lucide-react";
 
 export default async function OverviewPage() {
@@ -56,6 +57,8 @@ export default async function OverviewPage() {
           </p>
         </div>
       </div>
+
+      <Breadcrumbs />
 
       <div className="grid grid-cols-3 gap-4">
         {stats.map((stat) => (

@@ -1,5 +1,6 @@
 import { getUser } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { FileText, Upload } from "lucide-react";
 
 export default async function DocumentsPage() {
@@ -27,6 +28,8 @@ export default async function DocumentsPage() {
           </button>
         </div>
       </div>
+
+      <Breadcrumbs />
 
       {documents && documents.length > 0 ? (
         <div className="rounded-4xl border border-border">
