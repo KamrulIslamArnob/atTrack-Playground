@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, X, ChevronLeft, ChevronRight, MapPin, Building2, ExternalLink } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink } from "lucide-react";
 
 interface Application {
   id: string;
@@ -103,7 +103,7 @@ export function ApplicationsGrid({
   const updateParams = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value && value !== "all" && value !== "newest") {
+      if (value && value !== "all" && value !== "applied_newest") {
         params.set(key, value);
       } else {
         params.delete(key);
@@ -178,14 +178,17 @@ export function ApplicationsGrid({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Sort</span>
-          <Select value={sort} onValueChange={(v) => handleSortChange(v ?? "newest")}>
-            <SelectTrigger className="h-10 w-[130px]">
+          <Select value={sort} onValueChange={(v) => handleSortChange(v ?? "applied_newest")}>
+            <SelectTrigger className="h-10 w-[160px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest">Newest first</SelectItem>
-              <SelectItem value="oldest">Oldest first</SelectItem>
-              <SelectItem value="company">Company name</SelectItem>
+              <SelectItem value="applied_newest">Date applied ↓</SelectItem>
+              <SelectItem value="applied_oldest">Date applied ↑</SelectItem>
+              <SelectItem value="deadline_earliest">Deadline ↑</SelectItem>
+              <SelectItem value="deadline_latest">Deadline ↓</SelectItem>
+              <SelectItem value="company_az">Company A→Z</SelectItem>
+              <SelectItem value="company_za">Company Z→A</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -262,7 +265,7 @@ export function ApplicationsGrid({
           {initialSort !== "newest" && (
             <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
               {initialSort === "oldest" ? "Oldest first" : "By company"}
-              <button onClick={() => handleSortChange("newest")} className="ml-0.5">
+              <button onClick={() => handleSortChange("applied_newest")} className="ml-0.5">
                 <X className="size-3" />
               </button>
             </span>
@@ -331,11 +334,12 @@ export function ApplicationsGrid({
                     <span>{app.job.location}</span>
                   </div>
                 )}
-                {app.job?.salary_range && (
-                  <div className="text-sm text-muted-foreground">
-                    {app.job.salary_range}
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <DollarSign className="size-3.5 shrink-0" />
+                  <span className={app.job?.salary_range ? "" : "text-muted-foreground/50"}>
+                    {app.job?.salary_range || "Unspecified"}
+                  </span>
+                </div>
                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
                   {app.job?.employment_type && (
                     <span className="rounded-4xl bg-muted px-2 py-0.5">
@@ -351,12 +355,12 @@ export function ApplicationsGrid({
               </div>
 
               <div className="mt-3.5 flex items-center justify-between text-xs text-muted-foreground/60">
-                <span className={app.applied_at ? "" : "text-red-500 dark:text-red-400"}>
+                <span>
                   {app.applied_at
                     ? `Applied ${new Date(app.applied_at).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
                     : app.job?.deadline
                       ? `Deadline ${new Date(app.job.deadline).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
-                      : ""}
+                      : "No deadline"}
                 </span>
                 {app.job?.application_url && (
                   <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />

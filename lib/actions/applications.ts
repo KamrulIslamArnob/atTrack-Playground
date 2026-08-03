@@ -135,20 +135,6 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     query = query.in("job_id", matchingJobIds);
   }
 
-  // Apply sorting
-  switch (sort) {
-    case "oldest":
-      query = query.order("created_at", { ascending: true });
-      break;
-    case "company":
-      query = query.order("created_at", { ascending: false }); // We'll sort by company in memory since it's a nested relation
-      break;
-    case "newest":
-    default:
-      query = query.order("created_at", { ascending: false });
-      break;
-  }
-
   // Get total count for pagination (with same filters)
   let countQuery = supabase
     .from("applications")
@@ -164,11 +150,8 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
   const total = count ?? 0;
   const totalPages = Math.ceil(total / perPage);
 
-  // Apply pagination
-  const from = (page - 1) * perPage;
-  const to = from + perPage - 1;
-
-  const { data, error } = await query.range(from, to);
+  // Fetch all matching rows (no ordering - we sort in memory since some fields are nested)
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching applications:", error);
@@ -177,12 +160,52 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
 
   let applications = (data as unknown as Application[]) ?? [];
 
-  // Sort by company in memory if needed (nested relation sorting)
-  if (sort === "company") {
-    applications = [...applications].sort((a, b) =>
-      (a.job?.company?.name ?? "").localeCompare(b.job?.company?.name ?? "")
-    );
+  // Sort in memory (nested relations and mixed fields can't be sorted by Supabase)
+  switch (sort) {
+    case "applied_oldest":
+      applications = [...applications].sort((a, b) => {
+        const aTime = new Date(a.applied_at ?? a.created_at).getTime();
+        const bTime = new Date(b.applied_at ?? b.created_at).getTime();
+        return aTime - bTime;
+      });
+      break;
+    case "deadline_earliest":
+      applications = [...applications].sort((a, b) => {
+        const aTime = a.job?.deadline ? new Date(a.job.deadline).getTime() : Infinity;
+        const bTime = b.job?.deadline ? new Date(b.job.deadline).getTime() : Infinity;
+        return aTime - bTime;
+      });
+      break;
+    case "deadline_latest":
+      applications = [...applications].sort((a, b) => {
+        const aTime = a.job?.deadline ? new Date(a.job.deadline).getTime() : -Infinity;
+        const bTime = b.job?.deadline ? new Date(b.job.deadline).getTime() : -Infinity;
+        return bTime - aTime;
+      });
+      break;
+    case "company_az":
+      applications = [...applications].sort((a, b) =>
+        (a.job?.company?.name ?? "").localeCompare(b.job?.company?.name ?? "")
+      );
+      break;
+    case "company_za":
+      applications = [...applications].sort((a, b) =>
+        (b.job?.company?.name ?? "").localeCompare(a.job?.company?.name ?? "")
+      );
+      break;
+    case "applied_newest":
+    default:
+      applications = [...applications].sort((a, b) => {
+        const aTime = new Date(a.applied_at ?? a.created_at).getTime();
+        const bTime = new Date(b.applied_at ?? b.created_at).getTime();
+        return bTime - aTime;
+      });
+      break;
   }
+
+  // Paginate in memory
+  const from = (page - 1) * perPage;
+  applications = applications.slice(from, from + perPage);
 
   return {
     applications,
