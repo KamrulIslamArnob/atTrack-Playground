@@ -2,7 +2,7 @@
 
 import { getUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { extractJobFromScreenshot } from "@/lib/ai/ai";
+import { extractJobFromScreenshots } from "@/lib/ai/ai";
 import { createExtractionLogger } from "@/lib/ai/logger";
 import type { ExtractionResult } from "@/lib/ai/schema";
 
@@ -40,65 +40,78 @@ export async function uploadScreenshot(
   return { screenshotId, screenshotUrl: publicUrl };
 }
 
-export async function extractFromScreenshot(
-  screenshotId: string
+export async function extractFromScreenshots(
+  screenshotIds: string[]
 ): Promise<ExtractionResult> {
   const { userId } = await getUser();
   if (!userId) throw new Error("Unauthorized");
-  if (!screenshotId.startsWith(`${userId}/`)) {
-    throw new Error("Unauthorized");
+  if (screenshotIds.length === 0) throw new Error("No screenshots provided");
+
+  // Verify all screenshots belong to user
+  for (const id of screenshotIds) {
+    if (!id.startsWith(`${userId}/`)) {
+      throw new Error("Unauthorized");
+    }
   }
 
-  const extractionLog = createExtractionLogger(screenshotId, userId);
+  const extractionLog = createExtractionLogger(screenshotIds[0], userId);
   extractionLog.start();
 
   const supabase = createAdminClient();
 
-  const { data: fileData, error: downloadError } = await supabase.storage
-    .from(BUCKET)
-    .download(screenshotId);
+  // Download all screenshots and convert to base64
+  const imagesBase64: string[] = [];
 
-  if (downloadError) {
-    const { duration, error } = extractionLog.error(downloadError);
-    await saveLog(supabase, userId, screenshotId, "error", duration, undefined, error);
-    throw new Error(`Download failed: ${downloadError.message}`);
+  for (const screenshotId of screenshotIds) {
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from(BUCKET)
+      .download(screenshotId);
+
+    if (downloadError) {
+      const { duration, error } = extractionLog.error(downloadError);
+      await saveLog(supabase, userId, screenshotIds.join(","), "error", duration, undefined, error);
+      throw new Error(`Download failed: ${downloadError.message}`);
+    }
+
+    const arrayBuffer = await fileData.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    imagesBase64.push(base64);
   }
 
-  const arrayBuffer = await fileData.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-
   try {
-    const result = await extractJobFromScreenshot(base64);
+    const result = await extractJobFromScreenshots(imagesBase64);
     const extractedFields = Object.entries(result)
       .filter(([, v]) => v !== null && v !== undefined)
       .map(([k]) => k);
 
     const { duration } = extractionLog.success(extractedFields);
-    await saveLog(supabase, userId, screenshotId, "success", duration, extractedFields);
+    await saveLog(supabase, userId, screenshotIds.join(","), "success", duration, extractedFields);
 
     return result;
   } catch (err) {
     const { duration, error } = extractionLog.error(err);
-    await saveLog(supabase, userId, screenshotId, "error", duration, undefined, error);
+    await saveLog(supabase, userId, screenshotIds.join(","), "error", duration, undefined, error);
     throw err;
   }
 }
 
-export async function deleteScreenshot(screenshotId: string): Promise<void> {
+export async function deleteScreenshots(screenshotIds: string[]): Promise<void> {
   const { userId } = await getUser();
   if (!userId) throw new Error("Unauthorized");
-  if (!screenshotId.startsWith(`${userId}/`)) {
-    throw new Error("Unauthorized");
-  }
 
   const supabase = createAdminClient();
 
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .remove([screenshotId]);
+  // Verify ownership and filter
+  const ownedIds = screenshotIds.filter((id) => id.startsWith(`${userId}/`));
 
-  if (error) {
-    console.error("Failed to delete screenshot:", error.message);
+  if (ownedIds.length > 0) {
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .remove(ownedIds);
+
+    if (error) {
+      console.error("Failed to delete screenshots:", error.message);
+    }
   }
 }
 

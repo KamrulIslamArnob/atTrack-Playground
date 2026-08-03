@@ -100,6 +100,8 @@ export default async function JobDetailPage(props: {
   const companyName = str(company?.name);
   const companyLocation = str(company?.location);
   const notes = Array.isArray(job?.notes) ? (job.notes as Array<{ title: string; bullets: string[] }>) : [];
+  const matchScore = typeof job?.match_score === "number" ? job.match_score : null;
+  const matchReasoning = str(job?.match_reasoning);
 
   // Fetch MCQ results for this job
   const { data: mcqResults } = await supabase
@@ -152,11 +154,27 @@ export default async function JobDetailPage(props: {
                   )}
                 </p>
               </div>
-              <span
-                className={`shrink-0 rounded-4xl px-3 py-1.5 text-xs font-medium ${statusColors[jobStatus] ?? "bg-muted text-muted-foreground"}`}
-              >
-                {statusLabels[jobStatus] ?? jobStatus}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                {matchScore != null && (
+                  <span
+                    className={`rounded-4xl px-3 py-1.5 text-xs font-medium ${
+                      matchScore >= 80
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : matchScore >= 50
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    }`}
+                    title={matchReasoning || undefined}
+                  >
+                    {matchScore}% match
+                  </span>
+                )}
+                <span
+                  className={`shrink-0 rounded-4xl px-3 py-1.5 text-xs font-medium ${statusColors[jobStatus] ?? "bg-muted text-muted-foreground"}`}
+                >
+                  {statusLabels[jobStatus] ?? jobStatus}
+                </span>
+              </div>
             </div>
 
             {/* Job meta */}
@@ -319,6 +337,39 @@ export default async function JobDetailPage(props: {
               </div>
             </div>
           </div>
+
+          {/* Match score */}
+          {matchScore != null && (
+            <div className="rounded-4xl border border-border bg-card p-6">
+              <h2 className="font-heading text-lg font-semibold">Profile Match</h2>
+              <div className="mt-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex size-12 items-center justify-center rounded-4xl text-lg font-bold ${
+                      matchScore >= 80
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : matchScore >= 50
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    }`}
+                  >
+                    {matchScore}%
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Match Score</p>
+                    <p className="text-xs text-muted-foreground">
+                      Based on your resume vs. this job
+                    </p>
+                  </div>
+                </div>
+                {matchReasoning && (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {matchReasoning}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Job insights */}
           <div className="rounded-4xl border border-border bg-card p-6">

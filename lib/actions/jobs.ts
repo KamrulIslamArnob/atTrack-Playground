@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
+import { calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
 
 export async function createJob(formData: FormData) {
   const { supabase, userId } = await getUser();
@@ -79,6 +80,49 @@ export async function createJob(formData: FormData) {
 
   if (applicationError) {
     console.error("Failed to create application record:", applicationError);
+  }
+
+  // Calculate match score against user's resumes
+  try {
+    const { data: resumes } = await supabase
+      .from("documents")
+      .select("id, match_data")
+      .eq("user_id", userId)
+      .eq("type", "resume")
+      .not("match_data", "is", null);
+
+    if (resumes && resumes.length > 0) {
+      let bestScore = 0;
+      let bestReasoning = "";
+      let bestResumeId = "";
+
+      for (const resume of resumes) {
+        const result = await calculateMatchScore(
+          title,
+          description,
+          resume.match_data as unknown as ResumeMatchData
+        );
+
+        if (result.score > bestScore) {
+          bestScore = result.score;
+          bestReasoning = result.reasoning;
+          bestResumeId = resume.id;
+        }
+      }
+
+      if (bestResumeId) {
+        await supabase
+          .from("jobs")
+          .update({
+            match_score: bestScore,
+            matched_resume_id: bestResumeId,
+            match_reasoning: bestReasoning,
+          })
+          .eq("id", job.id);
+      }
+    }
+  } catch (e) {
+    console.error("Match scoring failed:", e);
   }
 
   revalidatePath("/jobs");

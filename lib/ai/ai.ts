@@ -6,27 +6,39 @@ const openrouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
-export async function extractJobFromScreenshot(
-  imageBase64: string
+export async function extractJobFromScreenshots(
+  imagesBase64: string[]
 ): Promise<ExtractionResult> {
+  if (imagesBase64.length === 0) {
+    throw new Error("No images provided");
+  }
+
+  const content: Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; imageUrl: { url: string } }
+  > = [
+    {
+      type: "text",
+      text: EXTRACTION_PROMPT + "\n\nNote: Multiple screenshots of the same job posting are provided. Analyze all images together to extract complete job information.",
+    },
+  ];
+
+  for (const base64 of imagesBase64) {
+    content.push({
+      type: "image_url",
+      imageUrl: {
+        url: `data:image/png;base64,${base64}`,
+      },
+    });
+  }
+
   const response = await openrouter.chat.send({
     chatRequest: {
       model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: EXTRACTION_PROMPT,
-            },
-            {
-              type: "image_url",
-              imageUrl: {
-                url: `data:image/png;base64,${imageBase64}`,
-              },
-            },
-          ],
+          content,
         },
       ],
     },

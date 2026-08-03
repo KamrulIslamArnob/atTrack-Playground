@@ -28,6 +28,8 @@ interface Application {
     work_location: string | null;
     deadline: string | null;
     application_url: string | null;
+    match_score: number | null;
+    match_reasoning: string | null;
     company: {
       name: string;
       location: string | null;
@@ -301,9 +303,25 @@ export function ApplicationsGrid({
                     <span>{app.job?.company?.name ?? "Unknown company"}</span>
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
-                  {statusLabels[app.job?.status ?? "saved"] ?? "Saved"}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  {app.job?.match_score != null && (
+                    <span
+                      className={`rounded-4xl px-2.5 py-1 text-[10px] font-medium ${
+                        app.job.match_score >= 80
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : app.job.match_score >= 50
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      }`}
+                      title={app.job.match_reasoning ?? undefined}
+                    >
+                      {app.job.match_score}% match
+                    </span>
+                  )}
+                  <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
+                    {statusLabels[app.job?.status ?? "saved"] ?? "Saved"}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-1 space-y-1.5">
