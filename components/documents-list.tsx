@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { deleteDocument, setDefaultDocument, getSignedUrl } from "@/lib/actions/documents";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { FileText, Download, Trash2, Star, ExternalLink } from "lucide-react";
+import { FileText, Download, Trash2, Star } from "lucide-react";
 import type { Document } from "@/lib/actions/documents";
 
 interface DocumentsListProps {
@@ -74,6 +75,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/50">
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground w-10">#</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Uploaded</th>
@@ -82,15 +84,23 @@ export function DocumentsList({ documents }: DocumentsListProps) {
           </tr>
         </thead>
         <tbody>
-          {documents.map((doc) => (
+          {documents.map((doc, index) => (
             <tr
               key={doc.id}
               className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
             >
+              <td className="px-4 py-3 text-muted-foreground text-xs">
+                {index + 1}
+              </td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <FileText className="size-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium">{doc.name}</span>
+                  <Link
+                    href={`/documents/${doc.id}`}
+                    className="font-medium hover:text-primary transition-colors"
+                  >
+                    {doc.name}
+                  </Link>
                   {doc.is_default && (
                     <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                       <Star className="size-2.5" />
