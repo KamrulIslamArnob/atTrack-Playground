@@ -28,6 +28,8 @@ interface Job {
   title: string;
   description: string | null;
   application_url: string | null;
+  application_email: string | null;
+  application_process: string | null;
   location: string | null;
   salary_range: string | null;
   employment_type: string | null;
@@ -169,6 +171,16 @@ export function EditJobDialog({ job }: EditJobDialogProps) {
               <div className="space-y-2">
                 <Label htmlFor="application_url">Job URL</Label>
                 <Input id="application_url" name="application_url" type="url" defaultValue={job.application_url ?? ""} placeholder="https://..." className="h-10" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="application_email">Application email</Label>
+                  <Input id="application_email" name="application_email" type="email" defaultValue={job.application_email ?? ""} placeholder="careers@example.com" className="h-10" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="application_process">How to apply</Label>
+                  <Input id="application_process" name="application_process" defaultValue={job.application_process ?? ""} placeholder="e.g. Send resume with subject..." className="h-10" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

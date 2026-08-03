@@ -1,11 +1,14 @@
 import { getUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { signOut } from "@/lib/actions/auth";
+import { getSmtpConfig } from "@/lib/actions/smtp";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
+import { AppPasswordGuide } from "@/components/settings/app-password-guide";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { LogOut } from "lucide-react";
+import { LogOut, Mail } from "lucide-react";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -15,6 +18,8 @@ export default async function SettingsPage() {
     .select("*")
     .eq("id", userId)
     .single();
+
+  const smtpConfig = await getSmtpConfig();
 
   return (
     <div className="space-y-6">
@@ -44,6 +49,18 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <ProfileForm profile={profile} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Mail className="size-4" />
+            Email (SMTP)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SmtpConfigCard config={smtpConfig} />
         </CardContent>
       </Card>
 
@@ -89,3 +106,9 @@ export default async function SettingsPage() {
     </div>
   );
 }
+
+function SmtpConfigCard({ config }: { config: Awaited<ReturnType<typeof getSmtpConfig>> }) {
+  return <SmtpConfigFormWrapper config={config} />;
+}
+
+import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";

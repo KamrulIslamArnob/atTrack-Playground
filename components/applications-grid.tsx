@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink, Mail } from "lucide-react";
 
 interface Application {
   id: string;
@@ -28,6 +28,7 @@ interface Application {
     work_location: string | null;
     deadline: string | null;
     application_url: string | null;
+    application_email: string | null;
     match_score: number | null;
     match_reasoning: string | null;
     company: {
@@ -262,9 +263,9 @@ export function ApplicationsGrid({
               </button>
             </span>
           )}
-          {initialSort !== "newest" && (
+          {initialSort !== "applied_newest" && (
             <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              {initialSort === "oldest" ? "Oldest first" : "By company"}
+              {initialSort === "applied_oldest" ? "Oldest applied" : initialSort === "deadline_earliest" ? "Deadline ↑" : initialSort === "deadline_latest" ? "Deadline ↓" : initialSort === "company_az" ? "Company A→Z" : initialSort === "company_za" ? "Company Z→A" : initialSort}
               <button onClick={() => handleSortChange("applied_newest")} className="ml-0.5">
                 <X className="size-3" />
               </button>
@@ -364,6 +365,9 @@ export function ApplicationsGrid({
                 </span>
                 {app.job?.application_url && (
                   <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                )}
+                {!app.job?.application_url && app.job?.application_email && (
+                  <Mail className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
                 )}
               </div>
             </Link>

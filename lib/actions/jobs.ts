@@ -10,6 +10,8 @@ export async function createJob(formData: FormData) {
   const title = formData.get("title") as string;
   const companyName = formData.get("company") as string;
   const applicationUrl = formData.get("application_url") as string | null;
+  const applicationEmail = formData.get("application_email") as string | null;
+  const applicationProcess = formData.get("application_process") as string | null;
   const location = formData.get("location") as string | null;
   const salaryRange = formData.get("salary_range") as string | null;
   const description = formData.get("description") as string | null;
@@ -53,6 +55,8 @@ export async function createJob(formData: FormData) {
       company_id: companyId,
       title,
       application_url: applicationUrl || null,
+      application_email: applicationEmail || null,
+      application_process: applicationProcess || null,
       location: location || null,
       salary_range: salaryRange || null,
       description: description || null,
@@ -143,6 +147,8 @@ export async function updateJob(formData: FormData) {
   const title = formData.get("title") as string;
   const companyName = formData.get("company") as string;
   const applicationUrl = formData.get("application_url") as string | null;
+  const applicationEmail = formData.get("application_email") as string | null;
+  const applicationProcess = formData.get("application_process") as string | null;
   const location = formData.get("location") as string | null;
   const salaryRange = formData.get("salary_range") as string | null;
   const description = formData.get("description") as string | null;
@@ -185,6 +191,8 @@ export async function updateJob(formData: FormData) {
       company_id: companyId,
       title,
       application_url: applicationUrl || null,
+      application_email: applicationEmail || null,
+      application_process: applicationProcess || null,
       location: location || null,
       salary_range: salaryRange || null,
       description: description || null,

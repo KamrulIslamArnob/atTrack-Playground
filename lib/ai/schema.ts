@@ -20,6 +20,8 @@ export const extractionSchema = z.object({
   work_location: z.enum(["remote", "onsite", "hybrid"]).nullable(),
   description: z.string().nullable(),
   application_url: z.string().url().nullable(),
+  application_email: z.string().email().nullable(),
+  application_process: z.string().nullable(),
   source: z.string().nullable(),
   deadline: z.string().nullable(),
   notes: z

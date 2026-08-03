@@ -171,6 +171,16 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="application_email">Application email</Label>
+                  <Input id="application_email" name="application_email" type="email" placeholder="careers@example.com" defaultValue={initialData?.application_email ?? ""} className="h-10" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="application_process">How to apply</Label>
+                  <Input id="application_process" name="application_process" placeholder="e.g. Send resume with subject..." defaultValue={initialData?.application_process ?? ""} className="h-10" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
                   <Input id="location" name="location" placeholder="e.g. San Francisco, CA" defaultValue={initialData?.location ?? ""} className="h-10" />
                 </div>

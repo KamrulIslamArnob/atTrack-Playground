@@ -32,6 +32,7 @@ export interface Application {
     work_location: string | null;
     deadline: string | null;
     application_url: string | null;
+    application_email: string | null;
     match_score: number | null;
     match_reasoning: string | null;
     company: {
@@ -69,6 +70,7 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
         work_location,
         deadline,
         application_url,
+        application_email,
         match_score,
         match_reasoning,
         company:companies(name, location)

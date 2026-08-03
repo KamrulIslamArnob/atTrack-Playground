@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
+import { isSmtpConfigured } from "@/lib/actions/smtp";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EditJobDialog } from "@/components/edit-job-dialog";
 import { PracticeButton } from "@/components/practice-button";
 import { MCQHistory } from "@/components/mcq-history";
+import { EmailApplyButton } from "@/components/email-apply-button";
 import {
   ArrowLeft,
   ExternalLink,
@@ -19,6 +21,7 @@ import {
   Globe,
   FileText,
   StickyNote,
+  Mail,
 } from "lucide-react";
 
 const statusLabels: Record<string, string> = {
@@ -95,6 +98,8 @@ export default async function JobDetailPage(props: {
   const jobDeadline = str(job?.deadline);
   const jobDescription = str(job?.description);
   const jobUrl = str(job?.application_url);
+  const jobEmail = str(job?.application_email);
+  const jobProcess = str(job?.application_process);
   const jobCreatedAt = str(job?.created_at);
   const jobStatus = str(job?.status) || "saved";
   const companyName = str(company?.name);
@@ -117,6 +122,8 @@ export default async function JobDetailPage(props: {
   const bestScore = totalTests > 0
     ? Math.round(Math.max(...mcqResults!.map(r => r.score / r.total)) * 100)
     : null;
+
+  const smtpReady = await isSmtpConfigured();
 
   return (
     <div className="space-y-6">
@@ -243,11 +250,16 @@ export default async function JobDetailPage(props: {
                   <ExternalLink className="size-3.5" />
                 </a>
               )}
+              {jobEmail && (
+                <EmailApplyButton jobId={id} isSmtpConfigured={smtpReady} />
+              )}
               <EditJobDialog job={{
                 id,
                 title: jobTitle,
                 description: str(job?.description) || null,
                 application_url: jobUrl || null,
+                application_email: jobEmail || null,
+                application_process: jobProcess || null,
                 location: jobLocation || null,
                 salary_range: jobSalaryRange || null,
                 employment_type: jobEmploymentType || null,
@@ -274,6 +286,34 @@ export default async function JobDetailPage(props: {
               <h2 className="font-heading text-lg font-semibold">Job Description</h2>
               <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                 {jobDescription}
+              </div>
+            </div>
+          )}
+
+          {/* Application process */}
+          {(jobEmail || jobProcess) && (
+            <div className="rounded-4xl border border-border bg-card p-6">
+              <h2 className="font-heading text-lg font-semibold">How to apply</h2>
+              <div className="mt-4 space-y-3">
+                {jobEmail && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-4xl bg-muted">
+                      <Mail className="size-5 text-muted-foreground/50" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Send application to</p>
+                      <a href={`mailto:${jobEmail}`} className="text-sm font-medium hover:underline">
+                        {jobEmail}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {jobProcess && (
+                  <div className="rounded-4xl bg-muted/50 p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Application process</p>
+                    <p className="whitespace-pre-wrap text-sm">{jobProcess}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

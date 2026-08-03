@@ -8,6 +8,8 @@ export interface JobFormData {
   title: string;
   company: string;
   application_url: string | null;
+  application_email: string | null;
+  application_process: string | null;
   location: string | null;
   salary_range: string | null;
   employment_type: string | null;
@@ -28,6 +30,8 @@ export interface ExtractionResult {
   work_location: string | null;
   description: string | null;
   application_url: string | null;
+  application_email: string | null;
+  application_process: string | null;
   source: string | null;
   deadline: string | null;
   notes: Array<{ title: string; bullets: string[] }> | null;
