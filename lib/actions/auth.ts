@@ -191,28 +191,53 @@ export async function deleteAccount(formData: FormData) {
     redirect("/settings?error=" + encodeURIComponent("Email does not match. Account not deleted."));
   }
 
-  // Delete storage files (avatar and documents)
-  await supabase.storage.from("avatar").remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`, `${user.id}/avatar.gif`]);
-  await supabase.storage.from("documents").list(user.id).then(({ data }) => {
-    if (data) {
-      const files = data.map((f) => `${user.id}/${f.name}`);
-      supabase.storage.from("documents").remove(files);
-    }
-  });
+  const userId = user.id;
+
+  // Delete storage files (all buckets)
+  // Avatar
+  await supabase.storage.from("avatar").remove([
+    `${userId}/avatar.jpg`,
+    `${userId}/avatar.png`,
+    `${userId}/avatar.gif`,
+    `${userId}/avatar.webp`,
+    `${userId}/avatar.jpeg`,
+  ]);
+
+  // Documents (resumes, etc.)
+  const { data: docFiles } = await supabase.storage.from("documents").list(userId);
+  if (docFiles && docFiles.length > 0) {
+    await supabase.storage.from("documents").remove(docFiles.map((f) => `${userId}/${f.name}`));
+  }
+
+  // Job imports (screenshots)
+  const { data: importFiles } = await supabase.storage.from("job-imports").list(userId);
+  if (importFiles && importFiles.length > 0) {
+    await supabase.storage.from("job-imports").remove(importFiles.map((f) => `${userId}/${f.name}`));
+  }
 
   // Delete database records (order matters due to foreign keys)
-  await supabase.from("interviews").delete().eq("user_id", user.id);
-  await supabase.from("notes").delete().eq("user_id", user.id);
-  await supabase.from("timeline_events").delete().eq("user_id", user.id);
-  await supabase.from("documents").delete().eq("user_id", user.id);
-  await supabase.from("applications").delete().eq("user_id", user.id);
-  await supabase.from("jobs").delete().eq("user_id", user.id);
-  await supabase.from("companies").delete().eq("user_id", user.id);
-  await supabase.from("profiles").delete().eq("id", user.id);
+  // Child tables first (depend on jobs)
+  await supabase.from("mcq_results").delete().eq("user_id", userId);
+  await supabase.from("interviews").delete().eq("user_id", userId);
+  await supabase.from("documents").delete().eq("user_id", userId);
+  await supabase.from("applications").delete().eq("user_id", userId);
+
+  // Independent tables
+  await supabase.from("timeline_events").delete().eq("user_id", userId);
+  await supabase.from("notes").delete().eq("user_id", userId);
+  await supabase.from("ai_extraction_logs").delete().eq("user_id", userId);
+  await supabase.from("smtp_config").delete().eq("user_id", userId);
+
+  // Parent tables
+  await supabase.from("jobs").delete().eq("user_id", userId);
+  await supabase.from("companies").delete().eq("user_id", userId);
+
+  // Profile (auth user record)
+  await supabase.from("profiles").delete().eq("id", userId);
 
   // Delete auth user using secret key (bypasses RLS)
   const admin = createAdminClient();
-  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
+  const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
   if (deleteError) {
     redirect("/settings?error=" + encodeURIComponent("Failed to delete account. Please try again."));

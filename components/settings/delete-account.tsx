@@ -1,12 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { deleteAccount } from "@/lib/actions/auth";
 
 interface DeleteAccountProps {
   email: string;
 }
+
+const dataItems = [
+  "Profile and avatar",
+  "All jobs and applications",
+  "Companies",
+  "Interviews and MCQ results",
+  "Documents and resumes",
+  "SMTP configuration",
+  "AI extraction logs",
+  "Timeline events and notes",
+  "All uploaded files",
+  "Auth account",
+];
 
 export function DeleteAccount({ email }: DeleteAccountProps) {
   const [open, setOpen] = useState(false);
@@ -36,7 +49,7 @@ export function DeleteAccount({ email }: DeleteAccountProps) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-4xl bg-card p-6 shadow-md ring-1 ring-foreground/5">
+          <div className="w-full max-w-md rounded-4xl bg-card p-6 shadow-md ring-1 ring-foreground/5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
                 <AlertTriangle className="size-5 text-destructive" />
@@ -52,11 +65,19 @@ export function DeleteAccount({ email }: DeleteAccountProps) {
             </div>
 
             <p className="mt-4 text-sm text-muted-foreground">
-              This will permanently delete your account, including all your data,
-              applications, documents, and profile information.
+              This will permanently delete your account and all associated data:
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            <ul className="mt-3 space-y-1.5">
+              {dataItems.map((item) => (
+                <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Trash2 className="size-3.5 shrink-0 text-destructive/60" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div className="space-y-3">
                 <label htmlFor="confirm-email" className="text-sm font-medium">
                   Type <span className="inline-flex items-center rounded-4xl bg-muted px-2 py-0.5 font-mono text-sm text-foreground">{email}</span> to confirm
@@ -92,7 +113,7 @@ export function DeleteAccount({ email }: DeleteAccountProps) {
                   ) : (
                     <AlertTriangle className="size-4" />
                   )}
-                  Delete account
+                  Delete everything
                 </button>
               </div>
             </form>
