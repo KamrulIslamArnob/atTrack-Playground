@@ -7,8 +7,46 @@ const openrouter = new OpenRouter({
 
 export const resumeMatchDataSchema = z.object({
   skills: z.array(z.string()),
-  experience: z.array(z.string()),
-  education: z.array(z.string()),
+  experience: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        company: z.string().optional(),
+        role: z.string().optional(),
+        title: z.string().optional(),
+        duration: z.string().optional(),
+        description: z.string().optional(),
+      }).passthrough(),
+    ])
+  ).transform((items) =>
+    items.map((item) =>
+      typeof item === "string"
+        ? item
+        : [item.role || item.title, item.company, item.duration]
+            .filter(Boolean)
+            .join(" at ") || item.description || JSON.stringify(item)
+    )
+  ),
+  education: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        school: z.string().optional(),
+        institution: z.string().optional(),
+        degree: z.string().optional(),
+        field: z.string().optional(),
+        duration: z.string().optional(),
+      }).passthrough(),
+    ])
+  ).transform((items) =>
+    items.map((item) =>
+      typeof item === "string"
+        ? item
+        : [item.degree, item.field, item.school || item.institution, item.duration]
+            .filter(Boolean)
+            .join(" — ") || JSON.stringify(item)
+    )
+  ),
   summary: z.string(),
 });
 
@@ -39,10 +77,12 @@ export async function extractResumeContent(
         {
           role: "user",
           content: `Extract structured information from this resume text. Return JSON with:
-- skills: array of technical and soft skills mentioned
-- experience: array of work experience entries (job title + company + brief description)
-- education: array of education entries (degree + institution)
+- skills: array of strings (technical and soft skills mentioned)
+- experience: array of strings describing each role (e.g. "Software Engineer at Google, 2020-2023")
+- education: array of strings describing each entry (e.g. "BS Computer Science — MIT, 2016-2020")
 - summary: 2-3 sentence professional summary
+
+IMPORTANT: All array items must be plain strings, not objects.
 
 Resume text:
 ${pdfText.slice(0, 8000)}`,
@@ -66,6 +106,7 @@ ${pdfText.slice(0, 8000)}`,
   const validated = resumeMatchDataSchema.safeParse(parsed);
 
   if (!validated.success) {
+    console.error("[ResumeExtract] Validation error:", validated.error.flatten());
     throw new Error(`Invalid resume extraction: ${validated.error.message}`);
   }
 

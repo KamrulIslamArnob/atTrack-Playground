@@ -84,12 +84,14 @@ export async function createJob(formData: FormData) {
 
   // Calculate match score against user's resumes
   try {
-    const { data: resumes } = await supabase
+    const { data: resumes, error: resumeError } = await supabase
       .from("documents")
       .select("id, match_data")
       .eq("user_id", userId)
       .eq("type", "resume")
       .not("match_data", "is", null);
+
+    console.log("[MatchScore] Resumes found:", resumes?.length ?? 0, "Error:", resumeError);
 
     if (resumes && resumes.length > 0) {
       let bestScore = 0;
@@ -97,11 +99,13 @@ export async function createJob(formData: FormData) {
       let bestResumeId = "";
 
       for (const resume of resumes) {
+        console.log("[MatchScore] Calculating for resume:", resume.id);
         const result = await calculateMatchScore(
           title,
           description,
           resume.match_data as unknown as ResumeMatchData
         );
+        console.log("[MatchScore] Score:", result.score, "Reasoning:", result.reasoning);
 
         if (result.score > bestScore) {
           bestScore = result.score;
@@ -111,6 +115,7 @@ export async function createJob(formData: FormData) {
       }
 
       if (bestResumeId) {
+        console.log("[MatchScore] Updating job", job.id, "with score:", bestScore);
         await supabase
           .from("jobs")
           .update({
@@ -120,9 +125,11 @@ export async function createJob(formData: FormData) {
           })
           .eq("id", job.id);
       }
+    } else {
+      console.log("[MatchScore] No resumes with match_data found");
     }
   } catch (e) {
-    console.error("Match scoring failed:", e);
+    console.error("[MatchScore] Match scoring failed:", e);
   }
 
   revalidatePath("/jobs");
