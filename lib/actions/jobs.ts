@@ -74,18 +74,6 @@ export async function createJob(formData: FormData) {
     throw new Error("Failed to save job.");
   }
 
-  const { error: applicationError } = await supabase
-    .from("applications")
-    .insert({
-      user_id: userId,
-      job_id: job.id,
-      status,
-    });
-
-  if (applicationError) {
-    console.error("Failed to create application record:", applicationError);
-  }
-
   // Calculate match score against user's resumes
   try {
     const { data: resumes, error: resumeError } = await supabase
@@ -95,21 +83,17 @@ export async function createJob(formData: FormData) {
       .eq("type", "resume")
       .not("match_data", "is", null);
 
-    console.log("[MatchScore] Resumes found:", resumes?.length ?? 0, "Error:", resumeError);
-
     if (resumes && resumes.length > 0) {
       let bestScore = 0;
       let bestReasoning = "";
       let bestResumeId = "";
 
       for (const resume of resumes) {
-        console.log("[MatchScore] Calculating for resume:", resume.id);
         const result = await calculateMatchScore(
           title,
           description,
           resume.match_data as unknown as ResumeMatchData
         );
-        console.log("[MatchScore] Score:", result.score, "Reasoning:", result.reasoning);
 
         if (result.score > bestScore) {
           bestScore = result.score;
@@ -119,7 +103,6 @@ export async function createJob(formData: FormData) {
       }
 
       if (bestResumeId) {
-        console.log("[MatchScore] Updating job", job.id, "with score:", bestScore);
         await supabase
           .from("jobs")
           .update({
@@ -129,8 +112,6 @@ export async function createJob(formData: FormData) {
           })
           .eq("id", job.id);
       }
-    } else {
-      console.log("[MatchScore] No resumes with match_data found");
     }
   } catch (e) {
     console.error("[MatchScore] Match scoring failed:", e);
@@ -210,32 +191,85 @@ export async function updateJob(formData: FormData) {
     throw new Error("Failed to update job.");
   }
 
-  // Sync applications table status
-  await supabase
+  revalidatePath("/jobs");
+  revalidatePath("/jobs/" + jobId);
+  revalidatePath("/interviews");
+}
+
+export async function createApplication(formData: FormData) {
+  const { supabase, userId } = await getUser();
+
+  const jobId = formData.get("job_id") as string;
+  const resumeId = formData.get("resume_id") as string | null;
+  const resumeName = formData.get("resume_name") as string | null;
+  const notes = formData.get("notes") as string | null;
+
+  // Check if application already exists for this job
+  const { data: existing } = await supabase
     .from("applications")
-    .update({ status })
+    .select("id")
     .eq("job_id", jobId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .single();
 
-  // Auto-create interview when status changes to "interview"
-  if (status === "interview") {
-    const { data: existingInterview } = await supabase
-      .from("interviews")
-      .select("id")
-      .eq("job_id", jobId)
-      .eq("user_id", userId)
-      .single();
+  if (existing) {
+    throw new Error("Application already exists for this job.");
+  }
 
-    if (!existingInterview) {
-      await supabase.from("interviews").insert({
-        user_id: userId,
-        job_id: jobId,
-        status: "scheduled",
-      });
-    }
+  const { data: application, error } = await supabase
+    .from("applications")
+    .insert({
+      user_id: userId,
+      job_id: jobId,
+      status: "submitted",
+      applied_at: new Date().toISOString(),
+      resume_id: resumeId || null,
+      resume_name: resumeName || null,
+      notes: notes || null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error("Failed to create application.");
   }
 
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
-  revalidatePath("/interviews");
+  return { applicationId: application.id };
+}
+
+export async function updateApplicationStatus(formData: FormData) {
+  const { supabase, userId } = await getUser();
+
+  const applicationId = formData.get("application_id") as string;
+  const status = formData.get("status") as string;
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ status })
+    .eq("id", applicationId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error("Failed to update application status.");
+  }
+
+  revalidatePath("/jobs");
+}
+
+export async function deleteApplication(applicationId: string) {
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase
+    .from("applications")
+    .delete()
+    .eq("id", applicationId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error("Failed to delete application.");
+  }
+
+  revalidatePath("/jobs");
 }

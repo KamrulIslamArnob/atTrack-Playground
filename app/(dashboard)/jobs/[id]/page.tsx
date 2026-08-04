@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { isSmtpConfigured } from "@/lib/actions/smtp";
 import { buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EditJobDialog } from "@/components/edit-job-dialog";
 import { PracticeButton } from "@/components/practice-button";
@@ -22,31 +21,13 @@ import {
   FileText,
   StickyNote,
   Mail,
+  Plus,
+  CheckCircle2,
+  XCircle,
+  Clock3,
+  Send,
 } from "lucide-react";
-
-const statusLabels: Record<string, string> = {
-  saved: "Saved",
-  interested: "Interested",
-  preparing: "Preparing",
-  applied: "Applied",
-  interview: "Interview",
-  offer: "Offer",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
-};
-
-const statusColors: Record<string, string> = {
-  saved: "bg-muted text-muted-foreground",
-  interested: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  preparing: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  applied: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-  interview: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  offer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  withdrawn: "bg-muted text-muted-foreground",
-};
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from "@/lib/types/job";
 
 export default async function JobDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -54,19 +35,35 @@ export default async function JobDetailPage(props: {
   const { id } = await props.params;
   const { supabase, userId } = await getUser();
 
-  const { data: application } = await supabase
-    .from("applications")
-    .select("*, job:jobs(*, company:companies(*))")
-    .eq("job_id", id)
+  // Fetch job directly from jobs table
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("*, company:companies(*)")
+    .eq("id", id)
     .eq("user_id", userId)
     .single();
 
-  if (!application) {
+  if (!job) {
     redirect("/jobs");
   }
 
-  const job = application.job as Record<string, unknown> | null;
-  const company = job?.company as Record<string, unknown> | null;
+  const company = (Array.isArray(job.company) ? job.company[0] : job.company) as Record<string, unknown> | null;
+
+  // Fetch applications for this job
+  const { data: applications } = await supabase
+    .from("applications")
+    .select("*")
+    .eq("job_id", id)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  // Fetch application emails for this job
+  const { data: emailHistory } = await supabase
+    .from("application_emails")
+    .select("*")
+    .eq("job_id", id)
+    .eq("user_id", userId)
+    .order("sent_at", { ascending: false });
 
   const formatDate = (date: string | null) => {
     if (!date) return null;
@@ -88,25 +85,24 @@ export default async function JobDetailPage(props: {
   };
 
   const str = (v: unknown): string => (typeof v === "string" ? v : "");
-  const addedLabel = daysAgo(str(job?.created_at));
-  const jobTitle = str(job?.title);
-  const jobLocation = str(job?.location);
-  const jobWorkLocation = str(job?.work_location);
-  const jobEmploymentType = str(job?.employment_type);
-  const jobSalaryRange = str(job?.salary_range);
-  const jobSource = str(job?.source);
-  const jobDeadline = str(job?.deadline);
-  const jobDescription = str(job?.description);
-  const jobUrl = str(job?.application_url);
-  const jobEmail = str(job?.application_email);
-  const jobProcess = str(job?.application_process);
-  const jobCreatedAt = str(job?.created_at);
-  const jobStatus = str(job?.status) || "saved";
+  const addedLabel = daysAgo(str(job.created_at));
+  const jobTitle = str(job.title);
+  const jobLocation = str(job.location);
+  const jobWorkLocation = str(job.work_location);
+  const jobEmploymentType = str(job.employment_type);
+  const jobSalaryRange = str(job.salary_range);
+  const jobSource = str(job.source);
+  const jobDeadline = str(job.deadline);
+  const jobDescription = str(job.description);
+  const jobUrl = str(job.application_url);
+  const jobEmail = str(job.application_email);
+  const jobProcess = str(job.application_process);
+  const jobStatus = str(job.status) || "saved";
   const companyName = str(company?.name);
   const companyLocation = str(company?.location);
-  const notes = Array.isArray(job?.notes) ? (job.notes as Array<{ title: string; bullets: string[] }>) : [];
-  const matchScore = typeof job?.match_score === "number" ? job.match_score : null;
-  const matchReasoning = str(job?.match_reasoning);
+  const notes = Array.isArray(job.notes) ? (job.notes as Array<{ title: string; bullets: string[] }>) : [];
+  const matchScore = typeof job.match_score === "number" ? job.match_score : null;
+  const matchReasoning = str(job.match_reasoning);
 
   // Fetch MCQ results for this job
   const { data: mcqResults } = await supabase
@@ -177,9 +173,9 @@ export default async function JobDetailPage(props: {
                   </span>
                 )}
                 <span
-                  className={`shrink-0 rounded-4xl px-3 py-1.5 text-xs font-medium ${statusColors[jobStatus] ?? "bg-muted text-muted-foreground"}`}
+                  className={`shrink-0 rounded-4xl px-3 py-1.5 text-xs font-medium ${JOB_STATUS_COLORS[jobStatus as keyof typeof JOB_STATUS_COLORS] ?? "bg-muted text-muted-foreground"}`}
                 >
-                  {statusLabels[jobStatus] ?? jobStatus}
+                  {JOB_STATUS_LABELS[jobStatus as keyof typeof JOB_STATUS_LABELS] ?? jobStatus}
                 </span>
               </div>
             </div>
@@ -214,12 +210,6 @@ export default async function JobDetailPage(props: {
 
             {/* Dates */}
             <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground/70">
-              {application.applied_at && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="size-3.5" />
-                  Applied {formatDate(application.applied_at)}
-                </span>
-              )}
               {jobDeadline && (
                 <span className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
                   <Clock className="size-3.5" />
@@ -256,7 +246,7 @@ export default async function JobDetailPage(props: {
               <EditJobDialog job={{
                 id,
                 title: jobTitle,
-                description: str(job?.description) || null,
+                description: str(job.description) || null,
                 application_url: jobUrl || null,
                 application_email: jobEmail || null,
                 application_process: jobProcess || null,
@@ -267,10 +257,10 @@ export default async function JobDetailPage(props: {
                 deadline: jobDeadline || null,
                 source: jobSource || null,
                 status: jobStatus,
-                notes: Array.isArray(job?.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
+                notes: Array.isArray(job.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
                 company: companyName ? { name: companyName } : null,
               }} />
-              {jobStatus === "interview" && <PracticeButton jobId={id} />}
+              {jobStatus === "preparing" && <PracticeButton jobId={id} />}
             </div>
           </div>
         </div>
@@ -314,6 +304,97 @@ export default async function JobDetailPage(props: {
                     <p className="whitespace-pre-wrap text-sm">{jobProcess}</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Applications section */}
+          <div className="rounded-4xl border border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-heading text-lg font-semibold">Applications</h2>
+              <span className="text-xs text-muted-foreground">{applications?.length ?? 0} total</span>
+            </div>
+            {applications && applications.length > 0 ? (
+              <div className="space-y-3">
+                {applications.map((app) => (
+                  <div key={app.id} className="flex items-center justify-between rounded-4xl border border-border p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex size-9 items-center justify-center rounded-4xl ${
+                        app.status === "submitted" ? "bg-violet-500/10" :
+                        app.status === "interview" ? "bg-emerald-500/10" :
+                        app.status === "offer" ? "bg-emerald-500/10" :
+                        app.status === "rejected" ? "bg-red-500/10" :
+                        "bg-muted"
+                      }`}>
+                        {app.status === "submitted" ? <Send className="size-4 text-violet-500" /> :
+                         app.status === "interview" ? <CheckCircle2 className="size-4 text-emerald-500" /> :
+                         app.status === "offer" ? <CheckCircle2 className="size-4 text-emerald-500" /> :
+                         app.status === "rejected" ? <XCircle className="size-4 text-red-500" /> :
+                         <Clock3 className="size-4 text-muted-foreground" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium capitalize">{APPLICATION_STATUS_LABELS[app.status as keyof typeof APPLICATION_STATUS_LABELS] ?? app.status}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {app.applied_at
+                            ? `Applied ${formatDate(app.applied_at)}`
+                            : `Created ${formatDate(app.created_at)}`}
+                        </p>
+                      </div>
+                    </div>
+                    {app.resume_name && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <FileText className="size-3" />
+                        {app.resume_name}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-sm text-muted-foreground mb-3">No applications yet</p>
+                <p className="text-xs text-muted-foreground/70">Apply to this job to track your application status</p>
+              </div>
+            )}
+          </div>
+
+          {/* Email history */}
+          {emailHistory && emailHistory.length > 0 && (
+            <div className="rounded-4xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-heading text-lg font-semibold">Email History</h2>
+                <span className="text-xs text-muted-foreground">{emailHistory.length} sent</span>
+              </div>
+              <div className="space-y-3">
+                {emailHistory.map((email) => (
+                  <div key={email.id} className="rounded-4xl border border-border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{email.subject}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          To: {email.recipient_email}
+                        </p>
+                        {email.resume_name && (
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <FileText className="size-3" />
+                            Attached: {email.resume_name}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className={`rounded-4xl px-2 py-0.5 text-[10px] font-medium ${
+                          email.status === "sent" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                          "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        }`}>
+                          {email.status}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDate(email.sent_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

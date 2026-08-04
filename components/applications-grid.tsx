@@ -13,11 +13,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink, Mail } from "lucide-react";
+import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from "@/lib/types/job";
+import type { ApplicationStatus } from "@/lib/types/job";
 
 interface Application {
   id: string;
+  status: string;
   applied_at: string | null;
   created_at: string;
+  resume_id: string | null;
+  resume_name: string | null;
   job: {
     id: string;
     title: string;
@@ -50,10 +55,9 @@ interface ApplicationsGridProps {
 }
 
 const statusColors: Record<string, string> = {
-  saved: "bg-muted text-muted-foreground",
-  interested: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  preparing: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  applied: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+  draft: "bg-muted text-muted-foreground",
+  submitted: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+  acknowledged: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   interview: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   offer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -61,23 +65,12 @@ const statusColors: Record<string, string> = {
   withdrawn: "bg-muted text-muted-foreground",
 };
 
-const statusLabels: Record<string, string> = {
-  saved: "Saved",
-  interested: "Interested",
-  preparing: "Preparing",
-  applied: "Applied",
-  interview: "Interview",
-  offer: "Offer",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
-};
+const statusLabels: Record<string, string> = APPLICATION_STATUS_LABELS;
 
 const statusOptions = [
-  "saved",
-  "interested",
-  "preparing",
-  "applied",
+  "draft",
+  "submitted",
+  "acknowledged",
   "interview",
   "offer",
   "accepted",
@@ -257,7 +250,7 @@ export function ApplicationsGrid({
           )}
           {initialStatus !== "all" && (
             <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
-              {initialStatus}
+              {statusLabels[initialStatus] ?? initialStatus}
               <button onClick={() => handleStatusChange("all")} className="ml-0.5">
                 <X className="size-3" />
               </button>
@@ -274,7 +267,7 @@ export function ApplicationsGrid({
           <button
             onClick={() => {
               setSearch("");
-              router.push("/jobs");
+              router.push("/applications");
             }}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
@@ -322,8 +315,8 @@ export function ApplicationsGrid({
                       {app.job.match_score}% match
                     </span>
                   )}
-                  <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.job?.status ?? "saved"] ?? "bg-muted text-muted-foreground"}`}>
-                    {statusLabels[app.job?.status ?? "saved"] ?? "Saved"}
+                  <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.status ?? "draft"] ?? "bg-muted text-muted-foreground"}`}>
+                    {statusLabels[app.status ?? "draft"] ?? "Draft"}
                   </span>
                 </div>
               </div>

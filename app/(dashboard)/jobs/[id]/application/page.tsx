@@ -9,22 +9,20 @@ export default async function ApplicationPage(props: {
   const { supabase, userId } = await getUser();
 
   // Fetch job with company
-  const { data: application } = await supabase
-    .from("applications")
-    .select("job:jobs(id, title, description, application_email, application_process, company:companies(name))")
-    .eq("job_id", id)
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, title, description, application_email, application_process, company:companies(name)")
+    .eq("id", id)
     .eq("user_id", userId)
     .single();
 
-  if (!application) {
+  if (!job) {
     redirect("/jobs");
   }
 
-  const appData = application as unknown as { job: Record<string, unknown> | null };
-  const job = appData.job;
-  const companyRaw = job?.company;
+  const companyRaw = job.company;
   const company = Array.isArray(companyRaw) ? companyRaw[0] : companyRaw;
-  const jobEmail = typeof job?.application_email === "string" ? job.application_email : null;
+  const jobEmail = typeof job.application_email === "string" ? job.application_email : null;
 
   if (!jobEmail) {
     redirect("/jobs/" + id);

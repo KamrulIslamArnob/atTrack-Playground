@@ -7,7 +7,8 @@ export interface InsightsData {
   totalApplications: number;
   totalInterviews: number;
   totalDocuments: number;
-  statusBreakdown: Record<string, number>;
+  jobPipelineBreakdown: Record<string, number>;
+  applicationStatusBreakdown: Record<string, number>;
   matchScoreDistribution: {
     high: number; // 80+
     medium: number; // 50-79
@@ -38,10 +39,10 @@ export async function getInsights(): Promise<InsightsData> {
     .select("id, status, match_score, source, employment_type, work_location, created_at")
     .eq("user_id", userId);
 
-  // Fetch applications count
-  const { count: totalApplications } = await supabase
+  // Fetch all applications with status
+  const { data: applications } = await supabase
     .from("applications")
-    .select("id", { count: "exact", head: true })
+    .select("id, status, created_at")
     .eq("user_id", userId);
 
   // Fetch interviews count
@@ -63,11 +64,18 @@ export async function getInsights(): Promise<InsightsData> {
     .eq("user_id", userId);
 
   const allJobs = jobs ?? [];
+  const allApplications = applications ?? [];
 
-  // Status breakdown
-  const statusBreakdown: Record<string, number> = {};
+  // Job pipeline breakdown (pre-application stages only)
+  const jobPipelineBreakdown: Record<string, number> = {};
   for (const job of allJobs) {
-    statusBreakdown[job.status] = (statusBreakdown[job.status] || 0) + 1;
+    jobPipelineBreakdown[job.status] = (jobPipelineBreakdown[job.status] || 0) + 1;
+  }
+
+  // Application status breakdown (full lifecycle)
+  const applicationStatusBreakdown: Record<string, number> = {};
+  for (const app of allApplications) {
+    applicationStatusBreakdown[app.status] = (applicationStatusBreakdown[app.status] || 0) + 1;
   }
 
   // Match score distribution
@@ -144,10 +152,11 @@ export async function getInsights(): Promise<InsightsData> {
 
   return {
     totalJobs: allJobs.length,
-    totalApplications: totalApplications ?? 0,
+    totalApplications: allApplications.length,
     totalInterviews: totalInterviews ?? 0,
     totalDocuments: totalDocuments ?? 0,
-    statusBreakdown,
+    jobPipelineBreakdown,
+    applicationStatusBreakdown,
     matchScoreDistribution: {
       high: highMatches,
       medium: mediumMatches,

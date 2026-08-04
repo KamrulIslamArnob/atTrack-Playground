@@ -144,6 +144,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
     setIsSending(true);
 
     const result = await sendApplicationEmail({
+      jobId: job.id,
       to: job.applicationEmail,
       subject,
       body,
@@ -156,6 +157,8 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
       toast.success("Email sent successfully!", {
         description: `Sent to ${job.applicationEmail}`,
       });
+      router.push(`/jobs/${job.id}`);
+      return;
     }
 
     setIsSending(false);

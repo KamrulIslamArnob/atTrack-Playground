@@ -1,5 +1,5 @@
-import { getApplications } from "@/lib/actions/applications";
-import { ApplicationsGrid } from "@/components/applications-grid";
+import { getJobsList } from "@/lib/actions/jobs-list";
+import { JobsGrid } from "@/components/jobs-grid";
 import { ImportChoice } from "@/components/import-choice";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 
@@ -13,7 +13,7 @@ interface PageProps {
   }>;
 }
 
-export default async function ApplicationsPage(props: PageProps) {
+export default async function JobsPage(props: PageProps) {
   const params = await props.searchParams;
 
   const search = params.search ?? "";
@@ -22,7 +22,7 @@ export default async function ApplicationsPage(props: PageProps) {
   const page = Number(params.page) || 1;
   const perPage = Number(params.perPage) || 30;
 
-  const result = await getApplications({
+  const result = await getJobsList({
     search,
     status,
     sort,
@@ -37,7 +37,7 @@ export default async function ApplicationsPage(props: PageProps) {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
             <p className="text-sm text-muted-foreground">
-              Track and manage your job applications.
+              Track and manage your job opportunities.
             </p>
           </div>
           <div className="flex items-center">
@@ -48,8 +48,8 @@ export default async function ApplicationsPage(props: PageProps) {
 
       <Breadcrumbs />
 
-      <ApplicationsGrid
-        applications={result.applications}
+      <JobsGrid
+        jobs={result.jobs}
         total={result.total}
         initialSearch={search}
         initialStatus={status}

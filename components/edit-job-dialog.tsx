@@ -62,12 +62,6 @@ const statusOptions = [
   { value: "saved", label: "Saved" },
   { value: "interested", label: "Interested" },
   { value: "preparing", label: "Preparing" },
-  { value: "applied", label: "Applied" },
-  { value: "interview", label: "Interview" },
-  { value: "offer", label: "Offer" },
-  { value: "accepted", label: "Accepted" },
-  { value: "rejected", label: "Rejected" },
-  { value: "withdrawn", label: "Withdrawn" },
 ];
 
 export function EditJobDialog({ job }: EditJobDialogProps) {

@@ -10,6 +10,7 @@ import { signOut } from "@/lib/actions/auth";
 import {
   LayoutDashboard,
   Briefcase,
+  Send,
   Calendar,
   FileText,
   Lightbulb,
@@ -23,6 +24,7 @@ import {
 const navigation = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
   { name: "Jobs", href: "/jobs", icon: Briefcase },
+  { name: "Applications", href: "/applications", icon: Send },
   { name: "Interviews", href: "/interviews", icon: Calendar },
   { name: "Documents", href: "/documents", icon: FileText },
 ];

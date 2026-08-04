@@ -5,13 +5,16 @@ import { getUser } from "@/lib/auth";
 import { decrypt } from "@/lib/encryption";
 
 interface SendEmailParams {
+  jobId: string;
+  applicationId?: string | null;
   to: string;
   subject: string;
   body: string;
   resumeId: string | null;
+  resumeName?: string | null;
 }
 
-export async function sendApplicationEmail(params: SendEmailParams): Promise<{ error?: string; success?: boolean }> {
+export async function sendApplicationEmail(params: SendEmailParams): Promise<{ error?: string; success?: boolean; emailId?: string }> {
   const { supabase, userId } = await getUser();
 
   // Fetch SMTP config
@@ -89,10 +92,130 @@ export async function sendApplicationEmail(params: SendEmailParams): Promise<{ e
 
   try {
     await transporter.sendMail(mailOptions);
-    return { success: true };
+
+    // Update job status from 'saved' to 'preparing' if still saved
+    await supabase
+      .from("jobs")
+      .update({ status: "preparing" })
+      .eq("id", params.jobId)
+      .eq("user_id", userId)
+      .eq("status", "saved");
+
+    // Ensure an application record exists for this job
+    let applicationId = params.applicationId || null;
+
+    if (!applicationId) {
+      // Check if an application already exists for this job
+      const { data: existingApp } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("job_id", params.jobId)
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingApp) {
+        applicationId = existingApp.id;
+        // Update status to 'submitted' if it's 'draft'
+        await supabase
+          .from("applications")
+          .update({ status: "submitted", applied_at: new Date().toISOString() })
+          .eq("id", applicationId)
+          .eq("user_id", userId)
+          .eq("status", "draft");
+      } else {
+        // Create a new application record
+        const { data: newApp } = await supabase
+          .from("applications")
+          .insert({
+            user_id: userId,
+            job_id: params.jobId,
+            status: "submitted",
+            applied_at: new Date().toISOString(),
+            resume_id: params.resumeId || null,
+            resume_name: params.resumeName || null,
+          })
+          .select("id")
+          .single();
+
+        if (newApp) {
+          applicationId = newApp.id;
+        }
+      }
+    } else {
+      // Application ID provided, update status to 'submitted' if it's 'draft'
+      await supabase
+        .from("applications")
+        .update({ status: "submitted", applied_at: new Date().toISOString() })
+        .eq("id", applicationId)
+        .eq("user_id", userId)
+        .eq("status", "draft");
+    }
+
+    // Store email record in application_emails
+    const { data: emailRecord, error: insertError } = await supabase
+      .from("application_emails")
+      .insert({
+        user_id: userId,
+        job_id: params.jobId,
+        application_id: applicationId,
+        recipient_email: params.to,
+        from_email: smtpConfig.user_email,
+        subject: params.subject,
+        body: params.body,
+        resume_id: params.resumeId || null,
+        resume_name: params.resumeName || null,
+        status: "sent",
+        sent_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("Failed to store email record:", insertError);
+    }
+
+    return { success: true, emailId: emailRecord?.id };
   } catch (err) {
     console.error("Failed to send email:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
+
+    // Store failed email record
+    await supabase
+      .from("application_emails")
+      .insert({
+        user_id: userId,
+        job_id: params.jobId,
+        application_id: params.applicationId || null,
+        recipient_email: params.to,
+        from_email: smtpConfig.user_email,
+        subject: params.subject,
+        body: params.body,
+        resume_id: params.resumeId || null,
+        resume_name: params.resumeName || null,
+        status: "failed",
+        error_message: message,
+        sent_at: new Date().toISOString(),
+      });
+
     return { error: `Failed to send email: ${message}` };
   }
+}
+
+export async function getApplicationEmails(jobId: string) {
+  const { supabase, userId } = await getUser();
+
+  const { data, error } = await supabase
+    .from("application_emails")
+    .select("*")
+    .eq("job_id", jobId)
+    .eq("user_id", userId)
+    .order("sent_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch application emails:", error);
+    return [];
+  }
+
+  return data ?? [];
 }

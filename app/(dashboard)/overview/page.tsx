@@ -37,12 +37,6 @@ const statusLabels: Record<string, string> = {
   saved: "Saved",
   interested: "Interested",
   preparing: "Preparing",
-  applied: "Applied",
-  interview: "Interview",
-  offer: "Offer",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
 };
 
 const sourceColors: Record<string, string> = {
@@ -372,7 +366,7 @@ export default async function OverviewPage() {
           </div>
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <QuickStat icon={Briefcase} label="Total Jobs" value={totalJobs ?? 0} color="text-blue-500" bgColor="bg-blue-500/10" />
-            <QuickStat icon={Send} label="Applications" value={totalApplications ?? 0} color="text-violet-500" bgColor="bg-violet-500/10" />
+            <QuickStat icon={Send} label="Applications Sent" value={totalApplications ?? 0} color="text-violet-500" bgColor="bg-violet-500/10" />
             <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} color="text-emerald-500" bgColor="bg-emerald-500/10" />
             <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "\u2014"} color="text-amber-500" bgColor="bg-amber-500/10" />
             <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "\u2014"} color="text-emerald-600" bgColor="bg-emerald-500/10" />
@@ -387,7 +381,7 @@ export default async function OverviewPage() {
         <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-heading text-lg font-semibold">Application Pipeline</h2>
+              <h2 className="font-heading text-lg font-semibold">Job Pipeline</h2>
               <p className="text-xs text-muted-foreground mt-1">Jobs by status</p>
             </div>
             <Link href="/jobs" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>

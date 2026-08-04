@@ -20,8 +20,12 @@ export interface ApplicationsResult {
 
 export interface Application {
   id: string;
+  status: string;
   applied_at: string | null;
   created_at: string;
+  resume_id: string | null;
+  resume_name: string | null;
+  notes: string | null;
   job: {
     id: string;
     title: string;
@@ -58,8 +62,12 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     .from("applications")
     .select(`
       id,
+      status,
       applied_at,
       created_at,
+      resume_id,
+      resume_name,
+      notes,
       job:jobs(
         id,
         title,
@@ -78,38 +86,28 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     `, { count: "exact" })
     .eq("user_id", userId);
 
-  // Apply status filter - find matching job IDs
-  let matchingJobIds: string[] | null = null;
+  // Apply status filter - filter on applications.status
   if (status && status !== "all") {
-    const { data: statusJobs } = await supabase
-      .from("jobs")
-      .select("id")
-      .eq("status", status);
-    
-    if (!statusJobs || statusJobs.length === 0) {
-      return { applications: [], total: 0, page, perPage, totalPages: 0 };
-    }
-    
-    matchingJobIds = statusJobs.map((j) => j.id);
-    query = query.in("job_id", matchingJobIds);
+    query = query.eq("status", status);
   }
 
   // Apply search filter - find matching job IDs and intersect
+  let matchingJobIds: string[] | null = null;
   if (search) {
     const term = `%${search}%`;
     const { data: matchingJobs } = await supabase
       .from("jobs")
       .select("id")
       .or(`title.ilike.${term},location.ilike.${term}`);
-    
+
     const { data: matchingCompanies } = await supabase
       .from("companies")
       .select("id")
       .ilike("name", term);
-    
+
     const jobIds = new Set<string>();
     matchingJobs?.forEach((j) => jobIds.add(j.id));
-    
+
     if (matchingCompanies && matchingCompanies.length > 0) {
       const { data: companyJobs } = await supabase
         .from("jobs")
@@ -117,31 +115,26 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
         .in("company_id", matchingCompanies.map((c) => c.id));
       companyJobs?.forEach((j) => jobIds.add(j.id));
     }
-    
+
     const searchIds = [...jobIds];
-    
+
     if (searchIds.length === 0) {
       return { applications: [], total: 0, page, perPage, totalPages: 0 };
     }
-    
-    // Intersect with status filter if both exist
-    if (matchingJobIds !== null) {
-      matchingJobIds = matchingJobIds.filter((id) => searchIds.includes(id));
-      if (matchingJobIds.length === 0) {
-        return { applications: [], total: 0, page, perPage, totalPages: 0 };
-      }
-    } else {
-      matchingJobIds = searchIds;
-    }
-    
+
+    matchingJobIds = searchIds;
     query = query.in("job_id", matchingJobIds);
   }
 
-  // Get total count for pagination (with same filters)
+  // Get total count for pagination
   let countQuery = supabase
     .from("applications")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
+
+  if (status && status !== "all") {
+    countQuery = countQuery.eq("status", status);
+  }
 
   if (matchingJobIds !== null) {
     countQuery = countQuery.in("job_id", matchingJobIds);
@@ -152,7 +145,7 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
   const total = count ?? 0;
   const totalPages = Math.ceil(total / perPage);
 
-  // Fetch all matching rows (no ordering - we sort in memory since some fields are nested)
+  // Fetch all matching rows
   const { data, error } = await query;
 
   if (error) {
@@ -162,7 +155,7 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
 
   let applications = (data as unknown as Application[]) ?? [];
 
-  // Sort in memory (nested relations and mixed fields can't be sorted by Supabase)
+  // Sort in memory
   switch (sort) {
     case "applied_oldest":
       applications = [...applications].sort((a, b) => {

@@ -128,9 +128,18 @@ export function DashboardHeader() {
                     Overview
                   </CommandItem>
                   <CommandItem
-                    value="applications"
+                    value="jobs"
                     onItemSelect={() => {
                       window.location.href = "/jobs";
+                      setOpen(false);
+                    }}
+                  >
+                    Jobs
+                  </CommandItem>
+                  <CommandItem
+                    value="applications"
+                    onItemSelect={() => {
+                      window.location.href = "/applications";
                       setOpen(false);
                     }}
                   >

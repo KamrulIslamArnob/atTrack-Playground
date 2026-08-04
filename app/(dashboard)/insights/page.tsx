@@ -14,11 +14,22 @@ import {
   Minus,
 } from "lucide-react";
 
-const statusLabels: Record<string, string> = {
+const jobPipelineLabels: Record<string, string> = {
   saved: "Saved",
   interested: "Interested",
   preparing: "Preparing",
-  applied: "Applied",
+};
+
+const jobPipelineColors: Record<string, string> = {
+  saved: "bg-muted",
+  interested: "bg-blue-500",
+  preparing: "bg-amber-500",
+};
+
+const appStatusLabels: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  acknowledged: "Acknowledged",
   interview: "Interview",
   offer: "Offer",
   accepted: "Accepted",
@@ -26,11 +37,10 @@ const statusLabels: Record<string, string> = {
   withdrawn: "Withdrawn",
 };
 
-const statusColors: Record<string, string> = {
-  saved: "bg-muted",
-  interested: "bg-blue-500",
-  preparing: "bg-amber-500",
-  applied: "bg-violet-500",
+const appStatusColors: Record<string, string> = {
+  draft: "bg-muted",
+  submitted: "bg-blue-500",
+  acknowledged: "bg-amber-500",
   interview: "bg-emerald-500",
   offer: "bg-emerald-600",
   accepted: "bg-emerald-600",
@@ -38,25 +48,14 @@ const statusColors: Record<string, string> = {
   withdrawn: "bg-muted",
 };
 
-const statusTextColors: Record<string, string> = {
-  saved: "text-muted-foreground",
-  interested: "text-blue-600 dark:text-blue-400",
-  preparing: "text-amber-600 dark:text-amber-400",
-  applied: "text-violet-600 dark:text-violet-400",
-  interview: "text-emerald-600 dark:text-emerald-400",
-  offer: "text-emerald-600 dark:text-emerald-400",
-  accepted: "text-emerald-600 dark:text-emerald-400",
-  rejected: "text-red-600 dark:text-red-400",
-  withdrawn: "text-muted-foreground",
-};
-
 export default async function InsightsPage() {
   const insights = await getInsights();
 
-  const maxStatusCount = Math.max(...Object.values(insights.statusBreakdown), 1);
+  const jobPipelineEntries = Object.entries(insights.jobPipelineBreakdown);
+  const appStatusEntries = Object.entries(insights.applicationStatusBreakdown);
+  const maxJobCount = Math.max(...jobPipelineEntries.map(([, c]) => c), 1);
+  const maxAppCount = Math.max(...appStatusEntries.map(([, c]) => c), 1);
   const maxSourceCount = Math.max(...Object.values(insights.sourceBreakdown), 1);
-
-  const totalStatusJobs = Object.values(insights.statusBreakdown).reduce((a, b) => a + b, 0);
 
   return (
     <div className="space-y-6">
@@ -81,7 +80,7 @@ export default async function InsightsPage() {
         />
         <StatCard
           icon={FileText}
-          label="Applications"
+          label="Applications Sent"
           value={insights.totalApplications}
           color="bg-violet-500"
         />
@@ -101,24 +100,25 @@ export default async function InsightsPage() {
 
       {/* Main content grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Application funnel - takes 2 cols */}
+        {/* Job Pipeline - takes 2 cols */}
         <div className="lg:col-span-2 rounded-4xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg font-semibold">Application Pipeline</h2>
-            <span className="text-xs text-muted-foreground">{totalStatusJobs} total</span>
+            <h2 className="font-heading text-lg font-semibold">Job Pipeline</h2>
+            <span className="text-xs text-muted-foreground">{insights.totalJobs} jobs</span>
           </div>
           <div className="mt-6 space-y-4">
-            {Object.entries(insights.statusBreakdown)
+            {jobPipelineEntries
               .sort(([, a], [, b]) => b - a)
               .map(([status, count]) => {
-                const percentage = totalStatusJobs > 0 ? Math.round((count / totalStatusJobs) * 100) : 0;
+                const totalJobs = jobPipelineEntries.reduce((s, [, c]) => s + c, 0);
+                const percentage = totalJobs > 0 ? Math.round((count / totalJobs) * 100) : 0;
                 return (
                   <div key={status} className="group">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
-                        <div className={`size-2 rounded-full ${statusColors[status] ?? "bg-muted"}`} />
+                        <div className={`size-2 rounded-full ${jobPipelineColors[status] ?? "bg-muted"}`} />
                         <span className="text-sm font-medium">
-                          {statusLabels[status] ?? status}
+                          {jobPipelineLabels[status] ?? status}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -128,16 +128,60 @@ export default async function InsightsPage() {
                     </div>
                     <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${statusColors[status] ?? "bg-muted"} transition-all duration-500`}
-                        style={{ width: `${(count / maxStatusCount) * 100}%` }}
+                        className={`h-full rounded-full ${jobPipelineColors[status] ?? "bg-muted"} transition-all duration-500`}
+                        style={{ width: `${(count / maxJobCount) * 100}%` }}
                       />
                     </div>
                   </div>
                 );
               })}
-            {Object.keys(insights.statusBreakdown).length === 0 && (
+            {jobPipelineEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm text-muted-foreground">No jobs yet</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Application Status */}
+        <div className="rounded-4xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg font-semibold">Application Status</h2>
+            <span className="text-xs text-muted-foreground">{insights.totalApplications} apps</span>
+          </div>
+          <div className="mt-6 space-y-4">
+            {appStatusEntries
+              .sort(([, a], [, b]) => b - a)
+              .map(([status, count]) => {
+                const totalApps = appStatusEntries.reduce((s, [, c]) => s + c, 0);
+                const percentage = totalApps > 0 ? Math.round((count / totalApps) * 100) : 0;
+                return (
+                  <div key={status} className="group">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`size-2 rounded-full ${appStatusColors[status] ?? "bg-muted"}`} />
+                        <span className="text-sm font-medium">
+                          {appStatusLabels[status] ?? status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{count}</span>
+                        <span className="text-xs text-muted-foreground w-10 text-right">{percentage}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${appStatusColors[status] ?? "bg-muted"} transition-all duration-500`}
+                        style={{ width: `${(count / maxAppCount) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            {appStatusEntries.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="size-8 text-muted-foreground/30 mb-2" />
                 <p className="text-sm text-muted-foreground">No applications yet</p>
               </div>
             )}
