@@ -7,7 +7,7 @@ import { Bell, Menu, Search, X, Briefcase, Send, Calendar, FileText, File, Loade
 import { Button } from "@/components/ui/button";
 import { Sidebar, type SidebarProps } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
-import { globalSearch, type SearchResult } from "@/lib/actions/search";
+import { globalSearch, adminGlobalSearch, type SearchResult, type AdminSearchResult } from "@/lib/actions/search";
 import {
   Command,
   CommandInput,
@@ -52,9 +52,11 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
   const [open, setOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<(SearchResult | AdminSearchResult)[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isAdmin = role === "admin";
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -113,7 +115,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const data = await globalSearch(value);
+        const data = isAdmin ? await adminGlobalSearch(value) : await globalSearch(value);
         setResults(data);
       } catch {
         setResults([]);
@@ -121,17 +123,16 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
         setLoading(false);
       }
     }, 300);
-  }, []);
+  }, [isAdmin]);
 
   // Group results by type
-  const grouped = results.reduce<Record<string, SearchResult[]>>((acc, r) => {
+  const grouped = results.reduce<Record<string, (SearchResult | AdminSearchResult)[]>>((acc, r) => {
     (acc[r.type] ??= []).push(r);
     return acc;
   }, {});
 
   const hasQuery = query.trim().length >= 2;
 
-  const isAdmin = role === "admin";
   const homeHref = isAdmin ? "/admin" : "/overview";
 
   const landingNav = [
@@ -168,20 +169,6 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
                 {item.name}
               </Link>
             ))}
-            {isAdmin && (
-              <>
-                <div className="mx-1 h-4 w-px bg-border" />
-                {ADMIN_NAV_ITEMS.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </>
-            )}
           </nav>
         </div>
 
@@ -245,7 +232,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
             </button>
           </div>
           <div className="min-h-0 flex-1 p-2">
-            <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} role={role} />
+            <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} role={role} onNavigate={() => setMobileNavOpen(false)} />
           </div>
         </div>
       </div>
@@ -267,7 +254,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
               )}
 
               {!loading && !hasQuery && (
-                <CommandGroup heading={isAdmin ? "Navigation" : "Quick Navigation"}>
+                <CommandGroup heading="Quick Navigation">
                   {landingNav.map((item) => (
                     <CommandItem
                       key={item.name}
@@ -309,6 +296,69 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
                       }}
                     >
                       {TYPE_ICONS.page}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.user && (
+                <CommandGroup heading="Users">
+                  {grouped.user.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`user-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      <Users className="mr-2 size-4 shrink-0 text-blue-500" />
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.activity && (
+                <CommandGroup heading="Activity Logs">
+                  {grouped.activity.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`activity-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      <Activity className="mr-2 size-4 shrink-0 text-emerald-500" />
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.ai_usage && (
+                <CommandGroup heading="AI Usage">
+                  {grouped.ai_usage.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`ai-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      <Cpu className="mr-2 size-4 shrink-0 text-violet-500" />
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>

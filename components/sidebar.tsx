@@ -67,9 +67,10 @@ export interface SidebarProps {
   avatarUrl?: string | null;
   fullName?: string | null;
   role?: string;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ user, avatarUrl, fullName: profileName, role }: SidebarProps) {
+export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -110,12 +111,24 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-card bg-emerald-500" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium leading-none truncate">
-                {fullName}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium leading-none truncate">
+                  {fullName}
+                </p>
+                {role === "admin" && (
+                  <span className="shrink-0 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                    Admin
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-xs text-muted-foreground truncate">
                 {user.email || "No email"}
               </p>
+              {role === "admin" && (
+                <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/60">
+                  Admin Panel
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -136,6 +149,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -164,6 +178,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -192,6 +207,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -217,6 +233,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -245,6 +262,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -273,6 +291,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -299,6 +318,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
                     <Link
                       key={item.name}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
                         isActive
