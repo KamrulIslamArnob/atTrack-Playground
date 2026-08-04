@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -17,7 +16,6 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import type { OverviewData } from "@/lib/actions/overview";
 
 const statusLabels: Record<string, string> = {
   saved: "Saved",
@@ -50,7 +48,39 @@ const tooltipStyle = {
   fontSize: "12px",
 };
 
-export function PipelineChart({ pipeline }: { pipeline: OverviewData["pipeline"] }) {
+interface PipelineData {
+  saved: number;
+  interested: number;
+  preparing: number;
+  applied: number;
+  interview: number;
+  offer: number;
+  accepted: number;
+  rejected: number;
+  withdrawn: number;
+}
+
+interface ChartDataItem {
+  range?: string;
+  count: number;
+  fill: string;
+  source?: string;
+  location?: string;
+  type?: string;
+}
+
+interface TrendData {
+  date: string;
+  applications: number;
+  interviews: number;
+}
+
+interface McqScoreData {
+  date: string;
+  score: number;
+}
+
+export function PipelineChart({ pipeline }: { pipeline: PipelineData }) {
   const chartData = Object.entries(pipeline).map(([key, value]) => ({
     name: statusLabels[key] || key,
     value,
@@ -74,7 +104,7 @@ export function PipelineChart({ pipeline }: { pipeline: OverviewData["pipeline"]
   );
 }
 
-export function MatchScoreChart({ data }: { data: OverviewData["matchScoreDistribution"] }) {
+export function MatchScoreChart({ data }: { data: ChartDataItem[] }) {
   const filtered = data.filter((d) => d.count > 0);
 
   return (
@@ -100,7 +130,7 @@ export function MatchScoreChart({ data }: { data: OverviewData["matchScoreDistri
   );
 }
 
-export function ApplicationTrendChart({ data }: { data: OverviewData["applicationTrend"] }) {
+export function ApplicationTrendChart({ data }: { data: TrendData[] }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -125,7 +155,7 @@ export function ApplicationTrendChart({ data }: { data: OverviewData["applicatio
   );
 }
 
-export function SourceChart({ data }: { data: OverviewData["sourceBreakdown"] }) {
+export function SourceChart({ data }: { data: ChartDataItem[] }) {
   return (
     <ResponsiveContainer width="100%" height={180}>
       <PieChart>
@@ -149,7 +179,7 @@ export function SourceChart({ data }: { data: OverviewData["sourceBreakdown"] })
   );
 }
 
-export function LocationChart({ data }: { data: OverviewData["workLocationBreakdown"] }) {
+export function LocationChart({ data }: { data: ChartDataItem[] }) {
   return (
     <ResponsiveContainer width="100%" height={180}>
       <PieChart>
@@ -173,7 +203,7 @@ export function LocationChart({ data }: { data: OverviewData["workLocationBreakd
   );
 }
 
-export function EmploymentTypeChart({ data }: { data: OverviewData["employmentTypeBreakdown"] }) {
+export function EmploymentTypeChart({ data }: { data: ChartDataItem[] }) {
   return (
     <ResponsiveContainer width="100%" height={180}>
       <PieChart>
@@ -197,7 +227,7 @@ export function EmploymentTypeChart({ data }: { data: OverviewData["employmentTy
   );
 }
 
-export function McqScoreChart({ data }: { data: OverviewData["mcqStats"]["recentScores"] }) {
+export function McqScoreChart({ data }: { data: McqScoreData[] }) {
   return (
     <ResponsiveContainer width="100%" height={100}>
       <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>

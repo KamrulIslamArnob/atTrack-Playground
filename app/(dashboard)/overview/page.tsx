@@ -1,55 +1,37 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { getUser } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { AddJobDialog } from "@/components/add-job-dialog";
+import {
+  PipelineChart,
+  MatchScoreChart,
+  ApplicationTrendChart,
+  SourceChart,
+  LocationChart,
+  EmploymentTypeChart,
+  McqScoreChart,
+} from "@/components/overview-charts";
 import {
   Briefcase,
   Calendar,
   Clock,
   Target,
   ArrowRight,
-  FileText,
   Plus,
   Camera,
-  MapPin,
-  DollarSign,
   Building2,
   Sparkles,
-  ArrowUpRight,
   TrendingUp,
-  Users,
-  BarChart3,
-  Zap,
-  CheckCircle2,
-  Circle,
-  MoreHorizontal,
   Activity,
   Timer,
+  Zap,
   Award,
   Send,
+  CheckCircle2,
+  BarChart3,
+  FileText,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-  RadialBarChart,
-  RadialBar,
-  Legend,
-  LineChart,
-  Line,
-} from "recharts";
-import type { OverviewData } from "@/lib/actions/overview";
 
 const statusLabels: Record<string, string> = {
   saved: "Saved",
@@ -63,62 +45,302 @@ const statusLabels: Record<string, string> = {
   withdrawn: "Withdrawn",
 };
 
-const statusColors: Record<string, string> = {
-  saved: "#94A3B8",
-  interested: "#3B82F6",
-  preparing: "#F59E0B",
-  applied: "#8B5CF6",
-  interview: "#10B981",
-  offer: "#059669",
-  accepted: "#047857",
-  rejected: "#EF4444",
-  withdrawn: "#6B7280",
+const sourceColors: Record<string, string> = {
+  linkedin: "#0A66C2",
+  indeed: "#2164F3",
+  glassdoor: "#0CAA41",
+  referral: "#8B5CF6",
+  company_site: "#F59E0B",
+  other: "#6B7280",
+  manual: "#6366F1",
+  screenshot: "#EC4899",
 };
 
-export default function OverviewPage() {
-  const [data, setData] = useState<OverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
+const employmentTypeColors: Record<string, string> = {
+  "Full-time": "#6366F1",
+  "Part-time": "#8B5CF6",
+  Contract: "#A855F7",
+  Freelance: "#D946EF",
+  Internship: "#EC4899",
+  Temporary: "#F43F5E",
+  Apprenticeship: "#F97316",
+  Volunteer: "#EAB308",
+};
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/overview");
-        const json = await res.json();
-        setData(json);
-      } catch (error) {
-        console.error("Failed to fetch overview data:", error);
-      } finally {
-        setLoading(false);
+const workLocationColors: Record<string, string> = {
+  Remote: "#10B981",
+  Hybrid: "#F59E0B",
+  "On-site": "#6366F1",
+  Unspecified: "#6B7280",
+};
+
+export default async function OverviewPage() {
+  const { supabase, userId } = await getUser();
+
+  const { data: jobs } = await supabase
+    .from("jobs")
+    .select(`
+      id, title, status, match_score, source, employment_type, work_location,
+      created_at, updated_at,
+      company:companies(name),
+      applications(id, status, applied_at, created_at),
+      interviews(id, scheduled_at, type, status)
+    `)
+    .eq("user_id", userId);
+
+  const [
+    { count: totalJobs },
+    { count: totalApplications },
+    { count: totalInterviews },
+    { count: totalDocuments },
+  ] = await Promise.all([
+    supabase.from("jobs").select("*", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("applications").select("*", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("interviews").select("*", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("documents").select("*", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
+
+  const { data: mcqResults } = await supabase
+    .from("mcq_results")
+    .select("score, total, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  const allJobs = jobs ?? [];
+
+  // Pipeline
+  const pipeline = { saved: 0, interested: 0, preparing: 0, applied: 0, interview: 0, offer: 0, accepted: 0, rejected: 0, withdrawn: 0 };
+  for (const job of allJobs) {
+    const s = job.status as keyof typeof pipeline;
+    if (s in pipeline) pipeline[s]++;
+  }
+
+  // Match score distribution
+  let totalScore = 0;
+  let scoredCount = 0;
+  const matchScoreDistribution = [
+    { range: "90-100%", count: 0, fill: "#10B981" },
+    { range: "70-89%", count: 0, fill: "#22C55E" },
+    { range: "50-69%", count: 0, fill: "#F59E0B" },
+    { range: "30-49%", count: 0, fill: "#F97316" },
+    { range: "0-29%", count: 0, fill: "#EF4444" },
+  ];
+  for (const job of allJobs) {
+    if (job.match_score != null) {
+      const score = Number(job.match_score);
+      totalScore += score;
+      scoredCount++;
+      if (score >= 90) matchScoreDistribution[0].count++;
+      else if (score >= 70) matchScoreDistribution[1].count++;
+      else if (score >= 50) matchScoreDistribution[2].count++;
+      else if (score >= 30) matchScoreDistribution[3].count++;
+      else matchScoreDistribution[4].count++;
+    }
+  }
+  const averageMatchScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
+
+  // Source breakdown
+  const sourceMap: Record<string, number> = {};
+  for (const job of allJobs) {
+    const src = (job.source as string) || "Other";
+    sourceMap[src] = (sourceMap[src] || 0) + 1;
+  }
+  const sourceBreakdown = Object.entries(sourceMap)
+    .map(([source, count]) => ({
+      source: source.charAt(0).toUpperCase() + source.slice(1).replace("_", " "),
+      count,
+      fill: sourceColors[source] || "#6B7280",
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Employment type breakdown
+  const employmentTypeMap: Record<string, number> = {};
+  for (const job of allJobs) {
+    const t = (job.employment_type as string) || "Full-time";
+    employmentTypeMap[t] = (employmentTypeMap[t] || 0) + 1;
+  }
+  const employmentTypeBreakdown = Object.entries(employmentTypeMap)
+    .map(([type, count]) => ({ type, count, fill: employmentTypeColors[type] || "#6B7280" }))
+    .sort((a, b) => b.count - a.count);
+
+  // Work location breakdown
+  const workLocationMap: Record<string, number> = {};
+  for (const job of allJobs) {
+    const l = (job.work_location as string) || "Unspecified";
+    workLocationMap[l] = (workLocationMap[l] || 0) + 1;
+  }
+  const workLocationBreakdown = Object.entries(workLocationMap)
+    .map(([location, count]) => ({ location, count, fill: workLocationColors[location] || "#6B7280" }))
+    .sort((a, b) => b.count - a.count);
+
+  // Top companies
+  const companyMap: Record<string, { applications: number; interviews: number }> = {};
+  for (const job of allJobs) {
+    const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
+    const name = co?.name ?? "Unknown";
+    if (!companyMap[name]) companyMap[name] = { applications: 0, interviews: 0 };
+    companyMap[name].applications += (Array.isArray(job.applications) ? job.applications : []).length;
+    companyMap[name].interviews += (Array.isArray(job.interviews) ? job.interviews : []).length;
+  }
+  const topCompanies = Object.entries(companyMap)
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => b.applications - a.applications)
+    .slice(0, 5);
+
+  // Application trend (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const trendMap: Record<string, { applications: number; interviews: number }> = {};
+  for (const job of allJobs) {
+    for (const app of Array.isArray(job.applications) ? job.applications : []) {
+      const d = new Date((app as { created_at: string }).created_at);
+      if (d >= thirtyDaysAgo) {
+        const k = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        if (!trendMap[k]) trendMap[k] = { applications: 0, interviews: 0 };
+        trendMap[k].applications++;
       }
     }
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="size-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    for (const int of Array.isArray(job.interviews) ? job.interviews : []) {
+      const d = new Date((int as { scheduled_at: string }).scheduled_at);
+      if (d >= thirtyDaysAgo) {
+        const k = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        if (!trendMap[k]) trendMap[k] = { applications: 0, interviews: 0 };
+        trendMap[k].interviews++;
+      }
+    }
   }
+  const applicationTrend = Object.entries(trendMap)
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Failed to load dashboard data</p>
-      </div>
-    );
+  // Upcoming interviews
+  const upcomingInterviews = allJobs
+    .flatMap((job) => {
+      const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
+      return (Array.isArray(job.interviews) ? job.interviews : [])
+        .filter((i: { scheduled_at: string | null }) => i.scheduled_at && new Date(i.scheduled_at) >= new Date())
+        .map((i: { id: string; scheduled_at: string; type: string; status: string }) => ({
+          id: i.id,
+          scheduled_at: i.scheduled_at,
+          type: i.type,
+          status: i.status,
+          job: { title: job.title as string, company: co?.name ?? "Unknown" },
+        }));
+    })
+    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+    .slice(0, 5);
+
+  // Recent activity
+  const recentActivity: { id: string; type: string; title: string; timestamp: string; status?: string }[] = [];
+  for (const job of allJobs.slice(0, 10)) {
+    const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
+    recentActivity.push({
+      id: job.id as string,
+      type: "job_added",
+      title: `Added ${(job.title as string) ?? "Untitled"} at ${co?.name ?? "Unknown"}`,
+      timestamp: job.created_at as string,
+      status: job.status as string,
+    });
+    for (const app of Array.isArray(job.applications) ? job.applications : []) {
+      recentActivity.push({
+        id: `${job.id}-app`,
+        type: "application",
+        title: `Applied to ${(job.title as string) ?? "Untitled"}`,
+        timestamp: (app as { created_at: string }).created_at,
+        status: "applied",
+      });
+    }
   }
+  recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  // Interview stats
+  const allInterviews = allJobs.flatMap((job) => (Array.isArray(job.interviews) ? job.interviews : []));
+  const upcomingInterviewsCount = allInterviews.filter(
+    (i: { scheduled_at: string | null }) => i.scheduled_at && new Date(i.scheduled_at) >= new Date()
+  ).length;
+  const completedInterviews = allInterviews.filter((i: { status: string }) => i.status === "completed").length;
+  const passedInterviews = allInterviews.filter((i: { status: string }) => i.status === "passed").length;
+  const interviewStats = {
+    total: allInterviews.length,
+    upcoming: upcomingInterviewsCount,
+    completed: completedInterviews,
+    passRate: completedInterviews > 0 ? Math.round((passedInterviews / completedInterviews) * 100) : null,
+  };
+
+  // MCQ stats
+  const totalTests = mcqResults?.length ?? 0;
+  const avgScore =
+    totalTests > 0
+      ? Math.round((mcqResults ?? []).reduce((sum, r) => sum + (r.score / r.total), 0) / totalTests * 100)
+      : null;
+  const bestScore =
+    totalTests > 0
+      ? Math.round(Math.max(...(mcqResults ?? []).map((r) => r.score / r.total)) * 100)
+      : null;
+  const recentScores = (mcqResults ?? [])
+    .slice(0, 7)
+    .reverse()
+    .map((r) => ({
+      date: new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      score: Math.round((r.score / r.total) * 100),
+    }));
+
+  // Time analytics
+  let totalDaysToApply = 0;
+  let applyCount = 0;
+  let totalDaysToInterview = 0;
+  let interviewCount = 0;
+  let longestPendingDays = 0;
+  let longestPendingJob = null;
+
+  for (const job of allJobs) {
+    const created = new Date(job.created_at as string);
+    const apps = Array.isArray(job.applications) ? job.applications : [];
+    if (apps.length > 0) {
+      const appDate = new Date(
+        (apps[0] as { applied_at: string }).applied_at || (apps[0] as { created_at: string }).created_at
+      );
+      totalDaysToApply += Math.round((appDate.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      applyCount++;
+    } else {
+      const daysSinceCreated = Math.round((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceCreated > longestPendingDays) {
+        longestPendingDays = daysSinceCreated;
+        const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
+        longestPendingJob = { title: job.title as string, company: co?.name ?? "Unknown", days: daysSinceCreated };
+      }
+    }
+    const ints = Array.isArray(job.interviews) ? job.interviews : [];
+    if (ints.length > 0 && apps.length > 0) {
+      const intDate = new Date((ints[0] as { scheduled_at: string }).scheduled_at);
+      const appDate = new Date(
+        (apps[0] as { applied_at: string }).applied_at || (apps[0] as { created_at: string }).created_at
+      );
+      const d = Math.round((intDate.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (d > 0) {
+        totalDaysToInterview += d;
+        interviewCount++;
+      }
+    }
+  }
+  const timeAnalytics = {
+    averageTimeToApply: applyCount > 0 ? Math.round(totalDaysToApply / applyCount) : null,
+    averageTimeToInterview: interviewCount > 0 ? Math.round(totalDaysToInterview / interviewCount) : null,
+    longestPending: longestPendingJob,
+  };
+
+  const offerRate =
+    (totalJobs ?? 0) > 0 ? Math.round(((pipeline.offer + pipeline.accepted) / (totalJobs ?? 1)) * 100) : null;
+  const totalApplied =
+    pipeline.applied + pipeline.interview + pipeline.offer + pipeline.accepted + pipeline.rejected;
+  const responded = pipeline.interview + pipeline.offer + pipeline.accepted + pipeline.rejected;
+  const responseRate = totalApplied > 0 ? Math.round((responded / totalApplied) * 100) : null;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
       <div className="relative overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-8">
         <div className="absolute -right-20 -top-20 size-64 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-primary/5 blur-2xl" />
@@ -148,123 +370,38 @@ export default function OverviewPage() {
               </Link>
             </div>
           </div>
-
-          {/* Quick Stats */}
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <QuickStat
-              icon={Briefcase}
-              label="Total Jobs"
-              value={data.totalJobs}
-              color="text-blue-500"
-              bgColor="bg-blue-500/10"
-            />
-            <QuickStat
-              icon={Send}
-              label="Applications"
-              value={data.totalApplications}
-              color="text-violet-500"
-              bgColor="bg-violet-500/10"
-            />
-            <QuickStat
-              icon={Calendar}
-              label="Interviews"
-              value={data.totalInterviews}
-              color="text-emerald-500"
-              bgColor="bg-emerald-500/10"
-            />
-            <QuickStat
-              icon={Target}
-              label="Avg Match"
-              value={data.averageMatchScore != null ? `${data.averageMatchScore}%` : "—"}
-              color="text-amber-500"
-              bgColor="bg-amber-500/10"
-            />
-            <QuickStat
-              icon={TrendingUp}
-              label="Offer Rate"
-              value={data.offerRate != null ? `${data.offerRate}%` : "—"}
-              color="text-emerald-600"
-              bgColor="bg-emerald-500/10"
-            />
-            <QuickStat
-              icon={Activity}
-              label="Response"
-              value={data.responseRate != null ? `${data.responseRate}%` : "—"}
-              color="text-rose-500"
-              bgColor="bg-rose-500/10"
-            />
+            <QuickStat icon={Briefcase} label="Total Jobs" value={totalJobs ?? 0} color="text-blue-500" bgColor="bg-blue-500/10" />
+            <QuickStat icon={Send} label="Applications" value={totalApplications ?? 0} color="text-violet-500" bgColor="bg-violet-500/10" />
+            <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} color="text-emerald-500" bgColor="bg-emerald-500/10" />
+            <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "\u2014"} color="text-amber-500" bgColor="bg-amber-500/10" />
+            <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "\u2014"} color="text-emerald-600" bgColor="bg-emerald-500/10" />
+            <QuickStat icon={Activity} label="Response" value={responseRate != null ? `${responseRate}%` : "\u2014"} color="text-rose-500" bgColor="bg-rose-500/10" />
           </div>
         </div>
       </div>
 
-      {/* Main Grid */}
+      <Breadcrumbs />
+
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Pipeline Chart - 2 cols */}
         <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading text-lg font-semibold">Application Pipeline</h2>
               <p className="text-xs text-muted-foreground mt-1">Jobs by status</p>
             </div>
-            <Link href="/jobs" className="text-xs text-primary hover:underline flex items-center gap-1">
-              View all <ArrowRight className="size-3" />
-            </Link>
+            <Link href="/jobs" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={Object.entries(data.pipeline).map(([key, value]) => ({ name: statusLabels[key] || key, value, fill: statusColors[key] || "#6B7280" }))} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
-                  cursor={{ fill: "rgba(0,0,0,0.02)" }}
-                />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {Object.entries(data.pipeline).map(([key], index) => (
-                    <Cell key={`cell-${index}`} fill={statusColors[key] || "#6B7280"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <PipelineChart pipeline={pipeline} />
         </div>
-
-        {/* Match Score Ring */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Match Score</h2>
-              <p className="text-xs text-muted-foreground mt-1">Distribution</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Match Score</h2>
+            <p className="text-xs text-muted-foreground mt-1">Distribution</p>
           </div>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.matchScoreDistribution.filter(d => d.count > 0)}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="count"
-                  nameKey="range"
-                >
-                  {data.matchScoreDistribution
-                    .filter(d => d.count > 0)
-                    .map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <MatchScoreChart data={matchScoreDistribution} />
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {data.matchScoreDistribution.filter(d => d.count > 0).map((item) => (
+            {matchScoreDistribution.filter((d) => d.count > 0).map((item) => (
               <div key={item.range} className="flex items-center gap-2 text-xs">
                 <div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
                 <span className="text-muted-foreground">{item.range}</span>
@@ -275,224 +412,90 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Second Row */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Application Trend */}
         <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Application Trend</h2>
-              <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Application Trend</h2>
+            <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
           </div>
-          <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.applicationTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorApplications" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorInterviews" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB" }}
-                />
-                <Area type="monotone" dataKey="applications" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorApplications)" strokeWidth={2} />
-                <Area type="monotone" dataKey="interviews" stroke="#10B981" fillOpacity={1} fill="url(#colorInterviews)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <ApplicationTrendChart data={applicationTrend} />
           <div className="mt-4 flex items-center justify-center gap-6 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="size-2.5 rounded-full bg-violet-500" />
-              <span className="text-muted-foreground">Applications</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="size-2.5 rounded-full bg-emerald-500" />
-              <span className="text-muted-foreground">Interviews</span>
-            </div>
+            <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-violet-500" /><span className="text-muted-foreground">Applications</span></div>
+            <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
           </div>
         </div>
-
-        {/* Time Analytics */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Time Analytics</h2>
-              <p className="text-xs text-muted-foreground mt-1">Average response times</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Time Analytics</h2>
+            <p className="text-xs text-muted-foreground mt-1">Average response times</p>
           </div>
           <div className="space-y-6">
             <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-violet-500/10">
-                <Timer className="size-6 text-violet-500" />
-              </div>
+              <div className="flex size-12 items-center justify-center rounded-4xl bg-violet-500/10"><Timer className="size-6 text-violet-500" /></div>
               <div>
-                <p className="text-2xl font-bold">
-                  {data.timeAnalytics.averageTimeToApply != null ? `${data.timeAnalytics.averageTimeToApply}d` : "—"}
-                </p>
+                <p className="text-2xl font-bold">{timeAnalytics.averageTimeToApply != null ? `${timeAnalytics.averageTimeToApply}d` : "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Avg. time to apply</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-emerald-500/10">
-                <Zap className="size-6 text-emerald-500" />
-              </div>
+              <div className="flex size-12 items-center justify-center rounded-4xl bg-emerald-500/10"><Zap className="size-6 text-emerald-500" /></div>
               <div>
-                <p className="text-2xl font-bold">
-                  {data.timeAnalytics.averageTimeToInterview != null ? `${data.timeAnalytics.averageTimeToInterview}d` : "—"}
-                </p>
+                <p className="text-2xl font-bold">{timeAnalytics.averageTimeToInterview != null ? `${timeAnalytics.averageTimeToInterview}d` : "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Avg. time to interview</p>
               </div>
             </div>
-            {data.timeAnalytics.longestPending && (
+            {timeAnalytics.longestPending && (
               <div className="rounded-4xl bg-muted/50 p-4">
                 <p className="text-xs text-muted-foreground mb-2">Longest pending</p>
-                <p className="text-sm font-medium truncate">{data.timeAnalytics.longestPending.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {data.timeAnalytics.longestPending.company} • {data.timeAnalytics.longestPending.days} days
-                </p>
+                <p className="text-sm font-medium truncate">{timeAnalytics.longestPending.title}</p>
+                <p className="text-xs text-muted-foreground">{timeAnalytics.longestPending.company} &bull; {timeAnalytics.longestPending.days} days</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Third Row */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Source Breakdown */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Job Sources</h2>
-              <p className="text-xs text-muted-foreground mt-1">Where jobs come from</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Job Sources</h2>
+            <p className="text-xs text-muted-foreground mt-1">Where jobs come from</p>
           </div>
-          <div className="h-[180px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.sourceBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={70}
-                  paddingAngle={3}
-                  dataKey="count"
-                  nameKey="source"
-                >
-                  {data.sourceBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <SourceChart data={sourceBreakdown} />
           <div className="mt-2 space-y-2">
-            {data.sourceBreakdown.slice(0, 4).map((item) => (
+            {sourceBreakdown.slice(0, 4).map((item) => (
               <div key={item.source} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
-                  <span className="text-muted-foreground">{item.source}</span>
-                </div>
+                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.source}</span></div>
                 <span className="font-medium">{item.count}</span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Work Location */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Work Location</h2>
-              <p className="text-xs text-muted-foreground mt-1">Remote vs On-site</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Work Location</h2>
+            <p className="text-xs text-muted-foreground mt-1">Remote vs On-site</p>
           </div>
-          <div className="h-[180px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.workLocationBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={70}
-                  paddingAngle={3}
-                  dataKey="count"
-                  nameKey="location"
-                >
-                  {data.workLocationBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <LocationChart data={workLocationBreakdown} />
           <div className="mt-2 space-y-2">
-            {data.workLocationBreakdown.map((item) => (
+            {workLocationBreakdown.map((item) => (
               <div key={item.location} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
-                  <span className="text-muted-foreground">{item.location}</span>
-                </div>
+                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.location}</span></div>
                 <span className="font-medium">{item.count}</span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Employment Type */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Employment Type</h2>
-              <p className="text-xs text-muted-foreground mt-1">Full-time vs Part-time</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Employment Type</h2>
+            <p className="text-xs text-muted-foreground mt-1">Full-time vs Part-time</p>
           </div>
-          <div className="h-[180px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.employmentTypeBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={70}
-                  paddingAngle={3}
-                  dataKey="count"
-                  nameKey="type"
-                >
-                  {data.employmentTypeBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <EmploymentTypeChart data={employmentTypeBreakdown} />
           <div className="mt-2 space-y-2">
-            {data.employmentTypeBreakdown.slice(0, 4).map((item) => (
+            {employmentTypeBreakdown.slice(0, 4).map((item) => (
               <div key={item.type} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
-                  <span className="text-muted-foreground">{item.type}</span>
-                </div>
+                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.type}</span></div>
                 <span className="font-medium">{item.count}</span>
               </div>
             ))}
@@ -500,33 +503,25 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Fourth Row */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Top Companies */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Top Companies</h2>
-              <p className="text-xs text-muted-foreground mt-1">Most applied to</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Top Companies</h2>
+            <p className="text-xs text-muted-foreground mt-1">Most applied to</p>
           </div>
           <div className="space-y-4">
-            {data.topCompanies.length > 0 ? (
-              data.topCompanies.map((company, index) => (
-                <div key={company.name} className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-4xl bg-muted text-xs font-bold text-muted-foreground">
-                    {index + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{company.name}</p>
-                    <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
-                      <span>{company.applications} apps</span>
-                      <span>{company.interviews} interviews</span>
-                    </div>
+            {topCompanies.length > 0 ? topCompanies.map((company, index) => (
+              <div key={company.name} className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-4xl bg-muted text-xs font-bold text-muted-foreground">{index + 1}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{company.name}</p>
+                  <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
+                    <span>{company.applications} apps</span>
+                    <span>{company.interviews} interviews</span>
                   </div>
                 </div>
-              ))
-            ) : (
+              </div>
+            )) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Building2 className="size-8 text-muted-foreground/30 mb-2" />
                 <p className="text-xs text-muted-foreground">No data yet</p>
@@ -534,185 +529,116 @@ export default function OverviewPage() {
             )}
           </div>
         </div>
-
-        {/* Interview Stats */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Interview Stats</h2>
-              <p className="text-xs text-muted-foreground mt-1">Performance overview</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Interview Stats</h2>
+            <p className="text-xs text-muted-foreground mt-1">Performance overview</p>
           </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-emerald-500/10">
-                  <Calendar className="size-4 text-emerald-500" />
-                </div>
+                <div className="flex size-9 items-center justify-center rounded-4xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
                 <span className="text-sm">Total interviews</span>
               </div>
-              <span className="text-lg font-bold">{data.interviewStats.total}</span>
+              <span className="text-lg font-bold">{interviewStats.total}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-blue-500/10">
-                  <Clock className="size-4 text-blue-500" />
-                </div>
+                <div className="flex size-9 items-center justify-center rounded-4xl bg-blue-500/10"><Clock className="size-4 text-blue-500" /></div>
                 <span className="text-sm">Upcoming</span>
               </div>
-              <span className="text-lg font-bold">{data.interviewStats.upcoming}</span>
+              <span className="text-lg font-bold">{interviewStats.upcoming}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-violet-500/10">
-                  <CheckCircle2 className="size-4 text-violet-500" />
-                </div>
+                <div className="flex size-9 items-center justify-center rounded-4xl bg-violet-500/10"><CheckCircle2 className="size-4 text-violet-500" /></div>
                 <span className="text-sm">Completed</span>
               </div>
-              <span className="text-lg font-bold">{data.interviewStats.completed}</span>
+              <span className="text-lg font-bold">{interviewStats.completed}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-amber-500/10">
-                  <Award className="size-4 text-amber-500" />
-                </div>
+                <div className="flex size-9 items-center justify-center rounded-4xl bg-amber-500/10"><Award className="size-4 text-amber-500" /></div>
                 <span className="text-sm">Pass rate</span>
               </div>
-              <span className="text-lg font-bold">
-                {data.interviewStats.passRate != null ? `${data.interviewStats.passRate}%` : "—"}
-              </span>
+              <span className="text-lg font-bold">{interviewStats.passRate != null ? `${interviewStats.passRate}%` : "\u2014"}</span>
             </div>
           </div>
         </div>
-
-        {/* MCQ Performance */}
         <div className="rounded-4xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading text-lg font-semibold">Practice Score</h2>
               <p className="text-xs text-muted-foreground mt-1">MCQ test results</p>
             </div>
-            <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">
-              Practice <ArrowRight className="size-3" />
-            </Link>
+            <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
           </div>
-          {data.mcqStats.totalTests > 0 ? (
+          {totalTests > 0 ? (
             <>
               <div className="flex items-center gap-6 mb-6">
-                <div>
-                  <p className="text-3xl font-bold">{data.mcqStats.averageScore ?? 0}%</p>
-                  <p className="text-[10px] text-muted-foreground">Average</p>
-                </div>
+                <div><p className="text-3xl font-bold">{avgScore ?? 0}%</p><p className="text-[10px] text-muted-foreground">Average</p></div>
                 <div className="h-12 w-px bg-border" />
-                <div>
-                  <p className="text-3xl font-bold">{data.mcqStats.bestScore ?? 0}%</p>
-                  <p className="text-[10px] text-muted-foreground">Best</p>
-                </div>
+                <div><p className="text-3xl font-bold">{bestScore ?? 0}%</p><p className="text-[10px] text-muted-foreground">Best</p></div>
               </div>
-              {data.mcqStats.recentScores.length > 0 && (
-                <div className="h-[100px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.mcqStats.recentScores} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB", fontSize: "12px" }}
-                      />
-                      <Line type="monotone" dataKey="score" stroke="#F59E0B" strokeWidth={2} dot={{ fill: "#F59E0B", strokeWidth: 0, r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+              {recentScores.length > 0 && <McqScoreChart data={recentScores} />}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3">
-                <Sparkles className="size-6 text-muted-foreground/30" />
-              </div>
+              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3"><Sparkles className="size-6 text-muted-foreground/30" /></div>
               <p className="text-xs text-muted-foreground mb-3">No practice tests yet</p>
-              <Link
-                href="/interviews"
-                className={buttonVariants({ size: "sm", variant: "outline", className: "gap-1.5" })}
-              >
-                Start practicing
-                <ArrowRight className="size-3" />
-              </Link>
+              <Link href="/interviews" className={buttonVariants({ size: "sm", variant: "outline", className: "gap-1.5" })}>Start practicing <ArrowRight className="size-3" /></Link>
             </div>
           )}
         </div>
       </div>
 
-      {/* Fifth Row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Upcoming Interviews */}
         <div className="rounded-4xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
               <p className="text-xs text-muted-foreground mt-1">Next scheduled</p>
             </div>
-            <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">
-              View all <ArrowRight className="size-3" />
-            </Link>
+            <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
-          {data.upcomingInterviews.length > 0 ? (
+          {upcomingInterviews.length > 0 ? (
             <div className="space-y-3">
-              {data.upcomingInterviews.map((interview) => (
+              {upcomingInterviews.map((interview) => (
                 <div key={interview.id} className="flex items-center gap-4 rounded-4xl border border-border p-4 transition-all hover:shadow-md hover:border-primary/20">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-emerald-500/10">
-                    <Calendar className="size-5 text-emerald-500" />
-                  </div>
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{interview.job.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="rounded-4xl bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                      {interview.type}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </span>
+                    <span className="rounded-4xl bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{interview.type}</span>
+                    <span className="text-[10px] text-muted-foreground">{new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3">
-                <Calendar className="size-6 text-muted-foreground/30" />
-              </div>
+              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3"><Calendar className="size-6 text-muted-foreground/30" /></div>
               <p className="text-sm text-muted-foreground">No upcoming interviews</p>
             </div>
           )}
         </div>
-
-        {/* Recent Activity */}
         <div className="rounded-4xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
-              <p className="text-xs text-muted-foreground mt-1">Latest updates</p>
-            </div>
+          <div className="mb-6">
+            <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
+            <p className="text-xs text-muted-foreground mt-1">Latest updates</p>
           </div>
-          {data.recentActivity.length > 0 ? (
+          {recentActivity.length > 0 ? (
             <div className="space-y-4">
-              {data.recentActivity.map((activity) => (
+              {recentActivity.slice(0, 6).map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3">
-                  <div className="relative mt-1">
-                    <div className="size-2 rounded-full bg-primary" />
-                    <div className="absolute left-1/2 top-2 -translate-x-1/2 h-6 w-px bg-border" />
-                  </div>
+                  <div className="relative mt-1"><div className="size-2 rounded-full bg-primary" /><div className="absolute left-1/2 top-2 -translate-x-1/2 h-6 w-px bg-border" /></div>
                   <div className="min-w-0 flex-1 pb-4">
                     <p className="text-sm">{activity.title}</p>
                     <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span>{new Date(activity.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      {activity.status && (
-                        <>
-                          <span>•</span>
-                          <span className="capitalize">{activity.status}</span>
-                        </>
-                      )}
+                      {activity.status && <><span>&bull;</span><span className="capitalize">{statusLabels[activity.status] ?? activity.status}</span></>}
                     </div>
                   </div>
                 </div>
@@ -720,53 +646,30 @@ export default function OverviewPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3">
-                <Activity className="size-6 text-muted-foreground/30" />
-              </div>
+              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3"><Activity className="size-6 text-muted-foreground/30" /></div>
               <p className="text-sm text-muted-foreground">No recent activity</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="rounded-4xl border border-border bg-card p-6">
         <h2 className="font-heading text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Link
-            href="/jobs"
-            className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30"
-          >
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-blue-500/10">
-              <Briefcase className="size-5 text-blue-500" />
-            </div>
+          <Link href="/jobs" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-4xl bg-blue-500/10"><Briefcase className="size-5 text-blue-500" /></div>
             All Jobs
           </Link>
-          <Link
-            href="/interviews"
-            className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30"
-          >
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-emerald-500/10">
-              <Calendar className="size-5 text-emerald-500" />
-            </div>
+          <Link href="/interviews" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-4xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
             Interviews
           </Link>
-          <Link
-            href="/documents"
-            className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30"
-          >
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-violet-500/10">
-              <FileText className="size-5 text-violet-500" />
-            </div>
+          <Link href="/documents" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-4xl bg-violet-500/10"><FileText className="size-5 text-violet-500" /></div>
             Documents
           </Link>
-          <Link
-            href="/insights"
-            className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30"
-          >
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-amber-500/10">
-              <BarChart3 className="size-5 text-amber-500" />
-            </div>
+          <Link href="/insights" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-4xl bg-amber-500/10"><BarChart3 className="size-5 text-amber-500" /></div>
             Insights
           </Link>
         </div>
