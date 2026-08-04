@@ -3,7 +3,7 @@ import { ArrowRight, Check } from "lucide-react";
 
 export function Cta() {
   return (
-    <section className="relative overflow-hidden px-6 py-24">
+    <section id="cta" className="relative scroll-mt-24 overflow-hidden px-6 py-24">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-transparent" />
       <div className="absolute -left-48 top-0 size-96 rounded-full bg-primary/[0.08] blur-3xl" />
       <div className="absolute -right-48 bottom-0 size-96 rounded-full bg-primary/[0.06] blur-3xl" />

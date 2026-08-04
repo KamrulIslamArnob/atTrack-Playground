@@ -27,13 +27,13 @@ export function LandingHeader() {
     )}>
       <header
         className={cn(
-          "flex h-14 items-center justify-between px-4 transition-all duration-300 will-change-[transform,opacity]",
+          "grid h-14 grid-cols-[1fr_auto_1fr] items-center px-4 transition-all duration-300 will-change-[transform,opacity]",
           scrolled
             ? "rounded-4xl border border-white/10 dark:border-white/8 bg-white/60 dark:bg-white/6 shadow-lg shadow-black/5 backdrop-blur-md"
             : "rounded-none border-transparent bg-transparent"
         )}
       >
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5 justify-self-start">
           <Image
             src="/logo.png"
             alt="Aven"
@@ -45,13 +45,14 @@ export function LandingHeader() {
             Aven
           </span>
         </Link>
-        <div className="flex items-center gap-3">
-          <nav className="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
-            <a href="#features" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Features</a>
-            <a href="#how-it-works" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">How it works</a>
-            <a href="#ai" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">AI</a>
-            <a href="#privacy" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Privacy</a>
-          </nav>
+        <nav className="hidden items-center justify-self-center gap-1 text-sm text-muted-foreground md:flex">
+          <a href="#features" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Features</a>
+          <a href="#how-it-works" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">How it works</a>
+          <a href="#ai" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">AI</a>
+          <a href="#testimonials" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Testimonials</a>
+          <a href="#faq" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">FAQ</a>
+        </nav>
+        <div className="flex items-center justify-self-end gap-3">
           {mounted && (
             <div className="flex items-center gap-0.5 rounded-4xl border border-border/50 bg-card/50 p-0.5">
               <button

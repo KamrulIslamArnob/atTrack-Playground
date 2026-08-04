@@ -1,77 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const faqs = [
   {
-    question: "Is Aven free to use?",
-    answer: "Yes! Aven's free tier includes unlimited job tracking, AI screenshot import, AI email composer, resume matching, interview tracker, and MCQ practice tests. No credit card required.",
+    question: "What does Aven do?",
+    answer:
+      "Aven is a private workspace that brings your entire job search into one place. Track jobs, applications, and interviews, generate tailored emails, and practice with AI — from the moment you discover a role to the day you accept the offer.",
   },
   {
     question: "How does the AI screenshot import work?",
-    answer: "Simply paste a screenshot (or multiple screenshots) of a job posting. Our AI extracts the title, company, salary, location, requirements, employment type, and how to apply — all structured in seconds.",
+    answer:
+      "Paste a screenshot of a job posting — or several — and our AI extracts the title, company, salary, location, requirements, employment type, and how to apply. Everything is structured and saved in seconds, no copy-pasting required.",
   },
   {
-    question: "Is my data private and secure?",
-    answer: "Absolutely. Aven is a private workspace, not a job board. Your applications, resumes, and interview notes are encrypted and never shared with third parties. You own your data.",
+    question: "Can I import jobs from a URL too?",
+    answer:
+      "Yes. Alongside screenshots, you can paste a job posting URL and Aven fetches the page and extracts the details automatically — so you can save a role from anywhere.",
   },
   {
-    question: "Can I send application emails through Aven?",
-    answer: "Yes. Configure your SMTP settings (Gmail, Outlook, or any provider) and Aven will send personalized, AI-generated application emails on your behalf with your resume attached.",
+    question: "How does the AI email composer work?",
+    answer:
+      "Aven drafts a personalized application email tailored to the role and your experience. You can edit and preview it, attach your resume, and send it directly through your own SMTP account — Gmail, Outlook, or any provider.",
   },
   {
     question: "What is the resume match score?",
-    answer: "AI compares your resume against each job description and gives you a percentage match score. This helps you prioritize which jobs to apply to and tailor your resume for better chances.",
+    answer:
+      "AI compares your resume against each job description and returns a percentage match score. Use it to prioritize the roles where you're strongest and identify which keywords or skills to emphasize before you apply.",
   },
   {
-    question: "Can I import jobs from URLs?",
-    answer: "Yes. In addition to screenshots, you can paste job posting URLs and Aven will fetch and extract the details automatically.",
+    question: "Can I practice for interviews with Aven?",
+    answer:
+      "Yes. Aven generates role-specific multiple-choice questions based on the job, tracks your scores over time, and highlights weak areas so you can study where it matters most.",
+  },
+  {
+    question: "Is my data private and secure?",
+    answer:
+      "Completely. Aven is a private workspace, not a job board. Your applications, resumes, and interview notes are encrypted and never shared with third parties — you own your data.",
+  },
+  {
+    question: "Is Aven really free?",
+    answer:
+      "Yes. The free tier includes unlimited job tracking, AI screenshot import, the AI email composer, resume matching, the interview tracker, and MCQ practice tests. No credit card required.",
   },
 ];
 
 export function Faq() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
   return (
-    <section className="px-6 py-24">
-      <div className="mx-auto max-w-3xl">
+    <section id="faq" className="scroll-mt-24 px-6 py-24">
+      <div className="mx-auto max-w-4xl">
         <div className="text-center">
           <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Frequently asked questions
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-            Everything you need to know about Aven.
+            Straight answers to the questions job seekers ask most.
           </p>
         </div>
 
-        <div className="mt-16 space-y-3">
-          {faqs.map((faq, i) => (
-            <div
-              key={i}
-              className="rounded-4xl border border-border bg-card"
-            >
-              <button
-                onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-medium"
-              >
+        <Accordion
+          defaultValue={[faqs[0].question]}
+          className="mt-16 rounded-4xl border-border bg-gradient-to-br from-primary/[0.06] via-card to-card"
+        >
+          {faqs.map((faq) => (
+            <AccordionItem key={faq.question} value={faq.question}>
+              <AccordionTrigger className="hover:no-underline">
                 {faq.question}
-                <ChevronDown
-                  className={cn(
-                    "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                    openIndex === i && "rotate-180",
-                  )}
-                />
-              </button>
-              {openIndex === i && (
-                <div className="px-6 pb-4 text-sm leading-relaxed text-muted-foreground">
-                  {faq.answer}
-                </div>
-              )}
-            </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-5 leading-relaxed text-muted-foreground">
+                {faq.answer}
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
       </div>
     </section>
   );

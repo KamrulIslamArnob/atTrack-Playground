@@ -8,6 +8,7 @@ import { Faq } from "@/components/landing/faq";
 import { Privacy } from "@/components/landing/privacy";
 import { Cta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
+import { SectionSeparator } from "@/components/landing/section-separator";
 
 export default function LandingPage() {
   return (
@@ -16,12 +17,19 @@ export default function LandingPage() {
 
       <main className="flex-1">
         <Hero />
+        <SectionSeparator />
         <Features />
+        <SectionSeparator />
         <HowItWorks />
+        <SectionSeparator />
         <AiHighlight />
+        <SectionSeparator />
         <Testimonials />
+        <SectionSeparator />
         <Faq />
+        <SectionSeparator />
         <Privacy />
+        <SectionSeparator />
         <Cta />
       </main>
 

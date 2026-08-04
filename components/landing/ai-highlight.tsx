@@ -2,7 +2,7 @@ import { Sparkles, Camera, Mail, Check } from "lucide-react";
 
 export function AiHighlight() {
   return (
-    <section id="ai" className="px-6 py-24">
+    <section id="ai" className="scroll-mt-24 px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
