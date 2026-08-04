@@ -137,8 +137,8 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 
   if (!profiles) return [];
 
-  // Get auth users for email
-  const { data: authUsers } = await supabase.auth.admin.listUsers();
+  // Get auth users for email (requires service-role key)
+  const { data: authUsers } = await createAdminClient().auth.admin.listUsers();
   const authMap = new Map(authUsers.users.map((u) => [u.id, u]));
 
   return profiles.map((p) => {
@@ -277,8 +277,8 @@ export async function getAdminActivityLog(
 
   if (!data) return { logs: [], total: 0 };
 
-  // Batch fetch auth users for emails
-  const { data: authUsers } = await supabase.auth.admin.listUsers();
+  // Batch fetch auth users for emails (requires service-role key)
+  const { data: authUsers } = await createAdminClient().auth.admin.listUsers();
   const authMap = new Map(authUsers.users.map((u) => [u.id, u]));
 
   return {
@@ -344,7 +344,7 @@ export async function getAdminAiUsage(
 
   if (!data) return { logs: [], total: 0, totalTokens, totalCost };
 
-  const { data: authUsers } = await supabase.auth.admin.listUsers();
+  const { data: authUsers } = await createAdminClient().auth.admin.listUsers();
   const authMap = new Map(authUsers.users.map((u) => [u.id, u]));
 
   return {
