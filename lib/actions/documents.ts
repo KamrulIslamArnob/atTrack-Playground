@@ -64,7 +64,7 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
   // AI extraction of structured resume data
   let matchData: ResumeMatchData | null = null;
   try {
-    matchData = await extractResumeContent(pdfText);
+    matchData = await extractResumeContent(pdfText, userId);
   } catch (e) {
     console.error("AI extraction failed, continuing without match data:", e);
   }
@@ -253,7 +253,8 @@ async function recalculateAllMatchScores(
         const result = await calculateMatchScore(
           job.title,
           job.description,
-          resume.match_data as unknown as ResumeMatchData
+          resume.match_data as unknown as ResumeMatchData,
+          userId
         );
 
         if (result.score > bestScore) {

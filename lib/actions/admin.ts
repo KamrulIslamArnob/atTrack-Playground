@@ -355,6 +355,8 @@ export interface AdminAiUsageEntry {
   output_tokens: number;
   total_tokens: number;
   cost_usd: number;
+  duration_ms: number | null;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -403,6 +405,8 @@ export async function getAdminAiUsage(
         output_tokens: l.output_tokens ?? 0,
         total_tokens: (l.input_tokens ?? 0) + (l.output_tokens ?? 0),
         cost_usd: l.cost_usd ?? 0,
+        duration_ms: l.duration_ms ?? null,
+        metadata: l.metadata ?? {},
         created_at: l.created_at,
       };
     }),

@@ -93,7 +93,8 @@ export async function createJob(formData: FormData) {
         const result = await calculateMatchScore(
           title,
           description,
-          resume.match_data as unknown as ResumeMatchData
+          resume.match_data as unknown as ResumeMatchData,
+          userId
         );
 
         if (result.score > bestScore) {

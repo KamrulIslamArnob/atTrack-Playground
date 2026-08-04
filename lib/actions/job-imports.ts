@@ -81,7 +81,7 @@ export async function extractFromScreenshots(
   }
 
   try {
-    const result = await extractJobFromScreenshots(imagesBase64);
+    const result = await extractJobFromScreenshots(imagesBase64, userId);
     const extractedFields = Object.entries(result)
       .filter(([, v]) => v !== null && v !== undefined)
       .map(([k]) => k);

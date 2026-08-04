@@ -1,5 +1,6 @@
 import { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod";
+import { logAiUsage } from "@/lib/actions/ai-usage";
 
 const openrouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
@@ -68,8 +69,10 @@ function parseJsonResponse(text: string): unknown {
 }
 
 export async function extractResumeContent(
-  pdfText: string
+  pdfText: string,
+  userId?: string
 ): Promise<ResumeMatchData> {
+  const startedAt = Date.now();
   const response = await openrouter.chat.send({
     chatRequest: {
       model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
@@ -92,6 +95,16 @@ ${pdfText.slice(0, 8000)}`,
   });
 
   if (!response || !("choices" in response) || !response.choices?.length) {
+    if (userId) {
+      await logAiUsage({
+        userId,
+        action: "extract_resume",
+        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: "No response from model",
+      });
+    }
     throw new Error("No response from model");
   }
 
@@ -99,6 +112,16 @@ ${pdfText.slice(0, 8000)}`,
   const text = typeof message.content === "string" ? message.content : null;
 
   if (!text) {
+    if (userId) {
+      await logAiUsage({
+        userId,
+        action: "extract_resume",
+        model: response.model,
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: "No text content in response",
+      });
+    }
     throw new Error("No text content in response");
   }
 
@@ -106,8 +129,33 @@ ${pdfText.slice(0, 8000)}`,
   const validated = resumeMatchDataSchema.safeParse(parsed);
 
   if (!validated.success) {
+    if (userId) {
+      await logAiUsage({
+        userId,
+        action: "extract_resume",
+        model: response.model,
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: `Invalid resume extraction: ${validated.error.message}`,
+      });
+    }
     console.error("[ResumeExtract] Validation error:", validated.error.flatten());
     throw new Error(`Invalid resume extraction: ${validated.error.message}`);
+  }
+
+  if (userId) {
+    const usage = "usage" in response ? (response as { usage?: { promptTokens?: number; completionTokens?: number; cachedTokens?: number; reasoningTokens?: number; cost?: number | null } }).usage : undefined;
+    await logAiUsage({
+      userId,
+      action: "extract_resume",
+      model: response.model,
+      inputTokens: usage?.promptTokens ?? 0,
+      outputTokens: usage?.completionTokens ?? 0,
+      cachedTokens: usage?.cachedTokens,
+      reasoningTokens: usage?.reasoningTokens,
+      costUsd: usage?.cost ?? undefined,
+      durationMs: Date.now() - startedAt,
+    });
   }
 
   return validated.data;
@@ -116,8 +164,10 @@ ${pdfText.slice(0, 8000)}`,
 export async function calculateMatchScore(
   jobTitle: string,
   jobDescription: string | null,
-  resumeMatchData: ResumeMatchData
+  resumeMatchData: ResumeMatchData,
+  userId?: string
 ): Promise<MatchScore> {
+  const startedAt = Date.now();
   const jobContext = [
     jobTitle,
     jobDescription,
@@ -159,6 +209,17 @@ Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>
   });
 
   if (!response || !("choices" in response) || !response.choices?.length) {
+    if (userId) {
+      await logAiUsage({
+        userId,
+        action: "match_score",
+        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: "No response from model",
+        metadata: { job_title: jobTitle },
+      });
+    }
     throw new Error("No response from model");
   }
 
@@ -166,6 +227,17 @@ Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>
   const text = typeof message.content === "string" ? message.content : null;
 
   if (!text) {
+    if (userId) {
+      await logAiUsage({
+        userId,
+        action: "match_score",
+        model: response.model,
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: "No text content in response",
+        metadata: { job_title: jobTitle },
+      });
+    }
     throw new Error("No text content in response");
   }
 
@@ -173,7 +245,34 @@ Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>
   const validated = matchScoreSchema.safeParse(parsed);
 
   if (!validated.success) {
+    if (userId) {
+      await logAiUsage({
+        userId,
+        action: "match_score",
+        model: response.model,
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: `Invalid match score: ${validated.error.message}`,
+        metadata: { job_title: jobTitle },
+      });
+    }
     throw new Error(`Invalid match score: ${validated.error.message}`);
+  }
+
+  if (userId) {
+    const usage = "usage" in response ? (response as { usage?: { promptTokens?: number; completionTokens?: number; cachedTokens?: number; reasoningTokens?: number; cost?: number | null } }).usage : undefined;
+    await logAiUsage({
+      userId,
+      action: "match_score",
+      model: response.model,
+      inputTokens: usage?.promptTokens ?? 0,
+      outputTokens: usage?.completionTokens ?? 0,
+      cachedTokens: usage?.cachedTokens,
+      reasoningTokens: usage?.reasoningTokens,
+      costUsd: usage?.cost ?? undefined,
+      durationMs: Date.now() - startedAt,
+      metadata: { job_title: jobTitle },
+    });
   }
 
   return validated.data;

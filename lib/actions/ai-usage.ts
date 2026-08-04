@@ -8,8 +8,12 @@ interface AiUsageLogParams {
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
+  cachedTokens?: number;
+  reasoningTokens?: number;
   costUsd?: number;
   durationMs?: number;
+  status?: "success" | "error";
+  error?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -24,7 +28,13 @@ export async function logAiUsage(params: AiUsageLogParams): Promise<void> {
       output_tokens: params.outputTokens ?? 0,
       cost_usd: params.costUsd ?? 0,
       duration_ms: params.durationMs ?? null,
-      metadata: params.metadata ?? {},
+      metadata: {
+        status: params.status ?? "success",
+        ...(params.error ? { error: params.error } : {}),
+        ...(params.cachedTokens ? { cached_tokens: params.cachedTokens } : {}),
+        ...(params.reasoningTokens ? { reasoning_tokens: params.reasoningTokens } : {}),
+        ...(params.metadata ?? {}),
+      },
     });
   } catch {
     // AI usage logging should never break the main flow

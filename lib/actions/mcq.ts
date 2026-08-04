@@ -45,6 +45,7 @@ export async function generateMCQTest(jobId: string): Promise<MCQTest> {
     description: job.description,
     employmentType: job.employment_type,
     notes,
+    userId,
   });
 
   return {
