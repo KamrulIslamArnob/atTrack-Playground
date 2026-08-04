@@ -167,7 +167,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -175,7 +175,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
           <ArrowLeft className="size-4" />
           Back to job
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isStreaming && (
             <Button variant="outline" size="sm" onClick={() => generateEmail(selectedResumeId)} className="gap-1.5">
               <RefreshCw className="size-3.5" />
@@ -199,16 +199,19 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
 
       {/* Recipient info + Resume selector */}
       <div className="rounded-4xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
             <div>
               <span className="text-muted-foreground">To:</span>{" "}
               <span className="font-medium">{job.applicationEmail}</span>
             </div>
-            <div className="text-muted-foreground/40">|</div>
+            <div className="hidden text-muted-foreground/40 sm:inline">|</div>
+            <div className="flex items-center gap-1.5 text-muted-foreground/40 sm:hidden">
+              <span className="text-[10px]">•</span>
+            </div>
             <div>
               <span className="text-muted-foreground">Re:</span>{" "}
-              <span className="font-medium">{job.title} at {job.company}</span>
+              <span className="font-medium truncate">{job.title} at {job.company}</span>
             </div>
           </div>
           {resumes.length > 0 && (
@@ -219,7 +222,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
                 onValueChange={handleResumeChange}
                 items={resumes.map((r) => ({ value: r.id, label: r.name }))}
               >
-                <SelectTrigger className="h-9 w-[200px]">
+                <SelectTrigger className="h-9 w-full sm:w-[200px]">
                   <SelectValue placeholder="Select resume..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -342,7 +345,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
 
       {/* Confirmation dialog */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-md">
             <h2 className="font-heading text-lg font-semibold">Send email?</h2>
             <div className="mt-4 space-y-3 text-sm">
@@ -361,11 +364,11 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
                 </div>
               )}
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)}>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleSend} disabled={isSending} className="gap-1.5">
+              <Button size="sm" onClick={handleSend} disabled={isSending} className="w-full gap-1.5 sm:w-auto">
                 {isSending ? <Spinner className="size-3.5" /> : <Send className="size-3.5" />}
                 {isSending ? "Sending..." : "Send email"}
               </Button>

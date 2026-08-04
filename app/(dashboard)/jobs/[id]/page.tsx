@@ -133,26 +133,26 @@ export default async function JobDetailPage(props: {
       </Link>
 
       {/* Header card */}
-      <div className="rounded-4xl border border-border bg-card p-6">
-        <div className="flex items-start gap-4">
+      <div className="rounded-4xl border border-border bg-card p-4 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
           {/* Company logo placeholder */}
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-4xl bg-muted">
-            <Building2 className="size-8 text-muted-foreground/50" />
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-4xl bg-muted sm:size-16">
+            <Building2 className="size-7 text-muted-foreground/50 sm:size-8" />
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
                   {jobTitle || "Untitled"}
                 </h1>
-                <p className="mt-1 flex items-center gap-2 text-base text-muted-foreground">
-                  <Building2 className="size-4" />
-                  {companyName || "Unknown company"}
+                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground sm:text-base">
+                  <Building2 className="size-4 shrink-0" />
+                  <span className="truncate">{companyName || "Unknown company"}</span>
                   {companyLocation && (
                     <>
                       <span className="text-muted-foreground/40">·</span>
-                      <span>{companyLocation}</span>
+                      <span className="truncate">{companyLocation}</span>
                     </>
                   )}
                 </p>
@@ -228,39 +228,47 @@ export default async function JobDetailPage(props: {
             </div>
 
             {/* Actions */}
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
               {jobUrl && (
                 <a
                   href={jobUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={buttonVariants({ size: "sm", className: "gap-2" })}
+                  className={buttonVariants({ size: "sm", className: "col-span-2 justify-center gap-2 sm:col-span-1 sm:w-auto" })}
                 >
                   Apply now
                   <ExternalLink className="size-3.5" />
                 </a>
               )}
               {jobEmail && (
-                <EmailApplyButton jobId={id} isSmtpConfigured={smtpReady} />
+                <div className="col-span-2 sm:col-span-1 [&>button]:w-full">
+                  <EmailApplyButton jobId={id} isSmtpConfigured={smtpReady} />
+                </div>
               )}
-              <EditJobDialog job={{
-                id,
-                title: jobTitle,
-                description: str(job.description) || null,
-                application_url: jobUrl || null,
-                application_email: jobEmail || null,
-                application_process: jobProcess || null,
-                location: jobLocation || null,
-                salary_range: jobSalaryRange || null,
-                employment_type: jobEmploymentType || null,
-                work_location: jobWorkLocation || null,
-                deadline: jobDeadline || null,
-                source: jobSource || null,
-                status: jobStatus,
-                notes: Array.isArray(job.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
-                company: companyName ? { name: companyName } : null,
-              }} />
-              {jobStatus === "preparing" && <PracticeButton jobId={id} />}
+              <div className="col-span-2 sm:col-span-1 [&>button]:w-full">
+                <EditJobDialog job={{
+                  id,
+                  title: jobTitle,
+                  description: str(job.description) || null,
+                  application_url: jobUrl || null,
+                  application_email: jobEmail || null,
+                  application_process: jobProcess || null,
+                  location: jobLocation || null,
+                  salary_range: jobSalaryRange || null,
+                  employment_type: jobEmploymentType || null,
+                  work_location: jobWorkLocation || null,
+                  deadline: jobDeadline || null,
+                  source: jobSource || null,
+                  status: jobStatus,
+                  notes: Array.isArray(job.notes) ? job.notes as Array<{ title: string; bullets: string[] }> : null,
+                  company: companyName ? { name: companyName } : null,
+                }} />
+              </div>
+              {jobStatus === "preparing" && (
+                <div className="col-span-2 sm:col-span-1 [&>button]:w-full">
+                  <PracticeButton jobId={id} />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -272,7 +280,7 @@ export default async function JobDetailPage(props: {
         <div className="space-y-6 lg:col-span-2">
           {/* Description */}
           {jobDescription && (
-            <div className="rounded-4xl border border-border bg-card p-6">
+            <div className="rounded-4xl border border-border bg-card p-4 sm:p-6">
               <h2 className="font-heading text-lg font-semibold">Job Description</h2>
               <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                 {jobDescription}
@@ -317,9 +325,9 @@ export default async function JobDetailPage(props: {
             {applications && applications.length > 0 ? (
               <div className="space-y-3">
                 {applications.map((app) => (
-                  <div key={app.id} className="flex items-center justify-between rounded-4xl border border-border p-4">
+                  <div key={app.id} className="flex flex-col gap-3 rounded-4xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`flex size-9 items-center justify-center rounded-4xl ${
+                      <div className={`flex size-9 shrink-0 items-center justify-center rounded-4xl ${
                         app.status === "submitted" ? "bg-violet-500/10" :
                         app.status === "interview" ? "bg-emerald-500/10" :
                         app.status === "offer" ? "bg-emerald-500/10" :
@@ -342,9 +350,9 @@ export default async function JobDetailPage(props: {
                       </div>
                     </div>
                     {app.resume_name && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <FileText className="size-3" />
-                        {app.resume_name}
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 pl-12 sm:pl-0">
+                        <FileText className="size-3 shrink-0" />
+                        <span className="truncate">{app.resume_name}</span>
                       </span>
                     )}
                   </div>
@@ -371,13 +379,13 @@ export default async function JobDetailPage(props: {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{email.subject}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
                           To: {email.recipient_email}
                         </p>
                         {email.resume_name && (
                           <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <FileText className="size-3" />
-                            Attached: {email.resume_name}
+                            <FileText className="size-3 shrink-0" />
+                            <span className="truncate">Attached: {email.resume_name}</span>
                           </p>
                         )}
                       </div>

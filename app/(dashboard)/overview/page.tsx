@@ -39,6 +39,18 @@ const statusLabels: Record<string, string> = {
   preparing: "Preparing",
 };
 
+const pipelineColors: Record<string, string> = {
+  saved: "#94A3B8",
+  interested: "#3B82F6",
+  preparing: "#F59E0B",
+  applied: "#8B5CF6",
+  interview: "#10B981",
+  offer: "#059669",
+  accepted: "#047857",
+  rejected: "#EF4444",
+  withdrawn: "#6B7280",
+};
+
 const sourceColors: Record<string, string> = {
   linkedin: "#0A66C2",
   indeed: "#2164F3",
@@ -102,12 +114,15 @@ export default async function OverviewPage() {
 
   const allJobs = jobs ?? [];
 
-  // Pipeline
-  const pipeline = { saved: 0, interested: 0, preparing: 0, applied: 0, interview: 0, offer: 0, accepted: 0, rejected: 0, withdrawn: 0 };
+  // Pipeline — only include stages that have data
+  const pipelineCounts: Record<string, number> = {};
   for (const job of allJobs) {
-    const s = job.status as keyof typeof pipeline;
-    if (s in pipeline) pipeline[s]++;
+    const s = job.status as string;
+    pipelineCounts[s] = (pipelineCounts[s] || 0) + 1;
   }
+  const pipeline = Object.fromEntries(
+    Object.entries(pipelineCounts).filter(([, count]) => count > 0)
+  );
 
   // Match score distribution
   let totalScore = 0;
@@ -179,7 +194,7 @@ export default async function OverviewPage() {
   const topCompanies = Object.entries(companyMap)
     .map(([name, data]) => ({ name, ...data }))
     .sort((a, b) => b.applications - a.applications)
-    .slice(0, 5);
+    .slice(0, 3);
 
   // Application trend (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -222,7 +237,7 @@ export default async function OverviewPage() {
         }));
     })
     .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
-    .slice(0, 5);
+    .slice(0, 3);
 
   // Recent activity
   const recentActivity: { id: string; type: string; title: string; timestamp: string; status?: string }[] = [];
@@ -324,10 +339,10 @@ export default async function OverviewPage() {
   };
 
   const offerRate =
-    (totalJobs ?? 0) > 0 ? Math.round(((pipeline.offer + pipeline.accepted) / (totalJobs ?? 1)) * 100) : null;
+    (totalJobs ?? 0) > 0 ? Math.round(((pipeline.offer ?? 0) + (pipeline.accepted ?? 0)) / (totalJobs ?? 1) * 100) : null;
   const totalApplied =
-    pipeline.applied + pipeline.interview + pipeline.offer + pipeline.accepted + pipeline.rejected;
-  const responded = pipeline.interview + pipeline.offer + pipeline.accepted + pipeline.rejected;
+    (pipeline.applied ?? 0) + (pipeline.interview ?? 0) + (pipeline.offer ?? 0) + (pipeline.accepted ?? 0) + (pipeline.rejected ?? 0);
+  const responded = (pipeline.interview ?? 0) + (pipeline.offer ?? 0) + (pipeline.accepted ?? 0) + (pipeline.rejected ?? 0);
   const responseRate = totalApplied > 0 ? Math.round((responded / totalApplied) * 100) : null;
 
   const hour = new Date().getHours();
@@ -386,7 +401,25 @@ export default async function OverviewPage() {
             </div>
             <Link href="/jobs" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
-          <PipelineChart pipeline={pipeline} />
+          {Object.keys(pipeline).length > 0 ? (
+            <>
+              <PipelineChart pipeline={pipeline} />
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
+                {Object.entries(pipeline).map(([key, count]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <div className="size-2.5 rounded-full" style={{ backgroundColor: pipelineColors[key] || "#6B7280" }} />
+                    <span className="text-muted-foreground">{statusLabels[key] ?? key}</span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
+              <p className="text-xs text-muted-foreground">No jobs yet</p>
+            </div>
+          )}
         </div>
         <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
@@ -625,7 +658,7 @@ export default async function OverviewPage() {
           </div>
           {recentActivity.length > 0 ? (
             <div className="space-y-4">
-              {recentActivity.slice(0, 6).map((activity) => (
+              {recentActivity.slice(0, 3).map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3">
                   <div className="relative mt-1"><div className="size-2 rounded-full bg-primary" /><div className="absolute left-1/2 top-2 -translate-x-1/2 h-6 w-px bg-border" /></div>
                   <div className="min-w-0 flex-1 pb-4">
@@ -649,7 +682,7 @@ export default async function OverviewPage() {
 
       <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
         <h2 className="font-heading text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Link href="/jobs" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
             <div className="flex size-10 items-center justify-center rounded-4xl bg-blue-500/10"><Briefcase className="size-5 text-blue-500" /></div>
             All Jobs
@@ -661,10 +694,6 @@ export default async function OverviewPage() {
           <Link href="/documents" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
             <div className="flex size-10 items-center justify-center rounded-4xl bg-violet-500/10"><FileText className="size-5 text-violet-500" /></div>
             Documents
-          </Link>
-          <Link href="/insights" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-amber-500/10"><BarChart3 className="size-5 text-amber-500" /></div>
-            Insights
           </Link>
         </div>
       </div>

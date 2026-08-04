@@ -48,18 +48,6 @@ const tooltipStyle = {
   fontSize: "12px",
 };
 
-interface PipelineData {
-  saved: number;
-  interested: number;
-  preparing: number;
-  applied: number;
-  interview: number;
-  offer: number;
-  accepted: number;
-  rejected: number;
-  withdrawn: number;
-}
-
 interface ChartDataItem {
   range?: string;
   count: number;
@@ -80,7 +68,7 @@ interface McqScoreData {
   score: number;
 }
 
-export function PipelineChart({ pipeline }: { pipeline: PipelineData }) {
+export function PipelineChart({ pipeline }: { pipeline: Record<string, number> }) {
   const chartData = Object.entries(pipeline).map(([key, value]) => ({
     name: statusLabels[key] || key,
     value,
