@@ -332,18 +332,24 @@ export interface AdminActivityLogEntry {
 export async function getAdminActivityLog(
   page: number = 1,
   limit: number = 50,
-  filter?: { action?: string; resource?: string; user_id?: string }
+  filter?: { action?: string; resource?: string; user_id?: string; search?: string; sort?: string }
 ): Promise<{ logs: AdminActivityLogEntry[]; total: number }> {
   const { supabase } = await getAdminUser();
 
   let query = supabase
     .from("activity_logs")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+    .select("*", { count: "exact" });
 
   if (filter?.action) query = query.eq("action", filter.action);
   if (filter?.resource) query = query.eq("resource", filter.resource);
   if (filter?.user_id) query = query.eq("user_id", filter.user_id);
+  if (filter?.search) {
+    query = query.or(`action.ilike.%${filter.search}%,resource.ilike.%${filter.search}%`);
+  }
+
+  const sortCol = filter?.sort === "oldest" ? "created_at" : "created_at";
+  const sortAsc = filter?.sort === "oldest";
+  query = query.order(sortCol, { ascending: sortAsc });
 
   const { data, count } = await query
     .range((page - 1) * limit, page * limit - 1);
@@ -436,25 +442,32 @@ export interface AdminAiUsageEntry {
 export async function getAdminAiUsage(
   page: number = 1,
   limit: number = 50,
-  filter?: { action?: string; user_id?: string }
+  filter?: { action?: string; user_id?: string; search?: string; sort?: string }
 ): Promise<{ logs: AdminAiUsageEntry[]; total: number; totalTokens: number; totalCost: number }> {
   const { supabase } = await getAdminUser();
 
   let query = supabase
     .from("ai_usage_logs")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+    .select("*", { count: "exact" });
 
   if (filter?.action) query = query.eq("action", filter.action);
   if (filter?.user_id) query = query.eq("user_id", filter.user_id);
+  if (filter?.search) {
+    query = query.or(`action.ilike.%${filter.search}%,model.ilike.%${filter.search}%`);
+  }
+
+  const sortAsc = filter?.sort === "oldest";
+  query = query.order("created_at", { ascending: sortAsc });
 
   const { data, count } = await query
     .range((page - 1) * limit, page * limit - 1);
 
-  // Totals
-  const { data: allData } = await supabase
+  // Totals for the given user filter (not global)
+  let totalsQuery = supabase
     .from("ai_usage_logs")
     .select("input_tokens, output_tokens, cost_usd");
+  if (filter?.user_id) totalsQuery = totalsQuery.eq("user_id", filter.user_id);
+  const { data: allData } = await totalsQuery;
 
   const totalTokens = allData?.reduce((sum, l) => sum + (l.input_tokens ?? 0) + (l.output_tokens ?? 0), 0) ?? 0;
   const totalCost = allData?.reduce((sum, l) => sum + (l.cost_usd ?? 0), 0) ?? 0;
