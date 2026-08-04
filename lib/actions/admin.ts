@@ -157,6 +157,79 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   });
 }
 
+export interface AdminUserDetail extends AdminUser {
+  job_count: number;
+  application_count: number;
+  document_count: number;
+  interview_count: number;
+  activity_count: number;
+  ai_usage_count: number;
+  total_ai_tokens: number;
+  total_ai_cost: number;
+}
+
+export async function getAdminUserDetail(userId: string): Promise<AdminUserDetail | null> {
+  const { supabase } = await getAdminUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (!profile) return null;
+
+  const admin = createAdminClient();
+  const { data: authUser } = await admin.auth.admin.getUserById(userId);
+
+  const [
+    jobsRes,
+    appsRes,
+    docsRes,
+    interviewsRes,
+    activityRes,
+    aiUsageRes,
+    aiTokensRes,
+  ] = await Promise.all([
+    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("interviews").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("activity_logs").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("ai_usage_logs").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("ai_usage_logs").select("input_tokens, output_tokens, cost_usd").eq("user_id", userId),
+  ]);
+
+  const totalTokens = (aiTokensRes.data ?? []).reduce(
+    (sum, l) => sum + (l.input_tokens ?? 0) + (l.output_tokens ?? 0),
+    0
+  );
+  const totalCost = (aiTokensRes.data ?? []).reduce(
+    (sum, l) => sum + (l.cost_usd ?? 0),
+    0
+  );
+
+  return {
+    id: profile.id,
+    email: authUser?.user?.email ?? "unknown",
+    full_name: profile.full_name ?? authUser?.user?.user_metadata?.full_name ?? "Unknown",
+    avatar_url: profile.avatar_url ?? authUser?.user?.user_metadata?.avatar_url,
+    role: profile.role ?? "user",
+    is_banned: profile.is_banned ?? false,
+    banned_at: profile.banned_at ?? null,
+    created_at: profile.created_at,
+    last_sign_in: authUser?.user?.last_sign_in_at ?? null,
+    job_count: jobsRes.count ?? 0,
+    application_count: appsRes.count ?? 0,
+    document_count: docsRes.count ?? 0,
+    interview_count: interviewsRes.count ?? 0,
+    activity_count: activityRes.count ?? 0,
+    ai_usage_count: aiUsageRes.count ?? 0,
+    total_ai_tokens: totalTokens,
+    total_ai_cost: totalCost,
+  };
+}
+
 async function getTargetInfo(userId: string): Promise<{ email?: string; full_name?: string }> {
   try {
     const admin = createAdminClient();

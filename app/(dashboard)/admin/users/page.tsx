@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { getAdminUsers, banUser, unbanUser, promoteToAdmin, demoteToUser } from "@/lib/actions/admin";
 import type { AdminUser } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ export default function AdminUsersPage() {
     };
   }, []);
 
+  const router = useRouter();
   const [confirmAction, setConfirmAction] = useState<
     { action: "ban" | "unban" | "promote" | "demote"; user: AdminUser } | null
   >(null);
@@ -319,7 +321,8 @@ export default function AdminUsersPage() {
               {paged.map((user, index) => (
                 <tr
                   key={user.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/admin/users/${user.id}`)}
                 >
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {(page - 1) * perPage + index + 1}
@@ -370,7 +373,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => setConfirmAction({ action: "unban", user })}
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "unban", user }); }}
                           disabled={actionLoading === user.id}
                         >
                           {actionLoading === user.id ? (
@@ -385,7 +388,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs text-destructive"
-                          onClick={() => setConfirmAction({ action: "ban", user })}
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "ban", user }); }}
                           disabled={actionLoading === user.id}
                         >
                           {actionLoading === user.id ? (
@@ -401,7 +404,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => setConfirmAction({ action: "demote", user })}
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "demote", user }); }}
                           disabled={actionLoading === user.id}
                         >
                           <UserMinus className="size-3" />
@@ -412,7 +415,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => setConfirmAction({ action: "promote", user })}
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "promote", user }); }}
                           disabled={actionLoading === user.id}
                         >
                           <UserPlus className="size-3" />
