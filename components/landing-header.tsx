@@ -15,7 +15,11 @@ const navItems = [
   { href: "#faq", label: "FAQ" },
 ];
 
-export function LandingHeader() {
+interface LandingHeaderProps {
+  isAuthenticated?: boolean;
+}
+
+export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
   const { theme, setTheme } = useTheme();
@@ -119,18 +123,29 @@ export function LandingHeader() {
               </button>
             </div>
           )}
-          <Link
-            href="/login"
-            className="rounded-4xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-4xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
-          >
-            Get started
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/overview"
+              className="rounded-4xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="rounded-4xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-4xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+              >
+                Get started
+              </Link>
+            </>
+          )}
         </div>
       </header>
     </div>

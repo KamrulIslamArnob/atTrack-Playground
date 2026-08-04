@@ -52,6 +52,10 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
   const [status, setStatus] = useState("scheduled");
   const router = useRouter();
 
+  const selectedJob = jobs.find((job) => job.id === jobId);
+  const selectedType = interviewTypes.find((t) => t.value === type);
+  const selectedStatus = statusOptions.find((s) => s.value === status);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!jobId) return;
@@ -124,7 +128,11 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
                   <Label>Job *</Label>
                   <Select value={jobId} onValueChange={(v) => setJobId(v ?? "")}>
                     <SelectTrigger className="h-10 w-full">
-                      <SelectValue placeholder="Select a job..." />
+                      <SelectValue placeholder="Select a job...">
+                        {selectedJob
+                          ? `${selectedJob.title} — ${selectedJob.company_name}`
+                          : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {jobs.map((job) => (
@@ -167,7 +175,9 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
                     <Label>Type</Label>
                     <Select value={type} onValueChange={(v) => setType(v ?? "")}>
                       <SelectTrigger className="h-10 w-full">
-                        <SelectValue placeholder="Select type..." />
+                        <SelectValue placeholder="Select type...">
+                          {selectedType ? selectedType.label : null}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {interviewTypes.map((t) => (
@@ -185,7 +195,9 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
                       onValueChange={(v) => setStatus(v ?? "scheduled")}
                     >
                       <SelectTrigger className="h-10 w-full">
-                        <SelectValue />
+                        <SelectValue>
+                          {selectedStatus ? selectedStatus.label : null}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {statusOptions.map((s) => (

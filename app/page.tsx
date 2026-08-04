@@ -9,11 +9,17 @@ import { Privacy } from "@/components/landing/privacy";
 import { Cta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
 import { SectionSeparator } from "@/components/landing/section-separator";
+import { createClient } from "@/lib/supabase/server";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <LandingHeader />
+      <LandingHeader isAuthenticated={!!user} />
 
       <main className="flex-1">
         <Hero />
