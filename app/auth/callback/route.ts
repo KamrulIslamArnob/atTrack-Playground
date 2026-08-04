@@ -8,9 +8,10 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const next = searchParams.get("next") ?? "/overview";
   const redirectTo = request.nextUrl.clone();
   redirectTo.pathname = next;
+  redirectTo.search = "";
 
   // Handle OAuth callback (Google, etc.)
   if (code) {
@@ -28,17 +29,33 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (!profile) {
-          // Extract name from Google metadata
+          // Extract name and avatar from Google metadata
           const fullName = user.user_metadata?.full_name || user.user_metadata?.name || null;
+          const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
 
           await supabase.from("profiles").insert({
             id: user.id,
             full_name: fullName,
+            avatar_url: avatarUrl,
             headline: null,
             phone: null,
             location: null,
             website: null,
           });
+        } else {
+          // Backfill avatar for existing profiles missing one
+          const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+          if (avatarUrl) {
+            const { data: existing } = await supabase
+              .from("profiles")
+              .select("avatar_url")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            if (existing && !existing.avatar_url) {
+              await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+            }
+          }
         }
       }
 
@@ -55,6 +72,23 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
+      // Ensure profile exists for OTP/magic link users too
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          const fullName = user.user_metadata?.full_name || null;
+          await supabase.from("profiles").insert({
+            id: user.id,
+            full_name: fullName,
+          });
+        }
+      }
       return NextResponse.redirect(redirectTo);
     }
   }

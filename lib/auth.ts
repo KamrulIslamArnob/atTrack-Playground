@@ -27,11 +27,21 @@ export async function getUser(): Promise<AuthResult> {
   }
 
   // Fetch role and ban status from profiles
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("role, is_banned")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  // Auto-create profile if missing (email/password or magic link signup)
+  if (!profile) {
+    const fullName = user.user_metadata?.full_name || null;
+    await supabase.from("profiles").insert({
+      id: user.id,
+      full_name: fullName,
+    });
+    profile = { role: "user", is_banned: false };
+  }
 
   const role = profile?.role ?? "user";
   const isBanned = profile?.is_banned ?? false;

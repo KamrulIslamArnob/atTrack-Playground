@@ -78,79 +78,56 @@ CREATE POLICY "Authenticated users can insert own AI usage logs"
 -- 4. Admin RLS policies (admin can access all data)
 -- =============================================
 
+-- Security definer helper that checks admin role while bypassing RLS.
+-- NOTE: Policies must reference this helper rather than inlining a
+-- subquery on profiles, otherwise RLS infinite recursion breaks all
+-- reads/writes on profiles (see migration 018).
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+
 -- Activity logs: admin can view all
 CREATE POLICY "Admins can view all activity logs"
   ON activity_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- AI usage logs: admin can view all
 CREATE POLICY "Admins can view all AI usage logs"
   ON ai_usage_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- Profiles: admin can view all profiles
 CREATE POLICY "Admins can view all profiles"
   ON profiles FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles p
-      WHERE p.id = auth.uid()
-      AND p.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- Profiles: admin can update any profile (for banning, role changes)
 CREATE POLICY "Admins can update any profile"
   ON profiles FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles p
-      WHERE p.id = auth.uid()
-      AND p.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- Jobs: admin can view all jobs
 CREATE POLICY "Admins can view all jobs"
   ON jobs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- Applications: admin can view all
 CREATE POLICY "Admins can view all applications"
   ON applications FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- Documents: admin can view all
 CREATE POLICY "Admins can view all documents"
   ON documents FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (public.is_admin());

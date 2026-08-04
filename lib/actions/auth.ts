@@ -118,14 +118,14 @@ export async function updateProfile(formData: FormData) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({
+    .upsert({
+      id: user.id,
       full_name: fullName,
       headline: headline || null,
       phone: phone || null,
       location: location || null,
       website: website || null,
-    })
-    .eq("id", user.id);
+    }, { onConflict: "id" });
 
   if (error) {
     redirect("/settings?error=" + encodeURIComponent("Failed to update profile."));
@@ -192,8 +192,7 @@ export async function uploadAvatar(formData: FormData) {
 
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ avatar_url: urlData.publicUrl })
-    .eq("id", user.id);
+    .upsert({ id: user.id, avatar_url: urlData.publicUrl }, { onConflict: "id" });
 
   if (updateError) {
     redirect("/settings?error=" + encodeURIComponent("Failed to update profile with avatar."));
