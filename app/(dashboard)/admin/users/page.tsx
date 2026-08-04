@@ -29,7 +29,6 @@ import {
   ShieldCheck as ShieldIcon,
   UserMinus,
   UserPlus,
-  AlertTriangle,
   ShieldAlert,
   UserCog as UserCogIcon,
 } from "lucide-react";
@@ -54,8 +53,15 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => {
-    loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    getAdminUsers().then((data) => {
+      if (cancelled) return;
+      setUsers(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [confirmAction, setConfirmAction] = useState<
