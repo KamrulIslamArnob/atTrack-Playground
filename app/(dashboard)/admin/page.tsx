@@ -8,10 +8,8 @@ import {
   Send,
   Cpu,
   Activity,
-  FileText,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react";
 import {
   UsersTrendChart,
@@ -33,8 +31,6 @@ export default async function AdminDashboardPage() {
     day: "numeric",
   });
 
-  const totalDocs = stats.totalDocuments;
-  const totalInterviews = stats.totalInterviews;
   const activeRate = stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0;
   const banRate = stats.totalUsers > 0 ? Math.round((stats.bannedUsers / stats.totalUsers) * 100) : 0;
   const appPerJob = stats.totalJobs > 0 ? (stats.totalApplications / stats.totalJobs).toFixed(1) : "0";
@@ -235,15 +231,17 @@ function MetricCard({
           <Icon className={`size-5 ${color}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-bold tracking-tight">{value.toLocaleString()}</p>
+          <p className="text-xl font-bold tracking-tight">
+            {value.toLocaleString()}
+            {badge && (
+              <span className={`ml-2 text-xs font-medium ${badgeColor ?? "text-muted-foreground"}`}>
+                ({badge})
+              </span>
+            )}
+          </p>
           <p className="text-[11px] text-muted-foreground">{label}</p>
         </div>
       </div>
-      {badge && (
-        <div className="mt-2 flex items-center gap-1 text-[11px]">
-          <span className={`font-medium ${badgeColor}`}>{badge}</span>
-        </div>
-      )}
     </div>
   );
 }

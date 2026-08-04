@@ -14,19 +14,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-  type TooltipProps,
-  type ValueType,
-  type NameType,
 } from "recharts";
-
-const tooltipStyle = {
-  borderRadius: "12px",
-  border: "1px solid #E5E7EB",
-  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-  fontSize: "12px",
-  backdropFilter: "blur(8px)",
-};
 
 const statusColors: Record<string, string> = {
   saved: "#94A3B8",
@@ -68,12 +56,14 @@ const actionColors: Record<string, string> = {
   demote: "#F59E0B",
 };
 
-function CustomTooltip({ active, payload, label }: TooltipProps<ValueType, NameType>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-border bg-card/95 px-3 py-2 shadow-lg backdrop-blur-sm">
       <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
-      {payload.map((entry, index) => (
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {payload.map((entry: any, index: number) => (
         <p key={index} className="text-sm font-semibold" style={{ color: entry.color }}>
           {entry.name}: {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
         </p>
