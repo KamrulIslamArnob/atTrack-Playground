@@ -27,14 +27,14 @@ export function Cta() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/signup"
-                className="inline-flex h-12 items-center gap-2 rounded-4xl bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.98]"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
               >
                 Get started for free
                 <ArrowRight className="size-4" />
               </Link>
               <Link
                 href="/login"
-                className="inline-flex h-12 items-center gap-2 rounded-4xl border border-border bg-card px-8 text-sm font-medium transition-all hover:bg-muted"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl border border-border bg-card px-8 text-sm font-medium transition-all hover:bg-muted sm:w-auto"
               >
                 Sign in
               </Link>

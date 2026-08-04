@@ -50,7 +50,7 @@ export function AiHighlight() {
       <div className="absolute -right-40 bottom-16 size-96 rounded-full bg-violet-500/[0.06] blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl">
-        <div className="grid items-center gap-16 lg:grid-cols-2">
+        <div className="grid items-center gap-10 sm:gap-16 lg:grid-cols-2">
           <div>
             <div className="inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
               <Sparkles className="size-3" />

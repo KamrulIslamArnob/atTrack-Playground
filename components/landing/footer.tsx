@@ -19,8 +19,8 @@ export function Footer() {
   return (
     <footer className="border-t border-black/5 bg-foreground text-background dark:border-foreground/10 dark:bg-card dark:text-foreground">
       <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-4">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-12">
+          <div className="sm:col-span-2 lg:col-span-4">
             <Link href="/" className="inline-flex items-center gap-2.5">
               <Image src="/logo.png" alt="Aven" width={18} height={18} />
               <span className="font-heading text-lg font-semibold">Aven</span>
@@ -75,7 +75,7 @@ export function Footer() {
             </ul>
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="sm:col-span-2 lg:col-span-4">
             <div className="rounded-4xl border border-background/15 bg-background/10 p-6 dark:border-foreground/15 dark:bg-foreground/10">
               <h4 className="text-base font-semibold">
                 Start tracking your job search

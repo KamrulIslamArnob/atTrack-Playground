@@ -16,7 +16,7 @@ export function Hero() {
           <Sparkles className="size-3.5 shimmer-icon" />
           <ShinyText text="AI-powered job application tracker" speed={3} color="hsl(240 3.8% 46.1%)" shineColor="var(--primary)" />
         </div>
-        <h1 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+        <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
           <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">Organize</span>
           <span className="text-foreground"> your applications</span>
           <br />
@@ -32,19 +32,19 @@ export function Hero() {
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
             href="/signup"
-            className="inline-flex h-12 items-center gap-2 rounded-4xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
           >
             Start for free
             <ArrowRight className="size-4" />
           </Link>
           <Link
             href="/login"
-            className="inline-flex h-12 items-center gap-2 rounded-4xl border border-border bg-card px-8 text-sm font-medium transition-all hover:bg-muted"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl border border-border bg-card px-8 text-sm font-medium transition-all hover:bg-muted sm:w-auto"
           >
             Sign in
           </Link>
         </div>
-        <div className="mt-8 flex items-center justify-center gap-3">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <AvatarGroup>
             <Avatar>
               <AvatarImage src="/user-avatars/alex-suprun-mynsNaNwVDc-unsplash.jpg" alt="User" />

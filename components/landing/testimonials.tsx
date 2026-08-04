@@ -61,7 +61,7 @@ export function Testimonials() {
         </div>
 
         <div className="mt-14 grid gap-5 lg:grid-cols-3 lg:auto-rows-fr">
-          <article className="relative flex flex-col overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-primary/[0.06] via-card to-card p-8 transition-all hover:shadow-xl hover:shadow-primary/5 lg:col-span-2 lg:row-span-2">
+          <article className="relative flex flex-col overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-primary/[0.06] via-card to-card p-6 transition-all hover:shadow-xl hover:shadow-primary/5 sm:p-8 lg:col-span-2 lg:row-span-2">
             <Quote className="absolute top-6 right-6 size-16 text-primary/10" />
             <div className="flex gap-1">
               {Array.from({ length: 5 }).map((_, i) => (
