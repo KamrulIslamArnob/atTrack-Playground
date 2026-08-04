@@ -19,11 +19,6 @@ const faqs = [
       "Paste a screenshot of a job posting — or several — and our AI extracts the title, company, salary, location, requirements, employment type, and how to apply. Everything is structured and saved in seconds, no copy-pasting required.",
   },
   {
-    question: "Can I import jobs from a URL too?",
-    answer:
-      "Yes. Alongside screenshots, you can paste a job posting URL and Aven fetches the page and extracts the details automatically — so you can save a role from anywhere.",
-  },
-  {
     question: "How does the AI email composer work?",
     answer:
       "Aven drafts a personalized application email tailored to the role and your experience. You can edit and preview it, attach your resume, and send it directly through your own SMTP account — Gmail, Outlook, or any provider.",
@@ -52,7 +47,7 @@ const faqs = [
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24 px-6 py-24">
+    <section id="faq" className="scroll-mt-24 px-6 py-40">
       <div className="mx-auto max-w-4xl">
         <div className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">

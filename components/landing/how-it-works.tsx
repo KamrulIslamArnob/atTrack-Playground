@@ -7,7 +7,7 @@ const steps = [
     step: "01",
     title: "Discover",
     description:
-      "Screenshot a job posting or paste a URL. AI extracts every detail — title, company, salary, requirements, and how to apply — and saves it to your pipeline.",
+      "Paste a screenshot of a job posting — or several — and AI extracts every detail: title, company, salary, requirements, and how to apply. Saved to your pipeline in seconds.",
     icon: Camera,
     color: "text-pink-500",
     bg: "bg-pink-500/10",
@@ -34,7 +34,7 @@ const steps = [
     step: "04",
     title: "Accept",
     description:
-      "Your application moves through the pipeline automatically — from submitted to interview to offer. Accept with confidence.",
+      "Log applications and interviews as you go. Aven tracks each one from submitted to offer — so when the right offer lands, you're ready to accept.",
     icon: CheckCircle2,
     color: "text-amber-500",
     bg: "bg-amber-500/10",
@@ -45,7 +45,7 @@ const pipeline = ["Saved", "Interested", "Preparing"];
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="scroll-mt-24 bg-gradient-to-b from-primary/[0.03] to-background px-6 py-24">
+    <section id="how-it-works" className="scroll-mt-24 bg-gradient-to-b from-primary/[0.03] to-background px-6 py-40">
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">

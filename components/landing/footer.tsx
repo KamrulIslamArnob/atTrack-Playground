@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function Footer() {
   return (
-    <footer className="px-6 py-10">
+    <footer className="px-6 py-20">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
         <div className="flex items-center gap-2.5">
           <Image src="/logo.png" alt="Aven" width={20} height={20} />
