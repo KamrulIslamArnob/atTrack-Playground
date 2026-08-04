@@ -1,9 +1,19 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface SearchResult {
   type: "job" | "application" | "interview" | "document" | "page";
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  icon: string;
+}
+
+export interface AdminSearchResult {
+  type: "user" | "activity" | "ai_usage" | "page";
   id: string;
   title: string;
   subtitle: string;
@@ -170,6 +180,115 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
         .join(" · "),
       href: `/documents`,
       icon: "document",
+    });
+  }
+
+  return results;
+}
+
+const ADMIN_PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
+  { title: "Dashboard", href: "/admin", keywords: "admin dashboard overview stats" },
+  { title: "Users", href: "/admin/users", keywords: "users accounts manage ban promote" },
+  { title: "Activity Log", href: "/admin/activity", keywords: "activity audit log actions" },
+  { title: "AI Usage", href: "/admin/ai-usage", keywords: "ai usage tokens cost requests" },
+];
+
+export async function adminGlobalSearch(query: string): Promise<AdminSearchResult[]> {
+  if (!query || query.trim().length < 2) return [];
+
+  const q = query.trim();
+  const like = `%${q}%`;
+  const limit = 5;
+  const results: AdminSearchResult[] = [];
+
+  // Search admin pages
+  for (const page of ADMIN_PAGE_RESULTS) {
+    if (
+      page.title.toLowerCase().includes(q.toLowerCase()) ||
+      page.keywords.toLowerCase().includes(q.toLowerCase())
+    ) {
+      results.push({
+        type: "page",
+        id: page.href,
+        title: page.title,
+        subtitle: "Navigation",
+        href: page.href,
+        icon: "page",
+      });
+    }
+  }
+
+  // Search users via auth (service-role)
+  const admin = createAdminClient();
+  const { data: authUsers } = await admin.auth.admin.listUsers();
+  const authMap = new Map(authUsers.users.map((u) => [u.id, u]));
+
+  // Also fetch profiles for role/banned info
+  const { supabase } = await getUser();
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, role, is_banned");
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  for (const u of authUsers.users) {
+    const profile = profileMap.get(u.id);
+    const searchable = [u.email, u.user_metadata?.full_name, profile?.role]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    if (searchable.includes(q.toLowerCase())) {
+      results.push({
+        type: "user",
+        id: u.id,
+        title: u.user_metadata?.full_name ?? u.email ?? "Unknown",
+        subtitle: [u.email, profile?.role, profile?.is_banned ? "Banned" : null]
+          .filter(Boolean)
+          .join(" · "),
+        href: `/admin/users/${u.id}`,
+        icon: "user",
+      });
+    }
+  }
+
+  // Search activity logs
+  const { data: activityLogs } = await supabase
+    .from("activity_logs")
+    .select("id, user_id, action, resource, resource_id, metadata, created_at")
+    .or(`action.ilike.${like},resource.ilike.${like}`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  for (const log of activityLogs ?? []) {
+    const meta = (log.metadata ?? {}) as Record<string, unknown>;
+    const userEmail = authMap.get(log.user_id)?.email ?? "unknown";
+    results.push({
+      type: "activity",
+      id: log.id,
+      title: `${log.action} ${log.resource}`,
+      subtitle: [userEmail, meta.full_name ?? meta.target_name].filter(Boolean).join(" · "),
+      href: "/admin/activity",
+      icon: "activity",
+    });
+  }
+
+  // Search AI usage logs
+  const { data: aiLogs } = await supabase
+    .from("ai_usage_logs")
+    .select("id, action, model, user_id, created_at")
+    .or(`action.ilike.${like},model.ilike.${like}`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  for (const log of aiLogs ?? []) {
+    const userEmail = authMap.get(log.user_id)?.email ?? "unknown";
+    results.push({
+      type: "ai_usage",
+      id: log.id,
+      title: `${log.action} (${log.model})`,
+      subtitle: userEmail,
+      href: "/admin/ai-usage",
+      icon: "ai_usage",
     });
   }
 

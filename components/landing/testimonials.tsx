@@ -1,5 +1,13 @@
+"use client";
+
+import { motion } from "motion/react";
 import { Star, Quote } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import {
+  staggerContainer,
+  staggerItem,
+  Reveal,
+} from "@/components/landing/motion";
 
 const testimonials = [
   {
@@ -43,7 +51,7 @@ export function Testimonials() {
   return (
     <section id="testimonials" className="scroll-mt-24 px-6 py-40">
       <div className="mx-auto max-w-6xl">
-        <div className="text-center">
+        <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Loved by job seekers
           </h2>
@@ -58,10 +66,19 @@ export function Testimonials() {
               2,000+ job seekers
             </span>
           </div>
-        </div>
+        </Reveal>
 
-        <div className="mt-14 grid gap-5 lg:grid-cols-3 lg:auto-rows-fr">
-          <article className="relative flex flex-col overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-primary/[0.06] via-card to-card p-6 transition-all hover:shadow-xl hover:shadow-primary/5 sm:p-8 lg:col-span-2 lg:row-span-2">
+        <motion.div
+          className="mt-14 grid gap-5 lg:grid-cols-3 lg:auto-rows-fr"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px", amount: 0.1 }}
+        >
+          <motion.article
+            variants={staggerItem}
+            className="relative flex flex-col overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-primary/[0.06] via-card to-card p-6 transition-all hover:shadow-xl hover:shadow-primary/5 sm:p-8 lg:col-span-2 lg:row-span-2"
+          >
             <Quote className="absolute top-6 right-6 size-16 text-primary/10" />
             <div className="flex gap-1">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -87,11 +104,12 @@ export function Testimonials() {
                 {featured.highlight}
               </span>
             </div>
-          </article>
+          </motion.article>
 
           {rest.map((t) => (
-            <article
+            <motion.article
               key={t.name}
+              variants={staggerItem}
               className="flex flex-col rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5"
             >
               <div className="flex gap-0.5">
@@ -111,9 +129,9 @@ export function Testimonials() {
                   <p className="text-xs text-muted-foreground">{t.role}</p>
                 </div>
               </div>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
