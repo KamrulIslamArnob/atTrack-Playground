@@ -10,35 +10,34 @@ const productLinks = [
 
 const resourceLinks = [
   { label: "Testimonials", href: "/#testimonials" },
-  { label: "Privacy", href: "/#privacy" },
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Terms & Conditions", href: "/terms" },
   { label: "Sign in", href: "/login" },
-  { label: "Get started", href: "/signup" },
 ];
 
 export function Footer() {
   return (
-    <footer className="relative bg-background">
-      <div className="mx-auto h-px max-w-6xl bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+    <footer className="border-t border-black/5 bg-foreground text-background dark:border-foreground/10 dark:bg-card dark:text-foreground">
       <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <Link href="/" className="inline-flex items-center gap-2.5">
-              <Image src="/logo.png" alt="Aven" width={24} height={24} />
+              <Image src="/logo.png" alt="Aven" width={18} height={18} />
               <span className="font-heading text-lg font-semibold">Aven</span>
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/70 dark:text-foreground/70">
               The AI-powered workspace that carries your job search from first
               sight to signed offer — jobs, applications, interviews, and
               practice in one private place.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <span className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
                 Free forever
               </span>
-              <span className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
                 Private by design
               </span>
-              <span className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
                 No credit card
               </span>
             </div>
@@ -51,7 +50,7 @@ export function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-sm text-background/70 transition-colors hover:text-background dark:text-foreground/70 dark:hover:text-foreground"
                   >
                     {link.label}
                   </Link>
@@ -67,7 +66,7 @@ export function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-sm text-background/70 transition-colors hover:text-background dark:text-foreground/70 dark:hover:text-foreground"
                   >
                     {link.label}
                   </Link>
@@ -77,11 +76,11 @@ export function Footer() {
           </div>
 
           <div className="lg:col-span-4">
-            <div className="rounded-4xl border border-border bg-gradient-to-br from-primary/[0.05] via-card to-card p-6">
+            <div className="rounded-4xl border border-background/15 bg-background/10 p-6 dark:border-foreground/15 dark:bg-foreground/10">
               <h4 className="text-base font-semibold">
                 Start tracking your job search
               </h4>
-              <p className="mt-1.5 text-sm text-muted-foreground">
+              <p className="mt-1.5 text-sm text-background/70 dark:text-foreground/70">
                 Create your free account in under a minute. No credit card
                 required.
               </p>
@@ -94,7 +93,7 @@ export function Footer() {
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex h-10 items-center rounded-4xl border border-border bg-card px-5 text-sm font-medium transition-all hover:bg-muted"
+                  className="inline-flex h-10 items-center rounded-4xl border border-background/25 bg-background/10 px-5 text-sm font-medium transition-all hover:bg-background/20 dark:border-foreground/25 dark:bg-foreground/10 dark:hover:bg-foreground/20"
                 >
                   Sign in
                 </Link>
@@ -103,22 +102,22 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-8 sm:flex-row">
-          <p className="text-xs text-muted-foreground">
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-background/15 pt-8 sm:flex-row dark:border-foreground/15">
+          <p className="text-xs text-background/50 dark:text-foreground/50">
             &copy; {new Date().getFullYear()} Aven. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-xs text-muted-foreground">
+          <div className="flex items-center gap-6 text-xs text-background/50 dark:text-foreground/50">
             <Link
-              href="/#privacy"
-              className="transition-colors hover:text-foreground"
+              href="/privacy-policy"
+              className="transition-colors hover:text-background dark:hover:text-foreground"
             >
-              Privacy
+              Privacy Policy
             </Link>
             <Link
-              href="/#faq"
-              className="transition-colors hover:text-foreground"
+              href="/terms"
+              className="transition-colors hover:text-background dark:hover:text-foreground"
             >
-              FAQ
+              Terms
             </Link>
           </div>
         </div>
