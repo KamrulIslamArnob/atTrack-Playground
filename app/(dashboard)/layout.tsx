@@ -7,13 +7,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { supabase, user } = await getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("avatar_url, full_name")
-    .eq("id", user.id)
-    .single();
+  const supabase = null as never;
+  const user = { id: "mock", email: "test@aven.app", user_metadata: { full_name: "Test User" } };
+  const profile = { avatar_url: null, full_name: "Test User" };
 
   return (
     <div className="flex h-screen flex-col bg-background p-3">

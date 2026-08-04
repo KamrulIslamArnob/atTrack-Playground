@@ -30,7 +30,7 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-  { name: "Insights", href: "/insights", icon: Lightbulb },
+  // { name: "Insights", href: "/insights", icon: Lightbulb },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

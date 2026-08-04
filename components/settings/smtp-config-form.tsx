@@ -62,11 +62,11 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
   };
 
   return (
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex-1 min-w-0">
         {isEditing ? (
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
                 Use your Gmail App Password for secure sending.
               </p>
@@ -78,7 +78,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
                 How to get an App Password
               </button>
             </div>
-            <div className="grid grid-cols-[1fr_100px] gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_100px]">
               <div className="space-y-2">
                 <Label htmlFor="smtp-host">SMTP Host</Label>
                 <Input
@@ -100,7 +100,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="smtp-email">Gmail address</Label>
                 <Input
@@ -156,7 +156,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm text-muted-foreground">Gmail address</p>
                 <p className="text-sm font-medium">{config?.user_email || "—"}</p>
