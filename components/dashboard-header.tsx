@@ -2,21 +2,45 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Bell, Menu, Search, X, Briefcase, Send, Calendar, FileText, File, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, type SidebarProps } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
+import { globalSearch, type SearchResult } from "@/lib/actions/search";
 import {
   Command,
+  CommandInput,
   CommandList,
   CommandGroup,
   CommandItem,
+  CommandEmpty,
 } from "@/components/ui/command";
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  page: <File className="size-4 shrink-0 text-muted-foreground" />,
+  job: <Briefcase className="size-4 shrink-0 text-blue-500" />,
+  application: <Send className="size-4 shrink-0 text-violet-500" />,
+  interview: <Calendar className="size-4 shrink-0 text-emerald-500" />,
+  document: <FileText className="size-4 shrink-0 text-amber-500" />,
+};
+
+const NAV_ITEMS = [
+  { name: "Overview", href: "/overview", keywords: "dashboard home summary" },
+  { name: "Jobs", href: "/jobs", keywords: "job listings saved interested" },
+  { name: "Applications", href: "/applications", keywords: "application drafts sent" },
+  { name: "Interviews", href: "/interviews", keywords: "interview schedule upcoming" },
+  { name: "Documents", href: "/documents", keywords: "resume cv cover letter" },
+  { name: "Settings", href: "/settings", keywords: "account profile preferences" },
+];
 
 export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
   const [open, setOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -49,6 +73,54 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
+
+  // Reset state when dialog closes
+  const prevOpen = useRef(open);
+  useEffect(() => {
+    if (prevOpen.current && !open) {
+      setQuery("");
+      setResults([]);
+      setLoading(false);
+    }
+    prevOpen.current = open;
+  }, [open]);
+
+  // Debounced search
+  const handleSearch = useCallback((value: string) => {
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.trim().length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = await globalSearch(value);
+        setResults(data);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, []);
+
+  // Group results by type
+  const grouped = results.reduce<Record<string, SearchResult[]>>((acc, r) => {
+    (acc[r.type] ??= []).push(r);
+    return acc;
+  }, {});
+
+  const hasQuery = query.trim().length >= 2;
+
+  // Filter nav items for quick results when no server query
+  const filteredNav = hasQuery
+    ? []
+    : NAV_ITEMS;
 
   return (
     <>
@@ -151,108 +223,144 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <Command className="w-full max-w-lg">
-            <div className="flex items-center border-b border-border px-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mr-2 size-4 shrink-0 opacity-50"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              <input
-                autoFocus
-                placeholder="Search..."
-                className="flex h-10 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
-              />
-              <kbd className="pointer-events-none ml-1 hidden select-none rounded-4xl border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground md:inline">
-                esc
-              </kbd>
-              <button
-                onClick={() => setOpen(false)}
-                className="ml-1 flex size-6 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm">
+          <Command value={query} onValueChange={handleSearch} className="w-full max-w-lg">
+            <CommandInput placeholder="Search jobs, applications, documents..." />
             <CommandList>
-                <CommandGroup heading="Navigation">
-                  <CommandItem
-                    value="overview"
-                    onItemSelect={() => {
-                      window.location.href = "/overview";
-                      setOpen(false);
-                    }}
-                  >
-                    Overview
-                  </CommandItem>
-                  <CommandItem
-                    value="jobs"
-                    onItemSelect={() => {
-                      window.location.href = "/jobs";
-                      setOpen(false);
-                    }}
-                  >
-                    Jobs
-                  </CommandItem>
-                  <CommandItem
-                    value="applications"
-                    onItemSelect={() => {
-                      window.location.href = "/applications";
-                      setOpen(false);
-                    }}
-                  >
-                    Applications
-                  </CommandItem>
-                  <CommandItem
-                    value="interviews"
-                    onItemSelect={() => {
-                      window.location.href = "/interviews";
-                      setOpen(false);
-                    }}
-                  >
-                    Interviews
-                  </CommandItem>
-                  <CommandItem
-                    value="documents"
-                    onItemSelect={() => {
-                      window.location.href = "/documents";
-                      setOpen(false);
-                    }}
-                  >
-                    Documents
-                  </CommandItem>
+              {loading && (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Searching...
+                </div>
+              )}
+
+              {!loading && hasQuery && results.length === 0 && (
+                <CommandEmpty>No results found for &ldquo;{query}&rdquo;</CommandEmpty>
+              )}
+
+              {!loading && !hasQuery && (
+                <CommandGroup heading="Quick Navigation">
+                  {NAV_ITEMS.map((item) => (
+                    <CommandItem
+                      key={item.name}
+                      value={item.name}
+                      onItemSelect={() => {
+                        window.location.href = item.href;
+                        setOpen(false);
+                      }}
+                    >
+                      <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
+                      {item.name}
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
-                <CommandGroup heading="Account">
-                  <CommandItem
-                    value="settings"
-                    onItemSelect={() => {
-                      window.location.href = "/settings";
-                      setOpen(false);
-                    }}
-                  >
-                    Settings
-                  </CommandItem>
-                  <CommandItem
-                    value="insights"
-                    onItemSelect={() => {
-                      window.location.href = "/insights";
-                      setOpen(false);
-                    }}
-                  >
-                    Insights
-                  </CommandItem>
+              )}
+
+              {!loading && hasQuery && grouped.page && (
+                <CommandGroup heading="Pages">
+                  {grouped.page.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`page-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.page}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
-              </CommandList>
+              )}
+
+              {!loading && hasQuery && grouped.job && (
+                <CommandGroup heading="Jobs">
+                  {grouped.job.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`job-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.job}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.application && (
+                <CommandGroup heading="Applications">
+                  {grouped.application.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`app-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.application}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.interview && (
+                <CommandGroup heading="Interviews">
+                  {grouped.interview.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`interview-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.interview}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.document && (
+                <CommandGroup heading="Documents">
+                  {grouped.document.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`doc-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.document}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
           </Command>
         </div>
       )}
