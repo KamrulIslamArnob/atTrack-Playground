@@ -66,6 +66,26 @@ export default function LandingPage() {
                 Sign in
               </Link>
             </div>
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <AvatarGroup>
+                <Avatar>
+                  <AvatarImage src="/user-avatars/alex-suprun-mynsNaNwVDc-unsplash.jpg" alt="User" />
+                </Avatar>
+                <Avatar>
+                  <AvatarImage src="/user-avatars/diego-hernandez-MSepzbKFz10-unsplash.jpg" alt="User" />
+                </Avatar>
+                <Avatar>
+                  <AvatarImage src="/user-avatars/ihssan-rami-azouagh-gKzxWyJmKLQ-unsplash.jpg" alt="User" />
+                </Avatar>
+                <Avatar>
+                  <AvatarImage src="/user-avatars/jake-nackos-IF9TK5Uy-KI-unsplash.jpg" alt="User" />
+                </Avatar>
+                <Avatar>
+                  <AvatarImage src="/user-avatars/alex-suprun-ZHvM3XIOHoE-unsplash.jpg" alt="User" />
+                </Avatar>
+              </AvatarGroup>
+              <p className="text-xs text-muted-foreground">Trusted by job seekers worldwide</p>
+            </div>
 
             {/* Dashboard preview */}
             <div className="mt-16 rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/5">
