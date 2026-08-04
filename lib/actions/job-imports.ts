@@ -34,12 +34,14 @@ export async function uploadScreenshot(
 
   if (error) throw new Error(`Upload failed: ${error.message}`);
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(BUCKET).getPublicUrl(screenshotId);
+  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(screenshotId, 60 * 60); // 1 hour expiry
+
+  if (signedUrlError) throw new Error(`Failed to get URL: ${signedUrlError.message}`);
 
   await logResourceActivity(userId, "upload", "screenshot", screenshotId);
-  return { screenshotId, screenshotUrl: publicUrl };
+  return { screenshotId, screenshotUrl: signedUrlData.signedUrl };
 }
 
 export async function extractFromScreenshots(

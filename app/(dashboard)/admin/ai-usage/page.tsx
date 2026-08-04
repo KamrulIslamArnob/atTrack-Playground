@@ -22,7 +22,6 @@ import {
   Cpu,
   Coins,
   Zap,
-  Sparkles,
   Clock,
   CheckCircle2,
   XCircle,
