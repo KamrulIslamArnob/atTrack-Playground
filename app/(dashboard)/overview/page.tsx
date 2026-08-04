@@ -335,21 +335,21 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-8">
+      <div className="relative overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 size-64 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-primary/5 blur-2xl" />
         <div className="relative">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
               <p className="mt-2 text-muted-foreground max-w-lg">
                 Here&apos;s your career dashboard. Track applications, interviews, and opportunities all in one place.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               <AddJobDialog
                 trigger={
-                  <button className={buttonVariants({ size: "sm", className: "gap-1.5" })}>
+                  <button className={buttonVariants({ size: "sm", className: "w-full justify-center gap-1.5 sm:w-auto" })}>
                     <Plus className="size-4" />
                     Add job
                   </button>
@@ -357,7 +357,7 @@ export default async function OverviewPage() {
               />
               <Link
                 href="/jobs?import=screenshot"
-                className={buttonVariants({ variant: "outline", size: "sm", className: "gap-1.5" })}
+                className={buttonVariants({ variant: "outline", size: "sm", className: "w-full justify-center gap-1.5 sm:w-auto" })}
               >
                 <Camera className="size-4" />
                 Import

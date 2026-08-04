@@ -75,7 +75,7 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
           className={cn(
             "flex h-14 items-center justify-between px-4 transition-all duration-300 will-change-[transform,opacity] md:grid md:grid-cols-[1fr_auto_1fr]",
             scrolled
-              ? "rounded-4xl border border-white/10 dark:border-white/8 bg-white/60 dark:bg-white/6 shadow-lg shadow-black/5 backdrop-blur-md"
+              ? "rounded-4xl border border-white/10 bg-linear-to-r from-white/75 via-white/55 to-primary/10 shadow-lg shadow-black/5 backdrop-blur-md dark:border-white/8 dark:from-white/10 dark:via-white/6 dark:to-primary/20"
               : "rounded-none border-transparent bg-transparent"
           )}
         >

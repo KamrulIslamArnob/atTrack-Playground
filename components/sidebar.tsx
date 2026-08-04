@@ -34,7 +34,7 @@ const secondaryNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-interface SidebarProps {
+export interface SidebarProps {
   user: {
     id: string;
     email?: string;

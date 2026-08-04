@@ -3,18 +3,20 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
-import { Bell, Search, X } from "lucide-react";
+import { Bell, Menu, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sidebar, type SidebarProps } from "@/components/sidebar";
+import { cn } from "@/lib/utils";
 import {
   Command,
   CommandList,
-  CommandEmpty,
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command";
 
-export function DashboardHeader() {
+export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
   const [open, setOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -30,6 +32,23 @@ export function DashboardHeader() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    if (mobileNavOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <>
@@ -79,8 +98,54 @@ export function DashboardHeader() {
           <Button variant="ghost" size="icon" className="size-9 rounded-4xl">
             <Bell className="size-4" />
           </Button>
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="flex size-9 items-center justify-center rounded-4xl border border-border text-foreground transition-colors hover:bg-muted md:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="size-4" />
+          </button>
         </div>
       </header>
+
+      <div
+        className={cn(
+          "fixed inset-0 z-50 md:hidden",
+          mobileNavOpen ? "" : "pointer-events-none"
+        )}
+        aria-hidden={!mobileNavOpen}
+      >
+        <div
+          className={cn(
+            "absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300",
+            mobileNavOpen ? "opacity-100" : "opacity-0"
+          )}
+          onClick={() => setMobileNavOpen(false)}
+        />
+        <div
+          className={cn(
+            "absolute top-0 right-0 flex h-full w-60 flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
+            mobileNavOpen ? "translate-x-0" : "translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+            <Link href="/overview" className="flex items-center gap-2">
+              <Image src="/logo.png" alt="Aven" width={24} height={24} />
+              <span className="font-heading text-base font-semibold">Aven</span>
+            </Link>
+            <button
+              onClick={() => setMobileNavOpen(false)}
+              className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Close menu"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 p-2">
+            <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} />
+          </div>
+        </div>
+      </div>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

@@ -29,7 +29,7 @@ export function LegalShell({
             <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               {title}
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
               {subtitle}
             </p>
             <p className="mt-5 text-xs text-muted-foreground/70">
