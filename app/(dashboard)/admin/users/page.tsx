@@ -321,14 +321,16 @@ export default function AdminUsersPage() {
               {paged.map((user, index) => (
                 <tr
                   key={user.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => router.push(`/admin/users/${user.id}`)}
+                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {(page - 1) * perPage + index + 1}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => router.push(`/admin/users/${user.id}`)}
+                      className="flex items-center gap-3 text-left hover:underline"
+                    >
                       {user.avatar_url ? (
                         <Image
                           src={user.avatar_url}
@@ -351,7 +353,7 @@ export default function AdminUsersPage() {
                         </div>
                         <div className="truncate text-xs text-muted-foreground">{user.email}</div>
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3">
                     <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">

@@ -23,7 +23,7 @@ const routeLabels: Record<string, string> = {
   admin: "Admin",
 };
 
-export function Breadcrumbs() {
+export function Breadcrumbs({ labels }: { labels?: Record<string, string> }) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
@@ -31,7 +31,7 @@ export function Breadcrumbs() {
 
   const crumbs = segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const label = routeLabels[segment] ?? segment;
+    const label = labels?.[segment] ?? routeLabels[segment] ?? segment;
     const isLast = index === segments.length - 1;
 
     return { href, label, isLast };
