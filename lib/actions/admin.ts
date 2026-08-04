@@ -302,6 +302,48 @@ export async function getAdminActivityLog(
   };
 }
 
+export interface AdminActivityStats {
+  totalEntries: number;
+  entriesToday: number;
+  entriesThisWeek: number;
+  uniqueUsers: number;
+  topAction: string | null;
+}
+
+export async function getAdminActivityStats(): Promise<AdminActivityStats> {
+  const { supabase } = await getAdminUser();
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const [{ count: total }, { count: today }, { count: week }, usersRes, topActionRes] = await Promise.all([
+    supabase.from("activity_logs").select("id", { count: "exact", head: true }),
+    supabase.from("activity_logs").select("id", { count: "exact", head: true }).gte("created_at", startOfToday.toISOString()),
+    supabase.from("activity_logs").select("id", { count: "exact", head: true }).gte("created_at", weekAgo.toISOString()),
+    supabase.from("activity_logs").select("user_id").gte("created_at", weekAgo.toISOString()),
+    supabase.from("activity_logs").select("action").gte("created_at", weekAgo.toISOString()),
+  ]);
+
+  const topActionMap: Record<string, number> = {};
+  for (const row of topActionRes.data ?? []) {
+    topActionMap[row.action] = (topActionMap[row.action] ?? 0) + 1;
+  }
+  const topAction = Object.entries(topActionMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  const uniqueUsers = new Set((usersRes.data ?? []).map((u) => u.user_id)).size;
+
+  return {
+    totalEntries: total ?? 0,
+    entriesToday: today ?? 0,
+    entriesThisWeek: week ?? 0,
+    uniqueUsers,
+    topAction,
+  };
+}
+
 export interface AdminAiUsageEntry {
   id: string;
   user_id: string;

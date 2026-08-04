@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getAdminActivityLog, getAdminUsers } from "@/lib/actions/admin";
-import type { AdminActivityLogEntry } from "@/lib/actions/admin";
+import { getAdminActivityLog, getAdminUsers, getAdminActivityStats } from "@/lib/actions/admin";
+import type { AdminActivityLogEntry, AdminActivityStats } from "@/lib/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,11 @@ import {
   ChevronRight,
   Globe,
   Loader2,
+  Activity,
+  Zap,
+  CalendarDays,
+  Users,
+  Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { formatActivityMessage, normalizeIpAddress, ACTION_COLORS } from "@/lib/activity-messages";
@@ -36,6 +41,7 @@ export default function AdminActivityPage() {
   const [search, setSearch] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emailToUserId, setEmailToUserId] = useState<Record<string, string>>({});
+  const [stats, setStats] = useState<AdminActivityStats | null>(null);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
@@ -60,6 +66,10 @@ export default function AdminActivityPage() {
       for (const u of users) map[u.email.toLowerCase()] = u.id;
       setEmailToUserId(map);
     });
+  }, []);
+
+  useEffect(() => {
+    getAdminActivityStats().then(setStats);
   }, []);
 
   const applySearch = useCallback((value: string) => {
@@ -108,6 +118,15 @@ export default function AdminActivityPage() {
       </div>
 
       <Breadcrumbs />
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <QuickStat icon={Activity} label="Total Entries" value={stats?.totalEntries?.toLocaleString() ?? "—"} color="text-blue-500" bgColor="bg-blue-500/10" />
+        <QuickStat icon={Zap} label="Today" value={stats?.entriesToday?.toLocaleString() ?? "—"} color="text-violet-500" bgColor="bg-violet-500/10" />
+        <QuickStat icon={CalendarDays} label="Last 7 Days" value={stats?.entriesThisWeek?.toLocaleString() ?? "—"} color="text-emerald-500" bgColor="bg-emerald-500/10" />
+        <QuickStat icon={Users} label="Active Users (7d)" value={stats?.uniqueUsers?.toLocaleString() ?? "—"} color="text-amber-500" bgColor="bg-amber-500/10" />
+        <QuickStat icon={Sparkles} label="Top Action (7d)" value={stats?.topAction ?? "—"} color="text-rose-500" bgColor="bg-rose-500/10" />
+      </div>
 
       {/* Search, filter, per page, pagination — one row */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -285,6 +304,7 @@ export default function AdminActivityPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-10">#</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Message</th>
@@ -293,11 +313,14 @@ export default function AdminActivityPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
+              {logs.map((log, index) => (
                 <tr
                   key={log.id}
                   className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {(page - 1) * perPage + index + 1}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{log.user_name}</div>
                     <div className="text-xs text-muted-foreground">{log.user_email}</div>
@@ -344,6 +367,32 @@ export default function AdminActivityPage() {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function QuickStat({
+  icon: Icon,
+  label,
+  value,
+  color,
+  bgColor,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number | string;
+  color: string;
+  bgColor: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
+      <div className={`flex size-10 items-center justify-center rounded-4xl ${bgColor}`}>
+        <Icon className={`size-5 ${color}`} />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-xl font-bold tracking-tight">{value}</p>
+        <p className="truncate text-[11px] text-muted-foreground">{label}</p>
+      </div>
     </div>
   );
 }
