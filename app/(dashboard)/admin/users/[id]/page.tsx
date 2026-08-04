@@ -65,6 +65,7 @@ export default function AdminUserDetailPage() {
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityPage, setActivityPage] = useState(1);
   const [activityPerPage, setActivityPerPage] = useState(20);
+  const [activitySearchInput, setActivitySearchInput] = useState("");
   const [activitySearch, setActivitySearch] = useState("");
   const [activityActionFilter, setActivityActionFilter] = useState("all");
   const [activitySort, setActivitySort] = useState("newest");
@@ -78,6 +79,7 @@ export default function AdminUserDetailPage() {
   const [aiLoading, setAiLoading] = useState(true);
   const [aiPage, setAiPage] = useState(1);
   const [aiPerPage, setAiPerPage] = useState(20);
+  const [aiSearchInput, setAiSearchInput] = useState("");
   const [aiSearch, setAiSearch] = useState("");
   const [aiActionFilter, setAiActionFilter] = useState("all");
   const [aiSort, setAiSort] = useState("newest");
@@ -126,6 +128,7 @@ export default function AdminUserDetailPage() {
   useEffect(() => { loadAiUsage(); }, [loadAiUsage]);
 
   function handleActivitySearch(value: string) {
+    setActivitySearchInput(value);
     if (activityDebounceRef.current) clearTimeout(activityDebounceRef.current);
     activityDebounceRef.current = setTimeout(() => {
       setActivitySearch(value);
@@ -134,6 +137,7 @@ export default function AdminUserDetailPage() {
   }
 
   function handleAiSearch(value: string) {
+    setAiSearchInput(value);
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
     aiDebounceRef.current = setTimeout(() => {
       setAiSearch(value);
@@ -188,7 +192,7 @@ export default function AdminUserDetailPage() {
 
       {/* Profile card with gradient */}
       <div className="rounded-4xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">
-        <div className="flex items-start gap-5">
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
           <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-border">
             {user.avatar_url ? (
               <Image
@@ -209,8 +213,8 @@ export default function AdminUserDetailPage() {
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <div className="flex items-center justify-center gap-2 sm:justify-start">
               <h2 className="text-lg font-semibold">{user.full_name}</h2>
               {user.is_banned && (
                 <Badge variant="destructive" className="text-[10px]">Banned</Badge>
@@ -219,11 +223,11 @@ export default function AdminUserDetailPage() {
                 {user.role}
               </Badge>
             </div>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="mt-1 flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
               <Mail className="size-3.5" />
               {user.email}
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground sm:justify-start">
               <span className="flex items-center gap-1.5">
                 <CalendarDays className="size-3.5" />
                 Joined {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
@@ -245,7 +249,7 @@ export default function AdminUserDetailPage() {
         </div>
 
         {/* Stats row */}
-        <div className="mt-6 grid grid-cols-3 gap-4 sm:grid-cols-6">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
           <StatItem icon={Briefcase} label="Jobs" value={user.job_count} />
           <StatItem icon={FileText} label="Applications" value={user.application_count} />
           <StatItem icon={FileText} label="Documents" value={user.document_count} />
@@ -269,14 +273,14 @@ export default function AdminUserDetailPage() {
               <div className="relative w-full lg:w-72">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  value={activitySearch}
+                  value={activitySearchInput}
                   onChange={(e) => handleActivitySearch(e.target.value)}
                   placeholder="Search action or resource..."
                   className="h-10 pl-9 pr-9 text-sm"
                 />
-                {activitySearch && (
+                {activitySearchInput && (
                   <button
-                    onClick={() => { setActivitySearch(""); setActivityPage(1); }}
+                    onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityPage(1); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-4" />
@@ -359,7 +363,7 @@ export default function AdminUserDetailPage() {
                 {activitySearch && (
                   <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
                     &quot;{activitySearch}&quot;
-                    <button onClick={() => { setActivitySearch(""); setActivityPage(1); }} className="ml-0.5 hover:text-foreground">
+                    <button onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityPage(1); }} className="ml-0.5 hover:text-foreground">
                       <X className="size-3" />
                     </button>
                   </span>
@@ -373,7 +377,7 @@ export default function AdminUserDetailPage() {
                   </span>
                 )}
                 <button
-                  onClick={() => { setActivitySearch(""); setActivityActionFilter("all"); setActivityPage(1); }}
+                  onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityActionFilter("all"); setActivityPage(1); }}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   Clear all
@@ -499,14 +503,14 @@ export default function AdminUserDetailPage() {
               <div className="relative w-full lg:w-72">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  value={aiSearch}
+                  value={aiSearchInput}
                   onChange={(e) => handleAiSearch(e.target.value)}
                   placeholder="Search action or model..."
                   className="h-10 pl-9 pr-9 text-sm"
                 />
-                {aiSearch && (
+                {aiSearchInput && (
                   <button
-                    onClick={() => { setAiSearch(""); setAiPage(1); }}
+                    onClick={() => { setAiSearchInput(""); setAiSearch(""); setAiPage(1); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-4" />
@@ -587,7 +591,7 @@ export default function AdminUserDetailPage() {
                 {aiSearch && (
                   <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
                     &quot;{aiSearch}&quot;
-                    <button onClick={() => { setAiSearch(""); setAiPage(1); }} className="ml-0.5 hover:text-foreground">
+                    <button onClick={() => { setAiSearchInput(""); setAiSearch(""); setAiPage(1); }} className="ml-0.5 hover:text-foreground">
                       <X className="size-3" />
                     </button>
                   </span>
@@ -601,7 +605,7 @@ export default function AdminUserDetailPage() {
                   </span>
                 )}
                 <button
-                  onClick={() => { setAiSearch(""); setAiActionFilter("all"); setAiPage(1); }}
+                  onClick={() => { setAiSearchInput(""); setAiSearch(""); setAiActionFilter("all"); setAiPage(1); }}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   Clear all

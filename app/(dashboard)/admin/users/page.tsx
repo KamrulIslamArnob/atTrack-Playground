@@ -327,10 +327,7 @@ export default function AdminUsersPage() {
                     {(page - 1) * perPage + index + 1}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => router.push(`/admin/users/${user.id}`)}
-                      className="flex items-center gap-3 text-left hover:underline"
-                    >
+                    <div className="flex items-center gap-3">
                       {user.avatar_url ? (
                         <Image
                           src={user.avatar_url}
@@ -346,14 +343,19 @@ export default function AdminUsersPage() {
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="truncate font-medium">{user.full_name}</span>
+                          <button
+                            onClick={() => router.push(`/admin/users/${user.id}`)}
+                            className="truncate font-medium hover:underline"
+                          >
+                            {user.full_name}
+                          </button>
                           {user.is_banned && (
                             <Badge variant="destructive" className="text-[10px]">Banned</Badge>
                           )}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">{user.email}</div>
                       </div>
-                    </button>
+                    </div>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3">
                     <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">
