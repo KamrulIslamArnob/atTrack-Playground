@@ -23,13 +23,13 @@ export function LandingHeader() {
   return (
     <div className={cn(
       "fixed top-0 left-0 right-0 z-50 mx-auto mt-4 px-4 transition-all duration-300",
-      scrolled ? "max-w-6xl" : "max-w-[90rem]"
+      scrolled ? "max-w-7xl" : "max-w-360"
     )}>
       <header
         className={cn(
           "flex h-14 items-center justify-between px-4 transition-all duration-300 will-change-[transform,opacity]",
           scrolled
-            ? "rounded-4xl border border-white/10 dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.06] shadow-lg shadow-black/5 backdrop-blur-md"
+            ? "rounded-4xl border border-white/10 dark:border-white/8 bg-white/60 dark:bg-white/6 shadow-lg shadow-black/5 backdrop-blur-md"
             : "rounded-none border-transparent bg-transparent"
         )}
       >
