@@ -4,11 +4,20 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const navItems = [
+  { href: "#features", label: "Features" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#ai", label: "AI" },
+  { href: "#testimonials", label: "Testimonials" },
+  { href: "#faq", label: "FAQ" },
+];
 
 export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("");
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -18,6 +27,28 @@ export function LandingHeader() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const ids = navItems.map((item) => item.href.slice(1));
+    const onScroll = () => {
+      const scrollY = window.scrollY + 120;
+      let current = "";
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.offsetTop <= scrollY) {
+          current = `#${id}`;
+        }
+      }
+      setActiveSection(current);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   return (
@@ -46,11 +77,20 @@ export function LandingHeader() {
           </span>
         </Link>
         <nav className="hidden items-center justify-self-center gap-1 text-sm text-muted-foreground md:flex">
-          <a href="#features" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Features</a>
-          <a href="#how-it-works" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">How it works</a>
-          <a href="#ai" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">AI</a>
-          <a href="#testimonials" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Testimonials</a>
-          <a href="#faq" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">FAQ</a>
+          {navItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "rounded-4xl px-3.5 py-1.5 transition-colors",
+                activeSection === item.href
+                  ? "text-primary"
+                  : "hover:text-foreground"
+              )}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
         <div className="flex items-center justify-self-end gap-3">
           {mounted && (
@@ -76,17 +116,6 @@ export function LandingHeader() {
                 )}
               >
                 <Moon className="size-3.5" />
-              </button>
-              <button
-                onClick={() => setTheme("system")}
-                className={cn(
-                  "flex size-7 items-center justify-center rounded-4xl transition-colors",
-                  theme === "system"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Monitor className="size-3.5" />
               </button>
             </div>
           )}
