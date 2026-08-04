@@ -1,19 +1,32 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
+  AreaChart,
+  Area,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
+  Legend,
+  type TooltipProps,
+  type ValueType,
+  type NameType,
 } from "recharts";
+
+const tooltipStyle = {
+  borderRadius: "12px",
+  border: "1px solid #E5E7EB",
+  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+  fontSize: "12px",
+  backdropFilter: "blur(8px)",
+};
 
 const statusColors: Record<string, string> = {
   saved: "#94A3B8",
@@ -27,6 +40,18 @@ const statusColors: Record<string, string> = {
   withdrawn: "#6B7280",
 };
 
+const statusLabels: Record<string, string> = {
+  saved: "Saved",
+  interested: "Interested",
+  preparing: "Preparing",
+  applied: "Applied",
+  interview: "Interview",
+  offer: "Offer",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+};
+
 const actionColors: Record<string, string> = {
   create: "#10B981",
   update: "#3B82F6",
@@ -37,106 +62,246 @@ const actionColors: Record<string, string> = {
   sign_in: "#6366F1",
   sign_up: "#059669",
   sign_out: "#6B7280",
+  ban: "#EF4444",
+  unban: "#10B981",
+  promote: "#8B5CF6",
+  demote: "#F59E0B",
 };
 
-const tooltipStyle = {
-  borderRadius: "12px",
-  border: "1px solid #E5E7EB",
-  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-  fontSize: "12px",
-};
-
-export function UsersTrendChart({ data }: { data: { date: string; count: number }[] }) {
+function CustomTooltip({ active, payload, label }: TooltipProps<ValueType, NameType>) {
+  if (!active || !payload?.length) return null;
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <defs>
-          <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Area type="monotone" dataKey="count" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={2} />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="rounded-xl border border-border bg-card/95 px-3 py-2 shadow-lg backdrop-blur-sm">
+      <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
+      {payload.map((entry, index) => (
+        <p key={index} className="text-sm font-semibold" style={{ color: entry.color }}>
+          {entry.name}: {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
+        </p>
+      ))}
+    </div>
   );
 }
 
-export function JobsStatusChart({ data }: { data: { status: string; count: number }[] }) {
-  const chartData = data.map((d) => ({
-    name: d.status,
-    value: d.count,
-    fill: statusColors[d.status] || "#6B7280",
-  }));
+export function UsersTrendChart({ data }: { data: { date: string; count: number }[] }) {
+  const [active, setActive] = useState(true);
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(0,0,0,0.02)" }} />
-        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-          {chartData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setActive(!active)}
+          className={`text-xs font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}
+        >
+          {active ? "Showing" : "Hidden"}
+        </button>
+      </div>
+      <ResponsiveContainer width="100%" height={280}>
+        <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradientUsers" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} opacity={0.5} />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 11, fill: "#9CA3AF" }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: "#9CA3AF" }}
+            axisLine={false}
+            tickLine={false}
+            allowDecimals={false}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          {active && (
+            <Area
+              type="monotone"
+              dataKey="count"
+              name="Signups"
+              stroke="#8B5CF6"
+              strokeWidth={2.5}
+              fillOpacity={1}
+              fill="url(#gradientUsers)"
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#8B5CF6", fill: "#fff" }}
+            />
+          )}
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
 export function AiTrendChart({ data }: { data: { date: string; requests: number }[] }) {
+  const [active, setActive] = useState(true);
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <defs>
-          <linearGradient id="colorAi" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Area type="monotone" dataKey="requests" stroke="#6366F1" fillOpacity={1} fill="url(#colorAi)" strokeWidth={2} />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setActive(!active)}
+          className={`text-xs font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}
+        >
+          {active ? "Showing" : "Hidden"}
+        </button>
+      </div>
+      <ResponsiveContainer width="100%" height={280}>
+        <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradientAi" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#06B6D4" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#06B6D4" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} opacity={0.5} />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 11, fill: "#9CA3AF" }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: "#9CA3AF" }}
+            axisLine={false}
+            tickLine={false}
+            allowDecimals={false}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          {active && (
+            <Area
+              type="monotone"
+              dataKey="requests"
+              name="Requests"
+              stroke="#06B6D4"
+              strokeWidth={2.5}
+              fillOpacity={1}
+              fill="url(#gradientAi)"
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#06B6D4", fill: "#fff" }}
+            />
+          )}
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function JobsStatusChart({ data }: { data: { status: string; count: number }[] }) {
+  const chartData = useMemo(
+    () =>
+      data.map((d) => ({
+        name: statusLabels[d.status] ?? d.status,
+        value: d.count,
+        fill: statusColors[d.status] || "#6B7280",
+      })),
+    [data]
+  );
+
+  const total = useMemo(() => chartData.reduce((sum, d) => sum + d.value, 0), [chartData]);
+
+  return (
+    <div className="space-y-3">
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart
+          data={chartData}
+          layout="vertical"
+          margin={{ top: 5, right: 20, left: 10, bottom: 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" horizontal={false} opacity={0.5} />
+          <XAxis
+            type="number"
+            tick={{ fontSize: 11, fill: "#9CA3AF" }}
+            axisLine={false}
+            tickLine={false}
+            allowDecimals={false}
+          />
+          <YAxis
+            type="category"
+            dataKey="name"
+            tick={{ fontSize: 11, fill: "#6B7280" }}
+            axisLine={false}
+            tickLine={false}
+            width={80}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.02)" }} />
+          <Bar dataKey="value" name="Jobs" radius={[0, 6, 6, 0]} barSize={20}>
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <div className="flex flex-wrap gap-3 border-t border-border pt-3">
+        {chartData.map((item) => (
+          <div key={item.name} className="flex items-center gap-1.5 text-xs">
+            <div className="size-2 rounded-full" style={{ backgroundColor: item.fill }} />
+            <span className="text-muted-foreground">{item.name}</span>
+            <span className="font-medium">{item.value}</span>
+            <span className="text-muted-foreground/60">
+              ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export function ActivityByActionChart({ data }: { data: { action: string; count: number }[] }) {
-  const filtered = data.filter((d) => d.count > 0);
-  const chartData = filtered.map((d) => ({
-    name: d.action,
-    value: d.count,
-    fill: actionColors[d.action] || "#6B7280",
-  }));
+  const chartData = useMemo(
+    () =>
+      data
+        .filter((d) => d.count > 0)
+        .map((d) => ({
+          name: d.action.replace(/_/g, " "),
+          value: d.count,
+          fill: actionColors[d.action] || "#6B7280",
+        })),
+    [data]
+  );
+
+  const total = useMemo(() => chartData.reduce((sum, d) => sum + d.value, 0), [chartData]);
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <PieChart>
-        <Pie
-          data={chartData}
-          cx="50%"
-          cy="50%"
-          innerRadius={50}
-          outerRadius={80}
-          paddingAngle={3}
-          dataKey="value"
-          nameKey="name"
-        >
-          {chartData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="space-y-3">
+      <div className="flex items-center justify-center">
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={3}
+              dataKey="value"
+              nameKey="name"
+              strokeWidth={0}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-wrap gap-3 border-t border-border pt-3">
+        {chartData.map((item) => (
+          <div key={item.name} className="flex items-center gap-1.5 text-xs">
+            <div className="size-2 rounded-full" style={{ backgroundColor: item.fill }} />
+            <span className="text-muted-foreground capitalize">{item.name}</span>
+            <span className="font-medium">{item.value}</span>
+            <span className="text-muted-foreground/60">
+              ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
