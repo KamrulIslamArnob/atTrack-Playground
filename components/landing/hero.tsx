@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarGroup } from "@/components/ui/avatar";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-background px-6 pt-36 pb-24 sm:pt-54 sm:pb-32">
+    <section className="relative overflow-hidden bg-background px-6 pt-36 pb-24 sm:pt-45 sm:pb-32">
       <div className="absolute inset-0 -top-18 bg-linear-to-b from-primary/3 via-background to-background" />
       <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] bg-size-[32px_32px] opacity-40" />
       <div className="absolute -left-32 -top-32 size-96 rounded-full bg-primary/[0.07] blur-3xl" />

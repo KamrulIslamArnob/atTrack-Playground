@@ -7,7 +7,7 @@ export function Privacy() {
         <div className="mx-auto flex size-14 items-center justify-center rounded-4xl bg-primary/10 ring-1 ring-inset ring-primary/10">
           <Lock className="size-6 text-primary" />
         </div>
-        <h2 className="mt-6 font-heading text-2xl font-semibold tracking-tight">
+        <h2 className="mt-6 font-display text-2xl font-semibold tracking-tight">
           Your data stays yours
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-muted-foreground">

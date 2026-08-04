@@ -10,7 +10,7 @@ export function AiHighlight() {
               <Sparkles className="size-3" />
               AI-Powered
             </div>
-            <h2 className="mt-4 font-heading text-3xl font-semibold tracking-tight">
+            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight">
               Stop copy-pasting
               <br />
               job details

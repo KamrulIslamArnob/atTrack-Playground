@@ -26,7 +26,7 @@ export function Testimonials() {
     <section id="testimonials" className="scroll-mt-24 px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
-          <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Loved by job seekers
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-muted-foreground">

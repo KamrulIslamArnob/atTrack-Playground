@@ -8,7 +8,7 @@ export function Cta() {
       <div className="absolute -left-48 top-0 size-96 rounded-full bg-primary/[0.08] blur-3xl" />
       <div className="absolute -right-48 bottom-0 size-96 rounded-full bg-primary/[0.06] blur-3xl" />
       <div className="relative mx-auto max-w-3xl text-center">
-        <h2 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
+        <h2 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
           Ready to organize
           <br />
           your job search?

@@ -1,66 +1,108 @@
-import { Camera, Mail, Briefcase } from "lucide-react";
+import { Fragment } from "react";
+import { Camera, Send, Calendar, CheckCircle2, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const steps = [
   {
     step: "01",
-    title: "Import",
+    title: "Discover",
     description:
-      "Screenshot a job posting or paste a URL. AI extracts every detail — title, company, salary, requirements, and how to apply.",
+      "Screenshot a job posting or paste a URL. AI extracts every detail — title, company, salary, requirements, and how to apply — and saves it to your pipeline.",
     icon: Camera,
     color: "text-pink-500",
     bg: "bg-pink-500/10",
   },
   {
     step: "02",
-    title: "Compose",
+    title: "Apply",
     description:
-      "AI writes a personalized email tailored to the role and your experience. Edit, preview, and attach your resume.",
-    icon: Mail,
+      "AI writes a personalized application email tailored to the role and your resume. Edit, preview, attach your resume, and send it straight from Aven.",
+    icon: Send,
     color: "text-violet-500",
     bg: "bg-violet-500/10",
   },
   {
     step: "03",
-    title: "Track",
+    title: "Interview",
     description:
-      "Send the email and watch your application move through the pipeline. From submitted to interview to offer.",
-    icon: Briefcase,
+      "Track interviews with dates, prep notes, and types. Add them to Google Calendar in one click and practice with role-specific MCQs.",
+    icon: Calendar,
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
   },
+  {
+    step: "04",
+    title: "Accept",
+    description:
+      "Your application moves through the pipeline automatically — from submitted to interview to offer. Accept with confidence.",
+    icon: CheckCircle2,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+  },
 ];
+
+const pipeline = ["Saved", "Interested", "Preparing"];
 
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="scroll-mt-24 bg-gradient-to-b from-primary/[0.03] to-background px-6 py-24">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <div className="text-center">
-          <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-            From screenshot to sent
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            From first sight to signed offer
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-            Three steps. No copy-pasting. No tab-switching. Just you and
-            your next career move.
+          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+            Four stages. One workspace. Aven carries your application from
+            the moment you spot the role to the day you accept the offer.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-3">
-          {steps.map((item) => (
-            <div key={item.step} className="relative text-center">
-              <div className={`mx-auto flex size-14 items-center justify-center rounded-4xl ${item.bg} ring-1 ring-inset ring-black/[0.04] dark:ring-white/[0.04]`}>
-                <item.icon className={`size-6 ${item.color}`} />
+        <div className="relative mt-16">
+          <div className="absolute top-7 right-0 left-0 hidden h-px bg-linear-to-r from-transparent via-primary/40 to-transparent shadow-[0_0_8px_0] shadow-primary/20 lg:block" />
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+            {steps.map((item) => (
+              <div key={item.step} className="relative text-center lg:px-4">
+                <div className="relative mx-auto w-fit rounded-4xl bg-background p-1">
+                  <div
+                    className={cn(
+                      "flex size-12 items-center justify-center rounded-4xl ring-1 ring-inset ring-black/[0.04] dark:ring-white/[0.04]",
+                      item.bg
+                    )}
+                  >
+                    <item.icon className={cn("size-6", item.color)} />
+                  </div>
+                </div>
+                <div className="mt-6 font-heading text-xs font-semibold tracking-widest text-muted-foreground/60 uppercase">
+                  Step {item.step}
+                </div>
+                <h3 className="mt-1.5 font-heading text-lg font-semibold">
+                  {item.title}
+                </h3>
+                <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                  {item.description}
+                </p>
               </div>
-              <div className="mt-6 font-heading text-4xl font-bold text-primary/20">
-                {item.step}
-              </div>
-              <h3 className="mt-2 font-heading text-lg font-semibold">
-                {item.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {item.description}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-20 rounded-4xl border border-border bg-card p-6 sm:p-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {pipeline.map((stage, i) => (
+              <Fragment key={stage}>
+                <span className="rounded-4xl border border-border bg-muted/40 px-3.5 py-1.5 text-xs font-medium text-muted-foreground">
+                  {stage}
+                </span>
+                {i < pipeline.length - 1 && (
+                  <ArrowRight className="size-3.5 text-muted-foreground/40" />
+                )}
+              </Fragment>
+            ))}
+          </div>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Jobs start in your pipeline as Saved, Interested, or Preparing —
+            then move to applications, interviews, and offers as you log them.
+          </p>
         </div>
       </div>
     </section>
