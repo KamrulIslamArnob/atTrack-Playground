@@ -1,6 +1,7 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
+import { logResourceActivity } from "@/lib/actions/activity-log";
 
 export interface Interview {
   id: string;
@@ -192,6 +193,7 @@ export async function createInterview(
     throw new Error(`Failed to create interview: ${error.message}`);
   }
 
+  await logResourceActivity(userId, "create", "interview", inserted.id, { job_id: data.job_id });
   return { id: inserted.id };
 }
 
@@ -248,6 +250,8 @@ export async function updateInterview(
   if (error) {
     throw new Error(`Failed to update interview: ${error.message}`);
   }
+
+  await logResourceActivity(userId, "update", "interview", id);
 }
 
 export async function deleteInterview(id: string): Promise<void> {
@@ -262,4 +266,6 @@ export async function deleteInterview(id: string): Promise<void> {
   if (error) {
     throw new Error(`Failed to delete interview: ${error.message}`);
   }
+
+  await logResourceActivity(userId, "delete", "interview", id);
 }

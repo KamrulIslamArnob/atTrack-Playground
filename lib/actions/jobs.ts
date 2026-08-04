@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
+import { logResourceActivity } from "@/lib/actions/activity-log";
 
 export async function createJob(formData: FormData) {
   const { supabase, userId } = await getUser();
@@ -118,6 +119,7 @@ export async function createJob(formData: FormData) {
   }
 
   revalidatePath("/jobs");
+  await logResourceActivity(userId, "create", "job", job.id, { title, company: companyName });
   return { jobId: job.id };
 }
 
@@ -194,6 +196,7 @@ export async function updateJob(formData: FormData) {
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
   revalidatePath("/interviews");
+  await logResourceActivity(userId, "update", "job", jobId, { title, company: companyName });
 }
 
 export async function createApplication(formData: FormData) {
@@ -236,6 +239,7 @@ export async function createApplication(formData: FormData) {
 
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
+  await logResourceActivity(userId, "create", "application", application.id, { job_id: jobId });
   return { applicationId: application.id };
 }
 
@@ -256,6 +260,7 @@ export async function updateApplicationStatus(formData: FormData) {
   }
 
   revalidatePath("/jobs");
+  await logResourceActivity(userId, "update", "application", applicationId, { status });
 }
 
 export async function deleteApplication(applicationId: string) {
@@ -272,4 +277,5 @@ export async function deleteApplication(applicationId: string) {
   }
 
   revalidatePath("/jobs");
+  await logResourceActivity(userId, "delete", "application", applicationId);
 }

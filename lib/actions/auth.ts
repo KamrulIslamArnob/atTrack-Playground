@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logAuthActivity, logResourceActivity } from "@/lib/actions/activity-log";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -13,10 +14,26 @@ export async function signIn(formData: FormData) {
     password: formData.get("password") as string,
   };
 
-  const { error } = await supabase.auth.signInWithPassword(data);
+  const { data: authData, error } = await supabase.auth.signInWithPassword(data);
 
   if (error) {
     redirect("/login?error=" + encodeURIComponent(error.message));
+  }
+
+  if (authData.user) {
+    // Check if user is banned
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_banned")
+      .eq("id", authData.user.id)
+      .single();
+
+    if (profile?.is_banned) {
+      await supabase.auth.signOut();
+      redirect("/login?error=" + encodeURIComponent("Your account has been suspended. Contact support."));
+    }
+
+    await logAuthActivity(authData.user.id, "sign_in", { email: data.email });
   }
 
   redirect("/overview");
@@ -66,6 +83,8 @@ export async function signUp(formData: FormData) {
     if (profileError) {
       redirect("/signup?error=" + encodeURIComponent("Failed to create profile. Please try again."));
     }
+
+    await logAuthActivity(authData.user.id, "sign_up", { email, full_name: fullName });
   }
 
   redirect("/login?message=" + encodeURIComponent("Check your email to confirm your account."));
@@ -73,6 +92,12 @@ export async function signUp(formData: FormData) {
 
 export async function signOut() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    await logAuthActivity(user.id, "sign_out");
+  }
+
   await supabase.auth.signOut();
   redirect("/login");
 }
@@ -105,6 +130,8 @@ export async function updateProfile(formData: FormData) {
   if (error) {
     redirect("/settings?error=" + encodeURIComponent("Failed to update profile."));
   }
+
+  await logResourceActivity(user.id, "update", "profile", user.id, { full_name: fullName });
 
   revalidatePath("/settings");
   revalidatePath("/overview");
@@ -172,6 +199,8 @@ export async function uploadAvatar(formData: FormData) {
     redirect("/settings?error=" + encodeURIComponent("Failed to update profile with avatar."));
   }
 
+  await logResourceActivity(user.id, "upload", "avatar");
+
   revalidatePath("/settings");
   revalidatePath("/overview");
   redirect("/settings?message=" + encodeURIComponent("Avatar uploaded successfully."));
@@ -193,8 +222,10 @@ export async function deleteAccount(formData: FormData) {
 
   const userId = user.id;
 
+  // Log before deletion (last chance to record)
+  await logAuthActivity(userId, "account_deletion", { email });
+
   // Delete storage files (all buckets)
-  // Avatar
   await supabase.storage.from("avatar").remove([
     `${userId}/avatar.jpg`,
     `${userId}/avatar.png`,
@@ -203,39 +234,30 @@ export async function deleteAccount(formData: FormData) {
     `${userId}/avatar.jpeg`,
   ]);
 
-  // Documents (resumes, etc.)
   const { data: docFiles } = await supabase.storage.from("documents").list(userId);
   if (docFiles && docFiles.length > 0) {
     await supabase.storage.from("documents").remove(docFiles.map((f) => `${userId}/${f.name}`));
   }
 
-  // Job imports (screenshots)
   const { data: importFiles } = await supabase.storage.from("job-imports").list(userId);
   if (importFiles && importFiles.length > 0) {
     await supabase.storage.from("job-imports").remove(importFiles.map((f) => `${userId}/${f.name}`));
   }
 
   // Delete database records (order matters due to foreign keys)
-  // Child tables first (depend on jobs/applications)
   await supabase.from("mcq_results").delete().eq("user_id", userId);
   await supabase.from("application_emails").delete().eq("user_id", userId);
   await supabase.from("interviews").delete().eq("user_id", userId);
   await supabase.from("timeline_events").delete().eq("user_id", userId);
   await supabase.from("notes").delete().eq("user_id", userId);
   await supabase.from("documents").delete().eq("user_id", userId);
-
-  // Applications depend on jobs
   await supabase.from("applications").delete().eq("user_id", userId);
-
-  // Independent tables
   await supabase.from("ai_extraction_logs").delete().eq("user_id", userId);
   await supabase.from("smtp_config").delete().eq("user_id", userId);
-
-  // Parent tables
   await supabase.from("jobs").delete().eq("user_id", userId);
   await supabase.from("companies").delete().eq("user_id", userId);
-
-  // Profile (auth user record)
+  await supabase.from("activity_logs").delete().eq("user_id", userId);
+  await supabase.from("ai_usage_logs").delete().eq("user_id", userId);
   await supabase.from("profiles").delete().eq("id", userId);
 
   // Sign out first to clear session cookies

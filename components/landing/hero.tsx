@@ -18,7 +18,7 @@ export function Hero() {
         </div>
         <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
           <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">Organize</span>
-          <span className="text-foreground"> your applications</span>
+          <span className="text-foreground"> your applications,</span>
           <br />
           <span className="text-foreground">Accelerate your </span>
           <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">career.</span>

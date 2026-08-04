@@ -3,6 +3,7 @@
 import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { extractResumeContent, calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
+import { logResourceActivity } from "@/lib/actions/activity-log";
 
 export interface Document {
   id: string;
@@ -114,6 +115,7 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
   revalidatePath("/documents");
   revalidatePath("/jobs");
 
+  await logResourceActivity(userId, "create", "document", doc.id, { name, type });
   return { documentId: doc.id };
 }
 
@@ -153,6 +155,7 @@ export async function deleteDocument(id: string): Promise<void> {
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
+  await logResourceActivity(userId, "delete", "document", id);
 }
 
 export async function setDefaultDocument(id: string): Promise<void> {
@@ -181,6 +184,7 @@ export async function setDefaultDocument(id: string): Promise<void> {
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
+  await logResourceActivity(userId, "update", "document", id, { is_default: true });
 }
 
 export async function getSignedUrl(filePath: string): Promise<string> {

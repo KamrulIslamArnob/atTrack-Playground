@@ -13,12 +13,12 @@ import {
   Send,
   Calendar,
   FileText,
-  Lightbulb,
   Settings,
   LogOut,
   Sun,
   Moon,
   Monitor,
+  Shield,
 } from "lucide-react";
 
 const navigation = [
@@ -51,9 +51,10 @@ export interface SidebarProps {
   };
   avatarUrl?: string | null;
   fullName?: string | null;
+  role?: string;
 }
 
-export function Sidebar({ user, avatarUrl, fullName: profileName }: SidebarProps) {
+export function Sidebar({ user, avatarUrl, fullName: profileName, role }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -208,6 +209,27 @@ export function Sidebar({ user, avatarUrl, fullName: profileName }: SidebarProps
                 </Link>
               );
             })}
+
+            {role === "admin" && (
+              <>
+                <div className="my-4 h-px bg-border/50" />
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Admin
+                </div>
+                <Link
+                  href="/admin"
+                  className={cn(
+                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                    pathname.startsWith("/admin")
+                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Shield className="size-4 shrink-0" />
+                  Admin Panel
+                </Link>
+              </>
+            )}
           </div>
         </nav>
 

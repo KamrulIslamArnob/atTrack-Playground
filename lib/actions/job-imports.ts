@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { extractJobFromScreenshots } from "@/lib/ai/ai";
 import { createExtractionLogger } from "@/lib/ai/logger";
 import type { ExtractionResult } from "@/lib/ai/schema";
+import { logResourceActivity } from "@/lib/actions/activity-log";
 
 const BUCKET = "job-imports";
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -37,6 +38,7 @@ export async function uploadScreenshot(
     data: { publicUrl },
   } = supabase.storage.from(BUCKET).getPublicUrl(screenshotId);
 
+  await logResourceActivity(userId, "upload", "screenshot", screenshotId);
   return { screenshotId, screenshotUrl: publicUrl };
 }
 
@@ -86,6 +88,7 @@ export async function extractFromScreenshots(
 
     const { duration } = extractionLog.success(extractedFields);
     await saveLog(supabase, userId, screenshotIds.join(","), "success", duration, extractedFields);
+    await logResourceActivity(userId, "extract", "screenshot", undefined, { screenshots: screenshotIds.length });
 
     return result;
   } catch (err) {
@@ -112,6 +115,8 @@ export async function deleteScreenshots(screenshotIds: string[]): Promise<void> 
     if (error) {
       console.error("Failed to delete screenshots:", error.message);
     }
+
+    await logResourceActivity(userId, "delete", "screenshot", undefined, { screenshots: ownedIds.length });
   }
 }
 
