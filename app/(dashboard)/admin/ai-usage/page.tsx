@@ -119,7 +119,7 @@ export default function AdminAiUsagePage() {
       <Breadcrumbs />
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <QuickStat icon={Cpu} label="Total Requests" value={total.toLocaleString()} color="text-blue-500" bgColor="bg-blue-500/10" />
         <QuickStat icon={Zap} label="Total Tokens" value={totalTokens.toLocaleString()} color="text-violet-500" bgColor="bg-violet-500/10" />
         <QuickStat icon={Coins} label="Estimated Cost" value={`$${totalCost.toFixed(4)}`} color="text-amber-500" bgColor="bg-amber-500/10" />

@@ -261,9 +261,9 @@ export default function AdminUserDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="activity">
-        <TabsList>
-          <TabsTrigger value="activity">Activity Log</TabsTrigger>
-          <TabsTrigger value="ai-usage">AI Usage</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="activity" className="flex-1 sm:flex-none">Activity Log</TabsTrigger>
+          <TabsTrigger value="ai-usage" className="flex-1 sm:flex-none">AI Usage</TabsTrigger>
         </TabsList>
 
         <TabsContent value="activity">
@@ -462,7 +462,7 @@ export default function AdminUserDetailPage() {
         <TabsContent value="ai-usage">
           <div className="mt-4 space-y-4">
             {/* Summary cards */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
                 <div className="flex size-10 items-center justify-center rounded-4xl bg-violet-500/10">
                   <Zap className="size-5 text-violet-500" />

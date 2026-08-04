@@ -164,7 +164,7 @@ export default function AdminUsersPage() {
       <Breadcrumbs />
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <QuickStat icon={Users} label="Total Users" value={stats.total.toLocaleString()} color="text-blue-500" bgColor="bg-blue-500/10" />
         <QuickStat icon={ShieldCheck} label="Active" value={stats.active.toLocaleString()} color="text-emerald-500" bgColor="bg-emerald-500/10" />
         <QuickStat icon={Ban} label="Banned" value={stats.banned.toLocaleString()} color="text-rose-500" bgColor="bg-rose-500/10" />
