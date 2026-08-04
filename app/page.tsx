@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { LandingHeader } from "@/components/landing-header";
 import ShinyText from "@/components/ShinyText";
+import { Avatar, AvatarImage, AvatarGroup } from "@/components/ui/avatar";
 
 export default function LandingPage() {
   return (
@@ -25,7 +26,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-background px-6 pt-36 pb-24 sm:pt-44 sm:pb-32">
+        <section className="relative overflow-hidden bg-background px-6 pt-36 pb-24 sm:pt-54 sm:pb-32">
           {/* Full-height gradient behind header */}
           <div className="absolute inset-0 -top-18 bg-linear-to-b from-primary/3 via-background to-background" />
           <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] bg-size-[32px_32px] opacity-40" />
@@ -44,7 +45,7 @@ export default function LandingPage() {
               <span className="text-foreground">Accelerate your </span>
               <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">career.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
+            <p className="mx-auto mt-6 max-w-2xl text-muted-foreground leading-relaxed">
               Stop juggling spreadsheets, browser tabs, and forgotten follow-ups.
               Aven brings your entire job search into one intelligent workspace —
               from the moment you discover a role to the day you accept the offer.
@@ -109,17 +110,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Social proof */}
-        <section className="border-y border-border/50 bg-muted/30 px-6 py-10">
-          <div className="mx-auto max-w-4xl text-center">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">
-              Trusted by job seekers worldwide
-            </p>
-          </div>
-        </section>
-
         {/* Features Grid */}
-        <section className="px-6 py-24">
+        <section id="features" className="px-6 py-24">
           <div className="mx-auto max-w-6xl">
             <div className="text-center">
               <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -210,7 +202,7 @@ export default function LandingPage() {
         </section>
 
         {/* How It Works */}
-        <section className="border-y border-border/50 bg-gradient-to-b from-primary/[0.03] to-background px-6 py-24">
+        <section id="how-it-works" className="border-y border-border/50 bg-gradient-to-b from-primary/[0.03] to-background px-6 py-24">
           <div className="mx-auto max-w-5xl">
             <div className="text-center">
               <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -272,7 +264,7 @@ export default function LandingPage() {
         </section>
 
         {/* Feature Highlight - AI Extraction */}
-        <section className="px-6 py-24">
+        <section id="ai" className="px-6 py-24">
           <div className="mx-auto max-w-6xl">
             <div className="grid items-center gap-12 lg:grid-cols-2">
               <div>
@@ -365,7 +357,7 @@ export default function LandingPage() {
         </section>
 
         {/* Privacy */}
-        <section className="border-y border-border/50 bg-gradient-to-b from-primary/[0.04] to-background px-6 py-20">
+        <section id="privacy" className="border-y border-border/50 bg-gradient-to-b from-primary/[0.04] to-background px-6 py-20">
           <div className="mx-auto max-w-4xl text-center">
             <div className="mx-auto flex size-14 items-center justify-center rounded-4xl bg-primary/10 ring-1 ring-inset ring-primary/10">
               <Lock className="size-6 text-primary" />

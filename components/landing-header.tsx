@@ -46,6 +46,12 @@ export function LandingHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-3">
+          <nav className="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
+            <a href="#features" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Features</a>
+            <a href="#how-it-works" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">How it works</a>
+            <a href="#ai" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">AI</a>
+            <a href="#privacy" className="rounded-4xl px-3 py-1.5 transition-colors hover:text-foreground">Privacy</a>
+          </nav>
           {mounted && (
             <div className="flex items-center gap-0.5 rounded-4xl border border-border/50 bg-card/50 p-0.5">
               <button

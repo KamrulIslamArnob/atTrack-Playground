@@ -130,6 +130,7 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
 }
 
@@ -167,4 +168,13 @@
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--primary) transparent;
+}
+
+@keyframes shimmer-icon {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.shimmer-icon {
+  animation: shimmer-icon 3s ease-in-out infinite;
 }
