@@ -47,7 +47,7 @@ export function Testimonials() {
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Loved by job seekers
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
             Join thousands who streamlined their job search and landed their
             dream roles.
           </p>

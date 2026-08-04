@@ -51,7 +51,7 @@ export function HowItWorks() {
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             From first sight to signed offer
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
             Four stages. One workspace. Aven carries your application from
             the moment you spot the role to the day you accept the offer.
           </p>

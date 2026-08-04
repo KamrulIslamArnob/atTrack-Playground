@@ -20,7 +20,7 @@ export function Cta() {
               <br />
               <span className="text-primary">your job search?</span>
             </h2>
-            <p className="mx-auto mt-5 max-w-md text-muted-foreground">
+            <p className="mx-auto mt-5 max-w-md text-sm text-muted-foreground sm:text-base">
               Join thousands of job seekers who track their applications,
               ace their interviews, and land better offers.
             </p>

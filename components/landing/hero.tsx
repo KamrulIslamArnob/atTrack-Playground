@@ -23,7 +23,7 @@ export function Hero() {
           <span className="text-foreground">Accelerate your </span>
           <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">career.</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-muted-foreground leading-relaxed">
+        <p className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           Stop juggling spreadsheets, browser tabs, and forgotten follow-ups.
           Aven brings your entire job search into one intelligent workspace —
           from the moment you discover a role to the day you accept the offer.

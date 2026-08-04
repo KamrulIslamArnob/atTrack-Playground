@@ -61,7 +61,7 @@ export function AiHighlight() {
               <br />
               <span className="text-primary">You do the landing.</span>
             </h2>
-            <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
               Capture a job post from a screenshot, get a tailored application
               draft, know your match score, and practice the interview — all
               without leaving Aven.

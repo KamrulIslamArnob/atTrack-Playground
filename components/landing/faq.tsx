@@ -53,7 +53,7 @@ export function Faq() {
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Frequently asked questions
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
             Straight answers to the questions job seekers ask most.
           </p>
         </div>

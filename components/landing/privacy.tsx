@@ -18,7 +18,7 @@ export function Privacy() {
           <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Your data stays yours
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
             Aven is built private-first. Your jobs, applications, and notes are
             protected at the database, at rest, and on their way out.
           </p>

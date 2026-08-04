@@ -88,7 +88,7 @@ export function Features() {
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Everything you need to land the job
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
             A complete toolkit designed to streamline every step of your
             job search — from saving your first listing to accepting an offer.
           </p>
