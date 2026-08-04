@@ -23,9 +23,15 @@ import {
 
 const navigation = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
+];
+
+const pipelineNavigation = [
   { name: "Jobs", href: "/jobs", icon: Briefcase },
   { name: "Applications", href: "/applications", icon: Send },
   { name: "Interviews", href: "/interviews", icon: Calendar },
+];
+
+const resourceNavigation = [
   { name: "Documents", href: "/documents", icon: FileText },
 ];
 
@@ -99,11 +105,64 @@ export function Sidebar({ user, avatarUrl, fullName: profileName }: SidebarProps
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-            Workspace
-          </div>
           <div className="space-y-0.5">
             {navigation.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="my-4 h-px bg-border/50" />
+
+          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+            Pipeline
+          </div>
+          <div className="space-y-0.5">
+            {pipelineNavigation.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="my-4 h-px bg-border/50" />
+
+          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+            Resources
+          </div>
+          <div className="space-y-0.5">
+            {resourceNavigation.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/" && pathname.startsWith(item.href));

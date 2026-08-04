@@ -67,9 +67,12 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
 
           <nav className="hidden items-center gap-1 md:flex">
             {[
-              { name: "Overview", href: "/overview" },
-              { name: "Jobs", href: "/jobs" },
-              { name: "Interviews", href: "/interviews" },
+              { name: "Home", href: "/" },
+              { name: "Features", href: "/#features" },
+              { name: "How it works", href: "/#how-it-works" },
+              { name: "AI", href: "/#ai" },
+              { name: "Testimonials", href: "/#testimonials" },
+              { name: "FAQ", href: "/#faq" },
             ].map((item) => (
               <Link
                 key={item.name}

@@ -216,15 +216,18 @@ export async function deleteAccount(formData: FormData) {
   }
 
   // Delete database records (order matters due to foreign keys)
-  // Child tables first (depend on jobs)
+  // Child tables first (depend on jobs/applications)
   await supabase.from("mcq_results").delete().eq("user_id", userId);
+  await supabase.from("application_emails").delete().eq("user_id", userId);
   await supabase.from("interviews").delete().eq("user_id", userId);
+  await supabase.from("timeline_events").delete().eq("user_id", userId);
+  await supabase.from("notes").delete().eq("user_id", userId);
   await supabase.from("documents").delete().eq("user_id", userId);
+
+  // Applications depend on jobs
   await supabase.from("applications").delete().eq("user_id", userId);
 
   // Independent tables
-  await supabase.from("timeline_events").delete().eq("user_id", userId);
-  await supabase.from("notes").delete().eq("user_id", userId);
   await supabase.from("ai_extraction_logs").delete().eq("user_id", userId);
   await supabase.from("smtp_config").delete().eq("user_id", userId);
 
@@ -235,14 +238,16 @@ export async function deleteAccount(formData: FormData) {
   // Profile (auth user record)
   await supabase.from("profiles").delete().eq("id", userId);
 
+  // Sign out first to clear session cookies
+  await supabase.auth.signOut();
+
   // Delete auth user using secret key (bypasses RLS)
   const admin = createAdminClient();
   const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
   if (deleteError) {
-    redirect("/settings?error=" + encodeURIComponent("Failed to delete account. Please try again."));
+    redirect("/login?error=" + encodeURIComponent("Failed to delete account data. Please try again."));
   }
 
-  await supabase.auth.signOut();
   redirect("/login?message=" + encodeURIComponent("Account deleted successfully."));
 }
