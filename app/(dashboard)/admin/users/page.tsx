@@ -55,52 +55,36 @@ export default function AdminUsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleBan(userId: string) {
-    setActionLoading(userId);
-    const result = await banUser(userId);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("User banned");
-      await loadUsers();
-    }
-    setActionLoading(null);
-  }
+  const [confirmAction, setConfirmAction] = useState<
+    { action: "ban" | "unban" | "promote" | "demote"; user: AdminUser } | null
+  >(null);
 
-  async function handleUnban(userId: string) {
+  async function executeAction(action: "ban" | "unban" | "promote" | "demote", userId: string) {
     setActionLoading(userId);
-    const result = await unbanUser(userId);
+    const result =
+      action === "ban"
+        ? await banUser(userId)
+        : action === "unban"
+          ? await unbanUser(userId)
+          : action === "promote"
+            ? await promoteToAdmin(userId)
+            : await demoteToUser(userId);
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("User unbanned");
+      toast.success(
+        action === "ban"
+          ? "User banned"
+          : action === "unban"
+            ? "User unbanned"
+            : action === "promote"
+              ? "User promoted to admin"
+              : "User demoted to user",
+      );
       await loadUsers();
     }
     setActionLoading(null);
-  }
-
-  async function handlePromote(userId: string) {
-    setActionLoading(userId);
-    const result = await promoteToAdmin(userId);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("User promoted to admin");
-      await loadUsers();
-    }
-    setActionLoading(null);
-  }
-
-  async function handleDemote(userId: string) {
-    setActionLoading(userId);
-    const result = await demoteToUser(userId);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("User demoted to user");
-      await loadUsers();
-    }
-    setActionLoading(null);
+    setConfirmAction(null);
   }
 
   const stats = useMemo(() => {
@@ -377,7 +361,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => handleUnban(user.id)}
+                          onClick={() => setConfirmAction({ action: "unban", user })}
                           disabled={actionLoading === user.id}
                         >
                           {actionLoading === user.id ? (
@@ -392,7 +376,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs text-destructive"
-                          onClick={() => handleBan(user.id)}
+                          onClick={() => setConfirmAction({ action: "ban", user })}
                           disabled={actionLoading === user.id}
                         >
                           {actionLoading === user.id ? (
@@ -408,7 +392,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => handleDemote(user.id)}
+                          onClick={() => setConfirmAction({ action: "demote", user })}
                           disabled={actionLoading === user.id}
                         >
                           <UserMinus className="size-3" />
@@ -419,7 +403,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => handlePromote(user.id)}
+                          onClick={() => setConfirmAction({ action: "promote", user })}
                           disabled={actionLoading === user.id}
                         >
                           <UserPlus className="size-3" />
