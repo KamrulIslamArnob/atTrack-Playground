@@ -56,6 +56,7 @@ const statusColors: Record<string, string> = {
   saved: "bg-muted text-muted-foreground",
   interested: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   preparing: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  applied: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
 };
 
 const statusLabels: Record<string, string> = JOB_STATUS_LABELS;
@@ -274,6 +275,7 @@ export function JobsGrid({
           {jobs.map((job) => {
             const hasApplied = job.applications && job.applications.length > 0;
             const latestApplication = hasApplied ? job.applications[0] : null;
+            const displayStatus = hasApplied && job.status === "saved" ? "applied" : job.status;
 
             return (
               <Link
@@ -306,8 +308,8 @@ export function JobsGrid({
                         {job.match_score}% match
                       </span>
                     )}
-                    <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[job.status] ?? "bg-muted text-muted-foreground"}`}>
-                      {statusLabels[job.status] ?? job.status}
+                    <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[displayStatus] ?? "bg-muted text-muted-foreground"}`}>
+                      {displayStatus === "applied" ? "Applied" : statusLabels[displayStatus] ?? displayStatus}
                     </span>
                   </div>
                 </div>
@@ -334,11 +336,6 @@ export function JobsGrid({
                     {job.work_location && (
                       <span className="rounded-4xl bg-muted px-2 py-0.5">
                         {job.work_location}
-                      </span>
-                    )}
-                    {hasApplied && (
-                      <span className="rounded-4xl bg-violet-100 px-2 py-0.5 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                        Applied
                       </span>
                     )}
                   </div>

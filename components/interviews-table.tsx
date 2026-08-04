@@ -138,20 +138,20 @@ export function InterviewsTable({
   return (
     <div className="space-y-4">
       {/* Search, filter, sort, per page, pagination — one row */}
-      <div className="flex items-center gap-3">
-        <div className="relative w-72">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search by job, company, interviewer..."
-            className="h-10 pl-9"
+            className="h-10 pl-9 text-sm"
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Status</span>
+          <span className="shrink-0 text-xs text-muted-foreground">Status</span>
           <Select value={statusFilter} onValueChange={handleStatusChange}>
-            <SelectTrigger className="h-10 w-[130px]">
+            <SelectTrigger className="h-10 w-full lg:w-[130px]">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -165,9 +165,9 @@ export function InterviewsTable({
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Sort</span>
+          <span className="shrink-0 text-xs text-muted-foreground">Sort</span>
           <Select value={sort} onValueChange={handleSortChange}>
-            <SelectTrigger className="h-10 w-[130px]">
+            <SelectTrigger className="h-10 w-full lg:w-[130px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -178,7 +178,7 @@ export function InterviewsTable({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex items-center gap-1 lg:ml-auto">
           <span className="text-xs text-muted-foreground">Per page</span>
           <Select
             value={String(perPage)}
@@ -264,7 +264,7 @@ export function InterviewsTable({
 
       {/* Table */}
       {interviews.length > 0 ? (
-        <div className="rounded-4xl border border-border overflow-hidden">
+        <div className="rounded-4xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">

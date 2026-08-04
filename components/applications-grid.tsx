@@ -144,20 +144,20 @@ export function ApplicationsGrid({
   return (
     <div className="space-y-4">
       {/* Search and filter button */}
-      <div className="flex items-center gap-3">
-        <div className="relative w-72">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search by role, company, or location..."
-            className="h-10 pl-9"
+            className="h-10 pl-9 text-sm"
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Status</span>
+          <span className="shrink-0 text-xs text-muted-foreground">Status</span>
           <Select value={statusFilter} onValueChange={(v) => handleStatusChange(v ?? "all")}>
-            <SelectTrigger className="h-10 w-[130px]">
+            <SelectTrigger className="h-10 w-full lg:w-[130px]">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -171,9 +171,9 @@ export function ApplicationsGrid({
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Sort</span>
+          <span className="shrink-0 text-xs text-muted-foreground">Sort</span>
           <Select value={sort} onValueChange={(v) => handleSortChange(v ?? "applied_newest")}>
-            <SelectTrigger className="h-10 w-[160px]">
+            <SelectTrigger className="h-10 w-full lg:w-[160px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -186,7 +186,7 @@ export function ApplicationsGrid({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex items-center gap-1 lg:ml-auto">
           <span className="text-xs text-muted-foreground">Per page</span>
           <Select
             value={String(perPage)}
@@ -292,7 +292,7 @@ export function ApplicationsGrid({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors">
+                  <h3 className="text-sm font-semibold leading-tight group-hover:text-primary transition-colors sm:text-base">
                     {app.job?.title ?? "Untitled"}
                   </h3>
                   <p className="mt-3 text-sm text-muted-foreground flex items-center gap-1.5">
