@@ -429,6 +429,150 @@ export default function AdminUsersPage() {
           </p>
         </div>
       )}
+
+      {confirmAction && (
+        <ConfirmDialog
+          action={confirmAction.action}
+          user={confirmAction.user}
+          loading={actionLoading === confirmAction.user.id}
+          onConfirm={() => executeAction(confirmAction.action, confirmAction.user.id)}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+const CONFIRM_CONFIG = {
+  ban: {
+    title: "Ban user",
+    description:
+      "This will immediately revoke access for this user. They will be signed out and blocked from signing in again.",
+    confirmLabel: "Ban user",
+    icon: BanIcon,
+    iconBg: "bg-destructive/10",
+    iconColor: "text-destructive",
+    buttonClass: "text-destructive",
+  },
+  unban: {
+    title: "Unban user",
+    description:
+      "This will restore access for this user and allow them to sign in again.",
+    confirmLabel: "Unban user",
+    icon: ShieldIcon,
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
+    buttonClass: "",
+  },
+  promote: {
+    title: "Promote to admin",
+    description:
+      "This grants this user full admin access, including the ability to ban users and manage settings. Make sure you trust them.",
+    confirmLabel: "Promote to admin",
+    icon: UserCogIcon,
+    iconBg: "bg-violet-500/10",
+    iconColor: "text-violet-500",
+    buttonClass: "",
+  },
+  demote: {
+    title: "Demote to user",
+    description:
+      "This revokes admin access and returns this user to a regular account.",
+    confirmLabel: "Demote to user",
+    icon: ShieldAlert,
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+    buttonClass: "",
+  },
+} satisfies Record<
+  "ban" | "unban" | "promote" | "demote",
+  {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    icon: React.ComponentType<{ className?: string }>;
+    iconBg: string;
+    iconColor: string;
+    buttonClass: string;
+  }
+>;
+
+function ConfirmDialog({
+  action,
+  user,
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  action: "ban" | "unban" | "promote" | "demote";
+  user: AdminUser;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const config = CONFIRM_CONFIG[action];
+  const Icon = config.icon;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={() => {
+        if (!loading) onCancel();
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-4xl bg-card p-6 shadow-md ring-1 ring-foreground/5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`flex size-10 items-center justify-center rounded-full ${config.iconBg}`}>
+            <Icon className={`size-5 ${config.iconColor}`} />
+          </div>
+          <div>
+            <h2 className="font-heading text-base font-medium text-card-foreground">
+              {config.title}
+            </h2>
+            <p className="text-sm text-muted-foreground">This action can be undone</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3 rounded-4xl border border-border bg-muted/40 p-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-background text-sm font-medium text-muted-foreground">
+            {user.full_name
+              .split(" ")
+              .map((n) => n[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{user.full_name}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-muted-foreground">{config.description}</p>
+
+        <div className="mt-5 flex justify-end gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant={action === "ban" ? "destructive" : "default"}
+            size="sm"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading && <Loader2 className="size-3 animate-spin" />}
+            {config.confirmLabel}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
