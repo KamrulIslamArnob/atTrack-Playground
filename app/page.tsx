@@ -15,6 +15,7 @@ import {
   Lock,
 } from "lucide-react";
 import { LandingHeader } from "@/components/landing-header";
+import ShinyText from "@/components/ShinyText";
 
 export default function LandingPage() {
   return (
@@ -32,9 +33,9 @@ export default function LandingPage() {
           <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-primary/5 blur-3xl" />
 
           <div className="relative mx-auto max-w-4xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary backdrop-blur-sm">
-              <Sparkles className="size-3.5" />
-              AI-powered job application tracker
+            <div className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-primary">
+              <Sparkles className="size-3.5 shimmer-icon" />
+              <ShinyText text="AI-powered job application tracker" speed={3} color="hsl(240 3.8% 46.1%)" shineColor="var(--primary)" />
             </div>
             <h1 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
               <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">Organize</span>
