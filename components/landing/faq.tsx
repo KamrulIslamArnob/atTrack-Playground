@@ -26,12 +26,12 @@ const faqs = [
   {
     question: "What is the resume match score?",
     answer:
-      "AI compares your resume against each job description and returns a percentage match score. Use it to prioritize the roles where you're strongest and identify which keywords or skills to emphasize before you apply.",
+      "AI compares your resume against each job description and returns a percentage match score with a short explanation. Use it to prioritize the roles where you're strongest before you apply.",
   },
   {
     question: "Can I practice for interviews with Aven?",
     answer:
-      "Yes. Aven generates role-specific multiple-choice questions based on the job, tracks your scores over time, and highlights weak areas so you can study where it matters most.",
+      "Yes. Aven generates role-specific multiple-choice questions based on the job, shows which questions you missed, and tracks your scores over time so you can study where it matters most.",
   },
   {
     question: "Is my data private and secure?",
@@ -41,7 +41,7 @@ const faqs = [
   {
     question: "Is Aven really free?",
     answer:
-      "Yes. The free tier includes unlimited job tracking, AI screenshot import, the AI email composer, resume matching, the interview tracker, and MCQ practice tests. No credit card required.",
+      "Yes. Aven is completely free — unlimited job tracking, AI screenshot import, the AI email composer, resume matching, the interview tracker, and MCQ practice tests are all included. No credit card required.",
   },
 ];
 
