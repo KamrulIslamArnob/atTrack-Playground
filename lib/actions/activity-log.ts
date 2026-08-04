@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeIpAddress } from "@/lib/activity-messages";
 
 export interface ActivityLog {
   id: string;
@@ -28,7 +29,7 @@ interface ActivityLogParams {
 export async function getClientContext(): Promise<{ ipAddress: string | null; userAgent: string | null }> {
   try {
     const headerList = await headers();
-    const ipAddress = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const ipAddress = normalizeIpAddress(headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null);
     const userAgent = headerList.get("user-agent") ?? null;
     return { ipAddress, userAgent };
   } catch {

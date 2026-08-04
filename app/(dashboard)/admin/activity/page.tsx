@@ -22,7 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { formatActivityMessage, ACTION_COLORS } from "@/lib/activity-messages";
+import { formatActivityMessage, normalizeIpAddress, ACTION_COLORS } from "@/lib/activity-messages";
 
 export default function AdminActivityPage() {
   const [logs, setLogs] = useState<AdminActivityLogEntry[]>([]);
@@ -296,7 +296,7 @@ export default function AdminActivityPage() {
                       {log.ip_address ? (
                         <>
                           <Globe className="size-3.5 shrink-0" />
-                          {log.ip_address}
+                          {normalizeIpAddress(log.ip_address)}
                         </>
                       ) : (
                         <span className="text-muted-foreground/50">-</span>

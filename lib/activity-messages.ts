@@ -5,6 +5,14 @@ export interface ActivityLogLike {
   metadata: Record<string, unknown>;
 }
 
+export function normalizeIpAddress(ip: string | null | undefined): string | null {
+  if (!ip) return null;
+  if (ip === "::1" || ip === "::ffff:127.0.0.1" || ip === "127.0.0.1") {
+    return "localhost";
+  }
+  return ip;
+}
+
 const RESOURCE_LABELS: Record<string, string> = {
   auth: "account",
   job: "job",
