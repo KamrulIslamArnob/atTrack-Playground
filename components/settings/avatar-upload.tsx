@@ -98,7 +98,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="flex items-center justify-between">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-6">
           <div className="relative">
             {preview || avatarUrl ? (

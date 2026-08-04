@@ -71,7 +71,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
   }
 
   return (
-    <div className="rounded-4xl border border-border overflow-hidden">
+    <div className="rounded-4xl border border-border overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/50">

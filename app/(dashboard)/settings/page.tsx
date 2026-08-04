@@ -25,8 +25,8 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <div className="-mx-6 border-b border-border pb-6">
         <div className="px-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
             Manage your account and preferences.
           </p>
         </div>
@@ -69,7 +69,7 @@ export default async function SettingsPage() {
           <CardTitle className="text-base font-semibold">Account</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Email</p>
               <p className="text-sm font-medium">{user.email}</p>
@@ -92,7 +92,7 @@ export default async function SettingsPage() {
           <CardTitle className="text-base font-semibold text-destructive">Danger Zone</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium">Delete account</p>
               <p className="text-xs text-muted-foreground">

@@ -11,8 +11,8 @@ export default async function DocumentsPage() {
       <div className="-mx-6 border-b border-border pb-6">
         <div className="flex items-center justify-between px-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">Documents</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">
               Your resumes, cover letters, and other files.
             </p>
           </div>

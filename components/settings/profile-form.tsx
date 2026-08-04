@@ -26,7 +26,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       <div className="flex-1">
         {isEditing ? (
           <form action={updateProfile} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="full_name">Full name</Label>
                 <Input
@@ -48,7 +48,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="location">Location</Label>
                 <Input
@@ -101,7 +101,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm text-muted-foreground">Full name</p>
                 <p className="text-sm font-medium">{profile?.full_name || "—"}</p>
@@ -111,7 +111,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 <p className="text-sm font-medium">{profile?.headline || "—"}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm text-muted-foreground">Location</p>
                 <p className="text-sm font-medium">{profile?.location || "—"}</p>

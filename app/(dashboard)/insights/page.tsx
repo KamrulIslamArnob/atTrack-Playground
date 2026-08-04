@@ -61,8 +61,8 @@ export default async function InsightsPage() {
     <div className="space-y-6">
       <div className="-mx-6 border-b border-border pb-6">
         <div className="px-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">Insights</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
             Analytics and patterns from your job search.
           </p>
         </div>
