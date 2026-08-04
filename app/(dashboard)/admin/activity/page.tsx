@@ -5,6 +5,7 @@ import { getAdminActivityLog, getAdminUsers, getAdminActivityStats } from "@/lib
 import type { AdminActivityLogEntry, AdminActivityStats } from "@/lib/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -296,8 +297,29 @@ export default function AdminActivityPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center rounded-4xl border border-border py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="rounded-4xl border border-border">
+          <div className="bg-muted/50 px-4 py-3">
+            <div className="flex gap-4">
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-3 w-8" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-3 flex-1" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : logs.length > 0 ? (
         <div className="rounded-4xl border border-border overflow-x-auto">

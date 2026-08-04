@@ -8,6 +8,7 @@ import type { AdminUser } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -301,8 +302,36 @@ export default function AdminUsersPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center rounded-4xl border border-border py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="rounded-4xl border border-border">
+          <div className="bg-muted/50 px-4 py-3">
+            <div className="flex gap-4">
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-3 w-8" />
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="size-8 shrink-0 rounded-full" />
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-2.5 w-40" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : paged.length > 0 ? (
         <div className="rounded-4xl border border-border overflow-x-auto">

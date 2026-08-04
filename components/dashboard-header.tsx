@@ -133,7 +133,15 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
 
   const isAdmin = role === "admin";
   const homeHref = isAdmin ? "/admin" : "/overview";
-  const activeNav = isAdmin ? ADMIN_NAV_ITEMS : NAV_ITEMS;
+
+  const landingNav = [
+    { name: "Home", href: "/" },
+    { name: "Features", href: "/#features" },
+    { name: "How it works", href: "/#how-it-works" },
+    { name: "AI", href: "/#ai" },
+    { name: "Testimonials", href: "/#testimonials" },
+    { name: "FAQ", href: "/#faq" },
+  ];
 
   return (
     <>
@@ -151,33 +159,28 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
-            {isAdmin ? (
-              ADMIN_NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  {item.name}
-                </Link>
-              ))
-            ) : (
-              [
-                { name: "Home", href: "/" },
-                { name: "Features", href: "/#features" },
-                { name: "How it works", href: "/#how-it-works" },
-                { name: "AI", href: "/#ai" },
-                { name: "Testimonials", href: "/#testimonials" },
-                { name: "FAQ", href: "/#faq" },
-              ].map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  {item.name}
-                </Link>
-              ))
+            {landingNav.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {item.name}
+              </Link>
+            ))}
+            {isAdmin && (
+              <>
+                <div className="mx-1 h-4 w-px bg-border" />
+                {ADMIN_NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </>
             )}
           </nav>
         </div>
@@ -264,8 +267,8 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
               )}
 
               {!loading && !hasQuery && (
-                <CommandGroup heading={isAdmin ? "Admin Navigation" : "Quick Navigation"}>
-                  {activeNav.map((item) => (
+                <CommandGroup heading={isAdmin ? "Navigation" : "Quick Navigation"}>
+                  {landingNav.map((item) => (
                     <CommandItem
                       key={item.name}
                       value={item.name}
@@ -274,11 +277,20 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
                         setOpen(false);
                       }}
                     >
-                      {isAdmin ? (
-                        ADMIN_NAV_ICONS[item.href] ?? <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                      ) : (
-                        <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                      )}
+                      <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
+                      {item.name}
+                    </CommandItem>
+                  ))}
+                  {isAdmin && ADMIN_NAV_ITEMS.map((item) => (
+                    <CommandItem
+                      key={item.name}
+                      value={`admin-${item.name}`}
+                      onItemSelect={() => {
+                        window.location.href = item.href;
+                        setOpen(false);
+                      }}
+                    >
+                      {ADMIN_NAV_ICONS[item.href] ?? <File className="mr-2 size-4 shrink-0 text-muted-foreground" />}
                       {item.name}
                     </CommandItem>
                   ))}
