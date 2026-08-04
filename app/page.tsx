@@ -36,15 +36,18 @@ export default function LandingPage() {
               <Sparkles className="size-3.5" />
               AI-powered job application tracker
             </div>
-            <h1 className="font-heading text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
-              Your job search,
+            <h1 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+              <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">Organize</span>
+              <span className="text-foreground"> your applications</span>
               <br />
-              <span className="text-primary">organized.</span>
+              <span className="text-foreground">Accelerate your </span>
+              <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">career.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed">
-              Track every opportunity from discovery to offer. AI extracts
-              job details from screenshots, generates personalized emails,
-              and helps you interview with confidence.
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
+              Stop juggling spreadsheets, browser tabs, and forgotten follow-ups.
+              Aven brings your entire job search into one intelligent workspace —
+              from the moment you discover a role to the day you accept the offer.
+              AI handles the busywork so you can focus on what matters: landing the job.
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link
