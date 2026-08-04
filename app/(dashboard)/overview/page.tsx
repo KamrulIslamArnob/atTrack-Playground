@@ -378,7 +378,7 @@ export default async function OverviewPage() {
       <Breadcrumbs />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading text-lg font-semibold">Job Pipeline</h2>
@@ -388,7 +388,7 @@ export default async function OverviewPage() {
           </div>
           <PipelineChart pipeline={pipeline} />
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Match Score</h2>
             <p className="text-xs text-muted-foreground mt-1">Distribution</p>
@@ -407,7 +407,7 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Application Trend</h2>
             <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
@@ -418,7 +418,7 @@ export default async function OverviewPage() {
             <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Time Analytics</h2>
             <p className="text-xs text-muted-foreground mt-1">Average response times</p>
@@ -450,7 +450,7 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Job Sources</h2>
             <p className="text-xs text-muted-foreground mt-1">Where jobs come from</p>
@@ -465,7 +465,7 @@ export default async function OverviewPage() {
             ))}
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Work Location</h2>
             <p className="text-xs text-muted-foreground mt-1">Remote vs On-site</p>
@@ -480,7 +480,7 @@ export default async function OverviewPage() {
             ))}
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Employment Type</h2>
             <p className="text-xs text-muted-foreground mt-1">Full-time vs Part-time</p>
@@ -498,7 +498,7 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Top Companies</h2>
             <p className="text-xs text-muted-foreground mt-1">Most applied to</p>
@@ -523,7 +523,7 @@ export default async function OverviewPage() {
             )}
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Interview Stats</h2>
             <p className="text-xs text-muted-foreground mt-1">Performance overview</p>
@@ -559,7 +559,7 @@ export default async function OverviewPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading text-lg font-semibold">Practice Score</h2>
@@ -587,7 +587,7 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
@@ -618,7 +618,7 @@ export default async function OverviewPage() {
             </div>
           )}
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
           <div className="mb-6">
             <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
             <p className="text-xs text-muted-foreground mt-1">Latest updates</p>
@@ -647,7 +647,7 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      <div className="rounded-4xl border border-border bg-card p-6">
+      <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
         <h2 className="font-heading text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Link href="/jobs" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
