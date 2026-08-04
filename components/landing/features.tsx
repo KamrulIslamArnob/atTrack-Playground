@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "motion/react";
 import {
   Camera,
   Send,
@@ -7,6 +10,11 @@ import {
   BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  staggerContainer,
+  staggerItem,
+  Reveal,
+} from "@/components/landing/motion";
 
 const features = [
   {
@@ -84,18 +92,25 @@ export function Features() {
   return (
     <section id="features" className="scroll-mt-24 px-6 py-40">
       <div className="mx-auto max-w-6xl">
-        <div className="text-center">
+        <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Everything you need to land the job
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            A complete toolkit designed to streamline every step of your
-            job search — from saving your first listing to accepting an offer.
+            A complete toolkit designed to streamline every step of your job
+            search — from saving your first listing to accepting an offer.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <article
+        <motion.div
+          className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px", amount: 0.1 }}
+        >
+          <motion.article
+            variants={staggerItem}
             className={cn(
               "group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2 lg:row-span-2",
               featured.border
@@ -167,11 +182,12 @@ export function Features() {
                 ))}
               </div>
             </div>
-          </article>
+          </motion.article>
 
           {rest.map((feature) => (
-            <article
+            <motion.article
               key={feature.title}
+              variants={staggerItem}
               className={cn(
                 "group relative overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5",
                 feature.border
@@ -197,9 +213,9 @@ export function Features() {
               <p className="relative mt-2 text-sm leading-relaxed text-muted-foreground">
                 {feature.description}
               </p>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

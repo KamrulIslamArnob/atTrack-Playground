@@ -1,11 +1,13 @@
 "use client";
 
+import { motion } from "motion/react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Reveal, staggerContainer, staggerItem } from "@/components/landing/motion";
 
 const faqs = [
   {
@@ -49,30 +51,39 @@ export function Faq() {
   return (
     <section id="faq" className="scroll-mt-24 px-6 py-40">
       <div className="mx-auto max-w-4xl">
-        <div className="text-center">
+        <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Frequently asked questions
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
             Straight answers to the questions job seekers ask most.
           </p>
-        </div>
+        </Reveal>
 
-        <Accordion
-          defaultValue={[faqs[0].question]}
-          className="mt-16 rounded-4xl border-border bg-gradient-to-br from-primary/[0.06] via-card to-card"
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px", amount: 0.1 }}
+          variants={staggerContainer}
         >
-          {faqs.map((faq) => (
-            <AccordionItem key={faq.question} value={faq.question}>
-              <AccordionTrigger className="hover:no-underline">
-                {faq.question}
-              </AccordionTrigger>
-              <AccordionContent className="pb-5 leading-relaxed text-muted-foreground">
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+          <motion.div variants={staggerItem}>
+            <Accordion
+              defaultValue={[faqs[0].question]}
+              className="mt-16 rounded-4xl border-border bg-gradient-to-br from-primary/[0.06] via-card to-card"
+            >
+              {faqs.map((faq) => (
+                <AccordionItem key={faq.question} value={faq.question}>
+                  <AccordionTrigger className="hover:no-underline">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 leading-relaxed text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

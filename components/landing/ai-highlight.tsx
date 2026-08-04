@@ -1,18 +1,37 @@
-import { Camera, Send, Target, Sparkles, ImagePlus, WandSparkles, Check } from "lucide-react";
+"use client";
+
+import { motion } from "motion/react";
+import {
+  Camera,
+  Send,
+  Target,
+  Sparkles,
+  ImagePlus,
+  WandSparkles,
+  Check,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  slideInLeft,
+  slideInRight,
+  staggerContainer,
+  staggerItem,
+} from "@/components/landing/motion";
 
 const capabilities = [
   {
     icon: Camera,
     title: "Screenshot import",
-    description: "Paste screenshots — AI extracts title, salary, requirements in seconds.",
+    description:
+      "Paste screenshots — AI extracts title, salary, requirements in seconds.",
     color: "text-pink-500",
     bg: "bg-pink-500/10",
   },
   {
     icon: Send,
     title: "Email composer",
-    description: "Drafts a personalized application from the role and your resume.",
+    description:
+      "Drafts a personalized application from the role and your resume.",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
   },
@@ -26,7 +45,8 @@ const capabilities = [
   {
     icon: Sparkles,
     title: "Interview practice",
-    description: "Role-specific MCQs with score tracking and weak-spot insights.",
+    description:
+      "Role-specific MCQs with score tracking and weak-spot insights.",
     color: "text-blue-500",
     bg: "bg-blue-500/10",
   },
@@ -51,7 +71,12 @@ export function AiHighlight() {
 
       <div className="relative mx-auto max-w-6xl">
         <div className="grid items-center gap-10 sm:gap-16 lg:grid-cols-2">
-          <div>
+          <motion.div
+            variants={slideInLeft}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px", amount: 0.2 }}
+          >
             <div className="inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
               <Sparkles className="size-3" />
               AI-Powered
@@ -67,9 +92,19 @@ export function AiHighlight() {
               without leaving Aven.
             </p>
 
-            <ul className="mt-8 space-y-4">
+            <motion.ul
+              className="mt-8 space-y-4"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px", amount: 0.2 }}
+            >
               {capabilities.map((item) => (
-                <li key={item.title} className="flex items-start gap-3.5">
+                <motion.li
+                  key={item.title}
+                  variants={staggerItem}
+                  className="flex items-start gap-3.5"
+                >
                   <div
                     className={cn(
                       "flex size-10 shrink-0 items-center justify-center rounded-3xl",
@@ -84,12 +119,18 @@ export function AiHighlight() {
                       {item.description}
                     </p>
                   </div>
-                </li>
+                </motion.li>
               ))}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
 
-          <div className="rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/10">
+          <motion.div
+            variants={slideInRight}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px", amount: 0.2 }}
+            className="rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/10"
+          >
             <div className="flex items-center gap-2 rounded-3xl border border-border/50 bg-muted/30 px-4 py-2.5">
               <div className="flex gap-1.5">
                 <span className="size-2.5 rounded-full bg-red-400/60" />
@@ -155,7 +196,7 @@ export function AiHighlight() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

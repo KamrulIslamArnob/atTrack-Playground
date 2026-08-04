@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import { motion, AnimatePresence } from "motion/react";
 import { Sun, Moon, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -170,26 +171,30 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
         </header>
       </div>
 
-      <div
-        className={cn(
-          "fixed inset-0 z-50 md:hidden",
-          menuOpen ? "" : "pointer-events-none"
-        )}
-        aria-hidden={!menuOpen}
-      >
-        <div
-          className={cn(
-            "absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300",
-            menuOpen ? "opacity-100" : "opacity-0"
-          )}
-          onClick={() => setMenuOpen(false)}
-        />
-        <div
-          className={cn(
-            "absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
-            menuOpen ? "translate-x-0" : "translate-x-full"
-          )}
-        >
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 md:hidden"
+            aria-hidden={!menuOpen}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setMenuOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            <motion.div
+              className="absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col border-l border-border bg-background shadow-2xl"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            >
           <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
             <Link
               href="/"
@@ -285,8 +290,10 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
               </>
             )}
           </div>
-        </div>
-      </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

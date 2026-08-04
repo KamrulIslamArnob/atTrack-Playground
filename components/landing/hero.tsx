@@ -1,35 +1,86 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "motion/react";
 import { Sparkles, ArrowRight } from "lucide-react";
 import ShinyText from "@/components/ShinyText";
 import { Avatar, AvatarImage, AvatarGroup } from "@/components/ui/avatar";
+import {
+  fadeUp,
+  scaleIn,
+  staggerContainer,
+} from "@/components/landing/motion";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-background px-6 pt-36 pb-24 sm:pt-45 sm:pb-32">
       <div className="absolute inset-0 -top-18 bg-linear-to-b from-primary/3 via-background to-background" />
       <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] bg-size-[32px_32px] opacity-40" />
-      <div className="absolute -left-32 -top-32 size-96 rounded-full bg-primary/[0.07] blur-3xl" />
-      <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-primary/5 blur-3xl" />
+      <motion.div
+        className="absolute -left-32 -top-32 size-96 rounded-full bg-primary/[0.07] blur-3xl"
+        animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -bottom-32 -right-32 size-96 rounded-full bg-primary/5 blur-3xl"
+        animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1,
+        }}
+      />
 
-      <div className="relative mx-auto max-w-4xl text-center">
-        <div className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-primary">
+      <motion.div
+        className="relative mx-auto max-w-4xl text-center"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div
+          variants={fadeUp}
+          className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-primary"
+        >
           <Sparkles className="size-3.5 shimmer-icon" />
-          <ShinyText text="AI-powered job application tracker" speed={3} color="hsl(240 3.8% 46.1%)" shineColor="var(--primary)" />
-        </div>
-        <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
-          <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">Organize</span>
+          <ShinyText
+            text="AI-powered job application tracker"
+            speed={3}
+            color="hsl(240 3.8% 46.1%)"
+            shineColor="var(--primary)"
+          />
+        </motion.div>
+
+        <motion.h1
+          variants={fadeUp}
+          className="font-display text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl"
+        >
+          <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">
+            Organize
+          </span>
           <span className="text-foreground"> your applications,</span>
           <br />
           <span className="text-foreground">Accelerate your </span>
-          <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">career.</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+          <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">
+            career.
+          </span>
+        </motion.h1>
+
+        <motion.p
+          variants={fadeUp}
+          className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base"
+        >
           Stop juggling spreadsheets, browser tabs, and forgotten follow-ups.
           Aven brings your entire job search into one intelligent workspace —
           from the moment you discover a role to the day you accept the offer.
-          AI handles the busywork so you can focus on what matters: landing the job.
-        </p>
-        <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          AI handles the busywork so you can focus on what matters: landing the
+          job.
+        </motion.p>
+
+        <motion.div
+          variants={fadeUp}
+          className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
+        >
           <Link
             href="/signup"
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
@@ -43,30 +94,53 @@ export function Hero() {
           >
             Sign in
           </Link>
-        </div>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        </motion.div>
+
+        <motion.div
+          variants={fadeUp}
+          className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+        >
           <AvatarGroup>
             <Avatar>
-              <AvatarImage src="/user-avatars/alex-suprun-mynsNaNwVDc-unsplash.jpg" alt="User" />
+              <AvatarImage
+                src="/user-avatars/alex-suprun-mynsNaNwVDc-unsplash.jpg"
+                alt="User"
+              />
             </Avatar>
             <Avatar>
-              <AvatarImage src="/user-avatars/diego-hernandez-MSepzbKFz10-unsplash.jpg" alt="User" />
+              <AvatarImage
+                src="/user-avatars/diego-hernandez-MSepzbKFz10-unsplash.jpg"
+                alt="User"
+              />
             </Avatar>
             <Avatar>
-              <AvatarImage src="/user-avatars/ihssan-rami-azouagh-gKzxWyJmKLQ-unsplash.jpg" alt="User" />
+              <AvatarImage
+                src="/user-avatars/ihssan-rami-azouagh-gKzxWyJmKLQ-unsplash.jpg"
+                alt="User"
+              />
             </Avatar>
             <Avatar>
-              <AvatarImage src="/user-avatars/jake-nackos-IF9TK5Uy-KI-unsplash.jpg" alt="User" />
+              <AvatarImage
+                src="/user-avatars/jake-nackos-IF9TK5Uy-KI-unsplash.jpg"
+                alt="User"
+              />
             </Avatar>
             <Avatar>
-              <AvatarImage src="/user-avatars/alex-suprun-ZHvM3XIOHoE-unsplash.jpg" alt="User" />
+              <AvatarImage
+                src="/user-avatars/alex-suprun-ZHvM3XIOHoE-unsplash.jpg"
+                alt="User"
+              />
             </Avatar>
           </AvatarGroup>
-          <p className="text-xs text-muted-foreground">Trusted by job seekers worldwide</p>
-        </div>
+          <p className="text-xs text-muted-foreground">
+            Trusted by job seekers worldwide
+          </p>
+        </motion.div>
 
-        {/* Dashboard preview */}
-        <div className="mt-16 rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/5">
+        <motion.div
+          variants={scaleIn}
+          className="mt-16 rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/5"
+        >
           <div className="overflow-hidden rounded-3xl border border-border/50">
             <div className="flex items-center gap-2 border-b border-border/50 bg-muted/30 px-4 py-2.5">
               <div className="flex gap-1.5">
@@ -104,8 +178,8 @@ export function Hero() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 }
