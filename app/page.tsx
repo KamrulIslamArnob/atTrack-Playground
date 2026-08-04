@@ -24,10 +24,12 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative -mt-[72px] overflow-hidden bg-gradient-to-b from-primary/[0.03] via-background to-background px-6 pt-[72px] pb-24 sm:pb-32">
-          <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] bg-[size:32px_32px] opacity-40" />
+        <section className="relative overflow-hidden bg-background px-6 pt-36 pb-24 sm:pt-44 sm:pb-32">
+          {/* Full-height gradient behind header */}
+          <div className="absolute inset-0 -top-18 bg-linear-to-b from-primary/3 via-background to-background" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] bg-size-[32px_32px] opacity-40" />
           <div className="absolute -left-32 -top-32 size-96 rounded-full bg-primary/[0.07] blur-3xl" />
-          <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-primary/[0.05] blur-3xl" />
+          <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-primary/5 blur-3xl" />
 
           <div className="relative mx-auto max-w-4xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary backdrop-blur-sm">
