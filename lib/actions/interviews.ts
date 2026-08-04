@@ -152,6 +152,76 @@ export async function getInterviews(params?: {
   };
 }
 
+export async function createInterview(
+  data: {
+    job_id: string;
+    scheduled_at?: string | null;
+    type?: string | null;
+    location?: string | null;
+    meeting_url?: string | null;
+    interviewer_name?: string | null;
+    interviewer_email?: string | null;
+    notes?: string | null;
+    prep_notes?: string | null;
+    status?: string;
+    duration_minutes?: number | null;
+  }
+): Promise<{ id: string }> {
+  const { supabase, userId } = await getUser();
+
+  const { data: inserted, error } = await supabase
+    .from("interviews")
+    .insert({
+      user_id: userId,
+      job_id: data.job_id,
+      scheduled_at: data.scheduled_at ?? null,
+      type: data.type ?? null,
+      location: data.location ?? null,
+      meeting_url: data.meeting_url ?? null,
+      interviewer_name: data.interviewer_name ?? null,
+      interviewer_email: data.interviewer_email ?? null,
+      notes: data.notes ?? null,
+      prep_notes: data.prep_notes ?? null,
+      status: data.status ?? "scheduled",
+      duration_minutes: data.duration_minutes ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create interview: ${error.message}`);
+  }
+
+  return { id: inserted.id };
+}
+
+export async function getPreparingJobs(): Promise<
+  { id: string; title: string; company_name: string }[]
+> {
+  const { supabase, userId } = await getUser();
+
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("id, title, company:companies(name)")
+    .eq("user_id", userId)
+    .eq("status", "preparing")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching preparing jobs:", error);
+    return [];
+  }
+
+  return (data ?? []).map((job) => {
+    const company = Array.isArray(job.company) ? job.company[0] : job.company;
+    return {
+      id: job.id as string,
+      title: (job.title as string) || "Untitled",
+      company_name: (company as { name: string } | null)?.name ?? "Unknown",
+    };
+  });
+}
+
 export async function updateInterview(
   id: string,
   data: {

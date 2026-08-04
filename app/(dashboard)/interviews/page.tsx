@@ -1,6 +1,9 @@
-import { getInterviews } from "@/lib/actions/interviews";
+import { getInterviews, getPreparingJobs } from "@/lib/actions/interviews";
 import { InterviewsTable } from "@/components/interviews-table";
+import { AddInterviewDialog } from "@/components/add-interview-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Plus } from "lucide-react";
 
 interface PageProps {
   searchParams: Promise<{
@@ -29,6 +32,8 @@ export default async function InterviewsPage(props: PageProps) {
     perPage,
   });
 
+  const preparingJobs = await getPreparingJobs();
+
   return (
     <div className="space-y-6">
       <div className="-mx-6 border-b border-border pb-6">
@@ -39,6 +44,17 @@ export default async function InterviewsPage(props: PageProps) {
               Track and manage your upcoming and past interviews.
             </p>
           </div>
+          <AddInterviewDialog
+            jobs={preparingJobs}
+            trigger={
+              <button
+                className={buttonVariants({ size: "sm", className: "gap-1.5" })}
+              >
+                <Plus className="size-4" />
+                Add interview
+              </button>
+            }
+          />
         </div>
       </div>
 

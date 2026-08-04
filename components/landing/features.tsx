@@ -72,10 +72,10 @@ const features = [
 ];
 
 const extractedFields = [
-  { label: "Title", value: "Senior Flutter Developer" },
-  { label: "Company", value: "XpertLab" },
-  { label: "Salary", value: "$80k — $120k" },
-  { label: "Location", value: "Remote" },
+  { label: "Title", value: "Senior Software Engineer" },
+  { label: "Company", value: "Aven" },
+  { label: "Salary", value: "80k — 120k BDT" },
+  { label: "Location", value: "Dhaka, Bangladesh" },
 ];
 
 export function Features() {
