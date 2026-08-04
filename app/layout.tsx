@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Geist_Mono, Inter, Cormorant_Garamond, Bricolage_Grotesque } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Cormorant_Garamond, Bricolage_Grotesque, Crimson_Text } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
@@ -22,6 +22,12 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-heading",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+export const crimsonText = Crimson_Text({
+  variable: "--font--crimson",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"] 
 });
 
 const bricolage = Bricolage_Grotesque({
