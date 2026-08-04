@@ -138,7 +138,7 @@ export function JobsGrid({
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search by role, company, or location..."
-            className="h-10 pl-9"
+            className="h-10 pl-9 text-sm"
           />
         </div>
         <div className="flex items-center gap-2">
