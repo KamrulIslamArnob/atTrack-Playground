@@ -341,8 +341,8 @@ export default async function OverviewPage() {
         <div className="relative">
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
-              <p className="mt-2 text-muted-foreground max-w-lg">
+              <h1 className="font-heading text-3xl font-bold tracking-tight">{greeting}</h1>
+              <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
                 Here&apos;s your career dashboard. Track applications, interviews, and opportunities all in one place.
               </p>
             </div>
