@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { getAdminActivityLog } from "@/lib/actions/admin";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { getAdminActivityLog, getAdminUsers } from "@/lib/actions/admin";
 import type { AdminActivityLogEntry } from "@/lib/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ export default function AdminActivityPage() {
   const [resourceFilter, setResourceFilter] = useState<string>("all");
   const [userIdFilter, setUserIdFilter] = useState("");
   const [search, setSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [emailToUserId, setEmailToUserId] = useState<Record<string, string>>({});
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
@@ -52,11 +54,31 @@ export default function AdminActivityPage() {
     loadLogs();
   }, [loadLogs]);
 
-  function handleSearch() {
-    const match = logs.find((l) => l.user_email === search);
-    setUserIdFilter(match?.user_id ?? "");
+  useEffect(() => {
+    getAdminUsers().then((users) => {
+      const map: Record<string, string> = {};
+      for (const u of users) map[u.email.toLowerCase()] = u.id;
+      setEmailToUserId(map);
+    });
+  }, []);
+
+  const applySearch = useCallback((value: string) => {
+    const userId = emailToUserId[value.trim().toLowerCase()];
+    setUserIdFilter(userId ?? "");
     setPage(1);
+  }, [emailToUserId]);
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => applySearch(value), 400);
   }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   function clearSearch() {
     setSearch("");
@@ -93,8 +115,7 @@ export default function AdminActivityPage() {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by email..."
             className="h-10 pl-9 pr-9 text-sm"
           />
