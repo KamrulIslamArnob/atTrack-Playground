@@ -20,11 +20,14 @@ const routeLabels: Record<string, string> = {
   documents: "Documents",
   settings: "Settings",
   insights: "Insights",
+  admin: "Admin",
 };
 
 export function Breadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
+
+  const isAdmin = segments[0] === "admin";
 
   const crumbs = segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
@@ -38,11 +41,11 @@ export function Breadcrumbs() {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink render={<Link href="/overview" />}>
-            Home
+          <BreadcrumbLink render={<Link href={isAdmin ? "/admin" : "/overview"} />}>
+            {isAdmin ? "Admin" : "Home"}
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {crumbs.map((crumb, index) => (
+        {crumbs.slice(isAdmin ? 1 : 0).map((crumb, index) => (
           <Fragment key={crumb.href}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>

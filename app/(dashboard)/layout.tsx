@@ -17,7 +17,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen flex-col bg-background p-3">
-      <DashboardHeader user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} />
+      <DashboardHeader user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} role={profile?.role} />
 
       <div className="flex flex-1 gap-3 overflow-hidden pt-3">
         <div className="hidden md:block">

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bell, Menu, Search, X, Briefcase, Send, Calendar, FileText, File, Loader2 } from "lucide-react";
+import { Bell, Menu, Search, X, Briefcase, Send, Calendar, FileText, File, Loader2, Users, Activity, Cpu, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, type SidebarProps } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,21 @@ const NAV_ITEMS = [
   { name: "Settings", href: "/settings", keywords: "account profile preferences" },
 ];
 
-export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
+const ADMIN_NAV_ITEMS = [
+  { name: "Dashboard", href: "/admin", keywords: "admin dashboard overview" },
+  { name: "Users", href: "/admin/users", keywords: "users accounts manage" },
+  { name: "Activity Log", href: "/admin/activity", keywords: "activity audit log" },
+  { name: "AI Usage", href: "/admin/ai-usage", keywords: "ai usage tokens cost" },
+];
+
+const ADMIN_NAV_ICONS: Record<string, React.ReactNode> = {
+  "/admin": <LayoutDashboard className="mr-2 size-4 shrink-0 text-muted-foreground" />,
+  "/admin/users": <Users className="mr-2 size-4 shrink-0 text-muted-foreground" />,
+  "/admin/activity": <Activity className="mr-2 size-4 shrink-0 text-muted-foreground" />,
+  "/admin/ai-usage": <Cpu className="mr-2 size-4 shrink-0 text-muted-foreground" />,
+};
+
+export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProps) {
   const [open, setOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -117,16 +131,15 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
 
   const hasQuery = query.trim().length >= 2;
 
-  // Filter nav items for quick results when no server query
-  const filteredNav = hasQuery
-    ? []
-    : NAV_ITEMS;
+  const isAdmin = role === "admin";
+  const homeHref = isAdmin ? "/admin" : "/overview";
+  const activeNav = isAdmin ? ADMIN_NAV_ITEMS : NAV_ITEMS;
 
   return (
     <>
       <header className="flex h-14 items-center justify-between rounded-4xl border border-border bg-card px-4">
         <div className="flex items-center gap-6">
-          <Link href="/overview" className="flex items-center gap-2">
+          <Link href={homeHref} className="flex items-center gap-2">
             <Image
               src="/logo.png"
               alt="Aven"
@@ -138,22 +151,34 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
-            {[
-              { name: "Home", href: "/" },
-              { name: "Features", href: "/#features" },
-              { name: "How it works", href: "/#how-it-works" },
-              { name: "AI", href: "/#ai" },
-              { name: "Testimonials", href: "/#testimonials" },
-              { name: "FAQ", href: "/#faq" },
-            ].map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                {item.name}
-              </Link>
-            ))}
+            {isAdmin ? (
+              ADMIN_NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {item.name}
+                </Link>
+              ))
+            ) : (
+              [
+                { name: "Home", href: "/" },
+                { name: "Features", href: "/#features" },
+                { name: "How it works", href: "/#how-it-works" },
+                { name: "AI", href: "/#ai" },
+                { name: "Testimonials", href: "/#testimonials" },
+                { name: "FAQ", href: "/#faq" },
+              ].map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="rounded-4xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {item.name}
+                </Link>
+              ))
+            )}
           </nav>
         </div>
 
@@ -204,7 +229,7 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
           )}
         >
           <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-            <Link href="/overview" className="flex items-center gap-2">
+            <Link href={homeHref} className="flex items-center gap-2">
               <Image src="/logo.png" alt="Aven" width={24} height={24} />
               <span className="font-heading text-base font-semibold">Aven</span>
             </Link>
@@ -217,7 +242,7 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
             </button>
           </div>
           <div className="min-h-0 flex-1 p-2">
-            <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} />
+            <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} role={role} />
           </div>
         </div>
       </div>
@@ -225,7 +250,7 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm">
           <Command value={query} onValueChange={handleSearch} className="w-full max-w-lg">
-            <CommandInput placeholder="Search jobs, applications, documents..." />
+            <CommandInput placeholder={isAdmin ? "Search users, activity, AI usage..." : "Search jobs, applications, documents..."} />
             <CommandList>
               {loading && (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
@@ -239,8 +264,8 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
               )}
 
               {!loading && !hasQuery && (
-                <CommandGroup heading="Quick Navigation">
-                  {NAV_ITEMS.map((item) => (
+                <CommandGroup heading={isAdmin ? "Admin Navigation" : "Quick Navigation"}>
+                  {activeNav.map((item) => (
                     <CommandItem
                       key={item.name}
                       value={item.name}
@@ -249,7 +274,11 @@ export function DashboardHeader({ user, avatarUrl, fullName }: SidebarProps) {
                         setOpen(false);
                       }}
                     >
-                      <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
+                      {isAdmin ? (
+                        ADMIN_NAV_ICONS[item.href] ?? <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
+                      )}
                       {item.name}
                     </CommandItem>
                   ))}

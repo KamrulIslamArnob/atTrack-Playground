@@ -2,6 +2,7 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logAuthActivity } from "@/lib/actions/activity-log";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("id")
+          .select("id, role")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -56,7 +57,14 @@ export async function GET(request: NextRequest) {
               await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
             }
           }
+
+          // Admin users always land on the admin panel
+          if (profile.role === "admin" && redirectTo.pathname === "/overview") {
+            redirectTo.pathname = "/admin";
+          }
         }
+
+        await logAuthActivity(user.id, "sign_in", { method: "oauth" });
       }
 
       return NextResponse.redirect(redirectTo);
@@ -88,6 +96,8 @@ export async function GET(request: NextRequest) {
             full_name: fullName,
           });
         }
+
+        await logAuthActivity(user.id, "sign_in", { method: "magic_link" });
       }
       return NextResponse.redirect(redirectTo);
     }

@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface ActivityLog {
@@ -24,8 +25,23 @@ interface ActivityLogParams {
   userAgent?: string;
 }
 
+export async function getClientContext(): Promise<{ ipAddress: string | null; userAgent: string | null }> {
+  try {
+    const headerList = await headers();
+    const ipAddress = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const userAgent = headerList.get("user-agent") ?? null;
+    return { ipAddress, userAgent };
+  } catch {
+    return { ipAddress: null, userAgent: null };
+  }
+}
+
 export async function logActivity(params: ActivityLogParams): Promise<void> {
   try {
+    const { ipAddress, userAgent } = params.ipAddress
+      ? { ipAddress: params.ipAddress, userAgent: params.userAgent }
+      : await getClientContext();
+
     const admin = createAdminClient();
     await admin.from("activity_logs").insert({
       user_id: params.userId,
@@ -33,8 +49,8 @@ export async function logActivity(params: ActivityLogParams): Promise<void> {
       resource: params.resource,
       resource_id: params.resourceId ?? null,
       metadata: params.metadata ?? {},
-      ip_address: params.ipAddress ?? null,
-      user_agent: params.userAgent ?? null,
+      ip_address: ipAddress,
+      user_agent: userAgent,
     });
   } catch {
     // Activity logging should never break the main flow

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers as nextHeaders } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAuthActivity, logResourceActivity } from "@/lib/actions/activity-log";
@@ -143,10 +144,15 @@ export async function signInWithMagicLink(formData: FormData) {
 
   const email = formData.get("email") as string;
 
+  const nextHeadersList = await nextHeaders();
+  const host = nextHeadersList.get("x-forwarded-host") || nextHeadersList.get("host");
+  const protocol = nextHeadersList.get("x-forwarded-proto") || "http";
+  const origin = host ? `${protocol}://${host}` : "http://localhost:3000";
+
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback`,
     },
   });
 

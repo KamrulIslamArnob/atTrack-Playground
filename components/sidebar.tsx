@@ -18,7 +18,9 @@ import {
   Sun,
   Moon,
   Monitor,
-  Shield,
+  Users,
+  Activity,
+  Cpu,
 } from "lucide-react";
 
 const navigation = [
@@ -38,6 +40,13 @@ const resourceNavigation = [
 const secondaryNavigation = [
   // { name: "Insights", href: "/insights", icon: Lightbulb },
   { name: "Settings", href: "/settings", icon: Settings },
+];
+
+const adminNavigation = [
+  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Activity Log", href: "/admin/activity", icon: Activity },
+  { name: "AI Usage", href: "/admin/ai-usage", icon: Cpu },
 ];
 
 export interface SidebarProps {
@@ -106,131 +115,142 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role }: Sideba
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          <div className="space-y-0.5">
-            {navigation.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="size-4 shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
+          {role === "admin" ? (
+            <>
+              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                Admin
+              </div>
+              <div className="space-y-0.5">
+                {adminNavigation.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/admin" && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-0.5">
+                {navigation.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
 
-          <div className="my-4 h-px bg-border/50" />
+              <div className="my-4 h-px bg-border/50" />
 
-          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-            Pipeline
-          </div>
-          <div className="space-y-0.5">
-            {pipelineNavigation.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="size-4 shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
+              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                Pipeline
+              </div>
+              <div className="space-y-0.5">
+                {pipelineNavigation.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
 
-          <div className="my-4 h-px bg-border/50" />
+              <div className="my-4 h-px bg-border/50" />
 
-          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-            Resources
-          </div>
-          <div className="space-y-0.5">
-            {resourceNavigation.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="size-4 shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
+              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                Resources
+              </div>
+              <div className="space-y-0.5">
+                {resourceNavigation.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
 
-          <div className="my-4 h-px bg-border/50" />
+              <div className="my-4 h-px bg-border/50" />
 
-          <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-            Account
-          </div>
-          <div className="space-y-0.5">
-            {secondaryNavigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="size-4 shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
-
-            {role === "admin" && (
-              <>
-                <div className="my-4 h-px bg-border/50" />
-                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                  Admin
-                </div>
-                <Link
-                  href="/admin"
-                  className={cn(
-                    "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
-                    pathname.startsWith("/admin")
-                      ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Shield className="size-4 shrink-0" />
-                  Admin Panel
-                </Link>
-              </>
-            )}
-          </div>
+              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                Account
+              </div>
+              <div className="space-y-0.5">
+                {secondaryNavigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-4xl px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/35 text-foreground dark:bg-primary/10 dark:text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </nav>
 
         <div className="border-t border-border/50 p-3">

@@ -40,6 +40,17 @@ export async function proxy(request: NextRequest) {
   const isAdmin = adminRoutes.some((route) => path.startsWith(route));
   const isAuthRoute = authRoutes.some((route) => path.startsWith(route));
 
+  // Fetch role once if authenticated
+  let profile: { role: string; is_banned: boolean } | null = null;
+  if (user && (isProtected || isAdmin)) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role, is_banned")
+      .eq("id", user.id)
+      .single();
+    profile = data;
+  }
+
   // Redirect unauthenticated users to login
   if ((isProtected || isAdmin) && !user) {
     const url = request.nextUrl.clone();
@@ -50,18 +61,12 @@ export async function proxy(request: NextRequest) {
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/overview";
+    url.pathname = profile?.role === "admin" ? "/admin" : "/overview";
     return NextResponse.redirect(url);
   }
 
   // Admin route protection: verify role from database
   if (isAdmin && user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, is_banned")
-      .eq("id", user.id)
-      .single();
-
     // Block banned users
     if (profile?.is_banned) {
       await supabase.auth.signOut();
@@ -81,17 +86,18 @@ export async function proxy(request: NextRequest) {
 
   // Check ban status for protected routes
   if (isProtected && user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_banned")
-      .eq("id", user.id)
-      .single();
-
     if (profile?.is_banned) {
       await supabase.auth.signOut();
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.searchParams.set("error", "Your account has been suspended.");
+      return NextResponse.redirect(url);
+    }
+
+    // Redirect admin users away from user panel routes to the admin panel
+    if (profile?.role === "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
       return NextResponse.redirect(url);
     }
   }

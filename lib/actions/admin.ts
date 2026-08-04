@@ -2,6 +2,8 @@
 
 import { getAdminUser } from "@/lib/auth";
 import type { ActivityLog } from "@/lib/actions/activity-log";
+import { logResourceActivity } from "@/lib/actions/activity-log";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 interface AdminDashboardStats {
   totalUsers: number;
@@ -14,10 +16,18 @@ interface AdminDashboardStats {
   totalAiRequests: number;
   aiRequestsToday: number;
   recentActivity: ActivityLog[];
+  usersTrend: { date: string; count: number }[];
+  jobsByStatus: { status: string; count: number }[];
+  activityByAction: { action: string; count: number }[];
+  aiTrend: { date: string; requests: number }[];
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   const { supabase } = await getAdminUser();
+
+  const since = new Date();
+  since.setDate(since.getDate() - 14);
+  const sinceIso = since.toISOString();
 
   // Parallel queries
   const [
@@ -31,6 +41,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     aiTotalRes,
     aiTodayRes,
     activityRes,
+    usersTrendRes,
+    jobsStatusRes,
+    activityActionRes,
+    aiTrendRes,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_banned", false),
@@ -43,7 +57,45 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     supabase.from("ai_usage_logs").select("id", { count: "exact", head: true })
       .gte("created_at", new Date(Date.now() - 86400000).toISOString()),
     supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(20),
+    supabase.from("profiles").select("created_at").gte("created_at", sinceIso),
+    supabase.from("jobs").select("status"),
+    supabase.from("activity_logs").select("action").gte("created_at", sinceIso),
+    supabase.from("ai_usage_logs").select("created_at").gte("created_at", sinceIso),
   ]);
+
+  const usersTrendMap: Record<string, number> = {};
+  for (const row of usersTrendRes.data ?? []) {
+    const k = new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    usersTrendMap[k] = (usersTrendMap[k] ?? 0) + 1;
+  }
+  const usersTrend = Object.entries(usersTrendMap)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const statusMap: Record<string, number> = {};
+  for (const row of jobsStatusRes.data ?? []) {
+    statusMap[row.status] = (statusMap[row.status] ?? 0) + 1;
+  }
+  const jobsByStatus = Object.entries(statusMap)
+    .map(([status, count]) => ({ status, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const actionMap: Record<string, number> = {};
+  for (const row of activityActionRes.data ?? []) {
+    actionMap[row.action] = (actionMap[row.action] ?? 0) + 1;
+  }
+  const activityByAction = Object.entries(actionMap)
+    .map(([action, count]) => ({ action, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const aiTrendMap: Record<string, number> = {};
+  for (const row of aiTrendRes.data ?? []) {
+    const k = new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    aiTrendMap[k] = (aiTrendMap[k] ?? 0) + 1;
+  }
+  const aiTrend = Object.entries(aiTrendMap)
+    .map(([date, requests]) => ({ date, requests }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return {
     totalUsers: usersRes.count ?? 0,
@@ -56,6 +108,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     totalAiRequests: aiTotalRes.count ?? 0,
     aiRequestsToday: aiTodayRes.count ?? 0,
     recentActivity: (activityRes.data ?? []) as ActivityLog[],
+    usersTrend,
+    jobsByStatus,
+    activityByAction,
+    aiTrend,
   };
 }
 
@@ -101,6 +157,19 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   });
 }
 
+async function getTargetInfo(userId: string): Promise<{ email?: string; full_name?: string }> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin.auth.admin.getUserById(userId);
+    return {
+      email: data?.user?.email ?? undefined,
+      full_name: data?.user?.user_metadata?.full_name ?? undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export async function banUser(userId: string): Promise<{ error?: string }> {
   const { supabase, userId: adminId } = await getAdminUser();
 
@@ -114,11 +183,14 @@ export async function banUser(userId: string): Promise<{ error?: string }> {
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  const target = await getTargetInfo(userId);
+  await logResourceActivity(adminId, "ban", "user", userId, target);
   return {};
 }
 
 export async function unbanUser(userId: string): Promise<{ error?: string }> {
-  const { supabase } = await getAdminUser();
+  const { supabase, userId: adminId } = await getAdminUser();
 
   const { error } = await supabase
     .from("profiles")
@@ -126,6 +198,9 @@ export async function unbanUser(userId: string): Promise<{ error?: string }> {
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  const target = await getTargetInfo(userId);
+  await logResourceActivity(adminId, "unban", "user", userId, target);
   return {};
 }
 
@@ -142,6 +217,9 @@ export async function promoteToAdmin(userId: string): Promise<{ error?: string }
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  const target = await getTargetInfo(userId);
+  await logResourceActivity(adminId, "promote", "user", userId, target);
   return {};
 }
 
@@ -158,6 +236,9 @@ export async function demoteToUser(userId: string): Promise<{ error?: string }> 
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  const target = await getTargetInfo(userId);
+  await logResourceActivity(adminId, "demote", "user", userId, target);
   return {};
 }
 
