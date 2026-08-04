@@ -1,7 +1,3 @@
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
-
 interface LegalShellProps {
   badge: string;
   title: string;
@@ -26,20 +22,6 @@ export function LegalShell({
         <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-primary/5 blur-3xl" />
 
         <div className="relative mx-auto max-w-3xl">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2.5">
-              <Image src="/logo.png" alt="Aven" width={24} height={24} />
-              <span className="font-heading text-lg font-semibold">Aven</span>
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 rounded-4xl border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="size-3.5" />
-              Back to home
-            </Link>
-          </div>
-
           <div className="mt-16 text-center">
             <span className="inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
               {badge}
@@ -73,8 +55,10 @@ interface LegalSectionProps {
 export function LegalSection({ index, title, children }: LegalSectionProps) {
   return (
     <section className="mt-10 border-t border-border/60 pt-10 first:mt-0 first:border-t-0 first:pt-0">
-      <h2 className="flex items-baseline gap-3 font-display text-xl font-semibold tracking-tight sm:text-2xl">
-        <span className="font-heading text-sm text-primary">{index}</span>
+      <h2 className="flex items-center gap-3 font-display text-xl font-semibold tracking-tight sm:text-2xl">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-heading text-xs font-semibold text-primary">
+          {index}
+        </span>
         {title}
       </h2>
       <div className="mt-4 space-y-4">{children}</div>

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/landing/footer";
+import { LandingHeaderWrapper } from "@/components/landing-header-wrapper";
 import {
   LegalShell,
   LegalSection,
   LegalParagraph,
   LegalList,
-  LegalNote,
 } from "@/components/legal/legal-shell";
 
 export const metadata: Metadata = {
@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <>
+      <LandingHeaderWrapper />
       <LegalShell
         badge="Terms & Conditions"
         title="Terms of service"
@@ -172,20 +173,6 @@ export default function TermsPage() {
             date at the top of this page when we do. Continuing to use Aven
             after changes are posted means you accept the updated terms.
           </LegalParagraph>
-        </LegalSection>
-
-        <LegalSection index="14" title="Contact">
-          <LegalNote>
-            If you have questions about these terms, please contact the Aven
-            team at{" "}
-            <a
-              href="mailto:support@aven.app"
-              className="font-medium text-primary underline underline-offset-4 hover:no-underline"
-            >
-              support@aven.app
-            </a>
-            .
-          </LegalNote>
         </LegalSection>
       </LegalShell>
       <Footer />

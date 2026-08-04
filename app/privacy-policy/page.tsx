@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/landing/footer";
+import { LandingHeaderWrapper } from "@/components/landing-header-wrapper";
 import {
   LegalShell,
   LegalSection,
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <>
+      <LandingHeaderWrapper />
       <LegalShell
         badge="Privacy Policy"
         title="Your data stays yours"
@@ -225,20 +227,6 @@ export default function PrivacyPolicyPage() {
             changes, we will update the date at the top of this page. We
             encourage you to review this page occasionally so you stay informed
             about how your information is handled.
-          </LegalParagraph>
-        </LegalSection>
-
-        <LegalSection index="12" title="Contact">
-          <LegalParagraph>
-            If you have questions about this policy or about your data, you can
-            reach the Aven team by email at{" "}
-            <a
-              href="mailto:support@aven.app"
-              className="font-medium text-primary underline underline-offset-4 hover:no-underline"
-            >
-              support@aven.app
-            </a>
-            .
           </LegalParagraph>
         </LegalSection>
       </LegalShell>
