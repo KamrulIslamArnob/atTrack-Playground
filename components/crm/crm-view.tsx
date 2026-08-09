@@ -81,6 +81,14 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
     }
   };
 
+  const handleCompanyCreated = (createdCompany: CrmCompany) => {
+    setCompanies((prev) =>
+      prev.some((c) => c.id === createdCompany.id)
+        ? prev
+        : [...prev, createdCompany].sort((a, b) => a.name.localeCompare(b.name))
+    );
+  };
+
   const bumpContactCount = (companyId: string | null, delta: number) => {
     if (!companyId) return;
     setCompanies((prev) =>
@@ -134,6 +142,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
           initialContacts={initialContacts}
           companies={companies}
           onCompanyCountChange={bumpContactCount}
+          onCompanyCreated={handleCompanyCreated}
         />
       </TabsContent>
 
@@ -162,10 +171,12 @@ function ContactsView({
   initialContacts,
   companies,
   onCompanyCountChange,
+  onCompanyCreated,
 }: {
   initialContacts: Contact[];
   companies: CrmCompany[];
   onCompanyCountChange: (companyId: string | null, delta: number) => void;
+  onCompanyCreated?: (company: CrmCompany) => void;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
@@ -191,7 +202,11 @@ function ContactsView({
     });
   }, [contacts, search, companyFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSaved = (saved: Contact) => {
+  const handleSaved = (saved: Contact, createdCompany?: CrmCompany) => {
+    if (createdCompany) {
+      onCompanyCreated?.(createdCompany);
+      onCompanyCountChange(createdCompany.id, 1);
+    }
     setContacts((prev) => {
       const idx = prev.findIndex((c) => c.id === saved.id);
       if (idx >= 0) {

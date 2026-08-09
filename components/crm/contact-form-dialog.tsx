@@ -66,7 +66,7 @@ interface ContactFormDialogProps {
   companies: CrmCompany[];
   lockedCompanyId?: string;
   tagSuggestions: string[];
-  onSaved: (contact: Contact) => void;
+  onSaved: (contact: Contact, createdCompany?: CrmCompany) => void;
 }
 
 interface SocialLinkStateItem {
@@ -245,13 +245,32 @@ export function ContactFormDialog({
     try {
       const formData = new FormData(e.currentTarget);
       
-      // If user selected "create new company" or typed a new company name
       let resolvedCompanyId = lockedCompanyId ?? (companyId === NO_COMPANY ? null : companyId);
-      if (companyId === NEW_COMPANY && customCompanyName.trim()) {
-        const compFormData = new FormData();
-        compFormData.append("name", customCompanyName.trim());
-        const { id: newCompId } = await createCompany(compFormData);
-        resolvedCompanyId = newCompId;
+      let resolvedCompanyName: string | null = companyName(resolvedCompanyId);
+      let createdCompanyObj: CrmCompany | undefined = undefined;
+
+      if (!lockedCompanyId && companyId === NEW_COMPANY && customCompanyName.trim()) {
+        const compName = customCompanyName.trim();
+        const existingComp = companies.find((c) => c.name.toLowerCase() === compName.toLowerCase());
+        if (existingComp) {
+          resolvedCompanyId = existingComp.id;
+          resolvedCompanyName = existingComp.name;
+        } else {
+          const compFormData = new FormData();
+          compFormData.append("name", compName);
+          const { id: newCompId } = await createCompany(compFormData);
+          resolvedCompanyId = newCompId;
+          resolvedCompanyName = compName;
+          createdCompanyObj = {
+            id: newCompId,
+            name: compName,
+            website: null,
+            location: null,
+            color: null,
+            job_count: 0,
+            contact_count: 1,
+          };
+        }
       }
 
       // Serialize tags and social links
@@ -277,35 +296,42 @@ export function ContactFormDialog({
         github_url: githubItem?.url ?? (formData.get("github_url") as string) ?? null,
         social_links: JSON.stringify(cleanSocialLinks),
         notes: (formData.get("notes") as string) || null,
+        company_id: resolvedCompanyId,
+        company_name: resolvedCompanyName,
       };
 
       if (mode === "edit" && contact) {
         formData.set("company_id", resolvedCompanyId ?? "");
         await updateContact(contact.id, formData);
-        onSaved({
-          ...contact,
-          ...fields,
-          company_id: resolvedCompanyId,
-          company_name: companyName(resolvedCompanyId),
-        });
+        onSaved(
+          {
+            ...contact,
+            ...fields,
+          },
+          createdCompanyObj
+        );
       } else if (resolvedCompanyId) {
         const { id } = await createCompanyContact(resolvedCompanyId, formData);
-        onSaved({
-          id,
-          ...fields,
-          role: fields.role ?? "other",
-          company_id: resolvedCompanyId,
-          company_name: companyName(resolvedCompanyId),
-        });
+        onSaved(
+          {
+            id,
+            ...fields,
+            role: fields.role ?? "other",
+          },
+          createdCompanyObj
+        );
       } else {
         const { id } = await createPersonContact(formData);
-        onSaved({
-          id,
-          ...fields,
-          role: fields.role ?? "other",
-          company_id: null,
-          company_name: null,
-        });
+        onSaved(
+          {
+            id,
+            ...fields,
+            role: fields.role ?? "other",
+            company_id: null,
+            company_name: null,
+          },
+          createdCompanyObj
+        );
       }
       onOpenChange(false);
     } catch {
