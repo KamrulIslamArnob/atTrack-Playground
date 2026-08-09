@@ -46,8 +46,9 @@ const LIST_KIND_ICONS: Record<ListKind, LucideIcon> = {
 // its own "hot" gradient wash (below) instead of a static entry here.
 const LIST_KIND_BG: Partial<Record<ListKind, string>> = {
   wishlist: "bg-white dark:bg-card/40",
-  preparing: "bg-orange-50/70 dark:bg-orange-950/20",
+  preparing: "bg-amber-50/70 dark:bg-amber-950/20",
   applied: "bg-purple-50/70 dark:bg-purple-950/20",
+  interview: "bg-lime-50/80 dark:bg-lime-950/20 border-lime-300/60 dark:border-lime-500/30",
   offer: "bg-emerald-50/70 dark:bg-emerald-950/20",
 };
 
