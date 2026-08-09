@@ -152,3 +152,31 @@ export async function getJobsList(params: JobsListParams = {}): Promise<JobsList
     totalPages,
   };
 }
+
+export interface JobMentionOption {
+  id: string;
+  title: string;
+  company_name: string | null;
+}
+
+/** Lightweight job list for the CRM notes' @mention picker — not the paginated /jobs listing. */
+export async function getJobsForMention(): Promise<JobMentionOption[]> {
+  const { supabase, userId } = await getUser();
+
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("id, title, company:companies(name)")
+    .eq("user_id", userId)
+    .order("title", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching jobs for mention:", error);
+    return [];
+  }
+
+  return ((data ?? []) as unknown as { id: string; title: string; company: { name: string } | null }[]).map((row) => ({
+    id: row.id,
+    title: row.title,
+    company_name: row.company?.name ?? null,
+  }));
+}
