@@ -150,7 +150,7 @@ export function BoardColumn({
   const [draftName, setDraftName] = useState(list.name);
 
   const Icon = LIST_KIND_ICONS[list.kind] ?? Briefcase;
-  const accent = list.color ?? DEFAULT_LIST_COLORS[list.kind];
+  const accent = DEFAULT_LIST_COLORS[list.kind] ?? list.color ?? "#84cc16";
   // Interview lane gets a brand-tinted wash once it's carrying jobs — a quiet
   // "these are hot" signal, not present on any other lane.
   const isHot = list.kind === "interview" && cards.length > 0;

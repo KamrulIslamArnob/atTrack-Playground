@@ -17,12 +17,12 @@ const RPCS: Record<string, (args: Record<string, unknown>) => unknown> = {
     if (!userId) throw new Error("seed_board_lists requires p_user_id");
 
     const defaults: [string, string, string, number][] = [
-      ["Wishlist", "wishlist", "#94A3B8", 1],
-      ["Preparing", "preparing", "#F59E0B", 2],
-      ["Applied", "applied", "#8B5CF6", 3],
-      ["Interview", "interview", "#10B981", 4],
-      ["Offer", "offer", "#059669", 5],
-      ["Rejected", "rejected", "#EF4444", 6],
+      ["Wishlist", "wishlist", "#38bdf8", 1],
+      ["Preparing", "preparing", "#fbbf24", 2],
+      ["Applied", "applied", "#c084fc", 3],
+      ["Interview", "interview", "#84cc16", 4],
+      ["Offer", "offer", "#14b8a6", 5],
+      ["Rejected", "rejected", "#f87171", 6],
     ];
 
     const db = getDb();

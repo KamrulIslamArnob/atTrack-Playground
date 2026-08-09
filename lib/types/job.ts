@@ -31,10 +31,10 @@ export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
   draft: "#94A3B8",
   submitted: "#8B5CF6",
   acknowledged: "#3B82F6",
-  interview: "#10B981",
-  offer: "#059669",
-  accepted: "#047857",
-  rejected: "#EF4444",
+  interview: "#84cc16",
+  offer: "#14b8a6",
+  accepted: "#22c55e",
+  rejected: "#f87171",
   withdrawn: "#6B7280",
 };
 
