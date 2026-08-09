@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { deleteProvider, listProviders } from "@/lib/actions/ai-providers";
+import { deleteProvider, getTaskRoutes, listProviders } from "@/lib/actions/ai-providers";
 import { AiProviderDialog } from "@/components/settings/ai-provider-dialog";
 import { AiTaskRoutePicker } from "@/components/settings/ai-task-route-picker";
 import { Badge } from "@/components/ui/badge";
@@ -30,17 +30,11 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   const refreshProviders = async () => {
     const next = await listProviders();
     setProviders(next);
-    // Routes reference provider ids that still exist; re-derive their display
-    // objects from the fresh list so an edited name/model shows up without a
-    // full page reload.
-    const byId = new Map(next.map((p) => [p.id, p]));
-    setRoutes((prev) => {
-      const updated = {} as Record<TaskType, AiProviderSummary[]>;
-      for (const taskType of Object.keys(prev) as TaskType[]) {
-        updated[taskType] = prev[taskType].map((p) => byId.get(p.id)).filter((p): p is AiProviderSummary => !!p);
-      }
-      return updated;
-    });
+    // The DB is the source of truth for routes — re-fetching (rather than
+    // filtering the previous in-memory state) picks up any assignment made
+    // earlier in the session that the picker's local state never reported
+    // back up to us.
+    setRoutes(await getTaskRoutes());
     setDialogOpen(null);
   };
 
@@ -52,13 +46,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
     } else {
       toast.success("Provider deleted.");
       setProviders((prev) => prev.filter((p) => p.id !== id));
-      setRoutes((prev) => {
-        const updated = {} as Record<TaskType, AiProviderSummary[]>;
-        for (const taskType of Object.keys(prev) as TaskType[]) {
-          updated[taskType] = prev[taskType].filter((p) => p.id !== id);
-        }
-        return updated;
-      });
+      setRoutes(await getTaskRoutes());
     }
     setDeletingId(null);
   };

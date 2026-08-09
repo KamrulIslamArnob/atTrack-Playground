@@ -326,14 +326,14 @@ export async function generateTextStream(
   const startedAt = Date.now();
 
   if (provider.provider_type === "gemini") {
-    const ai = new GoogleGenAI({ apiKey: provider.api_key });
-    const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
-    const response = await ai.models.generateContentStream({ model: provider.model, contents: prompt });
-
     let usageCaptured = false;
     return new ReadableStream({
       async start(controller) {
         try {
+          const ai = new GoogleGenAI({ apiKey: provider.api_key });
+          const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
+          const response = await ai.models.generateContentStream({ model: provider.model, contents: prompt });
+
           for await (const chunk of response) {
             const text = chunk.text;
             if (text) {
@@ -356,6 +356,21 @@ export async function generateTextStream(
             }
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
+          if (logContext.userId) {
+            usageCaptured = true;
+            await logUsage({
+              userId: logContext.userId,
+              action: logContext.action,
+              model: `${provider.name}/${provider.model}`,
+              durationMs: Date.now() - startedAt,
+              status: "error",
+              error: message,
+              metadata: logContext.metadata,
+            });
+          }
         } finally {
           controller.close();
           if (!usageCaptured && logContext.userId) {
