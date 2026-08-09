@@ -1,10 +1,6 @@
-import { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod";
 import { logAiUsage } from "@/lib/actions/ai-usage";
-
-const openrouter = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
+import { resolveProviderChain, generateText } from "./providers";
 
 export const resumeMatchDataSchema = z.object({
   skills: z.array(z.string()),
@@ -68,18 +64,9 @@ function parseJsonResponse(text: string): unknown {
   return JSON.parse(jsonMatch[1] || jsonMatch[0]);
 }
 
-export async function extractResumeContent(
-  pdfText: string,
-  userId?: string
-): Promise<ResumeMatchData> {
+export async function extractResumeContent(pdfText: string, userId?: string): Promise<ResumeMatchData> {
   const startedAt = Date.now();
-  const response = await openrouter.chat.send({
-    chatRequest: {
-      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      messages: [
-        {
-          role: "user",
-          content: `Extract structured information from this resume text. Return JSON with:
+  const prompt = `Extract structured information from this resume text. Return JSON with:
 - skills: array of strings (technical and soft skills mentioned)
 - experience: array of strings describing each role (e.g. "Software Engineer at Google, 2020-2023")
 - education: array of strings describing each entry (e.g. "BS Computer Science — MIT, 2016-2020")
@@ -88,44 +75,20 @@ export async function extractResumeContent(
 IMPORTANT: All array items must be plain strings, not objects.
 
 Resume text:
-${pdfText.slice(0, 8000)}`,
-        },
-      ],
-    },
-  });
+${pdfText.slice(0, 8000)}`;
 
-  if (!response || !("choices" in response) || !response.choices?.length) {
+  const chain = userId ? await resolveProviderChain(userId, "text") : [];
+  if (chain.length === 0) {
+    const message = "No AI provider configured for text and no GEMINI_API_KEY fallback available.";
     if (userId) {
-      await logAiUsage({
-        userId,
-        action: "extract_resume",
-        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-        durationMs: Date.now() - startedAt,
-        status: "error",
-        error: "No response from model",
-      });
+      await logAiUsage({ userId, action: "extract_resume", durationMs: Date.now() - startedAt, status: "error", error: message });
     }
-    throw new Error("No response from model");
+    throw new Error(message);
   }
 
-  const message = response.choices[0].message;
-  const text = typeof message.content === "string" ? message.content : null;
+  const generated = await generateText(chain, { userPrompt: prompt }, { userId, action: "extract_resume" });
 
-  if (!text) {
-    if (userId) {
-      await logAiUsage({
-        userId,
-        action: "extract_resume",
-        model: response.model,
-        durationMs: Date.now() - startedAt,
-        status: "error",
-        error: "No text content in response",
-      });
-    }
-    throw new Error("No text content in response");
-  }
-
-  const parsed = parseJsonResponse(text);
+  const parsed = parseJsonResponse(generated.text);
   const validated = resumeMatchDataSchema.safeParse(parsed);
 
   if (!validated.success) {
@@ -133,7 +96,6 @@ ${pdfText.slice(0, 8000)}`,
       await logAiUsage({
         userId,
         action: "extract_resume",
-        model: response.model,
         durationMs: Date.now() - startedAt,
         status: "error",
         error: `Invalid resume extraction: ${validated.error.message}`,
@@ -141,21 +103,6 @@ ${pdfText.slice(0, 8000)}`,
     }
     console.error("[ResumeExtract] Validation error:", validated.error.flatten());
     throw new Error(`Invalid resume extraction: ${validated.error.message}`);
-  }
-
-  if (userId) {
-    const usage = "usage" in response ? (response as { usage?: { promptTokens?: number; completionTokens?: number; cachedTokens?: number; reasoningTokens?: number; cost?: number | null } }).usage : undefined;
-    await logAiUsage({
-      userId,
-      action: "extract_resume",
-      model: response.model,
-      inputTokens: usage?.promptTokens ?? 0,
-      outputTokens: usage?.completionTokens ?? 0,
-      cachedTokens: usage?.cachedTokens,
-      reasoningTokens: usage?.reasoningTokens,
-      costUsd: usage?.cost ?? undefined,
-      durationMs: Date.now() - startedAt,
-    });
   }
 
   return validated.data;
@@ -168,12 +115,7 @@ export async function calculateMatchScore(
   userId?: string
 ): Promise<MatchScore> {
   const startedAt = Date.now();
-  const jobContext = [
-    jobTitle,
-    jobDescription,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const jobContext = [jobTitle, jobDescription].filter(Boolean).join("\n");
 
   const resumeContext = [
     `Skills: ${resumeMatchData.skills.join(", ")}`,
@@ -182,13 +124,7 @@ export async function calculateMatchScore(
     `Summary: ${resumeMatchData.summary}`,
   ].join("\n");
 
-  const response = await openrouter.chat.send({
-    chatRequest: {
-      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      messages: [
-        {
-          role: "user",
-          content: `You are a job-match analyst. Compare this job posting against this candidate's resume and give a match score from 0-100.
+  const prompt = `You are a job-match analyst. Compare this job posting against this candidate's resume and give a match score from 0-100.
 
 Consider:
 - Skills alignment (most important)
@@ -202,46 +138,20 @@ ${jobContext}
 Candidate Resume:
 ${resumeContext}
 
-Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>" }`,
-        },
-      ],
-    },
-  });
+Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>" }`;
 
-  if (!response || !("choices" in response) || !response.choices?.length) {
+  const chain = userId ? await resolveProviderChain(userId, "text") : [];
+  if (chain.length === 0) {
+    const message = "No AI provider configured for text and no GEMINI_API_KEY fallback available.";
     if (userId) {
-      await logAiUsage({
-        userId,
-        action: "match_score",
-        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-        durationMs: Date.now() - startedAt,
-        status: "error",
-        error: "No response from model",
-        metadata: { job_title: jobTitle },
-      });
+      await logAiUsage({ userId, action: "match_score", durationMs: Date.now() - startedAt, status: "error", error: message, metadata: { job_title: jobTitle } });
     }
-    throw new Error("No response from model");
+    throw new Error(message);
   }
 
-  const message = response.choices[0].message;
-  const text = typeof message.content === "string" ? message.content : null;
+  const generated = await generateText(chain, { userPrompt: prompt }, { userId, action: "match_score", metadata: { job_title: jobTitle } });
 
-  if (!text) {
-    if (userId) {
-      await logAiUsage({
-        userId,
-        action: "match_score",
-        model: response.model,
-        durationMs: Date.now() - startedAt,
-        status: "error",
-        error: "No text content in response",
-        metadata: { job_title: jobTitle },
-      });
-    }
-    throw new Error("No text content in response");
-  }
-
-  const parsed = parseJsonResponse(text);
+  const parsed = parseJsonResponse(generated.text);
   const validated = matchScoreSchema.safeParse(parsed);
 
   if (!validated.success) {
@@ -249,7 +159,6 @@ Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>
       await logAiUsage({
         userId,
         action: "match_score",
-        model: response.model,
         durationMs: Date.now() - startedAt,
         status: "error",
         error: `Invalid match score: ${validated.error.message}`,
@@ -257,22 +166,6 @@ Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>
       });
     }
     throw new Error(`Invalid match score: ${validated.error.message}`);
-  }
-
-  if (userId) {
-    const usage = "usage" in response ? (response as { usage?: { promptTokens?: number; completionTokens?: number; cachedTokens?: number; reasoningTokens?: number; cost?: number | null } }).usage : undefined;
-    await logAiUsage({
-      userId,
-      action: "match_score",
-      model: response.model,
-      inputTokens: usage?.promptTokens ?? 0,
-      outputTokens: usage?.completionTokens ?? 0,
-      cachedTokens: usage?.cachedTokens,
-      reasoningTokens: usage?.reasoningTokens,
-      costUsd: usage?.cost ?? undefined,
-      durationMs: Date.now() - startedAt,
-      metadata: { job_title: jobTitle },
-    });
   }
 
   return validated.data;

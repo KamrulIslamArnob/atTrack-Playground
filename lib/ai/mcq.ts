@@ -1,10 +1,6 @@
-import { OpenRouter } from "@openrouter/sdk";
 import type { MCQQuestion } from "@/lib/types/mcq";
 import { logAiUsage } from "@/lib/actions/ai-usage";
-
-const openrouter = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
+import { resolveProviderChain, generateText } from "./providers";
 
 const MCQ_PROMPT = `You are an interview preparation assistant. Generate multiple-choice questions (MCQs) to help a candidate prepare for a job interview.
 
@@ -48,58 +44,36 @@ export async function generateMCQQuestions(params: {
     .filter(Boolean)
     .join("\n\n");
 
-  const response = await openrouter.chat.send({
-    chatRequest: {
-      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      messages: [
-        {
-          role: "user",
-          content: `${MCQ_PROMPT}\n\n---\n\nJob Context:\n${context}`,
-        },
-      ],
-    },
+  const prompt = `${MCQ_PROMPT}\n\n---\n\nJob Context:\n${context}`;
+
+  const chain = params.userId ? await resolveProviderChain(params.userId, "text") : [];
+  if (chain.length === 0) {
+    const message = "No AI provider configured for text and no GEMINI_API_KEY fallback available.";
+    if (params.userId) {
+      await logAiUsage({
+        userId: params.userId,
+        action: "generate_mcq",
+        durationMs: Date.now() - startedAt,
+        status: "error",
+        error: message,
+        metadata: { job_title: params.jobTitle },
+      });
+    }
+    throw new Error(message);
+  }
+
+  const generated = await generateText(chain, { userPrompt: prompt }, {
+    userId: params.userId,
+    action: "generate_mcq",
+    metadata: { job_title: params.jobTitle },
   });
 
-  if (!response || !("choices" in response) || !response.choices?.length) {
-    if (params.userId) {
-      await logAiUsage({
-        userId: params.userId,
-        action: "generate_mcq",
-        model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-        durationMs: Date.now() - startedAt,
-        status: "error",
-        error: "No response from model",
-        metadata: { job_title: params.jobTitle },
-      });
-    }
-    throw new Error("No response from model");
-  }
-
-  const message = response.choices[0].message;
-  const text = typeof message.content === "string" ? message.content : null;
-
-  if (!text) {
-    if (params.userId) {
-      await logAiUsage({
-        userId: params.userId,
-        action: "generate_mcq",
-        model: response.model,
-        durationMs: Date.now() - startedAt,
-        status: "error",
-        error: "No text content in response",
-        metadata: { job_title: params.jobTitle },
-      });
-    }
-    throw new Error("No text content in response");
-  }
-
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  const jsonMatch = generated.text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     if (params.userId) {
       await logAiUsage({
         userId: params.userId,
         action: "generate_mcq",
-        model: response.model,
         durationMs: Date.now() - startedAt,
         status: "error",
         error: "Failed to extract JSON from model response",
@@ -116,7 +90,6 @@ export async function generateMCQQuestions(params: {
       await logAiUsage({
         userId: params.userId,
         action: "generate_mcq",
-        model: response.model,
         durationMs: Date.now() - startedAt,
         status: "error",
         error: "Invalid response format",
@@ -124,22 +97,6 @@ export async function generateMCQQuestions(params: {
       });
     }
     throw new Error("Invalid response format");
-  }
-
-  if (params.userId) {
-    const usage = "usage" in response ? (response as { usage?: { promptTokens?: number; completionTokens?: number; cachedTokens?: number; reasoningTokens?: number; cost?: number | null } }).usage : undefined;
-    await logAiUsage({
-      userId: params.userId,
-      action: "generate_mcq",
-      model: response.model,
-      inputTokens: usage?.promptTokens ?? 0,
-      outputTokens: usage?.completionTokens ?? 0,
-      cachedTokens: usage?.cachedTokens,
-      reasoningTokens: usage?.reasoningTokens,
-      costUsd: usage?.cost ?? undefined,
-      durationMs: Date.now() - startedAt,
-      metadata: { job_title: params.jobTitle },
-    });
   }
 
   return parsed.map((q: MCQQuestion, i: number) => ({
