@@ -25,7 +25,9 @@ import {
   updateContact,
   type Contact,
 } from "@/lib/actions/contacts";
-import { createCompany, getCompanyJobs, type CompanyJob, type CrmCompany } from "@/lib/actions/companies";
+import { createCompany, getCompanyJobs, updateCompanyColor, type CompanyJob, type CrmCompany } from "@/lib/actions/companies";
+import { ContactCard } from "@/components/crm/contact-card";
+import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/types/job";
 import {
@@ -66,7 +68,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       setCompanies((prev) =>
         prev.some((c) => c.id === id)
           ? prev
-          : [...prev, { id, name: companyName.trim(), website: null, location: null, job_count: 0, contact_count: 0 }].sort((a, b) =>
+          : [...prev, { id, name: companyName.trim(), website: null, location: null, color: null, job_count: 0, contact_count: 0 }].sort((a, b) =>
               a.name.localeCompare(b.name)
             )
       );
@@ -168,10 +170,8 @@ function ContactsView({
   const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string>("all");
-  const [creating, setCreating] = useState(false);
-  const [newRole, setNewRole] = useState("other");
-  const [newCompanyId, setNewCompanyId] = useState<string>(NO_COMPANY);
-  const [pending, setPending] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined);
 
   const companyName = (id: string | null) => companies.find((c) => c.id === id)?.name ?? null;
 
@@ -184,43 +184,23 @@ function ContactsView({
       return (
         c.name.toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q) ||
+        (c.position ?? "").toLowerCase().includes(q) ||
+        (c.role ?? "").toLowerCase().includes(q) ||
         (companyName(c.company_id) ?? "").toLowerCase().includes(q)
       );
     });
   }, [contacts, search, companyFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setPending(true);
-    try {
-      const formData = new FormData(e.currentTarget);
-      formData.append("role", newRole);
-      const companyId = newCompanyId === NO_COMPANY ? null : newCompanyId;
-      if (companyId) formData.append("company_id", companyId);
-      const { id } = await createPersonContact(formData);
-      const contact: Contact = {
-        id,
-        name: (formData.get("name") as string) || "",
-        role: newRole,
-        email: (formData.get("email") as string) || null,
-        phone: (formData.get("phone") as string) || null,
-        position: (formData.get("position") as string) || null,
-        linkedin_url: (formData.get("linkedin_url") as string) || null,
-        github_url: (formData.get("github_url") as string) || null,
-        notes: null,
-        company_id: companyId,
-        company_name: companyName(companyId),
-      };
-      setContacts((prev) => [...prev, contact].sort((a, b) => a.name.localeCompare(b.name)));
-      onCompanyCountChange(companyId, 1);
-      setCreating(false);
-      setNewRole("other");
-      setNewCompanyId(NO_COMPANY);
-    } catch {
-      toast.error("Could not create contact");
-    } finally {
-      setPending(false);
-    }
+  const handleSaved = (saved: Contact) => {
+    setContacts((prev) => {
+      const idx = prev.findIndex((c) => c.id === saved.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = saved;
+        return copy;
+      }
+      return [...prev, saved].sort((a, b) => a.name.localeCompare(b.name));
+    });
   };
 
   const handleTagChange = async (contact: Contact, companyId: string | null) => {
@@ -233,21 +213,6 @@ function ContactsView({
       );
     } catch {
       toast.error("Could not update company");
-    }
-  };
-
-  const handleRoleChange = async (contact: Contact, role: string) => {
-    try {
-      const formData = new FormData();
-      formData.append("name", contact.name);
-      formData.append("role", role);
-      if (contact.email) formData.append("email", contact.email);
-      if (contact.phone) formData.append("phone", contact.phone);
-      if (contact.notes) formData.append("notes", contact.notes);
-      await updateContact(contact.id, formData);
-      setContacts((prev) => prev.map((c) => (c.id === contact.id ? { ...c, role } : c)));
-    } catch {
-      toast.error("Could not update role");
     }
   };
 
@@ -269,7 +234,7 @@ function ContactsView({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search contacts…"
+            placeholder="Search contacts, roles, position..."
             className="h-9 pl-8"
           />
         </div>
@@ -289,165 +254,76 @@ function ContactsView({
             ))}
           </SelectContent>
         </Select>
-        <Button size="sm" onClick={() => setCreating((v) => !v)}>
+
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditingContact(undefined);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="mr-1 size-4" />
-          Add contact
+          Add Contact
         </Button>
       </div>
-
-      {creating && (
-        <form onSubmit={handleCreate} className="space-y-3 rounded-2xl border border-border p-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input name="name" required placeholder="Name *" className="h-9" />
-            <Input name="email" type="email" placeholder="Email" className="h-9" />
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Select value={newRole} onValueChange={(v) => setNewRole(v ?? "other")}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue>{contactRoleLabel(newRole)}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {CONTACT_ROLES.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={newCompanyId} onValueChange={(v) => setNewCompanyId(v ?? NO_COMPANY)}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Company (optional)">
-                  {newCompanyId === NO_COMPANY ? "No company" : companyName(newCompanyId)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_COMPANY}>No company</SelectItem>
-                {companies.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Input name="phone" placeholder="Phone" className="h-9" />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending && <Spinner className="mr-2" />}
-              Add
-            </Button>
-          </div>
-        </form>
-      )}
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">
-            {contacts.length === 0 ? "No contacts yet." : "No contacts match."}
+            {contacts.length === 0 ? "No contacts yet." : "No contacts match your search."}
           </p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Add people directly, or they get pulled in automatically when AI spots a recruiter on a job posting.
+            Add contacts with Notion-style tags, company associations, and social media links.
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead className="w-9" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell className="font-medium">{contact.name}</TableCell>
-                  <TableCell>
-                    <Select value={contact.role ?? "other"} onValueChange={(v) => handleRoleChange(contact, v ?? "other")}>
-                      <SelectTrigger className="h-7 w-fit text-xs" size="sm">
-                        <SelectValue>{contactRoleLabel(contact.role)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CONTACT_ROLES.map((r) => (
-                          <SelectItem key={r.value} value={r.value}>
-                            {r.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={contact.company_id ?? NO_COMPANY}
-                      onValueChange={(v) => handleTagChange(contact, v === NO_COMPANY ? null : (v ?? null))}
-                    >
-                      <SelectTrigger className="h-7 w-fit max-w-40 text-xs" size="sm">
-                        <Building2 className="mr-0.5 size-3 shrink-0 text-muted-foreground" />
-                        <SelectValue placeholder="No company">
-                          {contact.company_id ? companyName(contact.company_id) : "No company"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_COMPANY}>No company</SelectItem>
-                        {companies.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {contact.email ? (
-                      <span className="flex items-center gap-1">
-                        <Mail className="size-3" /> {contact.email}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {contact.phone ? (
-                      <span className="flex items-center gap-1">
-                        <Phone className="size-3" /> {contact.phone}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <button
-                      onClick={() => handleDelete(contact)}
-                      className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      aria-label="Delete contact"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((contact) => (
+            <ContactCard
+              key={contact.id}
+              contact={contact}
+              onEdit={(c) => {
+                setEditingContact(c);
+                setDialogOpen(true);
+              }}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
       )}
+
+      <ContactFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        contact={editingContact}
+        companies={companies}
+        tagSuggestions={[]}
+        onSaved={handleSaved}
+      />
     </div>
   );
 }
 
+const COMPANY_COLORS = [
+  { value: "#10b981", label: "Emerald" },
+  { value: "#6366f1", label: "Indigo" },
+  { value: "#8b5cf6", label: "Violet" },
+  { value: "#f59e0b", label: "Amber" },
+  { value: "#f43f5e", label: "Rose" },
+  { value: "#06b6d4", label: "Cyan" },
+  { value: "#3b82f6", label: "Blue" },
+  { value: "#64748b", label: "Slate" },
+];
+
 /** Company-grouped view — same roster, sorted under the company tag; a job list rides along for context. */
 function CompanyRow({ company }: { company: CrmCompany }) {
   const [expanded, setExpanded] = useState(false);
+  const [color, setColor] = useState<string | null>(company.color);
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [jobs, setJobs] = useState<CompanyJob[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [contactCount, setContactCount] = useState(company.contact_count);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const load = async () => {
     if (contacts !== null) return;
@@ -463,30 +339,91 @@ function CompanyRow({ company }: { company: CrmCompany }) {
     if (!expanded) load();
   };
 
+  const handleSetColor = async (newColor: string | null) => {
+    setColor(newColor);
+    setColorPickerOpen(false);
+    try {
+      await updateCompanyColor(company.id, newColor);
+    } catch {
+      toast.error("Could not update company color");
+    }
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-card">
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
-      >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Building2 className="size-4 text-muted-foreground/70" />
+    <div
+      className="rounded-2xl border border-border bg-card overflow-hidden transition-all"
+      style={color ? { borderLeftColor: color, borderLeftWidth: "4px" } : undefined}
+    >
+      <div className="flex w-full items-center justify-between px-4 py-3">
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="flex flex-1 items-center gap-3 text-left"
+        >
+          <div
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted"
+            style={color ? { backgroundColor: `${color}20`, color } : undefined}
+          >
+            <Building2 className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{company.name}</p>
+            {company.location && <p className="truncate text-xs text-muted-foreground">{company.location}</p>}
+          </div>
+        </button>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Color picker */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setColorPickerOpen((v) => !v)}
+              className="flex size-5 items-center justify-center rounded-full border border-border/80 transition-transform hover:scale-110"
+              style={{ backgroundColor: color ?? "transparent" }}
+              title="Change column accent color"
+            >
+              {!color && <span className="size-2 rounded-full bg-muted-foreground/40" />}
+            </button>
+
+            {colorPickerOpen && (
+              <div className="absolute right-0 top-full z-20 mt-1 flex items-center gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-xs">
+                {COMPANY_COLORS.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => handleSetColor(c.value)}
+                    className="size-5 rounded-full transition-transform hover:scale-110 focus:outline-none"
+                    style={{ backgroundColor: c.value }}
+                    title={c.label}
+                  />
+                ))}
+                {color && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetColor(null)}
+                    className="flex size-5 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground hover:bg-muted"
+                    title="Clear color"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Jobs">
+            <Briefcase className="size-3.5" />
+            {company.job_count}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Contacts">
+            <UserRound className="size-3.5" />
+            {contactCount}
+          </span>
+          <button type="button" onClick={handleToggle} aria-label="Toggle section">
+            <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{company.name}</p>
-          {company.location && <p className="truncate text-xs text-muted-foreground">{company.location}</p>}
-        </div>
-        <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title="Jobs">
-          <Briefcase className="size-3.5" />
-          {company.job_count}
-        </span>
-        <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title="Contacts">
-          <UserRound className="size-3.5" />
-          {contactCount}
-        </span>
-        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
+      </div>
 
       {expanded && (
         <div className="border-t border-border px-4 py-3">
@@ -564,6 +501,7 @@ function ContactsPanel({
         position: (formData.get("position") as string) || null,
         linkedin_url: (formData.get("linkedin_url") as string) || null,
         github_url: (formData.get("github_url") as string) || null,
+        social_links: null,
         notes: null,
         company_id: companyId,
         company_name: null,

@@ -38,8 +38,20 @@ export interface CrmCompany {
   name: string;
   website: string | null;
   location: string | null;
+  color: string | null;
   job_count: number;
   contact_count: number;
+}
+
+export async function updateCompanyColor(companyId: string, color: string | null): Promise<void> {
+  const { supabase, userId } = await getUser();
+  const { error } = await supabase
+    .from("companies")
+    .update({ color })
+    .eq("id", companyId)
+    .eq("user_id", userId);
+  if (error) throw new Error("Failed to update company color.");
+  revalidatePath("/crm");
 }
 
 /**
@@ -55,7 +67,7 @@ export async function getCrmCompanies(): Promise<CrmCompany[]> {
   const { supabase, userId } = await getUser();
 
   const [{ data: companies }, { data: jobs }, { data: contacts }] = await Promise.all([
-    supabase.from("companies").select("id, name, website, location").eq("user_id", userId).order("name", { ascending: true }),
+    supabase.from("companies").select("id, name, website, location, color").eq("user_id", userId).order("name", { ascending: true }),
     supabase.from("jobs").select("company_id").eq("user_id", userId),
     supabase.from("contacts").select("company_id").eq("user_id", userId),
   ]);
@@ -74,6 +86,7 @@ export async function getCrmCompanies(): Promise<CrmCompany[]> {
     name: c.name,
     website: c.website ?? null,
     location: c.location ?? null,
+    color: c.color ?? null,
     job_count: jobCounts.get(c.id) ?? 0,
     contact_count: contactCounts.get(c.id) ?? 0,
   }));
