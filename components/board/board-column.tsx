@@ -198,8 +198,11 @@ export function BoardColumn({
       {/* Boxed and accent-tinted so the header reads as its own block, separated
           from the column body below it, instead of just floating text. */}
       <header
-        className="mb-1.5 flex items-center gap-1.5 rounded-xl p-1.5"
-        style={{ backgroundColor: `${accent}26` }}
+        className="mb-1.5 flex items-center gap-1.5 rounded-xl border p-1.5 transition-all shadow-xs"
+        style={{
+          backgroundColor: `${accent}25`,
+          borderColor: `${accent}45`,
+        }}
       >
         {/* Column reorder handle — separate from the title's pointer-pan drag
             below so the two gestures never fight over the same pointerdown. */}
@@ -219,8 +222,8 @@ export function BoardColumn({
           <GripVertical className="size-3.5" aria-hidden="true" />
         </span>
         <span
-          className="flex size-5 shrink-0 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${accent}20`, color: accent }}
+          className="flex size-5 shrink-0 items-center justify-center rounded-full shadow-xs"
+          style={{ backgroundColor: `${accent}35`, color: accent }}
         >
           <Icon className="size-3" aria-hidden="true" />
         </span>
@@ -259,9 +262,9 @@ export function BoardColumn({
               onPointerCancel={(e) => onPanEnd(e.pointerId)}
               className="touch-none cursor-grab select-none active:cursor-grabbing"
             >
-              <h2 className="flex items-baseline gap-1.5 truncate text-xs font-semibold uppercase tracking-wide">
+              <h2 className="flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider" style={{ color: accent }}>
                 <span className="truncate">{list.name}</span>
-                <span className="shrink-0 text-[10px] font-normal normal-case tabular-nums text-muted-foreground">
+                <span className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90" style={{ color: accent }}>
                   {cards.length}
                 </span>
               </h2>

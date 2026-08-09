@@ -78,14 +78,14 @@ export const LIST_KIND_LABELS: Record<ListKind, string> = {
 // Mirrors the hex values seeded by public.seed_board_lists() in migration 019.
 // Used as the fallback when board_lists.color is null (custom lists).
 export const DEFAULT_LIST_COLORS: Record<ListKind, string> = {
-  wishlist: "#94A3B8",
-  preparing: "#F59E0B",
-  applied: "#8B5CF6",
-  interview: "#10B981",
-  offer: "#059669",
-  accepted: "#047857",
-  rejected: "#EF4444",
-  custom: "#94A3B8",
+  wishlist: "#38bdf8",
+  preparing: "#fbbf24",
+  applied: "#c084fc",
+  interview: "#4ade80",
+  offer: "#34d399",
+  accepted: "#22c55e",
+  rejected: "#f87171",
+  custom: "#38bdf8",
 };
 
 // Match-score bands. Thresholds match getInsights() in lib/actions/insights.ts
