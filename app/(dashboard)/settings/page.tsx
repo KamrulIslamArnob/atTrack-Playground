@@ -1,17 +1,18 @@
 import { getUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { signOut } from "@/lib/actions/auth";
 import { getSmtpConfig } from "@/lib/actions/smtp";
+import { listProviders, getTaskRoutes } from "@/lib/actions/ai-providers";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
-import { ProfileForm } from "@/components/settings/profile-form";
+import { ProfileForm, type Profile } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 import { AppPasswordGuide } from "@/components/settings/app-password-guide";
+import { AiProvidersSettings } from "@/components/settings/ai-providers-settings";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { LogOut, Mail } from "lucide-react";
+import { Mail, Sparkles } from "lucide-react";
 
 export default async function SettingsPage() {
-  const { supabase, userId, user } = await getUser();
+  const { supabase, userId } = await getUser();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -20,15 +21,16 @@ export default async function SettingsPage() {
     .single();
 
   const smtpConfig = await getSmtpConfig();
+  const [aiProviders, aiTaskRoutes] = await Promise.all([listProviders(), getTaskRoutes()]);
 
   return (
     <div className="space-y-6">
       <div className="-mx-6 border-b border-border pb-6">
         <div className="px-6">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Manage your account and preferences.
-          </p>
+            <p className="text-sm text-muted-foreground sm:text-base">
+              Your profile, your email settings, your data.
+            </p>
         </div>
       </div>
 
@@ -48,7 +50,7 @@ export default async function SettingsPage() {
           <CardTitle className="text-base font-semibold">Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProfileForm profile={profile} />
+          <ProfileForm profile={profile as unknown as Profile} />
         </CardContent>
       </Card>
 
@@ -66,24 +68,13 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Account</CardTitle>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Sparkles className="size-4" />
+            AI Providers
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="text-sm font-medium">{user.email}</p>
-            </div>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                <LogOut className="size-4" />
-                Sign out
-              </button>
-            </form>
-          </div>
+        <CardContent>
+          <AiProvidersSettings initialProviders={aiProviders} initialRoutes={aiTaskRoutes} />
         </CardContent>
       </Card>
 
@@ -94,12 +85,13 @@ export default async function SettingsPage() {
         <CardContent>
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium">Delete account</p>
+              <p className="text-sm font-medium">Delete all data</p>
               <p className="text-xs text-muted-foreground">
-                Permanently delete your account and all associated data.
+                Permanently remove every job, application, document, and file
+                from this machine.
               </p>
             </div>
-            <DeleteAccount email={user.email || ""} />
+            <DeleteAccount confirmPhrase={profile?.full_name || "DELETE"} />
           </div>
         </CardContent>
       </Card>
