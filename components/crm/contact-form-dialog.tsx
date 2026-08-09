@@ -112,7 +112,7 @@ export function ContactFormDialog({
     // moved the cursor (click/arrow keys, no text change) since typing "@",
     // mention.start can now sit ahead of the caret and before/after would
     // overlap, splicing corrupted text into the note. Bail instead.
-    if (caret < mention.start) {
+    if (caret < mention.start || caret > mention.start + 1 + mention.query.length) {
       setMention(null);
       return;
     }
