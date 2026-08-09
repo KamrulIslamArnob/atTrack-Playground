@@ -38,7 +38,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-border p-6 pr-14">
+      <div className="border-b border-border px-8 py-6">
         <div className="flex items-start gap-3">
           <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-muted">
             <Building2 className="size-6 text-muted-foreground/50" />
@@ -95,7 +95,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
       </div>
 
       {/* Tabs + Shortcuts */}
-      <div className="grid flex-1 gap-6 p-6 lg:grid-cols-[1fr_260px]">
+      <div className="grid flex-1 gap-6 p-8 lg:grid-cols-[1fr_280px]">
         <Tabs value={tab} onValueChange={(v) => setTab(v ?? "insights")}>
           <TabsList variant="line" className="mb-4 w-full justify-start overflow-x-auto">
             <TabsTrigger value="insights">Insights</TabsTrigger>

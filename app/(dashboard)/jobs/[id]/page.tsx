@@ -13,7 +13,7 @@ export default async function JobDetailPage(props: {
   }
 
   return (
-    <div className="-m-6 rounded-2xl border border-border bg-card">
+    <div className="-mx-6 -my-8 min-h-[calc(100vh-4rem)] bg-card">
       <JobDetailRefresh data={data} />
     </div>
   );
