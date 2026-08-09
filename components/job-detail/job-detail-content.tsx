@@ -38,66 +38,68 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-border px-8 py-6">
-        <div className="flex items-start gap-3">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-muted">
-            <Building2 className="size-6 text-muted-foreground/50" />
+      <div className="border-b border-border bg-card/60 px-6 py-3.5 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted/80">
+              <Building2 className="size-4 text-muted-foreground/70" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-base font-bold tracking-tight">{job.title}</h1>
+              <p className="truncate text-xs text-muted-foreground">
+                {company?.name ?? "Unknown company"}
+                {company?.location && <span className="text-muted-foreground/50"> · {company.location}</span>}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-bold tracking-tight">{job.title}</h1>
-            <p className="mt-0.5 truncate text-sm text-muted-foreground">
-              {company?.name ?? "Unknown company"}
-              {company?.location && <span className="text-muted-foreground/50"> · {company.location}</span>}
-            </p>
-          </div>
-        </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span
-            className="rounded-2xl px-2.5 py-1 text-xs font-medium"
-            style={{ backgroundColor: `${statusColor}20`, color: statusColor }}
-          >
-            {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
-          </span>
-          {band && (
-            <span className={`rounded-2xl px-2.5 py-1 text-xs font-medium tabular-nums ${band.className}`}>
-              {band.label} {Math.round(job.match_score!)}
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className="rounded-lg px-2 py-0.5 text-[11px] font-medium"
+              style={{ backgroundColor: `${statusColor}20`, color: statusColor }}
+            >
+              {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
             </span>
-          )}
-          {job.application_url && (
-            <a
-              href={job.application_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ variant: "outline", size: "sm", className: "gap-1.5" })}
-            >
-              Apply now
-              <ExternalLink className="size-3" />
-            </a>
-          )}
-          {lists && onMoveTo && (
-            <MoveToMenu
-              lists={lists}
-              currentListId={job.list_id}
-              onMoveTo={onMoveTo}
-              renderTrigger={<button className={buttonVariants({ variant: "outline", size: "sm" })} />}
-            >
-              <MoveRight className="mr-1 size-3.5" />
-              Move
-            </MoveToMenu>
-          )}
-          {!lists && (
-            <Link href="/jobs" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-              Back to jobs
-            </Link>
-          )}
+            {band && (
+              <span className={`rounded-lg px-2 py-0.5 text-[11px] font-medium tabular-nums ${band.className}`}>
+                {band.label} {Math.round(job.match_score!)}
+              </span>
+            )}
+            {job.application_url && (
+              <a
+                href={job.application_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ variant: "outline", size: "sm", className: "h-7 gap-1 px-2.5 text-xs" })}
+              >
+                Apply now
+                <ExternalLink className="size-3" />
+              </a>
+            )}
+            {lists && onMoveTo && (
+              <MoveToMenu
+                lists={lists}
+                currentListId={job.list_id}
+                onMoveTo={onMoveTo}
+                renderTrigger={<button className={buttonVariants({ variant: "outline", size: "sm", className: "h-7 text-xs" })} />}
+              >
+                <MoveRight className="mr-1 size-3" />
+                Move
+              </MoveToMenu>
+            )}
+            {!lists && (
+              <Link href="/jobs" className={buttonVariants({ variant: "ghost", size: "sm", className: "h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground" })}>
+                Back to jobs
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Tabs + Shortcuts */}
-      <div className="grid flex-1 gap-6 p-8 lg:grid-cols-[1fr_280px]">
+      <div className="grid flex-1 gap-5 p-5 lg:grid-cols-[1fr_250px]">
         <Tabs value={tab} onValueChange={(v) => setTab(v ?? "insights")}>
-          <TabsList variant="line" className="mb-4 w-full justify-start overflow-x-auto">
+          <TabsList variant="line" className="mb-3.5 h-8 w-full justify-start overflow-x-auto gap-0.5 text-xs">
             <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="ai-tools">AI Tools</TabsTrigger>
