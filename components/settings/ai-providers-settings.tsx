@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { deleteProvider, getTaskRoutes, listProviders } from "@/lib/actions/ai-providers";
+import { deleteProvider, getTaskRoutes, listProviders, testProviderConnection } from "@/lib/actions/ai-providers";
 import { AiProviderDialog } from "@/components/settings/ai-provider-dialog";
 import { AiTaskRoutePicker } from "@/components/settings/ai-task-route-picker";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { PROVIDER_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
 
@@ -26,6 +26,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   const [routes, setRoutes] = useState(initialRoutes);
   const [dialogOpen, setDialogOpen] = useState<"add" | AiProviderSummary | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
 
   const refreshProviders = async () => {
     // Fetch both before setting either — setProviders and setRoutes must land
@@ -35,6 +36,23 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
     setProviders(next);
     setRoutes(freshRoutes);
     setDialogOpen(null);
+  };
+
+  const handleTest = async (p: AiProviderSummary) => {
+    setTestingId(p.id);
+    const res = await testProviderConnection({
+      id: p.id,
+      provider_type: p.provider_type,
+      base_url: p.base_url,
+      model: p.model,
+    });
+    setTestingId(null);
+
+    if (res.success) {
+      toast.success(`Connected to ${p.name} (${res.latencyMs ?? 0}ms)`);
+    } else {
+      toast.error(`Connection failed for ${p.name}: ${res.error}`);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -82,16 +100,31 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
                 <div className="flex items-center gap-2 text-sm">
                   <Badge variant="outline">{PROVIDER_TYPE_LABELS[p.provider_type]}</Badge>
                   <span className="font-medium">{p.name}</span>
-                  <span className="text-muted-foreground">{p.model}</span>
+                  <span className="text-muted-foreground font-mono text-xs">{p.model}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => setDialogOpen(p)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted">
+                  <button
+                    type="button"
+                    onClick={() => handleTest(p)}
+                    disabled={testingId === p.id}
+                    title="Test connection"
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                  >
+                    {testingId === p.id ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialogOpen(p)}
+                    title="Edit provider"
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
                     <Pencil className="size-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(p.id)}
                     disabled={deletingId === p.id}
+                    title="Delete provider"
                     className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
                   >
                     {deletingId === p.id ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />}

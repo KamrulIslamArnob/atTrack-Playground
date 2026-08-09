@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { createProvider, updateProvider } from "@/lib/actions/ai-providers";
+import { useState, useEffect, useRef } from "react";
+import {
+  createProvider,
+  updateProvider,
+  testProviderConnection,
+  fetchProviderModels,
+  type FetchedModel,
+} from "@/lib/actions/ai-providers";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, RefreshCw, Plug, CheckCircle2, AlertCircle, Search, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   PROVIDER_TYPES,
@@ -24,7 +31,7 @@ import {
 
 const MODEL_PLACEHOLDER: Record<ProviderType, string> = {
   gemini: "models/gemini-2.0-flash",
-  anthropic: "claude-sonnet-4-20250514",
+  anthropic: "claude-3-7-sonnet-20250219",
   openai_compatible: "gpt-4o-mini",
 };
 
@@ -41,6 +48,84 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
   const [model, setModel] = useState(provider?.model ?? "");
   const [apiKey, setApiKey] = useState("");
   const [pending, setPending] = useState(false);
+
+  // Connection test state
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Model fetching & picker state
+  const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [modelSearch, setModelSearch] = useState("");
+  const [onlyFreeModels, setOnlyFreeModels] = useState(false);
+
+  const modelPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close model picker on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (modelPickerRef.current && !modelPickerRef.current.contains(e.target as Node)) {
+        setShowModelPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    setTestResult(null);
+
+    const res = await testProviderConnection({
+      id: provider?.id,
+      provider_type: providerType,
+      base_url: baseUrl,
+      model: model || MODEL_PLACEHOLDER[providerType],
+      api_key: apiKey || undefined,
+    });
+
+    setIsTestingConnection(false);
+
+    if (res.success) {
+      setTestResult({
+        success: true,
+        message: `Connected (${res.latencyMs ?? 0}ms)`,
+      });
+      toast.success("Connection test successful!");
+    } else {
+      setTestResult({
+        success: false,
+        message: res.error || "Connection failed.",
+      });
+      toast.error(res.error || "Connection test failed.");
+    }
+  };
+
+  const handleFetchModels = async () => {
+    setIsFetchingModels(true);
+
+    const res = await fetchProviderModels({
+      id: provider?.id,
+      provider_type: providerType,
+      base_url: baseUrl,
+      api_key: apiKey || undefined,
+    });
+
+    setIsFetchingModels(false);
+
+    if (res.models && res.models.length > 0) {
+      setFetchedModels(res.models);
+      setShowModelPicker(true);
+      if (res.models.some((m) => m.isFree)) {
+        toast.success(`Fetched ${res.models.length} models (${res.models.filter((m) => m.isFree).length} free)`);
+      } else {
+        toast.success(`Fetched ${res.models.length} models`);
+      }
+    } else {
+      toast.error(res.error || "Could not fetch models.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +152,15 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     onSaved();
   };
 
+  const hasFreeModels = fetchedModels.some((m) => m.isFree);
+
+  const filteredModels = fetchedModels.filter((m) => {
+    if (onlyFreeModels && !m.isFree) return false;
+    if (!modelSearch.trim()) return true;
+    const query = modelSearch.toLowerCase();
+    return m.id.toLowerCase().includes(query) || (m.name && m.name.toLowerCase().includes(query));
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
@@ -92,7 +186,15 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
 
           <div className="space-y-2">
             <Label htmlFor="provider-type">Type</Label>
-            <Select value={providerType} onValueChange={(v) => setProviderType(v as ProviderType)}>
+            <Select
+              value={providerType}
+              onValueChange={(v) => {
+                setProviderType(v as ProviderType);
+                setFetchedModels([]);
+                setShowModelPicker(false);
+                setTestResult(null);
+              }}
+            >
               <SelectTrigger id="provider-type" className="h-10 w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -112,7 +214,11 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
               <Input
                 id="provider-base-url"
                 value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
+                onChange={(e) => {
+                  setBaseUrl(e.target.value);
+                  setFetchedModels([]);
+                  setShowModelPicker(false);
+                }}
                 placeholder="https://api.openai.com/v1"
                 className="h-10"
                 required
@@ -122,8 +228,16 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                   <button
                     key={preset.label}
                     type="button"
-                    onClick={() => setBaseUrl(preset.baseUrl)}
-                    className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                    onClick={() => {
+                      setBaseUrl(preset.baseUrl);
+                      setFetchedModels([]);
+                      setShowModelPicker(false);
+                    }}
+                    className={`rounded-lg border px-2 py-1 text-xs transition-colors ${
+                      baseUrl === preset.baseUrl
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
                   >
                     {preset.label}
                   </button>
@@ -132,16 +246,120 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="provider-model">Model</Label>
-            <Input
-              id="provider-model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder={MODEL_PLACEHOLDER[providerType]}
-              className="h-10"
-              required
-            />
+          <div className="space-y-2 relative" ref={modelPickerRef}>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="provider-model">Model</Label>
+              <button
+                type="button"
+                onClick={handleFetchModels}
+                disabled={isFetchingModels}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+              >
+                {isFetchingModels ? <Spinner className="size-3" /> : <RefreshCw className="size-3" />}
+                Fetch Models
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                id="provider-model"
+                value={model}
+                onChange={(e) => {
+                  setModel(e.target.value);
+                }}
+                onFocus={() => {
+                  if (fetchedModels.length > 0) setShowModelPicker(true);
+                }}
+                placeholder={MODEL_PLACEHOLDER[providerType]}
+                className="h-10 pr-9"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (fetchedModels.length === 0) {
+                    handleFetchModels();
+                  } else {
+                    setShowModelPicker((prev) => !prev);
+                  }
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                title="Toggle models dropdown"
+              >
+                <ChevronDown className="size-4" />
+              </button>
+            </div>
+
+            {showModelPicker && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 rounded-2xl border border-border bg-card p-2 shadow-xl overflow-hidden space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={modelSearch}
+                      onChange={(e) => setModelSearch(e.target.value)}
+                      placeholder="Filter models..."
+                      className="w-full rounded-xl border border-border bg-background py-1 pl-8 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  {hasFreeModels && (
+                    <button
+                      type="button"
+                      onClick={() => setOnlyFreeModels(!onlyFreeModels)}
+                      className={`rounded-xl border px-2 py-1 text-[11px] font-medium transition-colors ${
+                        onlyFreeModels
+                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Free Only
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                  {filteredModels.length === 0 ? (
+                    <p className="p-3 text-center text-xs text-muted-foreground">No matching models found.</p>
+                  ) : (
+                    filteredModels.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setModel(m.id);
+                          setShowModelPicker(false);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
+                          model === m.id ? "bg-accent/70 font-medium" : ""
+                        }`}
+                      >
+                        <div className="truncate max-w-[240px]">
+                          <span className="font-mono text-foreground">{m.id}</span>
+                          {m.name && m.name !== m.id && (
+                            <span className="ml-1 text-[11px] text-muted-foreground truncate block">
+                              {m.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          {m.isFree && (
+                            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold px-1.5 py-0">
+                              FREE
+                            </Badge>
+                          )}
+                          {m.contextLength && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {Math.round(m.contextLength / 1024)}k
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -150,13 +368,39 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
               id="provider-api-key"
               type="password"
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              onChange={(e) => {
+                setApiKey(e.target.value);
+                setTestResult(null);
+              }}
               placeholder={provider ? "••••••••••••" : "sk-..."}
               className="h-10"
               autoComplete="one-time-code"
               required={!provider}
             />
             {provider && <p className="text-[11px] text-muted-foreground">Leave blank to keep the current key.</p>}
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-2.5">
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={isTestingConnection}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              {isTestingConnection ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
+              Test Connection
+            </button>
+
+            {testResult && (
+              <div
+                className={`flex items-center gap-1.5 text-xs font-medium ${
+                  testResult.success ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                }`}
+              >
+                {testResult.success ? <CheckCircle2 className="size-4" /> : <AlertCircle className="size-4" />}
+                <span className="truncate max-w-[180px]">{testResult.message}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -181,3 +425,4 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     </div>
   );
 }
+
