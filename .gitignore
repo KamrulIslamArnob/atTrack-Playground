@@ -42,3 +42,10 @@ next-env.d.ts
 
 # Local SQLite database and file storage
 .data/
+
+# Temporary test/agent artifacts
+.playwright-mcp/
+.claude/
+~
+
+
