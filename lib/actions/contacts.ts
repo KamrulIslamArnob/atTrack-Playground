@@ -10,6 +10,9 @@ export interface Contact {
   role: string | null;
   email: string | null;
   phone: string | null;
+  position: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
   notes: string | null;
   company_id: string | null;
   company_name: string | null;
@@ -21,6 +24,9 @@ interface RawContactRow {
   role: string | null;
   email: string | null;
   phone: string | null;
+  position: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
   notes: string | null;
   company_id: string | null;
   company: { name: string } | null;
@@ -33,6 +39,9 @@ function toContact(row: RawContactRow): Contact {
     role: row.role,
     email: row.email,
     phone: row.phone,
+    position: row.position,
+    linkedin_url: row.linkedin_url,
+    github_url: row.github_url,
     notes: row.notes,
     company_id: row.company_id,
     company_name: row.company?.name ?? null,
@@ -45,7 +54,7 @@ export async function getContacts(): Promise<Contact[]> {
 
   const { data, error } = await supabase
     .from("contacts")
-    .select("id, name, role, email, phone, notes, company_id, company:companies(name)")
+    .select("id, name, role, email, phone, position, linkedin_url, github_url, notes, company_id, company:companies(name)")
     .eq("user_id", userId)
     .order("name", { ascending: true });
 
@@ -67,7 +76,7 @@ export async function getJobContacts(jobId: string): Promise<Contact[]> {
 
   const { data, error } = await supabase
     .from("job_contacts")
-    .select("contact:contacts(id, name, role, email, phone, notes, company_id, company:companies(name))")
+    .select("contact:contacts(id, name, role, email, phone, position, linkedin_url, github_url, notes, company_id, company:companies(name))")
     .eq("job_id", jobId);
 
   if (error) {
@@ -102,6 +111,9 @@ export async function createContact(
       role: (formData.get("role") as string) || null,
       email: (formData.get("email") as string) || null,
       phone: (formData.get("phone") as string) || null,
+      position: (formData.get("position") as string) || null,
+      linkedin_url: (formData.get("linkedin_url") as string) || null,
+      github_url: (formData.get("github_url") as string) || null,
       notes: (formData.get("notes") as string) || null,
     })
     .select("id")
@@ -149,6 +161,12 @@ export async function updateContact(id: string, formData: FormData): Promise<voi
   const name = (formData.get("name") as string)?.trim();
   if (!name) throw new Error("Contact name is required.");
 
+  const companyId = (formData.get("company_id") as string) || null;
+  if (companyId) {
+    const { data: company } = await supabase.from("companies").select("id").eq("id", companyId).eq("user_id", userId).single();
+    if (!company) throw new Error("Company not found.");
+  }
+
   const { error } = await supabase
     .from("contacts")
     .update({
@@ -156,7 +174,11 @@ export async function updateContact(id: string, formData: FormData): Promise<voi
       role: (formData.get("role") as string) || null,
       email: (formData.get("email") as string) || null,
       phone: (formData.get("phone") as string) || null,
+      position: (formData.get("position") as string) || null,
+      linkedin_url: (formData.get("linkedin_url") as string) || null,
+      github_url: (formData.get("github_url") as string) || null,
       notes: (formData.get("notes") as string) || null,
+      company_id: companyId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -181,7 +203,7 @@ export async function getCompanyContacts(companyId: string): Promise<Contact[]> 
 
   const { data, error } = await supabase
     .from("contacts")
-    .select("id, name, role, email, phone, notes, company_id, company:companies(name)")
+    .select("id, name, role, email, phone, position, linkedin_url, github_url, notes, company_id, company:companies(name)")
     .eq("user_id", userId)
     .eq("company_id", companyId)
     .order("name", { ascending: true });
@@ -200,7 +222,7 @@ export async function getOrphanContacts(): Promise<Contact[]> {
 
   const { data, error } = await supabase
     .from("contacts")
-    .select("id, name, role, email, phone, notes, company_id, company:companies(name)")
+    .select("id, name, role, email, phone, position, linkedin_url, github_url, notes, company_id, company:companies(name)")
     .eq("user_id", userId)
     .is("company_id", null)
     .order("name", { ascending: true });
@@ -239,6 +261,9 @@ export async function createCompanyContact(
       role: (formData.get("role") as string) || "other",
       email: (formData.get("email") as string) || null,
       phone: (formData.get("phone") as string) || null,
+      position: (formData.get("position") as string) || null,
+      linkedin_url: (formData.get("linkedin_url") as string) || null,
+      github_url: (formData.get("github_url") as string) || null,
       notes: (formData.get("notes") as string) || null,
       company_id: companyId,
     })
@@ -296,6 +321,9 @@ export async function createPersonContact(formData: FormData): Promise<{ id: str
       role: (formData.get("role") as string) || "other",
       email: (formData.get("email") as string) || null,
       phone: (formData.get("phone") as string) || null,
+      position: (formData.get("position") as string) || null,
+      linkedin_url: (formData.get("linkedin_url") as string) || null,
+      github_url: (formData.get("github_url") as string) || null,
       notes: (formData.get("notes") as string) || null,
       company_id: companyId,
     })
@@ -308,3 +336,4 @@ export async function createPersonContact(formData: FormData): Promise<{ id: str
   await logResourceActivity(userId, "create", "contact", contact.id, { company_id: companyId, name });
   return { id: contact.id };
 }
+
