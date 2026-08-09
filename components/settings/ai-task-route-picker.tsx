@@ -26,10 +26,14 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
   const [saving, setSaving] = useState(false);
 
   const save = async (next: string[]) => {
+    const prev = selectedIds;
     setSelectedIds(next);
     setSaving(true);
     const result = await saveTaskRoute(taskType, next);
-    if (result.error) toast.error(result.error);
+    if (result.error) {
+      setSelectedIds(prev);
+      toast.error(result.error);
+    }
     setSaving(false);
   };
 
