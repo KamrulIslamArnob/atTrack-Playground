@@ -108,6 +108,14 @@ export function ContactFormDialog({
   const pickMentionJob = (job: JobMentionOption) => {
     if (!mention) return;
     const caret = textareaRef.current?.selectionStart ?? notes.length;
+    // Caret must still be at/after the tracked "@query" span — if the user
+    // moved the cursor (click/arrow keys, no text change) since typing "@",
+    // mention.start can now sit ahead of the caret and before/after would
+    // overlap, splicing corrupted text into the note. Bail instead.
+    if (caret < mention.start) {
+      setMention(null);
+      return;
+    }
     const before = notes.slice(0, mention.start);
     const after = notes.slice(caret);
     const token = insertMentionToken(job.title, job.id);
@@ -119,6 +127,18 @@ export function ContactFormDialog({
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(pos, pos);
     });
+  };
+
+  // Cursor-only moves (click, arrow keys) don't fire onChange, so a stale
+  // mention popover can stay open pointing at a caret position the text no
+  // longer supports. Close it whenever the caret leaves the tracked span.
+  const closeMentionIfCaretMoved = () => {
+    if (!mention) return;
+    const caret = textareaRef.current?.selectionStart ?? 0;
+    const spanEnd = mention.start + 1 + mention.query.length;
+    if (caret < mention.start || caret > spanEnd) {
+      setMention(null);
+    }
   };
 
   const filteredJobs = mention
@@ -151,6 +171,8 @@ export function ContactFormDialog({
         onSaved({
           id,
           ...fields,
+          // createCompanyContact defaults a blank role to "other" server-side.
+          role: fields.role ?? "other",
           company_id: lockedCompanyId,
           company_name: companyName(lockedCompanyId),
         });
@@ -160,6 +182,8 @@ export function ContactFormDialog({
         onSaved({
           id,
           ...fields,
+          // createPersonContact defaults a blank role to "other" server-side.
+          role: fields.role ?? "other",
           company_id: resolvedCompanyId,
           company_name: companyName(resolvedCompanyId),
         });
@@ -266,6 +290,8 @@ export function ContactFormDialog({
               placeholder="Type @ to link a saved job…"
               value={notes}
               onChange={handleNotesChange}
+              onClick={closeMentionIfCaretMoved}
+              onKeyUp={closeMentionIfCaretMoved}
             />
             {mention && filteredJobs.length > 0 && (
               <Command className="absolute z-10 mt-1 w-full" value="">
