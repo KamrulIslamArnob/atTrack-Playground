@@ -81,7 +81,7 @@ export const DEFAULT_LIST_COLORS: Record<ListKind, string> = {
   wishlist: "#38bdf8",
   preparing: "#fbbf24",
   applied: "#c084fc",
-  interview: "#4ade80",
+  interview: "#84cc16",
   offer: "#34d399",
   accepted: "#22c55e",
   rejected: "#f87171",

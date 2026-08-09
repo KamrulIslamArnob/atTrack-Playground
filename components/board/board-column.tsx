@@ -224,7 +224,10 @@ export function BoardColumn({
         </span>
         <span
           className="flex size-5 shrink-0 items-center justify-center rounded-full shadow-xs"
-          style={{ backgroundColor: `${accent}35`, color: accent }}
+          style={{
+            backgroundColor: `${accent}35`,
+            color: list.kind === "interview" ? "#3f6212" : accent,
+          }}
         >
           <Icon className="size-3" aria-hidden="true" />
         </span>
@@ -263,9 +266,15 @@ export function BoardColumn({
               onPointerCancel={(e) => onPanEnd(e.pointerId)}
               className="touch-none cursor-grab select-none active:cursor-grabbing"
             >
-              <h2 className="flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider" style={{ color: accent }}>
+              <h2
+                className="flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider dark:text-lime-400"
+                style={{ color: list.kind === "interview" ? "#3f6212" : accent }}
+              >
                 <span className="truncate">{list.name}</span>
-                <span className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90" style={{ color: accent }}>
+                <span
+                  className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90"
+                  style={{ color: list.kind === "interview" ? "#3f6212" : accent }}
+                >
                   {cards.length}
                 </span>
               </h2>
