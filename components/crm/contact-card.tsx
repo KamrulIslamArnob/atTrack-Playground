@@ -90,77 +90,110 @@ export function ContactCard({
   const socialLinks = parseContactSocialLinks(contact);
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
+    <div className="group relative flex flex-col justify-between rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/40 hover:bg-muted/10">
+      {/* Top Header Row: Avatar, Name, Position, Social Icons & Actions */}
       <div className="flex items-start justify-between gap-2">
-        <button type="button" onClick={() => onEdit(contact)} className="flex min-w-0 items-center gap-3 text-left">
+        <button
+          type="button"
+          onClick={() => onEdit(contact)}
+          className="flex min-w-0 items-center gap-2.5 text-left"
+        >
           <div
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-xs",
+              "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-xs",
               getAvatarColorClass(contact.name)
             )}
           >
             {initials(contact.name) || "?"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold hover:text-primary transition-colors">{contact.name}</p>
-            {contact.position && <p className="truncate text-xs text-muted-foreground">{contact.position}</p>}
+            <p className="truncate text-sm font-semibold hover:text-primary transition-colors">
+              {contact.name}
+            </p>
+            {contact.position && (
+              <p className="truncate text-xs text-muted-foreground">{contact.position}</p>
+            )}
           </div>
         </button>
-        <button
-          onClick={() => onDelete(contact)}
-          className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-          aria-label="Delete contact"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {contact.company_name && (
-          <Badge variant="outline" className="border-border/80 bg-muted/30 font-medium">
-            <Building2 className="mr-1 size-3 text-muted-foreground" />
-            {contact.company_name}
-          </Badge>
-        )}
-        {tags.map((tag) => (
-          <Badge key={tag} className={cn("border font-medium text-xs px-2 py-0.5 rounded-md", getTagColorClass(tag))}>
-            {tag}
-          </Badge>
-        ))}
-      </div>
-
-      <div className="space-y-1 text-xs text-muted-foreground">
-        {contact.email && (
-          <p className="flex items-center gap-1.5">
-            <Mail className="size-3.5 shrink-0 text-muted-foreground/70" /> <span className="truncate">{contact.email}</span>
-          </p>
-        )}
-        {contact.phone && (
-          <p className="flex items-center gap-1.5">
-            <Phone className="size-3.5 shrink-0 text-muted-foreground/70" /> {contact.phone}
-          </p>
-        )}
-      </div>
-
-      {socialLinks.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-0.5">
+        {/* Right side: Clickable Social Icons & Delete Button */}
+        <div className="flex items-center gap-1 shrink-0">
           {socialLinks.map((link, idx) => (
             <a
               key={idx}
               href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/20 px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onClick={(e) => e.stopPropagation()}
+              className="flex size-7 items-center justify-center rounded-lg border border-border/70 bg-muted/30 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
               title={`${link.platform}: ${link.url}`}
             >
               <SocialIcon platform={link.platform} />
-              <span className="capitalize">{link.platform}</span>
             </a>
           ))}
+
+          <button
+            onClick={() => onDelete(contact)}
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground opacity-60 hover:bg-destructive/10 hover:text-destructive hover:opacity-100 transition-all"
+            aria-label="Delete contact"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Middle Row: Badges (Company + Colorful Notion Tags) */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {contact.company_name && (
+          <Badge variant="outline" className="border-border/80 bg-muted/40 text-[11px] font-medium py-0.5">
+            <Building2 className="mr-1 size-3 text-muted-foreground" />
+            {contact.company_name}
+          </Badge>
+        )}
+        {tags.map((tag) => (
+          <Badge
+            key={tag}
+            className={cn(
+              "border font-medium text-[11px] px-2 py-0.5 rounded-md",
+              getTagColorClass(tag)
+            )}
+          >
+            {tag}
+          </Badge>
+        ))}
+      </div>
+
+      {/* Bottom Row: Contact Info (Email + Phone inline) */}
+      {(contact.email || contact.phone) && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/40 pt-2 text-xs text-muted-foreground">
+          {contact.email && (
+            <a
+              href={`mailto:${contact.email}`}
+              className="flex items-center gap-1.5 truncate hover:text-foreground max-w-[240px]"
+              title={contact.email}
+            >
+              <Mail className="size-3 shrink-0 text-muted-foreground/70" />
+              <span className="truncate">{contact.email}</span>
+            </a>
+          )}
+          {contact.phone && (
+            <a
+              href={`tel:${contact.phone}`}
+              className="flex items-center gap-1.5 hover:text-foreground"
+              title={contact.phone}
+            >
+              <Phone className="size-3 shrink-0 text-muted-foreground/70" />
+              <span>{contact.phone}</span>
+            </a>
+          )}
         </div>
       )}
 
-      {contact.notes && <NotePreview notes={contact.notes} />}
+      {contact.notes && (
+        <div className="mt-1.5 pt-1 text-xs text-muted-foreground">
+          <NotePreview notes={contact.notes} />
+        </div>
+      )}
     </div>
   );
 }
