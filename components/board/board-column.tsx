@@ -52,6 +52,17 @@ const LIST_KIND_BG: Partial<Record<ListKind, string>> = {
   offer: "bg-teal-50/80 dark:bg-teal-950/20 border-teal-300/80 dark:border-teal-500/30",
 };
 
+const LIST_KIND_TEXT_COLORS: Record<ListKind, string> = {
+  wishlist: "text-sky-800 dark:text-sky-400",
+  preparing: "text-amber-800 dark:text-amber-400",
+  applied: "text-purple-800 dark:text-purple-400",
+  interview: "text-lime-900 dark:text-lime-400",
+  offer: "text-teal-800 dark:text-teal-400",
+  accepted: "text-emerald-800 dark:text-emerald-400",
+  rejected: "text-red-800 dark:text-red-400",
+  custom: "text-sky-800 dark:text-sky-400",
+};
+
 export type GroupOption = "none" | "company" | "position" | "resume";
 
 const GROUP_FIELD: Record<Exclude<GroupOption, "none">, keyof BoardCard> = {
@@ -223,10 +234,12 @@ export function BoardColumn({
           <GripVertical className="size-3.5" aria-hidden="true" />
         </span>
         <span
-          className="flex size-5 shrink-0 items-center justify-center rounded-full shadow-xs"
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full shadow-xs",
+            LIST_KIND_TEXT_COLORS[list.kind] ?? "text-foreground"
+          )}
           style={{
             backgroundColor: list.kind === "interview" ? "#bef264" : `${accent}35`,
-            color: list.kind === "interview" ? "#365314" : list.kind === "offer" ? "#0f766e" : accent,
           }}
         >
           <Icon className="size-3" aria-hidden="true" />
@@ -267,14 +280,13 @@ export function BoardColumn({
               className="touch-none cursor-grab select-none active:cursor-grabbing"
             >
               <h2
-                className="flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider dark:text-lime-400"
-                style={{ color: list.kind === "interview" ? "#365314" : list.kind === "offer" ? "#0f766e" : accent }}
+                className={cn(
+                  "flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider",
+                  LIST_KIND_TEXT_COLORS[list.kind] ?? "text-foreground"
+                )}
               >
                 <span className="truncate">{list.name}</span>
-                <span
-                  className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90"
-                  style={{ color: list.kind === "interview" ? "#365314" : list.kind === "offer" ? "#0f766e" : accent }}
-                >
+                <span className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90">
                   {cards.length}
                 </span>
               </h2>
