@@ -163,7 +163,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 max-h-[85vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">{provider ? "Edit provider" : "Add provider"}</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
@@ -291,7 +291,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
             </div>
 
             {showModelPicker && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 rounded-2xl border border-border bg-card p-2 shadow-xl overflow-hidden space-y-2">
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 rounded-2xl border border-border bg-card p-2 overflow-hidden space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />

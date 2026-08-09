@@ -13,7 +13,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">Gmail App Password Setup</h2>
           <button

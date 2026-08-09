@@ -47,7 +47,7 @@ export function DeleteAccount({ confirmPhrase }: ResetAllDataProps) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-card p-6 shadow-md ring-1 ring-foreground/5 max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
                 <AlertTriangle className="size-5 text-destructive" />

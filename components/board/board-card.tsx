@@ -61,7 +61,7 @@ export function BoardCardItem({
       style={{ borderLeftColor: accent }}
       className={cn(
         "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-shadow duration-200",
-        "hover:shadow-md focus-within:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        "hover:border-primary/60 focus-within:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         isDragging && "opacity-40"
       )}
     >

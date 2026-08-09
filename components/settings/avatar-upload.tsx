@@ -177,7 +177,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
 
       {dialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-card p-6 shadow-md ring-1 ring-foreground/5">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-base font-medium text-card-foreground">
                 Upload avatar

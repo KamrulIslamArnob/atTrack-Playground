@@ -34,7 +34,7 @@ const Command = React.forwardRef<HTMLDivElement, CommandProps>(
         <div
           ref={ref}
           className={cn(
-            "flex w-full flex-col overflow-hidden rounded-4xl border border-border bg-card text-card-foreground shadow-md",
+            "flex w-full flex-col overflow-hidden rounded-4xl border border-border bg-card text-card-foreground",
             className
           )}
           {...props}
