@@ -335,7 +335,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 size-64 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-primary/5 blur-2xl" />
         <div className="relative">
@@ -343,7 +343,7 @@ export default async function OverviewPage() {
             <div>
               <h1 className="font-heading text-3xl font-bold tracking-tight">{greeting}</h1>
               <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-                Here&apos;s your career dashboard. Track applications, interviews, and opportunities all in one place.
+                Here&apos;s where you stand — every application, every interview, every number that matters.
               </p>
             </div>
             <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -378,20 +378,20 @@ export default async function OverviewPage() {
       <Breadcrumbs />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-heading text-lg font-semibold">Job Pipeline</h2>
-              <p className="text-xs text-muted-foreground mt-1">Jobs by status</p>
+               <h2 className="font-heading text-lg font-semibold">Pipeline</h2>
+               <p className="text-xs text-muted-foreground mt-1">Where your jobs are right now</p>
             </div>
             <Link href="/jobs" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
           <PipelineChart pipeline={pipeline} />
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Match Score</h2>
-            <p className="text-xs text-muted-foreground mt-1">Distribution</p>
+               <h2 className="font-heading text-lg font-semibold">Match Scores</h2>
+               <p className="text-xs text-muted-foreground mt-1">How your resume fits each job</p>
           </div>
           <MatchScoreChart data={matchScoreDistribution} />
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -407,10 +407,10 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Application Trend</h2>
-            <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
+               <h2 className="font-heading text-lg font-semibold">Applications & Interviews</h2>
+               <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
           </div>
           <ApplicationTrendChart data={applicationTrend} />
           <div className="mt-4 flex items-center justify-center gap-6 text-xs">
@@ -418,28 +418,28 @@ export default async function OverviewPage() {
             <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
           </div>
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Time Analytics</h2>
-            <p className="text-xs text-muted-foreground mt-1">Average response times</p>
+               <h2 className="font-heading text-lg font-semibold">Timing</h2>
+               <p className="text-xs text-muted-foreground mt-1">How long things take</p>
           </div>
           <div className="space-y-6">
             <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-violet-500/10"><Timer className="size-6 text-violet-500" /></div>
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-500/10"><Timer className="size-6 text-violet-500" /></div>
               <div>
                 <p className="text-2xl font-bold">{timeAnalytics.averageTimeToApply != null ? `${timeAnalytics.averageTimeToApply}d` : "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Avg. time to apply</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-emerald-500/10"><Zap className="size-6 text-emerald-500" /></div>
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10"><Zap className="size-6 text-emerald-500" /></div>
               <div>
                 <p className="text-2xl font-bold">{timeAnalytics.averageTimeToInterview != null ? `${timeAnalytics.averageTimeToInterview}d` : "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Avg. time to interview</p>
               </div>
             </div>
             {timeAnalytics.longestPending && (
-              <div className="rounded-4xl bg-muted/50 p-4">
+              <div className="rounded-2xl bg-muted/50 p-4">
                 <p className="text-xs text-muted-foreground mb-2">Longest pending</p>
                 <p className="text-sm font-medium truncate">{timeAnalytics.longestPending.title}</p>
                 <p className="text-xs text-muted-foreground">{timeAnalytics.longestPending.company} &bull; {timeAnalytics.longestPending.days} days</p>
@@ -450,10 +450,10 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Job Sources</h2>
-            <p className="text-xs text-muted-foreground mt-1">Where jobs come from</p>
+               <h2 className="font-heading text-lg font-semibold">Sources</h2>
+               <p className="text-xs text-muted-foreground mt-1">Where you&apos;re finding jobs</p>
           </div>
           <SourceChart data={sourceBreakdown} />
           <div className="mt-2 space-y-2">
@@ -465,10 +465,10 @@ export default async function OverviewPage() {
             ))}
           </div>
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Work Location</h2>
-            <p className="text-xs text-muted-foreground mt-1">Remote vs On-site</p>
+               <h2 className="font-heading text-lg font-semibold">Work Location</h2>
+               <p className="text-xs text-muted-foreground mt-1">Remote, hybrid, on-site</p>
           </div>
           <LocationChart data={workLocationBreakdown} />
           <div className="mt-2 space-y-2">
@@ -480,10 +480,10 @@ export default async function OverviewPage() {
             ))}
           </div>
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Employment Type</h2>
-            <p className="text-xs text-muted-foreground mt-1">Full-time vs Part-time</p>
+               <h2 className="font-heading text-lg font-semibold">Employment Type</h2>
+               <p className="text-xs text-muted-foreground mt-1">Full-time, contract, freelance</p>
           </div>
           <EmploymentTypeChart data={employmentTypeBreakdown} />
           <div className="mt-2 space-y-2">
@@ -498,15 +498,15 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Top Companies</h2>
-            <p className="text-xs text-muted-foreground mt-1">Most applied to</p>
+               <h2 className="font-heading text-lg font-semibold">Top Companies</h2>
+               <p className="text-xs text-muted-foreground mt-1">Where you&apos;ve applied most</p>
           </div>
           <div className="space-y-4">
             {topCompanies.length > 0 ? topCompanies.map((company, index) => (
               <div key={company.name} className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-4xl bg-muted text-xs font-bold text-muted-foreground">{index + 1}</div>
+                <div className="flex size-8 items-center justify-center rounded-2xl bg-muted text-xs font-bold text-muted-foreground">{index + 1}</div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{company.name}</p>
                   <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -518,52 +518,52 @@ export default async function OverviewPage() {
             )) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Building2 className="size-8 text-muted-foreground/30 mb-2" />
-                <p className="text-xs text-muted-foreground">No data yet</p>
+                <p className="text-xs text-muted-foreground">Add jobs to see this</p>
               </div>
             )}
           </div>
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Interview Stats</h2>
-            <p className="text-xs text-muted-foreground mt-1">Performance overview</p>
+               <h2 className="font-heading text-lg font-semibold">Interviews</h2>
+               <p className="text-xs text-muted-foreground mt-1">How many, how they went</p>
           </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
+                <div className="flex size-9 items-center justify-center rounded-2xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
                 <span className="text-sm">Total interviews</span>
               </div>
               <span className="text-lg font-bold">{interviewStats.total}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-blue-500/10"><Clock className="size-4 text-blue-500" /></div>
+                <div className="flex size-9 items-center justify-center rounded-2xl bg-blue-500/10"><Clock className="size-4 text-blue-500" /></div>
                 <span className="text-sm">Upcoming</span>
               </div>
               <span className="text-lg font-bold">{interviewStats.upcoming}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-violet-500/10"><CheckCircle2 className="size-4 text-violet-500" /></div>
+                <div className="flex size-9 items-center justify-center rounded-2xl bg-violet-500/10"><CheckCircle2 className="size-4 text-violet-500" /></div>
                 <span className="text-sm">Completed</span>
               </div>
               <span className="text-lg font-bold">{interviewStats.completed}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-4xl bg-amber-500/10"><Award className="size-4 text-amber-500" /></div>
+                <div className="flex size-9 items-center justify-center rounded-2xl bg-amber-500/10"><Award className="size-4 text-amber-500" /></div>
                 <span className="text-sm">Pass rate</span>
               </div>
               <span className="text-lg font-bold">{interviewStats.passRate != null ? `${interviewStats.passRate}%` : "\u2014"}</span>
             </div>
           </div>
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-heading text-lg font-semibold">Practice Score</h2>
-              <p className="text-xs text-muted-foreground mt-1">MCQ test results</p>
+               <h2 className="font-heading text-lg font-semibold">Practice Tests</h2>
+               <p className="text-xs text-muted-foreground mt-1">How you&apos;re scoring</p>
             </div>
             <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
           </div>
@@ -578,8 +578,8 @@ export default async function OverviewPage() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3"><Sparkles className="size-6 text-muted-foreground/30" /></div>
-              <p className="text-xs text-muted-foreground mb-3">No practice tests yet</p>
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3"><Sparkles className="size-6 text-muted-foreground/30" /></div>
+              <p className="text-xs text-muted-foreground mb-3">Take a practice test to see your scores here</p>
               <Link href="/interviews" className={buttonVariants({ size: "sm", variant: "outline", className: "gap-1.5" })}>Start practicing <ArrowRight className="size-3" /></Link>
             </div>
           )}
@@ -587,25 +587,25 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
-              <p className="text-xs text-muted-foreground mt-1">Next scheduled</p>
+               <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
+               <p className="text-xs text-muted-foreground mt-1">What&apos;s on the calendar</p>
             </div>
             <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
           {upcomingInterviews.length > 0 ? (
             <div className="space-y-3">
               {upcomingInterviews.map((interview) => (
-                <div key={interview.id} className="flex items-center gap-4 rounded-4xl border border-border p-4 transition-all hover:shadow-md hover:border-primary/20">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
+                <div key={interview.id} className="flex items-center gap-4 rounded-2xl border border-border p-4 transition-all hover:shadow-md hover:border-primary/20">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{interview.job.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="rounded-4xl bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{interview.type}</span>
+                    <span className="rounded-2xl bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{interview.type}</span>
                     <span className="text-[10px] text-muted-foreground">{new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   </div>
                 </div>
@@ -613,15 +613,15 @@ export default async function OverviewPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3"><Calendar className="size-6 text-muted-foreground/30" /></div>
-              <p className="text-sm text-muted-foreground">No upcoming interviews</p>
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3"><Calendar className="size-6 text-muted-foreground/30" /></div>
+              <p className="text-sm text-muted-foreground">No interviews scheduled</p>
             </div>
           )}
         </div>
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-6">
-            <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
-            <p className="text-xs text-muted-foreground mt-1">Latest updates</p>
+               <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
+               <p className="text-xs text-muted-foreground mt-1">What you&apos;ve done lately</p>
           </div>
           {recentActivity.length > 0 ? (
             <div className="space-y-4">
@@ -640,30 +640,30 @@ export default async function OverviewPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3"><Activity className="size-6 text-muted-foreground/30" /></div>
-              <p className="text-sm text-muted-foreground">No recent activity</p>
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3"><Activity className="size-6 text-muted-foreground/30" /></div>
+              <p className="text-sm text-muted-foreground">Nothing here yet — add a job to get started</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+      <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
         <h2 className="font-heading text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Link href="/jobs" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-blue-500/10"><Briefcase className="size-5 text-blue-500" /></div>
+          <Link href="/jobs" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-500/10"><Briefcase className="size-5 text-blue-500" /></div>
             All Jobs
           </Link>
-          <Link href="/interviews" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
+          <Link href="/interviews" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
             Interviews
           </Link>
-          <Link href="/documents" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-violet-500/10"><FileText className="size-5 text-violet-500" /></div>
+          <Link href="/documents" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-violet-500/10"><FileText className="size-5 text-violet-500" /></div>
             Documents
           </Link>
-          <Link href="/insights" className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-4xl bg-amber-500/10"><BarChart3 className="size-5 text-amber-500" /></div>
+          <Link href="/insights" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-amber-500/10"><BarChart3 className="size-5 text-amber-500" /></div>
             Insights
           </Link>
         </div>
@@ -687,7 +687,7 @@ function QuickStat({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className={`flex size-10 items-center justify-center rounded-4xl ${bgColor}`}>
+      <div className={`flex size-10 items-center justify-center rounded-2xl ${bgColor}`}>
         <Icon className={`size-5 ${color}`} />
       </div>
       <div>

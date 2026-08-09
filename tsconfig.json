@@ -6,6 +6,10 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // lib/db/* imports siblings with explicit .ts extensions so that
+    // `node lib/db/selfcheck.ts` runs directly under Node's type stripping.
+    // Safe with noEmit: true.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

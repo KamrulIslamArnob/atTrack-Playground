@@ -36,7 +36,7 @@ export default async function ApplicationsPage(props: PageProps) {
           <div>
             <h1 className="font-heading text-2xl font-semibold tracking-tight">Applications</h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Track your application lifecycle from submission to offer.
+              Every application you&apos;ve sent. See the status, the date, and what happened.
             </p>
           </div>
         </div>

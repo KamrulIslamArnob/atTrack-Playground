@@ -56,7 +56,7 @@ export function PdfViewer({ url, fileName }: PdfViewerProps) {
       <div className="flex items-center justify-center gap-3">
         <button
           onClick={() => setScale((s) => Math.max(s - 0.1, 0.5))}
-          className="flex size-8 items-center justify-center rounded-4xl border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-2xl border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ZoomOut className="size-4" />
         </button>
@@ -65,7 +65,7 @@ export function PdfViewer({ url, fileName }: PdfViewerProps) {
         </span>
         <button
           onClick={() => setScale((s) => Math.min(s + 0.1, 3))}
-          className="flex size-8 items-center justify-center rounded-4xl border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-2xl border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ZoomIn className="size-4" />
         </button>
@@ -130,7 +130,7 @@ function PdfPage({ url, pageNum, scale }: { url: string; pageNum: number; scale:
       )}
       <canvas
         ref={canvasRef}
-        className="shadow-lg rounded-4xl"
+        className="shadow-lg rounded-2xl"
       />
     </div>
   );

@@ -16,9 +16,9 @@ export default function InsightsLoading() {
       {/* Summary stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-5">
+          <div key={i} className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center gap-4">
-              <Skeleton className="size-11 shrink-0 rounded-4xl" />
+              <Skeleton className="size-11 shrink-0 rounded-2xl" />
               <div className="space-y-1.5">
                 <Skeleton className="h-7 w-10" />
                 <Skeleton className="h-3 w-20" />
@@ -30,7 +30,7 @@ export default function InsightsLoading() {
 
       {/* Row 1: Pipeline + Application Status */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="rounded-2xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-6 flex items-center justify-between">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-3 w-16" />
@@ -47,7 +47,7 @@ export default function InsightsLoading() {
             ))}
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <div className="mb-6 flex items-center justify-between">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-3 w-12" />
@@ -67,7 +67,7 @@ export default function InsightsLoading() {
       </div>
 
       {/* Match Quality - full width */}
-      <div className="rounded-4xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-6">
         <Skeleton className="mb-6 h-5 w-32" />
         <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start">
           <Skeleton className="size-36 shrink-0 rounded-full" />
@@ -88,7 +88,7 @@ export default function InsightsLoading() {
       {/* Row 2: Sources + Work Location + Practice */}
       <div className="grid gap-6 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-6">
+          <div key={i} className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-4 flex items-center gap-2">
               <Skeleton className="size-4" />
               <Skeleton className="h-5 w-24" />
@@ -99,7 +99,7 @@ export default function InsightsLoading() {
       </div>
 
       {/* Employment Types */}
-      <div className="rounded-4xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-6">
         <Skeleton className="mb-4 h-5 w-32" />
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 4 }).map((_, i) => (

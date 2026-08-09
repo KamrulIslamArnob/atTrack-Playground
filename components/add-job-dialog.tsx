@@ -15,14 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, UserRound, X } from "lucide-react";
 import type { ExtractionResult } from "@/lib/ai/schema";
-
-interface JobNote {
-  id: string;
-  title: string;
-  bullets: string[];
-}
+import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
 
 const employmentTypes = [
   "Full-time",
@@ -46,9 +41,11 @@ interface AddJobDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Board column to drop the new job into. Omitted => createJob falls back to Wishlist. */
+  listId?: string;
 }
 
-export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpenChange }: AddJobDialogProps) {
+export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpenChange, listId }: AddJobDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -60,48 +57,13 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
       bullets: n.bullets,
     })) ?? []
   );
-  const [showNoteForm, setShowNoteForm] = useState(false);
-  const [noteTitle, setNoteTitle] = useState("");
-  const [noteBullets, setNoteBullets] = useState<string[]>([""]);
   const [workLocation, setWorkLocation] = useState(initialData?.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(initialData?.employment_type ?? "Full-time");
   const [status, setStatus] = useState("saved");
+  // A recruiter/hiring-manager the AI found in the posting — CRM feed, not a
+  // form field. Dismissible so the user can opt out of adding it.
+  const [contact, setContact] = useState(initialData?.contact ?? null);
   const router = useRouter();
-
-  const addNote = () => {
-    if (!noteTitle.trim()) return;
-    const filteredBullets = noteBullets.filter((b) => b.trim());
-    setNotes([
-      ...notes,
-      {
-        id: crypto.randomUUID(),
-        title: noteTitle.trim(),
-        bullets: filteredBullets,
-      },
-    ]);
-    setNoteTitle("");
-    setNoteBullets([""]);
-    setShowNoteForm(false);
-  };
-
-  const removeNote = (id: string) => {
-    setNotes(notes.filter((n) => n.id !== id));
-  };
-
-  const addBullet = () => {
-    setNoteBullets([...noteBullets, ""]);
-  };
-
-  const updateBullet = (index: number, value: string) => {
-    const updated = [...noteBullets];
-    updated[index] = value;
-    setNoteBullets(updated);
-  };
-
-  const removeBullet = (index: number) => {
-    if (noteBullets.length <= 1) return;
-    setNoteBullets(noteBullets.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -112,6 +74,12 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     formData.append("work_location", workLocation);
     formData.append("employment_type", employmentType);
     formData.append("status", status);
+    if (listId) formData.append("list_id", listId);
+    if (contact?.name || contact?.email) {
+      if (contact.name) formData.append("contact_name", contact.name);
+      if (contact.email) formData.append("contact_email", contact.email);
+      if (contact.role) formData.append("contact_role", contact.role);
+    }
     const result = await createJob(formData);
     setOpen(false);
     setPending(false);
@@ -119,7 +87,9 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     setWorkLocation("");
     setEmploymentType("Full-time");
     setStatus("saved");
-    if (result?.jobId) {
+    setContact(null);
+    // Opened from the board: stay on the board instead of navigating away.
+    if (result?.jobId && !listId) {
       router.push("/jobs/" + result.jobId);
     } else {
       router.refresh();
@@ -130,21 +100,21 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     <>
       {trigger ? (
         <span onClick={() => setOpen(true)}>{trigger}</span>
-      ) : (
+      ) : controlledOpen === undefined ? (
         <Button size="sm" onClick={() => setOpen(true)}>
           <Plus className="mr-1 size-4" />
           Add Job
         </Button>
-      )}
+      ) : null}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-4xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-lg font-semibold">Add Job</h2>
               <button
                 onClick={() => setOpen(false)}
-                className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -169,7 +139,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                   <Input id="application_email" name="application_email" type="email" placeholder="careers@example.com" defaultValue={initialData?.application_email ?? ""} className="h-10" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="application_process">How to apply</Label>
+                  <Label htmlFor="application_process">Application instructions</Label>
                   <Input id="application_process" name="application_process" placeholder="e.g. Send resume with subject..." defaultValue={initialData?.application_process ?? ""} className="h-10" />
                 </div>
               </div>
@@ -239,106 +209,34 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                 <Input id="source" name="source" placeholder="e.g. LinkedIn" defaultValue={initialData?.source ?? ""} className="h-10" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Job description</Label>
+                  <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
                   name="description"
                   rows={4}
-                  placeholder="Paste the job description here..."
+                  placeholder="Paste the full job posting here..."
                   defaultValue={initialData?.description ?? ""}
                 />
               </div>
 
-              {/* Notes section */}
-              <div className="space-y-2">
-                <Label>Notes</Label>
-                {notes.length > 0 && (
-                  <div className="space-y-2">
-                    {notes.map((note) => (
-                      <div key={note.id} className="rounded-4xl border border-border bg-muted/50 p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">{note.title}</p>
-                            {note.bullets.length > 0 && (
-                              <ul className="mt-1 space-y-0.5">
-                                {note.bullets.map((bullet, i) => (
-                                  <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                                    <span className="mt-1 size-1 shrink-0 rounded-full bg-muted-foreground" />
-                                    {bullet}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeNote(note.id)}
-                            className="flex size-6 shrink-0 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {showNoteForm ? (
-                  <div className="space-y-3 rounded-4xl border border-border p-3">
-                    <Input
-                      value={noteTitle}
-                      onChange={(e) => setNoteTitle(e.target.value)}
-                      placeholder="Title (e.g. Backend Integration)"
-                      className="h-9"
-                    />
-                    <div className="space-y-2">
-                      {noteBullets.map((bullet, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <span className="mt-1 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                          <Input
-                            value={bullet}
-                            onChange={(e) => updateBullet(index, e.target.value)}
-                            placeholder="Add a bullet point..."
-                            className="h-8"
-                          />
-                          {noteBullets.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeBullet(index)}
-                              className="flex size-6 shrink-0 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                            >
-                              <X className="size-3" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" className="w-full" onClick={addBullet}>
-                      <Plus className="mr-1 size-3" />
-                      Add bullet
-                    </Button>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => { setShowNoteForm(false); setNoteTitle(""); setNoteBullets([""]); }}>
-                        Cancel
-                      </Button>
-                      <Button type="button" size="sm" onClick={addNote} disabled={!noteTitle.trim()}>
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
+              {contact && (contact.name || contact.email) && (
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  <UserRound className="size-3.5 shrink-0" />
+                  <span className="flex-1 truncate">
+                    Found a contact: <span className="font-medium text-foreground">{contact.name ?? contact.email}</span>
+                    {contact.name && contact.email ? ` (${contact.email})` : null} — saved to your CRM
+                  </span>
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => setShowNoteForm(true)}
+                    onClick={() => setContact(null)}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
                   >
-                    <Plus className="mr-1 size-4" />
-                    Add note
-                  </Button>
-                )}
-              </div>
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
+
+              <JobNotesEditor notes={notes} onChange={setNotes} />
 
               <div className="flex justify-end gap-3 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
@@ -346,7 +244,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                 </Button>
                 <Button type="submit" size="sm" disabled={pending}>
                   {pending ? <Spinner className="mr-2" /> : null}
-                  Save Job
+                  Save job
                 </Button>
               </div>
             </form>

@@ -38,8 +38,8 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "Aven",
-    template: "%s | Aven",
+    default: "AtTrack",
+    template: "%s | AtTrack",
   },
   description: "Your personal job application tracker",
 };

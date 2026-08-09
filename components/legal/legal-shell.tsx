@@ -23,7 +23,7 @@ export function LegalShell({
 
         <div className="relative mx-auto max-w-3xl">
           <div className="mt-16 text-center">
-            <span className="inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
               {badge}
             </span>
             <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
@@ -96,7 +96,7 @@ export function LegalList({ items }: { items: React.ReactNode[] }) {
 
 export function LegalNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-4xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-muted-foreground [&_strong]:font-semibold [&_strong]:text-foreground sm:text-[15px]">
+    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-muted-foreground [&_strong]:font-semibold [&_strong]:text-foreground sm:text-[15px]">
       {children}
     </div>
   );

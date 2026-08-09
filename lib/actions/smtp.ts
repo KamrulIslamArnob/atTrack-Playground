@@ -23,7 +23,9 @@ export async function getSmtpConfig(): Promise<SmtpConfig | null> {
     .eq("user_id", userId)
     .single();
 
-  return data;
+  // The query layer returns an untyped row (see DbResult in lib/db/query.ts);
+  // .single() yields null when there is no config, which this cast preserves.
+  return data as unknown as SmtpConfig | null;
 }
 
 export async function isSmtpConfigured(): Promise<boolean> {

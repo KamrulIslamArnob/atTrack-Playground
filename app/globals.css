@@ -40,82 +40,96 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Radius ladder — see DESIGN.md "Radius". Each step is a flat 4px above the
+     last (not proportional to --radius) so nesting a smaller-tier element
+     inside a larger one always reads as a clear, consistent step, not a
+     coincidence of rounding. --radius itself stays at the shadcn-conventional
+     0.5rem so any vendor code that reads it directly still gets something sane. */
+  --radius-sm: 0.25rem;   /* 4px  — checkboxes, tags, tiny controls */
+  --radius-md: 0.375rem;  /* 6px  — reserved */
+  --radius-lg: 0.5rem;    /* 8px  — buttons, inputs, menu/select rows */
+  --radius-xl: 0.75rem;   /* 12px — dropdown/select popovers */
+  --radius-2xl: 1rem;     /* 16px — cards, board items, list rows */
+  --radius-3xl: 1.25rem;  /* 20px — dialogs, sheets, modal shells */
+  --radius-4xl: 1.5rem;   /* 24px — reserved for a rare hero/feature panel */
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.852 0.199 91.936);
-  --primary-foreground: oklch(0.421 0.095 57.708);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: #ffffff;
+  --foreground: #0b3d3a;
+  --card: #ffffff;
+  --card-foreground: #0b3d3a;
+  --popover: #ffffff;
+  --popover-foreground: #0b3d3a;
+  --primary: #0b3d3a;
+  --primary-foreground: #ffffff;
+  --secondary: #dfff2f;
+  --secondary-foreground: #0b3d3a;
+  --muted: #f5f5f5;
+  --muted-foreground: #14534b;
+  --accent: #c4ea17;
+  --accent-foreground: #0b3d3a;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0 0);
-  --input: oklch(0.92 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.681 0.162 75.834);
-  --sidebar-primary-foreground: oklch(0.987 0.026 102.212);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.92 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #dfff2f;
+  --chart-1: #0b3d3a;
+  --chart-2: #14534b;
+  --chart-3: #c4ea17;
+  --chart-4: #dfff2f;
+  --chart-5: #ecff9c;
+  --radius: 0.5rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b3d3a;
+  --sidebar-primary: #dfff2f;
+  --sidebar-primary-foreground: #0b3d3a;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #0b3d3a;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #14534b;
+
+  --gradient-brand-from: #dfff2f;
+  --gradient-brand-via: #c4ea17;
+  --gradient-brand-to: #0b3d3a;
+  --gradient-brand-tint: #ecff9c;
+  --gradient-brand-tint-strong: #c4ea17;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.795 0.184 86.047);
-  --primary-foreground: oklch(0.421 0.095 57.708);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #0b3d3a;
+  --foreground: #ffffff;
+  --card: #14534b;
+  --card-foreground: #ffffff;
+  --popover: #14534b;
+  --popover-foreground: #ffffff;
+  --primary: #dfff2f;
+  --primary-foreground: #0b3d3a;
+  --secondary: #14534b;
+  --secondary-foreground: #ffffff;
+  --muted: #0a3030;
+  --muted-foreground: #ecff9c;
+  --accent: #c4ea17;
+  --accent-foreground: #0b3d3a;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.795 0.184 86.047);
-  --sidebar-primary-foreground: oklch(0.987 0.026 102.212);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: #ffffff22;
+  --input: #ffffff22;
+  --ring: #dfff2f;
+  --chart-1: #dfff2f;
+  --chart-2: #c4ea17;
+  --chart-3: #ecff9c;
+  --chart-4: #14534b;
+  --chart-5: #0b3d3a;
+  --sidebar: #0a3030;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #dfff2f;
+  --sidebar-primary-foreground: #0b3d3a;
+  --sidebar-accent: #14534b;
+  --sidebar-accent-foreground: #ecff9c;
+  --sidebar-border: #ffffff22;
+  --sidebar-ring: #dfff2f;
+
+  --gradient-brand-tint: color-mix(in oklch, var(--gradient-brand-to) 25%, var(--background));
+  --gradient-brand-tint-strong: color-mix(in oklch, var(--gradient-brand-to) 40%, var(--background));
 }
 
 @layer base {
@@ -177,4 +191,35 @@
 
 .shimmer-icon {
   animation: shimmer-icon 3s ease-in-out infinite;
+}
+
+/* Hides the scrollbar on a scrollable element while keeping it scrollable
+   (native scroll, drag-to-pan, and the edge chevrons on /board rely on it). */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Brand gradient utilities — see DESIGN.md for where these are allowed. */
+.bg-gradient-brand {
+  background-image: linear-gradient(135deg, var(--gradient-brand-from) 0%, var(--gradient-brand-via) 55%, var(--gradient-brand-to) 100%);
+}
+
+.bg-gradient-brand-tint {
+  background-color: var(--gradient-brand-tint);
+}
+
+.bg-gradient-brand-tint-strong {
+  background-color: var(--gradient-brand-tint-strong);
+}
+
+.text-gradient-brand {
+  background-image: linear-gradient(135deg, var(--gradient-brand-from), var(--gradient-brand-via));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }

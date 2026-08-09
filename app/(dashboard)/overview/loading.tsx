@@ -4,21 +4,21 @@ export default function OverviewLoading() {
   return (
     <div className="space-y-6">
       {/* Hero banner */}
-      <div className="rounded-4xl border border-border bg-card p-6 sm:p-8">
+      <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-72" />
           </div>
           <div className="flex gap-2">
-            <Skeleton className="h-9 w-24 rounded-4xl" />
-            <Skeleton className="h-9 w-24 rounded-4xl" />
+            <Skeleton className="h-9 w-24 rounded-2xl" />
+            <Skeleton className="h-9 w-24 rounded-2xl" />
           </div>
         </div>
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">
-              <Skeleton className="size-10 shrink-0 rounded-4xl" />
+              <Skeleton className="size-10 shrink-0 rounded-2xl" />
               <div className="space-y-1.5">
                 <Skeleton className="h-5 w-10" />
                 <Skeleton className="h-3 w-16" />
@@ -32,7 +32,7 @@ export default function OverviewLoading() {
 
       {/* Row 1: Pipeline + Match Score */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="rounded-2xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-6 flex items-center justify-between">
             <div className="space-y-1">
               <Skeleton className="h-5 w-28" />
@@ -52,7 +52,7 @@ export default function OverviewLoading() {
             ))}
           </div>
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <div className="mb-6 space-y-1">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-3 w-20" />
@@ -73,14 +73,14 @@ export default function OverviewLoading() {
 
       {/* Row 2: Trend + Time Analytics */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-4xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="rounded-2xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-6 space-y-1">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-3 w-20" />
           </div>
           <Skeleton className="h-48 w-full" />
         </div>
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <div className="mb-6 space-y-1">
             <Skeleton className="h-5 w-32" />
             <Skeleton className="h-3 w-28" />
@@ -88,7 +88,7 @@ export default function OverviewLoading() {
           <div className="space-y-6">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="flex items-center gap-4">
-                <Skeleton className="size-12 shrink-0 rounded-4xl" />
+                <Skeleton className="size-12 shrink-0 rounded-2xl" />
                 <div className="space-y-1.5">
                   <Skeleton className="h-7 w-14" />
                   <Skeleton className="h-3 w-28" />
@@ -102,7 +102,7 @@ export default function OverviewLoading() {
       {/* Row 3: Sources + Location + Employment */}
       <div className="grid gap-6 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-6">
+          <div key={i} className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-6 space-y-1">
               <Skeleton className="h-5 w-28" />
               <Skeleton className="h-3 w-24" />
@@ -115,7 +115,7 @@ export default function OverviewLoading() {
       {/* Row 4: Top Companies + Interview Stats + Practice */}
       <div className="grid gap-6 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-6">
+          <div key={i} className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-6 space-y-1">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-3 w-24" />
@@ -123,7 +123,7 @@ export default function OverviewLoading() {
             <div className="space-y-4">
               {Array.from({ length: 4 }).map((_, j) => (
                 <div key={j} className="flex items-center gap-3">
-                  <Skeleton className="size-8 shrink-0 rounded-4xl" />
+                  <Skeleton className="size-8 shrink-0 rounded-2xl" />
                   <div className="flex-1 space-y-1.5">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-3 w-20" />
@@ -138,7 +138,7 @@ export default function OverviewLoading() {
       {/* Row 5: Upcoming Interviews + Recent Activity */}
       <div className="grid gap-6 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-6">
+          <div key={i} className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <Skeleton className="h-5 w-40" />
@@ -148,8 +148,8 @@ export default function OverviewLoading() {
             </div>
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="flex items-center gap-4 rounded-4xl border border-border p-4">
-                  <Skeleton className="size-10 shrink-0 rounded-4xl" />
+                <div key={j} className="flex items-center gap-4 rounded-2xl border border-border p-4">
+                  <Skeleton className="size-10 shrink-0 rounded-2xl" />
                   <div className="flex-1 space-y-1.5">
                     <Skeleton className="h-4 w-40" />
                     <Skeleton className="h-3 w-24" />
@@ -166,12 +166,12 @@ export default function OverviewLoading() {
       </div>
 
       {/* Quick Actions */}
-      <div className="rounded-4xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-6">
         <Skeleton className="mb-4 h-5 w-28" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 rounded-4xl border border-border p-4">
-              <Skeleton className="size-10 rounded-4xl" />
+            <div key={i} className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4">
+              <Skeleton className="size-10 rounded-2xl" />
               <Skeleton className="h-4 w-20" />
             </div>
           ))}

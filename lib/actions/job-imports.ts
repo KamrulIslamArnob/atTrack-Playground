@@ -2,7 +2,7 @@
 
 import { getUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { extractJobFromScreenshots } from "@/lib/ai/ai";
+import { extractJob } from "@/lib/ai/ai";
 import { createExtractionLogger } from "@/lib/ai/logger";
 import type { ExtractionResult } from "@/lib/ai/schema";
 import { logResourceActivity } from "@/lib/actions/activity-log";
@@ -44,12 +44,29 @@ export async function uploadScreenshot(
   return { screenshotId, screenshotUrl: signedUrlData.signedUrl };
 }
 
-export async function extractFromScreenshots(
-  screenshotIds: string[]
+/**
+ * One job posting, extracted from any mix of uploaded screenshots, pasted
+ * text, and a source URL (career page, LinkedIn/Facebook post, ...) — at
+ * least one of the three must be provided. All feed the same AI call so the
+ * model merges them itself (see extractJob in lib/ai/ai.ts), including
+ * fetching the URL via Gemini's built-in url_context tool.
+ */
+export async function extractJobImport(
+  screenshotIds: string[],
+  text: string,
+  url: string
 ): Promise<ExtractionResult> {
   const { userId } = await getUser();
   if (!userId) throw new Error("Unauthorized");
-  if (screenshotIds.length === 0) throw new Error("No screenshots provided");
+
+  const trimmedText = text.trim();
+  const trimmedUrl = url.trim();
+  if (screenshotIds.length === 0 && !trimmedText && !trimmedUrl) {
+    throw new Error("Add a screenshot, paste text, a link, or a combination");
+  }
+  if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+    throw new Error("Link must start with http:// or https://");
+  }
 
   // Verify all screenshots belong to user
   for (const id of screenshotIds) {
@@ -58,7 +75,10 @@ export async function extractFromScreenshots(
     }
   }
 
-  const extractionLog = createExtractionLogger(screenshotIds[0], userId);
+  // ai_extraction_logs.screenshot_id is NOT NULL; use the first screenshot id
+  // when there is one, otherwise a generated id for a text-only import.
+  const sourceId = screenshotIds[0] ?? `text/${userId}/${crypto.randomUUID()}`;
+  const extractionLog = createExtractionLogger(sourceId, userId);
   extractionLog.start();
 
   const supabase = createAdminClient();
@@ -73,7 +93,7 @@ export async function extractFromScreenshots(
 
     if (downloadError) {
       const { duration, error } = extractionLog.error(downloadError);
-      await saveLog(supabase, userId, screenshotIds.join(","), "error", duration, undefined, error);
+      await saveLog(supabase, userId, sourceId, "error", duration, undefined, error);
       throw new Error(`Download failed: ${downloadError.message}`);
     }
 
@@ -83,19 +103,23 @@ export async function extractFromScreenshots(
   }
 
   try {
-    const result = await extractJobFromScreenshots(imagesBase64, userId);
+    const result = await extractJob(imagesBase64, trimmedText, trimmedUrl, userId);
     const extractedFields = Object.entries(result)
       .filter(([, v]) => v !== null && v !== undefined)
       .map(([k]) => k);
 
     const { duration } = extractionLog.success(extractedFields);
-    await saveLog(supabase, userId, screenshotIds.join(","), "success", duration, extractedFields);
-    await logResourceActivity(userId, "extract", "screenshot", undefined, { screenshots: screenshotIds.length });
+    await saveLog(supabase, userId, sourceId, "success", duration, extractedFields);
+    await logResourceActivity(userId, "extract", "job_import", undefined, {
+      screenshots: screenshotIds.length,
+      hasText: !!trimmedText,
+      hasUrl: !!trimmedUrl,
+    });
 
     return result;
   } catch (err) {
     const { duration, error } = extractionLog.error(err);
-    await saveLog(supabase, userId, screenshotIds.join(","), "error", duration, undefined, error);
+    await saveLog(supabase, userId, sourceId, "error", duration, undefined, error);
     throw err;
   }
 }

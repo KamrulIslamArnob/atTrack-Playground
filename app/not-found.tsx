@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
-import { MapPinOff, ArrowLeft, LogIn } from "lucide-react";
+import { MapPinOff, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -11,13 +11,13 @@ export default function NotFound() {
         <div className="flex items-center justify-center gap-2.5 opacity-90 transition-opacity hover:opacity-100">
           <Image
             src="/logo.png"
-            alt="Aven"
+            alt="AtTrack"
             width={28}
             height={28}
             priority
             className="drop-shadow-sm"
           />
-          <span className="font-heading text-xl font-semibold tracking-tight">Aven</span>
+          <span className="font-heading text-xl font-semibold tracking-tight">AtTrack</span>
         </div>
 
         {/* Premium Icon Container */}
@@ -36,7 +36,7 @@ export default function NotFound() {
           404
         </h1>
         <p className="mt-4 text-base text-muted-foreground/90">
-          The page you are looking for doesn't exist or has been moved.
+          This page doesn&apos;t exist. It may have been moved or never existed.
         </p>
 
         {/* Action Buttons */}
@@ -50,13 +50,6 @@ export default function NotFound() {
           >
             <ArrowLeft className="mr-2 size-4" strokeWidth={2} />
             Back to dashboard
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-border/60 bg-background/50 px-6 py-2.5 text-sm font-medium text-foreground shadow-sm backdrop-blur-md transition-all hover:border-border hover:bg-muted active:scale-[0.98]"
-          >
-            Sign in
-            <LogIn className="ml-2 size-4 text-muted-foreground" strokeWidth={2} />
           </Link>
         </div>
       </div>

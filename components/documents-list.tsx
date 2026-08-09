@@ -71,7 +71,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
   }
 
   return (
-    <div className="rounded-4xl border border-border overflow-x-auto">
+    <div className="rounded-2xl border border-border overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/50">
@@ -102,7 +102,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                     {doc.name}
                   </Link>
                   {doc.is_default && (
-                    <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                       <Star className="size-2.5" />
                       Default
                     </span>
@@ -111,7 +111,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               </td>
               <td className="px-4 py-3">
                 <span
-                  className={`inline-block rounded-4xl px-2 py-0.5 text-[10px] font-medium ${typeColors[doc.type] ?? "bg-muted text-muted-foreground"}`}
+                  className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${typeColors[doc.type] ?? "bg-muted text-muted-foreground"}`}
                 >
                   {typeLabels[doc.type] ?? doc.type}
                 </span>

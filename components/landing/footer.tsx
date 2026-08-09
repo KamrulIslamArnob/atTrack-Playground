@@ -15,7 +15,6 @@ const resourceLinks = [
   { label: "Testimonials", href: "/#testimonials" },
   { label: "Privacy Policy", href: "/privacy-policy" },
   { label: "Terms & Conditions", href: "/terms" },
-  { label: "Sign in", href: "/login" },
 ];
 
 export function Footer() {
@@ -26,25 +25,25 @@ export function Footer() {
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-12">
             <div className="sm:col-span-2 lg:col-span-4">
               <Link href="/" className="inline-flex items-center gap-2.5">
-                <Image src="/logo.png" alt="Aven" width={18} height={18} />
+                <Image src="/logo.png" alt="AtTrack" width={18} height={18} />
                 <span className="font-heading text-lg font-semibold">
-                  Aven
+                  AtTrack
                 </span>
               </Link>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/70 dark:text-foreground/70">
-                The AI-powered workspace that carries your job search from first
-                sight to signed offer — jobs, applications, interviews, and
-                practice in one private place.
+                A private workspace for your job search — save jobs, track
+                applications, practice interviews, and see how you&apos;re doing.
+                All on your own machine.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
-                  Free forever
+                  Free, forever
                 </span>
                 <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
-                  Private by design
+                  Runs on your machine
                 </span>
                 <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
-                  No credit card
+                  No sign-up
                 </span>
               </div>
             </div>
@@ -82,26 +81,19 @@ export function Footer() {
             </div>
 
             <div className="sm:col-span-2 lg:col-span-4">
-              <div className="rounded-4xl border border-background/15 bg-background/10 p-6 dark:border-foreground/15 dark:bg-foreground/10">
+              <div className="rounded-2xl border border-background/15 bg-background/10 p-6 dark:border-foreground/15 dark:bg-foreground/10">
                 <h4 className="text-base font-semibold">
-                  Start tracking your job search
+                  Start using AtTrack
                 </h4>
                 <p className="mt-1.5 text-sm text-background/70 dark:text-foreground/70">
-                  Create your free account in under a minute. No credit card
-                  required.
+                  It runs on this machine. No account, no cloud, no setup.
                 </p>
                 <div className="mt-5 flex gap-3">
                   <Link
-                    href="/signup"
-                    className="inline-flex h-10 items-center gap-2 rounded-4xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+                    href="/overview"
+                    className="inline-flex h-10 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
                   >
-                    Get started
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="inline-flex h-10 items-center rounded-4xl border border-background/25 bg-background/10 px-5 text-sm font-medium transition-all hover:bg-background/20 dark:border-foreground/25 dark:bg-foreground/10 dark:hover:bg-foreground/20"
-                  >
-                    Sign in
+                    Open AtTrack
                   </Link>
                 </div>
               </div>
@@ -111,7 +103,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-background/15 pt-8 sm:flex-row dark:border-foreground/15">
           <p className="text-xs text-background/50 dark:text-foreground/50">
-            &copy; {new Date().getFullYear()} Aven. All rights reserved.
+            &copy; {new Date().getFullYear()} AtTrack. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-xs text-background/50 dark:text-foreground/50">
             <Link

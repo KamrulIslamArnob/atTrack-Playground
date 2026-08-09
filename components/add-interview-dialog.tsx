@@ -42,12 +42,15 @@ const statusOptions = [
 interface AddInterviewDialogProps {
   jobs: PreparingJob[];
   trigger?: React.ReactNode;
+  /** job-detail-sheet Shortcuts panel: skip the job picker, always scheduling for this job. */
+  lockedJobId?: string;
+  onCreated?: () => void;
 }
 
-export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
+export function AddInterviewDialog({ jobs, trigger, lockedJobId, onCreated }: AddInterviewDialogProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const [jobId, setJobId] = useState("");
+  const [jobId, setJobId] = useState(lockedJobId ?? "");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("scheduled");
   const router = useRouter();
@@ -83,9 +86,10 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
 
     setPending(false);
     setOpen(false);
-    setJobId("");
+    setJobId(lockedJobId ?? "");
     setType("");
     setStatus("scheduled");
+    onCreated?.();
     router.refresh();
   };
 
@@ -102,19 +106,19 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-4xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-lg font-semibold">Add Interview</h2>
               <button
                 onClick={() => setOpen(false)}
-                className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            {jobs.length === 0 ? (
-              <div className="mt-4 rounded-4xl border border-dashed border-border p-8 text-center">
+            {!lockedJobId && jobs.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-border p-8 text-center">
                 <p className="text-sm text-muted-foreground">
                   No jobs in &ldquo;Preparing&rdquo; status yet.
                 </p>
@@ -124,6 +128,7 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                {!lockedJobId && (
                 <div className="space-y-2">
                   <Label>Job *</Label>
                   <Select value={jobId} onValueChange={(v) => setJobId(v ?? "")}>
@@ -146,6 +151,7 @@ export function AddInterviewDialog({ jobs, trigger }: AddInterviewDialogProps) {
                     Only jobs in &ldquo;Preparing&rdquo; status are eligible for interviews.
                   </p>
                 </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

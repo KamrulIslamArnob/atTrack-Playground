@@ -20,9 +20,9 @@ export default function AdminAiUsageLoading() {
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-4">
+          <div key={i} className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-3">
-              <Skeleton className="size-10 shrink-0 rounded-4xl" />
+              <Skeleton className="size-10 shrink-0 rounded-2xl" />
               <div className="space-y-2">
                 <Skeleton className="h-5 w-16" />
                 <Skeleton className="h-3 w-28" />
@@ -47,7 +47,7 @@ export default function AdminAiUsageLoading() {
       <Skeleton className="h-3 w-36" />
 
       {/* Table */}
-      <div className="rounded-4xl border border-border">
+      <div className="rounded-2xl border border-border">
         <div className="bg-muted/50 px-4 py-3">
           <div className="flex gap-4">
             <Skeleton className="h-4 w-10" />

@@ -10,7 +10,7 @@ export default function InterviewsLoading() {
             <Skeleton className="h-7 w-28" />
             <Skeleton className="h-4 w-48" />
           </div>
-          <Skeleton className="h-9 w-32 rounded-4xl" />
+          <Skeleton className="h-9 w-32 rounded-2xl" />
         </div>
       </div>
 
@@ -22,13 +22,13 @@ export default function InterviewsLoading() {
         <Skeleton className="h-10 w-full lg:w-[130px]" />
         <Skeleton className="h-10 w-full lg:w-[160px]" />
         <div className="flex items-center gap-1 lg:ml-auto">
-          <Skeleton className="h-9 w-20 rounded-4xl" />
-          <Skeleton className="h-9 w-9 rounded-4xl" />
+          <Skeleton className="h-9 w-20 rounded-2xl" />
+          <Skeleton className="h-9 w-9 rounded-2xl" />
         </div>
       </div>
 
       {/* Table skeleton */}
-      <div className="overflow-x-auto rounded-4xl border border-border">
+      <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -47,7 +47,7 @@ export default function InterviewsLoading() {
                 <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                 <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                <td className="px-4 py-3"><Skeleton className="h-8 w-8 rounded-4xl" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-8 w-8 rounded-2xl" /></td>
               </tr>
             ))}
           </tbody>

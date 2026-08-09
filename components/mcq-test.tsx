@@ -64,7 +64,7 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-md text-center">
+        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-md text-center">
           <div className="mx-auto size-12 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
           <p className="mt-4 text-sm text-muted-foreground">
             Generating interview questions...
@@ -78,12 +78,12 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
   if (error) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-md">
+        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-md">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-semibold">MCQ Test</h2>
             <button
               onClick={onClose}
-              className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <X className="size-4" />
             </button>
@@ -106,12 +106,12 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
   if (!test) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-md">
+        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-md">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-semibold">MCQ Practice Test</h2>
             <button
               onClick={onClose}
-              className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <X className="size-4" />
             </button>
@@ -139,12 +139,12 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="w-full max-w-2xl rounded-4xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+        <div className="w-full max-w-2xl rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-semibold">Results</h2>
             <button
               onClick={onClose}
-              className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <X className="size-4" />
             </button>
@@ -167,7 +167,7 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
               return (
                 <div
                   key={q.id}
-                  className={`rounded-4xl border p-4 ${
+                  className={`rounded-2xl border p-4 ${
                     isCorrect
                       ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
                       : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
@@ -218,12 +218,12 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-4xl border border-border bg-card p-6 shadow-md">
+      <div className="w-full max-w-2xl rounded-3xl border border-border bg-card p-6 shadow-md">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">Question {currentQ + 1} of {total}</h2>
           <button
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="size-4" />
           </button>
@@ -248,7 +248,7 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
                 <button
                   key={i}
                   onClick={() => handleAnswer(question.id, i)}
-                  className={`flex w-full items-center gap-3 rounded-4xl border p-3 text-left transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
                     isSelected
                       ? "border-primary bg-primary/5"
                       : "border-border hover:bg-muted/50"

@@ -116,12 +116,12 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-4xl border border-border bg-card p-6 shadow-md">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-md">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">Upload Document</h2>
           <button
             onClick={handleClose}
-            className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="size-4" />
           </button>
@@ -143,7 +143,7 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
               className="hidden"
             />
             {file ? (
-              <div className="flex items-center gap-3 rounded-4xl border border-border p-3">
+              <div className="flex items-center gap-3 rounded-2xl border border-border p-3">
                 <FileText className="size-8 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
@@ -163,7 +163,7 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex w-full items-center justify-center gap-2 rounded-4xl border border-dashed border-border p-8 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
               >
                 <Upload className="size-4" />
                 Choose PDF file

@@ -62,9 +62,9 @@ export default async function InsightsPage() {
       <div className="-mx-6 border-b border-border pb-6">
         <div className="px-6">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Insights</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Analytics and patterns from your job search.
-          </p>
+            <p className="text-sm text-muted-foreground sm:text-base">
+              What your job search looks like from the outside — where things are working, where they&apos;re stuck.
+            </p>
         </div>
       </div>
 
@@ -101,7 +101,7 @@ export default async function InsightsPage() {
       {/* Main content grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Job Pipeline - takes 2 cols */}
-        <div className="lg:col-span-2 rounded-4xl border border-border bg-card p-6">
+        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-semibold">Job Pipeline</h2>
             <span className="text-xs text-muted-foreground">{insights.totalJobs} jobs</span>
@@ -138,14 +138,14 @@ export default async function InsightsPage() {
             {jobPipelineEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm text-muted-foreground">No jobs yet</p>
+                <p className="text-sm text-muted-foreground">Add jobs to see your pipeline</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Application Status */}
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-semibold">Application Status</h2>
             <span className="text-xs text-muted-foreground">{insights.totalApplications} apps</span>
@@ -182,14 +182,14 @@ export default async function InsightsPage() {
             {appStatusEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="size-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm text-muted-foreground">No applications yet</p>
+                <p className="text-sm text-muted-foreground">Apply to jobs to see your progress</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Match score ring */}
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-heading text-lg font-semibold">Match Quality</h2>
           <div className="mt-6 flex flex-col items-center">
             <div className="relative size-32">
@@ -252,7 +252,7 @@ export default async function InsightsPage() {
       {/* Second row */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Sources */}
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-heading text-lg font-semibold flex items-center gap-2">
             <Building2 className="size-4 text-muted-foreground" />
             Sources
@@ -276,13 +276,13 @@ export default async function InsightsPage() {
                 </div>
               ))}
             {Object.keys(insights.sourceBreakdown).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No data</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No data yet</p>
             )}
           </div>
         </div>
 
         {/* Work location */}
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-heading text-lg font-semibold flex items-center gap-2">
             <Globe className="size-4 text-muted-foreground" />
             Work Location
@@ -308,25 +308,25 @@ export default async function InsightsPage() {
                 );
               })}
             {Object.keys(insights.workLocationBreakdown).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No data</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No data yet</p>
             )}
           </div>
         </div>
 
         {/* Practice performance */}
-        <div className="rounded-4xl border border-border bg-card p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-heading text-lg font-semibold flex items-center gap-2">
             <BookOpen className="size-4 text-muted-foreground" />
             Practice
           </h2>
           <div className="mt-4 space-y-4">
-            <div className="rounded-4xl bg-muted/50 p-4">
+            <div className="rounded-2xl bg-muted/50 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Tests Taken</span>
                 <span className="text-xl font-bold">{insights.mcqStats.totalTests}</span>
               </div>
             </div>
-            <div className="rounded-4xl bg-muted/50 p-4">
+            <div className="rounded-2xl bg-muted/50 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Average</span>
                 <span className={`text-xl font-bold ${
@@ -340,7 +340,7 @@ export default async function InsightsPage() {
                 </span>
               </div>
             </div>
-            <div className="rounded-4xl bg-muted/50 p-4">
+            <div className="rounded-2xl bg-muted/50 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Best Score</span>
                 <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -353,7 +353,7 @@ export default async function InsightsPage() {
       </div>
 
       {/* Employment types */}
-      <div className="rounded-4xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-heading text-lg font-semibold">Employment Types</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {Object.entries(insights.employmentTypeBreakdown)
@@ -390,9 +390,9 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-4xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex items-center gap-4">
-        <div className={`flex size-11 items-center justify-center rounded-4xl ${color}`}>
+        <div className={`flex size-11 items-center justify-center rounded-2xl ${color}`}>
           <Icon className="size-5 text-white" />
         </div>
         <div>

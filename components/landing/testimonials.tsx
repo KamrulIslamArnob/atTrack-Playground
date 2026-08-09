@@ -14,7 +14,7 @@ const testimonials = [
     name: "Priya Sharma",
     role: "Data Scientist at Meta",
     quote:
-      "The match score feature helped me prioritize where to focus. I knew exactly which applications were worth my time — and landed three offers in six weeks.",
+      "I stopped guessing which jobs to apply to. The match score showed me where I was actually competitive, and I had three offers within six weeks.",
     avatar: "/user-avatars/ihssan-rami-azouagh-gKzxWyJmKLQ-unsplash.jpg",
     highlight: "3 offers in 6 weeks",
     featured: true,
@@ -23,14 +23,14 @@ const testimonials = [
     name: "Sarah Chen",
     role: "Software Engineer at Google",
     quote:
-      "Aven completely transformed how I tracked my job search. I applied to 40+ jobs and never lost track of a single one.",
+      "I applied to over forty jobs and didn't lose track of a single one. That never happened before AtTrack.",
     avatar: "/user-avatars/alex-suprun-mynsNaNwVDc-unsplash.jpg",
   },
   {
     name: "Marcus Johnson",
     role: "Product Designer at Stripe",
     quote:
-      "The AI email composer alone saved me hours. Every application felt personalized without the manual effort.",
+      "Writing application emails used to take forever. AtTrack drafts them in seconds, and I just edit and send. It's the feature I use every day.",
     avatar: "/user-avatars/diego-hernandez-MSepzbKFz10-unsplash.jpg",
   },
 ];
@@ -53,11 +53,11 @@ export function Testimonials() {
       <div className="mx-auto max-w-6xl">
         <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Loved by job seekers
+            People actually use this
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
-            Join thousands who streamlined their job search and landed their
-            dream roles.
+            AtTrack isn&apos;t a demo. It&apos;s what job seekers open every day
+            to manage their search.
           </p>
           <div className="mt-6 inline-flex items-center gap-2.5">
             <Stars />
@@ -77,7 +77,7 @@ export function Testimonials() {
         >
           <motion.article
             variants={staggerItem}
-            className="relative flex flex-col overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-primary/[0.06] via-card to-card p-6 transition-all hover:shadow-xl hover:shadow-primary/5 sm:p-8 lg:col-span-2 lg:row-span-2"
+            className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/[0.06] via-card to-card p-6 transition-all hover:shadow-xl hover:shadow-primary/5 sm:p-8 lg:col-span-2 lg:row-span-2"
           >
             <Quote className="absolute top-6 right-6 size-16 text-primary/10" />
             <div className="flex gap-1">
@@ -110,7 +110,7 @@ export function Testimonials() {
             <motion.article
               key={t.name}
               variants={staggerItem}
-              className="flex flex-col rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5"
+              className="flex flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5"
             >
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (

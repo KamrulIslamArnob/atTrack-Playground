@@ -12,15 +12,11 @@ const navItems = [
   { href: "#features", label: "Features" },
   { href: "#how-it-works", label: "How it works" },
   { href: "#ai", label: "AI" },
-  { href: "#testimonials", label: "Testimonials" },
+  { href: "#testimonials", label: "Stories" },
   { href: "#faq", label: "FAQ" },
 ];
 
-interface LandingHeaderProps {
-  isAuthenticated?: boolean;
-}
-
-export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
+export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
   const { theme, setTheme } = useTheme();
@@ -76,20 +72,20 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
           className={cn(
             "flex h-14 items-center justify-between px-4 transition-all duration-300 will-change-[transform,opacity] md:grid md:grid-cols-[1fr_auto_1fr]",
             scrolled
-              ? "rounded-4xl border border-white/10 bg-linear-to-r from-white/75 via-white/55 to-primary/10 shadow-lg shadow-black/5 backdrop-blur-md dark:border-white/8 dark:from-white/10 dark:via-white/6 dark:to-primary/20"
+              ? "rounded-2xl border border-white/10 bg-linear-to-r from-white/75 via-white/55 to-primary/10 shadow-lg shadow-black/5 backdrop-blur-md dark:border-white/8 dark:from-white/10 dark:via-white/6 dark:to-primary/20"
               : "rounded-none border-transparent bg-transparent"
           )}
         >
           <Link href="/" className="flex items-center gap-2.5 justify-self-start">
             <Image
               src="/logo.png"
-              alt="Aven"
+              alt="AtTrack"
               width={24}
               height={24}
               priority
             />
             <span className="font-heading text-lg font-semibold tracking-tight">
-              Aven
+              AtTrack
             </span>
           </Link>
           <nav className="hidden items-center justify-self-center gap-1 text-sm text-muted-foreground md:flex">
@@ -98,7 +94,7 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-4xl px-3.5 py-1.5 transition-colors",
+                  "rounded-2xl px-3.5 py-1.5 transition-colors",
                   activeSection === item.href
                     ? "text-primary"
                     : "hover:text-foreground"
@@ -110,11 +106,11 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
           </nav>
           <div className="flex items-center justify-self-end gap-3">
             {mounted && (
-              <div className="hidden items-center gap-0.5 rounded-4xl border border-border/50 bg-card/50 p-0.5 md:flex">
+              <div className="hidden items-center gap-0.5 rounded-2xl border border-border/50 bg-card/50 p-0.5 md:flex">
                 <button
                   onClick={() => setTheme("light")}
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-4xl transition-colors",
+                    "flex size-7 items-center justify-center rounded-2xl transition-colors",
                     theme === "light"
                       ? "bg-primary/15 text-primary"
                       : "text-muted-foreground hover:text-foreground"
@@ -125,7 +121,7 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
                 <button
                   onClick={() => setTheme("dark")}
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-4xl transition-colors",
+                    "flex size-7 items-center justify-center rounded-2xl transition-colors",
                     theme === "dark"
                       ? "bg-primary/15 text-primary"
                       : "text-muted-foreground hover:text-foreground"
@@ -136,33 +132,16 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
               </div>
             )}
             <div className="hidden items-center gap-3 md:flex">
-              {isAuthenticated ? (
-                <Link
-                  href="/overview"
-                  className="rounded-4xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="rounded-4xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className="rounded-4xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
-                  >
-                    Get started
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/overview"
+                className="rounded-2xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+              >
+                Open AtTrack
+              </Link>
             </div>
             <button
               onClick={() => setMenuOpen(true)}
-              className="flex size-8 items-center justify-center rounded-4xl border border-border/50 bg-card/50 text-foreground transition-colors hover:bg-muted md:hidden"
+              className="flex size-8 items-center justify-center rounded-2xl border border-border/50 bg-card/50 text-foreground transition-colors hover:bg-muted md:hidden"
               aria-label="Open menu"
             >
               <Menu className="size-4" />
@@ -201,14 +180,14 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
               className="flex items-center gap-2.5"
               onClick={() => setMenuOpen(false)}
             >
-              <Image src="/logo.png" alt="Aven" width={24} height={24} />
+              <Image src="/logo.png" alt="AtTrack" width={24} height={24} />
               <span className="font-heading text-lg font-semibold tracking-tight">
-                Aven
+                AtTrack
               </span>
             </Link>
             <button
               onClick={() => setMenuOpen(false)}
-              className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Close menu"
             >
               <X className="size-4" />
@@ -222,7 +201,7 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
                 href={item.href}
                 onClick={() => setMenuOpen(false)}
                 className={cn(
-                  "block rounded-4xl px-4 py-2.5 text-sm font-medium transition-colors",
+                  "block rounded-2xl px-4 py-2.5 text-sm font-medium transition-colors",
                   activeSection === item.href
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -237,11 +216,11 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Theme</span>
               {mounted && (
-                <div className="flex items-center gap-0.5 rounded-4xl border border-border/50 bg-card/50 p-0.5">
+                <div className="flex items-center gap-0.5 rounded-2xl border border-border/50 bg-card/50 p-0.5">
                   <button
                     onClick={() => setTheme("light")}
                     className={cn(
-                      "flex size-7 items-center justify-center rounded-4xl transition-colors",
+                      "flex size-7 items-center justify-center rounded-2xl transition-colors",
                       theme === "light"
                         ? "bg-primary/15 text-primary"
                         : "text-muted-foreground hover:text-foreground"
@@ -252,7 +231,7 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
                   <button
                     onClick={() => setTheme("dark")}
                     className={cn(
-                      "flex size-7 items-center justify-center rounded-4xl transition-colors",
+                      "flex size-7 items-center justify-center rounded-2xl transition-colors",
                       theme === "dark"
                         ? "bg-primary/15 text-primary"
                         : "text-muted-foreground hover:text-foreground"
@@ -263,32 +242,13 @@ export function LandingHeader({ isAuthenticated = false }: LandingHeaderProps) {
                 </div>
               )}
             </div>
-            {isAuthenticated ? (
-              <Link
-                href="/overview"
-                onClick={() => setMenuOpen(false)}
-                className="flex h-11 items-center justify-center rounded-4xl bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex h-11 items-center justify-center rounded-4xl border border-border bg-card text-sm font-medium transition-colors hover:bg-muted"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex h-11 items-center justify-center rounded-4xl bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
-                >
-                  Get started
-                </Link>
-              </>
-            )}
+            <Link
+              href="/overview"
+              onClick={() => setMenuOpen(false)}
+              className="flex h-11 items-center justify-center rounded-2xl bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
+            >
+              Open AtTrack
+            </Link>
           </div>
             </motion.div>
           </motion.div>

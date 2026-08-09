@@ -37,7 +37,7 @@ export default async function JobsPage(props: PageProps) {
           <div>
             <h1 className="font-heading text-2xl font-semibold tracking-tight">Jobs</h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Track and manage your job opportunities.
+              Every job you&apos;ve saved, in one list. Search, filter, and open any of them.
             </p>
           </div>
           <div className="flex items-center">
@@ -53,7 +53,6 @@ export default async function JobsPage(props: PageProps) {
         total={result.total}
         initialSearch={search}
         initialStatus={status}
-        initialSort={sort}
         page={result.page}
         totalPages={result.totalPages}
         perPage={result.perPage}

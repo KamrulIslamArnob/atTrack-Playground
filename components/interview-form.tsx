@@ -94,12 +94,12 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-4xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">Interview Details</h2>
           <button
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="size-4" />
           </button>
@@ -239,7 +239,7 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
 
           {/* Calendar link preview */}
           {interview.scheduled_at && (
-            <div className="rounded-4xl border border-border bg-muted/50 p-3">
+            <div className="rounded-2xl border border-border bg-muted/50 p-3">
               <p className="text-xs text-muted-foreground mb-2">Calendar event preview</p>
               <a
                 href={getCalendarLinkFromInterview({

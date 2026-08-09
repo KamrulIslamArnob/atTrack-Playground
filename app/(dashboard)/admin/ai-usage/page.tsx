@@ -207,7 +207,7 @@ export default function AdminAiUsagePage() {
       {hasActiveFilters && (
         <div className="flex items-center gap-2">
           {userIdFilter && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               User: {search || "filtered"}
               <button onClick={clearSearch} className="ml-0.5 hover:text-foreground">
                 <X className="size-3" />
@@ -215,7 +215,7 @@ export default function AdminAiUsagePage() {
             </span>
           )}
           {actionFilter !== "all" && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs capitalize">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
               Action: {AI_ACTION_LABELS[actionFilter] ?? actionFilter}
               <button
                 onClick={() => { setActionFilter("all"); setPage(1); }}
@@ -246,7 +246,7 @@ export default function AdminAiUsagePage() {
 
       {/* Table */}
       {loading ? (
-        <div className="rounded-4xl border border-border">
+        <div className="rounded-2xl border border-border">
           <div className="bg-muted/50 px-4 py-3">
             <div className="flex gap-4">
               <Skeleton className="h-4 w-10" />
@@ -275,7 +275,7 @@ export default function AdminAiUsagePage() {
           </div>
         </div>
       ) : logs.length > 0 ? (
-        <div className="rounded-4xl border border-border overflow-x-auto">
+        <div className="rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -308,7 +308,7 @@ export default function AdminAiUsagePage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-block rounded-4xl px-2 py-0.5 text-[10px] font-medium ${AI_ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
+                        className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${AI_ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
                       >
                         {AI_ACTION_LABELS[log.action] ?? log.action}
                       </span>
@@ -368,7 +368,7 @@ export default function AdminAiUsagePage() {
           </table>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">
             {hasActiveFilters
               ? "No AI usage matches your filters."
@@ -394,8 +394,8 @@ function QuickStat({
   bgColor: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
-      <div className={`flex size-10 items-center justify-center rounded-4xl ${bgColor}`}>
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className={`flex size-10 items-center justify-center rounded-2xl ${bgColor}`}>
         <Icon className={`size-5 ${color}`} />
       </div>
       <div className="min-w-0">

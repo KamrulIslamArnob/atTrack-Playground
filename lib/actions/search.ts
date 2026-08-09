@@ -23,6 +23,7 @@ export interface AdminSearchResult {
 
 const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Overview", href: "/overview", keywords: "dashboard home summary stats" },
+  { title: "Board", href: "/board", keywords: "kanban pipeline stages drag wishlist columns" },
   { title: "Jobs", href: "/jobs", keywords: "job listings saved interested preparing" },
   { title: "Applications", href: "/applications", keywords: "application drafts submitted sent" },
   { title: "Interviews", href: "/interviews", keywords: "interview schedule upcoming completed" },

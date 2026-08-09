@@ -23,30 +23,30 @@ const capabilities = [
     icon: Camera,
     title: "Screenshot import",
     description:
-      "Paste screenshots — AI extracts title, salary, requirements in seconds.",
+      "Screenshot a job posting and AtTrack reads it — title, salary, requirements, all filled in.",
     color: "text-pink-500",
     bg: "bg-pink-500/10",
   },
   {
     icon: Send,
-    title: "Email composer",
+    title: "Application drafts",
     description:
-      "Drafts a personalized application from the role and your resume.",
+      "AtTrack writes a first draft of your application email using the job details and your resume.",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
   },
   {
     icon: Target,
-    title: "Resume matching",
-    description: "A match score for every job before you even apply.",
+    title: "Resume scoring",
+    description: "See how your resume stacks up against each job before you apply.",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
   },
   {
     icon: Sparkles,
-    title: "Interview practice",
+    title: "Practice tests",
     description:
-      "Role-specific MCQs with score tracking and weak-spot insights.",
+      "Generate interview questions for a specific role, take the test, and see where to improve.",
     color: "text-blue-500",
     bg: "bg-blue-500/10",
   },
@@ -77,19 +77,19 @@ export function AiHighlight() {
             whileInView="visible"
             viewport={{ once: true, margin: "-80px", amount: 0.2 }}
           >
-            <div className="inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
               <Sparkles className="size-3" />
-              AI-Powered
+              AI that does the boring parts
             </div>
             <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              Let AI do the busywork.
+              You shouldn&apos;t have to copy-paste
               <br />
-              <span className="text-primary">You do the landing.</span>
+              <span className="text-primary">job details by hand.</span>
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Capture a job post from a screenshot, get a tailored application
-              draft, know your match score, and practice the interview — all
-              without leaving Aven.
+              AtTrack uses AI to read job postings, draft application emails, score
+              your resume, and generate practice questions. You review, edit, and
+              send — it handles the repetitive stuff.
             </p>
 
             <motion.ul
@@ -129,7 +129,7 @@ export function AiHighlight() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-80px", amount: 0.2 }}
-            className="rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/10"
+            className="rounded-2xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/10"
           >
             <div className="flex items-center gap-2 rounded-3xl border border-border/50 bg-muted/30 px-4 py-2.5">
               <div className="flex gap-1.5">
@@ -138,7 +138,7 @@ export function AiHighlight() {
                 <span className="size-2.5 rounded-full bg-emerald-400/60" />
               </div>
               <div className="flex-1 text-center text-[11px] text-muted-foreground">
-                ai.aven.dev/capture
+                ai.attrack.dev/capture
               </div>
             </div>
 
@@ -148,7 +148,7 @@ export function AiHighlight() {
                   <ImagePlus className="size-5 text-pink-500" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Screenshot received</p>
+                  <p className="text-sm font-medium">Screenshot uploaded</p>
                   <p className="truncate text-xs text-muted-foreground">
                     job_posting.png · 3 images
                   </p>
@@ -163,9 +163,9 @@ export function AiHighlight() {
                   <WandSparkles className="size-5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">AI extraction</p>
+                  <p className="text-sm font-medium">Reading the posting…</p>
                   <p className="text-xs text-muted-foreground">
-                    Parsing title, salary, requirements…
+                    Extracting title, salary, requirements…
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-semibold text-primary">
@@ -188,7 +188,7 @@ export function AiHighlight() {
                 </div>
                 <div className="mt-3 flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
                   <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    Match with your resume
+                    Your resume vs. this job
                   </span>
                   <span className="text-sm font-semibold text-emerald-600">
                     87%

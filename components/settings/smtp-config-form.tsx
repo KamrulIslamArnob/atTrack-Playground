@@ -138,7 +138,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
                 <button
                   type="button"
                   onClick={() => { setIsEditing(false); setPassword(""); }}
-                  className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <X className="size-4" />
                   Cancel
@@ -147,7 +147,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
               <button
                 type="submit"
                 disabled={pending}
-                className="inline-flex items-center justify-center rounded-4xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {pending && <Spinner className="mr-2" />}
                 {config ? "Update" : "Save configuration"}
@@ -174,7 +174,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
         <div className="ml-4 flex shrink-0 items-center gap-2">
           <button
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             <Pencil className="size-4" />
             {config ? "Edit" : "Set up"}
@@ -183,7 +183,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
             >
               {deleting ? <Spinner className="size-4" /> : <Trash2 className="size-4" />}
             </button>

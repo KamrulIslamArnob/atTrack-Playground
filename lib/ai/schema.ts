@@ -32,6 +32,16 @@ export const extractionSchema = z.object({
       })
     )
     .nullable(),
+  // A recruiter/hiring-manager named in the posting, if any — feeds the CRM
+  // (lib/actions/jobs.ts's createJob find-or-creates this contact under the
+  // job's company and links it). Null when the posting doesn't name a person.
+  contact: z
+    .object({
+      name: z.string().nullable(),
+      email: z.string().email().nullable(),
+      role: z.string().nullable(),
+    })
+    .nullable(),
 });
 
 export type ExtractionResult = z.infer<typeof extractionSchema>;
