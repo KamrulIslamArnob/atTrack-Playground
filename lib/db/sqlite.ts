@@ -59,6 +59,9 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "documents", column: "generated_kind", ddl: "ALTER TABLE documents ADD COLUMN generated_kind TEXT" },
   { table: "companies", column: "updated_at", ddl: "ALTER TABLE companies ADD COLUMN updated_at TEXT" },
   { table: "documents", column: "updated_at", ddl: "ALTER TABLE documents ADD COLUMN updated_at TEXT" },
+  { table: "contacts", column: "position", ddl: "ALTER TABLE contacts ADD COLUMN position TEXT" },
+  { table: "contacts", column: "linkedin_url", ddl: "ALTER TABLE contacts ADD COLUMN linkedin_url TEXT" },
+  { table: "contacts", column: "github_url", ddl: "ALTER TABLE contacts ADD COLUMN github_url TEXT" },
 ];
 
 function addMissingColumns(db: DatabaseSync) {
