@@ -48,8 +48,8 @@ const LIST_KIND_BG: Partial<Record<ListKind, string>> = {
   wishlist: "bg-white dark:bg-card/40",
   preparing: "bg-amber-50/70 dark:bg-amber-950/20",
   applied: "bg-purple-50/70 dark:bg-purple-950/20",
-  interview: "bg-lime-50/80 dark:bg-lime-950/20 border-lime-300/60 dark:border-lime-500/30",
-  offer: "bg-emerald-50/70 dark:bg-emerald-950/20",
+  interview: "bg-lime-100/90 dark:bg-lime-950/30 border-lime-400/80 dark:border-lime-500/40",
+  offer: "bg-teal-50/80 dark:bg-teal-950/20 border-teal-300/80 dark:border-teal-500/30",
 };
 
 export type GroupOption = "none" | "company" | "position" | "resume";
@@ -201,8 +201,8 @@ export function BoardColumn({
       <header
         className="mb-1.5 flex items-center gap-1.5 rounded-xl border p-1.5 transition-all shadow-xs"
         style={{
-          backgroundColor: `${accent}25`,
-          borderColor: `${accent}45`,
+          backgroundColor: list.kind === "interview" ? "#bef26470" : `${accent}25`,
+          borderColor: list.kind === "interview" ? "#84cc16" : `${accent}45`,
         }}
       >
         {/* Column reorder handle — separate from the title's pointer-pan drag
@@ -225,8 +225,8 @@ export function BoardColumn({
         <span
           className="flex size-5 shrink-0 items-center justify-center rounded-full shadow-xs"
           style={{
-            backgroundColor: `${accent}35`,
-            color: list.kind === "interview" ? "#3f6212" : accent,
+            backgroundColor: list.kind === "interview" ? "#bef264" : `${accent}35`,
+            color: list.kind === "interview" ? "#365314" : list.kind === "offer" ? "#0f766e" : accent,
           }}
         >
           <Icon className="size-3" aria-hidden="true" />
@@ -268,12 +268,12 @@ export function BoardColumn({
             >
               <h2
                 className="flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider dark:text-lime-400"
-                style={{ color: list.kind === "interview" ? "#3f6212" : accent }}
+                style={{ color: list.kind === "interview" ? "#365314" : list.kind === "offer" ? "#0f766e" : accent }}
               >
                 <span className="truncate">{list.name}</span>
                 <span
                   className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90"
-                  style={{ color: list.kind === "interview" ? "#3f6212" : accent }}
+                  style={{ color: list.kind === "interview" ? "#365314" : list.kind === "offer" ? "#0f766e" : accent }}
                 >
                   {cards.length}
                 </span>
