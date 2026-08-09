@@ -28,13 +28,12 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const refreshProviders = async () => {
-    const next = await listProviders();
+    // Fetch both before setting either — setProviders and setRoutes must land
+    // in the same render so the picker's remount key (derived from providers)
+    // never fires on a stale intermediate routes value.
+    const [next, freshRoutes] = await Promise.all([listProviders(), getTaskRoutes()]);
     setProviders(next);
-    // The DB is the source of truth for routes — re-fetching (rather than
-    // filtering the previous in-memory state) picks up any assignment made
-    // earlier in the session that the picker's local state never reported
-    // back up to us.
-    setRoutes(await getTaskRoutes());
+    setRoutes(freshRoutes);
     setDialogOpen(null);
   };
 
@@ -45,8 +44,9 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       toast.error(result.error);
     } else {
       toast.success("Provider deleted.");
+      const freshRoutes = await getTaskRoutes();
       setProviders((prev) => prev.filter((p) => p.id !== id));
-      setRoutes(await getTaskRoutes());
+      setRoutes(freshRoutes);
     }
     setDeletingId(null);
   };
