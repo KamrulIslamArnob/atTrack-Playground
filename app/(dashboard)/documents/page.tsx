@@ -11,9 +11,9 @@ export default async function DocumentsPage() {
       <div className="-mx-6 border-b border-border pb-6">
         <div className="flex items-center justify-between px-6">
           <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">Documents</h1>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">Resume/CV</h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Your resumes, cover letters, and other files.
+              Your resumes and cover letters. Upload once, attach to any application.
             </p>
           </div>
           <DocumentsUploadInline />
@@ -25,10 +25,10 @@ export default async function DocumentsPage() {
       {documents.length > 0 ? (
         <DocumentsList documents={documents} />
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
-          <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
+          <p className="text-sm text-muted-foreground">No documents yet.</p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Upload resumes for AI-powered job matching.
+            Upload a resume to start matching it against jobs.
           </p>
         </div>
       )}

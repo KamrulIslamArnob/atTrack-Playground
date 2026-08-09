@@ -133,7 +133,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
                 <button
                   type="submit"
                   disabled={isUploading}
-                  className="inline-flex items-center gap-2 rounded-4xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {isUploading ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -145,7 +145,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
                 <button
                   type="button"
                   onClick={handleRemove}
-                  className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Cancel
                 </button>
@@ -158,7 +158,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             <Upload className="size-4" />
             Upload
@@ -177,14 +177,14 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
 
       {dialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-4xl bg-card p-6 shadow-md ring-1 ring-foreground/5">
+          <div className="w-full max-w-md rounded-3xl bg-card p-6 shadow-md ring-1 ring-foreground/5">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-base font-medium text-card-foreground">
                 Upload avatar
               </h2>
               <button
                 onClick={() => setDialogOpen(false)}
-                className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -195,7 +195,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-4xl border-2 border-dashed p-8 transition-colors ${
+              className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 transition-colors ${
                 isDragOver
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/50 hover:bg-muted/50"
@@ -213,7 +213,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setDialogOpen(false)}
-                className="inline-flex items-center justify-center rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                className="inline-flex items-center justify-center rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Close
               </button>

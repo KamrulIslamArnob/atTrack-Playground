@@ -150,7 +150,7 @@ export default function AdminUserDetailPage() {
       <div className="space-y-6">
         <div className="-mx-6 border-b border-border pb-6">
           <div className="flex items-center gap-4 px-6">
-            <Skeleton className="size-9 shrink-0 rounded-4xl" />
+            <Skeleton className="size-9 shrink-0 rounded-2xl" />
             <div className="space-y-2">
               <Skeleton className="h-7 w-40" />
               <Skeleton className="h-4 w-64" />
@@ -158,7 +158,7 @@ export default function AdminUserDetailPage() {
           </div>
         </div>
         <Skeleton className="h-4 w-64" />
-        <div className="rounded-4xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">
+        <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">
           <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
             <Skeleton className="size-16 shrink-0 rounded-full" />
             <div className="flex-1 space-y-3 text-center sm:text-left">
@@ -176,7 +176,7 @@ export default function AdminUserDetailPage() {
           </div>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2.5 rounded-4xl border border-border bg-muted/40 px-3 py-2.5">
+              <div key={i} className="flex items-center gap-2.5 rounded-2xl border border-border bg-muted/40 px-3 py-2.5">
                 <Skeleton className="size-4 shrink-0" />
                 <div className="space-y-1">
                   <Skeleton className="h-4 w-8" />
@@ -200,7 +200,7 @@ export default function AdminUserDetailPage() {
     return (
       <div className="space-y-6">
         <Breadcrumbs labels={{ [userId]: "Unknown" }} />
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">User not found.</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push("/admin/users")}>
             Back to Users
@@ -217,7 +217,7 @@ export default function AdminUserDetailPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push("/admin/users")}
-              className="flex size-9 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-9 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <ArrowLeft className="size-4" />
             </button>
@@ -234,7 +234,7 @@ export default function AdminUserDetailPage() {
       <Breadcrumbs labels={{ [userId]: user.full_name }} />
 
       {/* Profile card with gradient */}
-      <div className="rounded-4xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
           <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-border">
             {user.avatar_url ? (
@@ -404,7 +404,7 @@ export default function AdminUserDetailPage() {
             {(activitySearch || activityActionFilter !== "all") && (
               <div className="flex items-center gap-2">
                 {activitySearch && (
-                  <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
                     &quot;{activitySearch}&quot;
                     <button onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityPage(1); }} className="ml-0.5 hover:text-foreground">
                       <X className="size-3" />
@@ -412,7 +412,7 @@ export default function AdminUserDetailPage() {
                   </span>
                 )}
                 {activityActionFilter !== "all" && (
-                  <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs capitalize">
+                  <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
                     Action: {activityActionFilter.replace(/_/g, " ")}
                     <button onClick={() => { setActivityActionFilter("all"); setActivityPage(1); }} className="ml-0.5 hover:text-foreground">
                       <X className="size-3" />
@@ -435,7 +435,7 @@ export default function AdminUserDetailPage() {
 
             {/* Table */}
             {activityLoading ? (
-              <div className="rounded-4xl border border-border">
+              <div className="rounded-2xl border border-border">
                 <div className="bg-muted/50 px-4 py-3">
                   <div className="flex gap-4">
                     <Skeleton className="h-4 w-10" />
@@ -460,7 +460,7 @@ export default function AdminUserDetailPage() {
                 </div>
               </div>
             ) : activity.length > 0 ? (
-              <div className="rounded-4xl border border-border overflow-x-auto">
+              <div className="rounded-2xl border border-border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
@@ -482,7 +482,7 @@ export default function AdminUserDetailPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-block rounded-4xl px-2 py-0.5 text-[10px] font-medium ${ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
+                            className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
                           >
                             {log.action}
                           </span>
@@ -514,7 +514,7 @@ export default function AdminUserDetailPage() {
                 </table>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
                 <p className="text-sm text-muted-foreground">
                   {activitySearch || activityActionFilter !== "all" ? "No activity matches your filters." : "No activity yet."}
                 </p>
@@ -527,8 +527,8 @@ export default function AdminUserDetailPage() {
           <div className="mt-4 space-y-4">
             {/* Summary cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
-                <div className="flex size-10 items-center justify-center rounded-4xl bg-violet-500/10">
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-violet-500/10">
                   <Zap className="size-5 text-violet-500" />
                 </div>
                 <div className="min-w-0">
@@ -538,8 +538,8 @@ export default function AdminUserDetailPage() {
                   <p className="truncate text-[11px] text-muted-foreground">Total Tokens</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
-                <div className="flex size-10 items-center justify-center rounded-4xl bg-amber-500/10">
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-amber-500/10">
                   <Coins className="size-5 text-amber-500" />
                 </div>
                 <div className="min-w-0">
@@ -549,8 +549,8 @@ export default function AdminUserDetailPage() {
                   <p className="truncate text-[11px] text-muted-foreground">Total Cost</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
-                <div className="flex size-10 items-center justify-center rounded-4xl bg-blue-500/10">
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-500/10">
                   <Cpu className="size-5 text-blue-500" />
                 </div>
                 <div className="min-w-0">
@@ -653,7 +653,7 @@ export default function AdminUserDetailPage() {
             {(aiSearch || aiActionFilter !== "all") && (
               <div className="flex items-center gap-2">
                 {aiSearch && (
-                  <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
                     &quot;{aiSearch}&quot;
                     <button onClick={() => { setAiSearchInput(""); setAiSearch(""); setAiPage(1); }} className="ml-0.5 hover:text-foreground">
                       <X className="size-3" />
@@ -661,7 +661,7 @@ export default function AdminUserDetailPage() {
                   </span>
                 )}
                 {aiActionFilter !== "all" && (
-                  <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs capitalize">
+                  <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
                     Action: {AI_ACTION_LABELS[aiActionFilter] ?? aiActionFilter}
                     <button onClick={() => { setAiActionFilter("all"); setAiPage(1); }} className="ml-0.5 hover:text-foreground">
                       <X className="size-3" />
@@ -684,7 +684,7 @@ export default function AdminUserDetailPage() {
 
             {/* Table */}
             {aiLoading ? (
-              <div className="rounded-4xl border border-border">
+              <div className="rounded-2xl border border-border">
                 <div className="bg-muted/50 px-4 py-3">
                   <div className="flex gap-4">
                     <Skeleton className="h-4 w-10" />
@@ -713,7 +713,7 @@ export default function AdminUserDetailPage() {
                 </div>
               </div>
             ) : aiUsage.length > 0 ? (
-              <div className="rounded-4xl border border-border overflow-x-auto">
+              <div className="rounded-2xl border border-border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
@@ -741,7 +741,7 @@ export default function AdminUserDetailPage() {
                           </td>
                           <td className="px-4 py-3">
                             <span
-                              className={`inline-block rounded-4xl px-2 py-0.5 text-[10px] font-medium ${AI_ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
+                              className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${AI_ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
                             >
                               {AI_ACTION_LABELS[log.action] ?? log.action}
                             </span>
@@ -791,7 +791,7 @@ export default function AdminUserDetailPage() {
                 </table>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
                 <p className="text-sm text-muted-foreground">
                   {aiSearch || aiActionFilter !== "all" ? "No AI usage matches your filters." : "No AI usage yet."}
                 </p>
@@ -814,7 +814,7 @@ function StatItem({
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-4xl border border-border bg-muted/40 px-3 py-2.5">
+    <div className="flex items-center gap-2.5 rounded-2xl border border-border bg-muted/40 px-3 py-2.5">
       <Icon className="size-4 text-muted-foreground" />
       <div className="min-w-0">
         <p className="text-sm font-semibold">{value.toLocaleString()}</p>

@@ -19,18 +19,18 @@ import {
 const steps = [
   {
     step: "01",
-    title: "Discover",
+    title: "Find a job",
     description:
-      "Paste a screenshot of a job posting — or several — and AI extracts every detail: title, company, salary, requirements, and how to apply. Saved to your pipeline in seconds.",
+      "Screenshot a posting or paste a link. AtTrack pulls out the title, company, salary, and requirements — so you don&apos;t have to copy them by hand.",
     icon: Camera,
     color: "text-pink-500",
     bg: "bg-pink-500/10",
   },
   {
     step: "02",
-    title: "Apply",
+    title: "Apply to it",
     description:
-      "AI writes a personalized application email tailored to the role and your resume. Edit, preview, attach your resume, and send it straight from Aven.",
+      "AtTrack drafts an application email using your resume and the job details. You edit it, attach your resume, and send it from your own email address.",
     icon: Send,
     color: "text-violet-500",
     bg: "bg-violet-500/10",
@@ -39,16 +39,16 @@ const steps = [
     step: "03",
     title: "Interview",
     description:
-      "Track interviews with dates, prep notes, and types. Add them to Google Calendar in one click and practice with role-specific MCQs.",
+      "When you get a call, log the interview. Add prep notes, sync it to your calendar, and run a practice test tailored to the role.",
     icon: Calendar,
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
   },
   {
     step: "04",
-    title: "Accept",
+    title: "Get the offer",
     description:
-      "Log applications and interviews as you go. Aven tracks each one from submitted to offer — so when the right offer lands, you're ready to accept.",
+      "Move each job through your board as it progresses. When an offer comes in, you&apos;ll know exactly how you got there — and what worked.",
     icon: CheckCircle2,
     color: "text-amber-500",
     bg: "bg-amber-500/10",
@@ -66,11 +66,11 @@ export function HowItWorks() {
       <div className="mx-auto max-w-6xl">
         <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            From first sight to signed offer
+            A job search has a beginning and an end
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            Four stages. One workspace. Aven carries your application from the
-            moment you spot the role to the day you accept the offer.
+            You find a job, you apply, you interview, you get an offer. AtTrack
+            walks through each step with you — nothing more, nothing less.
           </p>
         </Reveal>
 
@@ -95,10 +95,10 @@ export function HowItWorks() {
                 variants={staggerItem}
                 className="relative text-center lg:px-4"
               >
-                <div className="relative mx-auto w-fit rounded-4xl bg-background p-1">
+                <div className="relative mx-auto w-fit rounded-2xl bg-background p-1">
                   <div
                     className={cn(
-                      "flex size-12 items-center justify-center rounded-4xl ring-1 ring-inset ring-black/[0.04] dark:ring-white/[0.04]",
+                      "flex size-12 items-center justify-center rounded-2xl ring-1 ring-inset ring-black/[0.04] dark:ring-white/[0.04]",
                       item.bg
                     )}
                   >
@@ -119,11 +119,11 @@ export function HowItWorks() {
           </motion.div>
         </div>
 
-        <Reveal className="mt-20 rounded-4xl border border-border bg-card p-6 sm:p-8">
+        <Reveal className="mt-20 rounded-2xl border border-border bg-card p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
             {pipeline.map((stage, i) => (
               <Fragment key={stage}>
-                <span className="rounded-4xl border border-border bg-muted/40 px-3.5 py-1.5 text-xs font-medium text-muted-foreground">
+                <span className="rounded-2xl border border-border bg-muted/40 px-3.5 py-1.5 text-xs font-medium text-muted-foreground">
                   {stage}
                 </span>
                 {i < pipeline.length - 1 && (
@@ -133,8 +133,8 @@ export function HowItWorks() {
             ))}
           </div>
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Jobs start in your pipeline as Saved, Interested, or Preparing —
-            then move to applications, interviews, and offers as you log them.
+            A job enters your board when you save it. It moves forward as you apply,
+            interview, and — if things go well — get an offer.
           </p>
         </Reveal>
       </div>

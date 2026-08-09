@@ -241,7 +241,7 @@ export function ApplicationsGrid({
       {hasActiveFilters && (
         <div className="flex items-center gap-2">
           {initialSearch && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
               &quot;{initialSearch}&quot;
               <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
                 <X className="size-3" />
@@ -249,7 +249,7 @@ export function ApplicationsGrid({
             </span>
           )}
           {initialStatus !== "all" && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
               {statusLabels[initialStatus] ?? initialStatus}
               <button onClick={() => handleStatusChange("all")} className="ml-0.5">
                 <X className="size-3" />
@@ -257,7 +257,7 @@ export function ApplicationsGrid({
             </span>
           )}
           {initialSort !== "applied_newest" && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
               {initialSort === "applied_oldest" ? "Oldest applied" : initialSort === "deadline_earliest" ? "Deadline ↑" : initialSort === "deadline_latest" ? "Deadline ↓" : initialSort === "company_az" ? "Company A→Z" : initialSort === "company_za" ? "Company Z→A" : initialSort}
               <button onClick={() => handleSortChange("applied_newest")} className="ml-0.5">
                 <X className="size-3" />
@@ -288,7 +288,7 @@ export function ApplicationsGrid({
             <Link
               key={app.id}
               href={`/jobs/${app.job?.id}`}
-              className="group rounded-4xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
+              className="group rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -303,7 +303,7 @@ export function ApplicationsGrid({
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {app.job?.match_score != null && (
                     <span
-                      className={`rounded-4xl px-2.5 py-1 text-[10px] font-medium ${
+                      className={`rounded-2xl px-2.5 py-1 text-[10px] font-medium ${
                         app.job.match_score >= 80
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           : app.job.match_score >= 50
@@ -315,7 +315,7 @@ export function ApplicationsGrid({
                       {app.job.match_score}% match
                     </span>
                   )}
-                  <span className={`shrink-0 rounded-4xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.status ?? "draft"] ?? "bg-muted text-muted-foreground"}`}>
+                  <span className={`shrink-0 rounded-2xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.status ?? "draft"] ?? "bg-muted text-muted-foreground"}`}>
                     {statusLabels[app.status ?? "draft"] ?? "Draft"}
                   </span>
                 </div>
@@ -336,12 +336,12 @@ export function ApplicationsGrid({
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
                   {app.job?.employment_type && (
-                    <span className="rounded-4xl bg-muted px-2 py-0.5">
+                    <span className="rounded-2xl bg-muted px-2 py-0.5">
                       {app.job.employment_type}
                     </span>
                   )}
                   {app.job?.work_location && (
-                    <span className="rounded-4xl bg-muted px-2 py-0.5">
+                    <span className="rounded-2xl bg-muted px-2 py-0.5">
                       {app.job.work_location}
                     </span>
                   )}
@@ -367,7 +367,7 @@ export function ApplicationsGrid({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">
             {hasActiveFilters
               ? "No applications match your filters."

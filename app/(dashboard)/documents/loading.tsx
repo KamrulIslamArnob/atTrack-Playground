@@ -10,14 +10,14 @@ export default function DocumentsLoading() {
             <Skeleton className="h-7 w-28" />
             <Skeleton className="h-4 w-56" />
           </div>
-          <Skeleton className="h-9 w-24 rounded-4xl" />
+          <Skeleton className="h-9 w-24 rounded-2xl" />
         </div>
       </div>
 
       <Skeleton className="h-4 w-24" />
 
       {/* Table skeleton */}
-      <div className="overflow-x-auto rounded-4xl border border-border">
+      <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -43,8 +43,8 @@ export default function DocumentsLoading() {
                 <td className="px-4 py-3"><Skeleton className="h-3 w-28" /></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    <Skeleton className="h-8 w-8 rounded-4xl" />
-                    <Skeleton className="h-8 w-8 rounded-4xl" />
+                    <Skeleton className="h-8 w-8 rounded-2xl" />
+                    <Skeleton className="h-8 w-8 rounded-2xl" />
                   </div>
                 </td>
               </tr>

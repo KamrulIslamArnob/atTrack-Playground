@@ -89,14 +89,18 @@ export async function getInterviews(params?: {
   if (search) {
     const term = `%${search}%`;
 
+    // .eq("user_id", userId) is load-bearing here: RLS used to scope these
+    // implicitly, and without it the search would span every user's rows.
     const { data: matchingJobs } = await supabase
       .from("jobs")
       .select("id")
+      .eq("user_id", userId)
       .ilike("title", term);
 
     const { data: matchingCompanies } = await supabase
       .from("companies")
       .select("id")
+      .eq("user_id", userId)
       .ilike("name", term);
 
     const jobIds = new Set<string>();
@@ -106,6 +110,7 @@ export async function getInterviews(params?: {
       const { data: companyJobs } = await supabase
         .from("jobs")
         .select("id")
+        .eq("user_id", userId)
         .in("company_id", matchingCompanies.map((c) => c.id));
       companyJobs?.forEach((j) => jobIds.add(j.id));
     }

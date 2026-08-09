@@ -38,7 +38,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Hero section */}
-      <div className="relative overflow-hidden rounded-4xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 size-64 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-primary/5 blur-2xl" />
         <div className="relative">
@@ -115,7 +115,7 @@ export default async function AdminDashboardPage() {
 
       {/* Charts row 1: Users Trend + AI Usage Trend */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -137,7 +137,7 @@ export default async function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -162,7 +162,7 @@ export default async function AdminDashboardPage() {
 
       {/* Charts row 2: Jobs by Status + Activity by Action */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-4">
             <h2 className="font-heading text-lg font-semibold">Jobs by Status</h2>
             <p className="text-xs text-muted-foreground mt-1">Distribution across all users</p>
@@ -174,7 +174,7 @@ export default async function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-4">
             <h2 className="font-heading text-lg font-semibold">Activity by Action</h2>
             <p className="text-xs text-muted-foreground mt-1">Last 14 days</p>
@@ -188,7 +188,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="min-w-0 rounded-4xl border border-border bg-card p-6">
+      <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
         <div className="mb-6">
           <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
           <p className="text-xs text-muted-foreground mt-1">Latest actions across the platform</p>
@@ -225,9 +225,9 @@ function MetricCard({
   badgeColor?: string;
 }) {
   return (
-    <div className="rounded-4xl border border-border bg-card p-4 transition-colors hover:bg-muted/30">
+    <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/30">
       <div className="flex items-center gap-3">
-        <div className={`flex size-10 items-center justify-center rounded-4xl ${bgColor}`}>
+        <div className={`flex size-10 items-center justify-center rounded-2xl ${bgColor}`}>
           <Icon className={`size-5 ${color}`} />
         </div>
         <div className="min-w-0 flex-1">
@@ -255,7 +255,7 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 text-center">
-      <div className="flex size-12 items-center justify-center rounded-4xl bg-muted/50 mb-3">
+      <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3">
         <Icon className="size-6 text-muted-foreground/30" />
       </div>
       <p className="text-sm text-muted-foreground">{text}</p>

@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Camera, X } from "lucide-react";
+import { Plus, Sparkles, X } from "lucide-react";
 import { AddJobDialog } from "@/components/add-job-dialog";
-import { ScreenshotUpload } from "@/components/job-import/screenshot-upload";
+import { AiImport } from "@/components/job-import/ai-import";
 
 export function ImportChoice() {
   const [open, setOpen] = useState(false);
-  const [choice, setChoice] = useState<"manual" | "import" | null>(null);
+  const [choice, setChoice] = useState<"manual" | "ai" | null>(null);
 
-  if (choice === "import") {
-    return <ScreenshotUpload onClose={() => { setChoice(null); setOpen(false); }} />;
+  if (choice === "ai") {
+    return <AiImport onClose={() => { setChoice(null); setOpen(false); }} />;
   }
 
   return (
@@ -23,47 +23,47 @@ export function ImportChoice() {
 
       {open && choice !== "manual" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-4xl border border-border bg-card p-6 shadow-md">
+          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-md">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-lg font-semibold">Add Job</h2>
               <button
                 onClick={() => setOpen(false)}
-                className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              How would you like to add this job?
+              How do you want to add this job?
             </p>
 
             <div className="mt-4 space-y-3">
               <button
                 onClick={() => setChoice("manual")}
-                className="flex w-full items-center gap-3 rounded-4xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-muted">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
                   <Plus className="size-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium">Enter Manually</p>
+                  <p className="font-medium">Enter it yourself</p>
                   <p className="text-xs text-muted-foreground">
-                    Fill in the job details yourself
+                    Type in the title, company, and details
                   </p>
                 </div>
               </button>
 
               <button
-                onClick={() => setChoice("import")}
-                className="flex w-full items-center gap-3 rounded-4xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
+                onClick={() => setChoice("ai")}
+                className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-4xl bg-muted">
-                  <Camera className="size-5 text-muted-foreground" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
+                  <Sparkles className="size-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium">Import from Screenshot</p>
+                  <p className="font-medium">Import with AI</p>
                   <p className="text-xs text-muted-foreground">
-                    Upload a screenshot and AI will extract the details
+                    Screenshot or paste text — AtTrack reads it and fills in the details
                   </p>
                 </div>
               </button>

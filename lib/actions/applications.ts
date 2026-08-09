@@ -95,14 +95,18 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
   let matchingJobIds: string[] | null = null;
   if (search) {
     const term = `%${search}%`;
+    // The .eq("user_id", userId) on these three is load-bearing. Under Postgres,
+    // RLS scoped them implicitly; without it they would search every user's rows.
     const { data: matchingJobs } = await supabase
       .from("jobs")
       .select("id")
+      .eq("user_id", userId)
       .or(`title.ilike.${term},location.ilike.${term}`);
 
     const { data: matchingCompanies } = await supabase
       .from("companies")
       .select("id")
+      .eq("user_id", userId)
       .ilike("name", term);
 
     const jobIds = new Set<string>();
@@ -112,6 +116,7 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
       const { data: companyJobs } = await supabase
         .from("jobs")
         .select("id")
+        .eq("user_id", userId)
         .in("company_id", matchingCompanies.map((c) => c.id));
       companyJobs?.forEach((j) => jobIds.add(j.id));
     }

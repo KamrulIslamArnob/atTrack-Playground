@@ -19,9 +19,9 @@ import {
 const features = [
   {
     icon: Camera,
-    title: "AI Screenshot Import",
+    title: "Screenshot Import",
     description:
-      "Paste a job posting screenshot and AI extracts title, company, salary, requirements — everything structured in seconds.",
+      "See a job posting? Screenshot it. AtTrack reads the image and fills in the title, company, salary, and requirements for you.",
     color: "text-pink-500",
     bg: "bg-pink-500/10",
     border: "hover:border-pink-500/30",
@@ -29,9 +29,9 @@ const features = [
   },
   {
     icon: Send,
-    title: "AI Email Composer",
+    title: "Application Emails",
     description:
-      "Generate personalized application emails with AI that understands your resume and the role. Send directly via SMTP.",
+      "AtTrack drafts a personalized email for each application using your resume and the job details. Edit it, then send it from your own inbox.",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
     border: "hover:border-violet-500/30",
@@ -39,9 +39,9 @@ const features = [
   },
   {
     icon: Target,
-    title: "Resume Matching",
+    title: "Resume Match Score",
     description:
-      "AI scores how well your resume matches each job. Know your chances before you even apply.",
+      "Upload your resume and AtTrack scores how well it fits each job. Spend your time on the roles where you&apos;re actually competitive.",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
     border: "hover:border-amber-500/30",
@@ -49,9 +49,9 @@ const features = [
   },
   {
     icon: Calendar,
-    title: "Interview Tracker",
+    title: "Interview Tracking",
     description:
-      "Schedule, prep, and follow up on interviews. Add to Google Calendar in one click. Never miss a call.",
+      "Log your interviews, add prep notes, and sync them to Google Calendar. AtTrack reminds you what stage each application is in.",
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
     border: "hover:border-emerald-500/30",
@@ -59,9 +59,9 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: "MCQ Practice Tests",
+    title: "Practice Questions",
     description:
-      "Generate role-specific multiple choice questions. Track your scores and identify weak areas to study.",
+      "Generate multiple-choice questions tailored to a specific job. Take a practice test, see where you struggled, and try again.",
     color: "text-blue-500",
     bg: "bg-blue-500/10",
     border: "hover:border-blue-500/30",
@@ -69,9 +69,9 @@ const features = [
   },
   {
     icon: BarChart3,
-    title: "Smart Insights",
+    title: "Search Insights",
     description:
-      "Visualize your pipeline, response rates, time-to-interview, and application trends. Know where you stand.",
+      "See how many applications you&apos;ve sent, how many turned into interviews, and where your pipeline is stuck. Real numbers, not guesses.",
     color: "text-rose-500",
     bg: "bg-rose-500/10",
     border: "hover:border-rose-500/30",
@@ -81,7 +81,7 @@ const features = [
 
 const extractedFields = [
   { label: "Title", value: "Senior Software Engineer" },
-  { label: "Company", value: "Aven" },
+  { label: "Company", value: "AtTrack" },
   { label: "Salary", value: "80k — 120k BDT" },
   { label: "Location", value: "Dhaka, Bangladesh" },
 ];
@@ -94,11 +94,12 @@ export function Features() {
       <div className="mx-auto max-w-6xl">
         <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Everything you need to land the job
+            The tools your job search actually needs
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            A complete toolkit designed to streamline every step of your job
-            search — from saving your first listing to accepting an offer.
+            Not a bloated suite. Just the features that move the needle — saving
+            jobs, writing applications, tracking interviews, and seeing how
+            you&apos;re doing.
           </p>
         </Reveal>
 
@@ -112,7 +113,7 @@ export function Features() {
           <motion.article
             variants={staggerItem}
             className={cn(
-              "group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2 lg:row-span-2",
+              "group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2 lg:row-span-2",
               featured.border
             )}
           >
@@ -125,7 +126,7 @@ export function Features() {
             <div className="relative flex items-start justify-between">
               <div
                 className={cn(
-                  "flex size-12 items-center justify-center rounded-4xl",
+                  "flex size-12 items-center justify-center rounded-2xl",
                   featured.bg
                 )}
               >
@@ -133,7 +134,7 @@ export function Features() {
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-medium text-emerald-600">
                 <Sparkles className="size-3" />
-                AI-powered
+                AI
               </span>
             </div>
             <h3 className="relative mt-5 font-heading text-xl font-semibold">
@@ -163,7 +164,7 @@ export function Features() {
                   <div className="h-2 w-1/2 rounded-full bg-muted/70" />
                 </div>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">
-                  87% match
+                  87% fit
                 </span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -189,7 +190,7 @@ export function Features() {
               key={feature.title}
               variants={staggerItem}
               className={cn(
-                "group relative overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5",
+                "group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5",
                 feature.border
               )}
             >
@@ -201,7 +202,7 @@ export function Features() {
               />
               <div
                 className={cn(
-                  "relative flex size-11 items-center justify-center rounded-4xl",
+                  "relative flex size-11 items-center justify-center rounded-2xl",
                   feature.bg
                 )}
               >

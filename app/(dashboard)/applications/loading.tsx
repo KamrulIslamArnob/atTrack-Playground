@@ -10,7 +10,7 @@ export default function ApplicationsLoading() {
             <Skeleton className="h-7 w-32" />
             <Skeleton className="h-4 w-56" />
           </div>
-          <Skeleton className="h-9 w-32 rounded-4xl" />
+          <Skeleton className="h-9 w-32 rounded-2xl" />
         </div>
       </div>
 
@@ -22,15 +22,15 @@ export default function ApplicationsLoading() {
         <Skeleton className="h-10 w-full lg:w-[130px]" />
         <Skeleton className="h-10 w-full lg:w-[160px]" />
         <div className="flex items-center gap-1 lg:ml-auto">
-          <Skeleton className="h-9 w-20 rounded-4xl" />
-          <Skeleton className="h-9 w-9 rounded-4xl" />
+          <Skeleton className="h-9 w-20 rounded-2xl" />
+          <Skeleton className="h-9 w-9 rounded-2xl" />
         </div>
       </div>
 
       {/* Application cards grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-4xl border border-border bg-card p-5">
+          <div key={i} className="rounded-2xl border border-border bg-card p-5">
             <div className="mb-3 flex items-start justify-between">
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-5 w-36" />

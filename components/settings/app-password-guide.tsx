@@ -13,12 +13,12 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-4xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-md max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">Gmail App Password Setup</h2>
           <button
             onClick={() => onOpenChange(false)}
-            className="flex size-8 items-center justify-center rounded-4xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             ✕
           </button>
@@ -79,7 +79,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
               <p className="font-medium">Generate a new App Password</p>
               <p className="mt-1 text-muted-foreground">
                 Select <strong>Mail</strong> as the app and <strong>Other (Custom name)</strong> as the
-                device. Name it something like &quot;Aven Job Tracker&quot; and click{" "}
+                device. Name it something like &quot;AtTrack&quot; and click{" "}
                 <strong>Generate</strong>.
               </p>
             </div>
@@ -104,7 +104,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
           </div>
 
           {/* Security note */}
-          <div className="rounded-4xl bg-muted/50 p-4">
+          <div className="rounded-2xl bg-muted/50 p-4">
             <p className="text-xs text-muted-foreground">
               <strong>Security:</strong> Your App Password is encrypted with AES-256-GCM before
               storage. It&apos;s only decrypted server-side when sending emails. We never send it to

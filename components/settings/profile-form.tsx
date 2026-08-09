@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfile } from "@/lib/actions/auth";
 
-interface Profile {
+export interface Profile {
   full_name?: string | null;
   headline?: string | null;
   phone?: string | null;
@@ -86,14 +86,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 <X className="size-4" />
                 Cancel
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-4xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Save changes
               </button>
@@ -132,7 +132,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       {!isEditing && (
         <button
           onClick={() => setIsEditing(true)}
-          className="ml-4 inline-flex items-center gap-2 rounded-4xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          className="ml-4 inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
         >
           <Pencil className="size-4" />
           Edit

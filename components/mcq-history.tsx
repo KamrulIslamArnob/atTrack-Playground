@@ -23,7 +23,7 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
 
   if (loading) {
     return (
-      <div className="rounded-4xl border border-border bg-card p-6">
+      <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-heading text-lg font-semibold">Practice Tests</h2>
         <div className="mt-4 flex justify-center py-4">
           <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
@@ -37,7 +37,7 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
   }
 
   return (
-    <div className="rounded-4xl border border-border bg-card p-6">
+    <div className="rounded-2xl border border-border bg-card p-6">
       <h2 className="font-heading text-lg font-semibold">Practice Tests</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Your past MCQ test results for this job.
@@ -49,14 +49,14 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
           const isExpanded = expandedId === result.id;
 
           return (
-            <div key={result.id} className="rounded-4xl border border-border">
+            <div key={result.id} className="rounded-2xl border border-border">
               <button
                 onClick={() => setExpandedId(isExpanded ? null : result.id)}
                 className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-muted/50"
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-4xl ${
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${
                       percentage >= 70
                         ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         : percentage >= 50
@@ -105,7 +105,7 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
                       return (
                         <div
                           key={q.id}
-                          className={`rounded-4xl border p-3 ${
+                          className={`rounded-2xl border p-3 ${
                             isCorrect
                               ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
                               : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30"

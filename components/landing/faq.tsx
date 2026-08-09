@@ -11,39 +11,39 @@ import { Reveal, staggerContainer, staggerItem } from "@/components/landing/moti
 
 const faqs = [
   {
-    question: "What does Aven do?",
+    question: "What does AtTrack do?",
     answer:
-      "Aven is a private workspace that brings your entire job search into one place. Track jobs, applications, and interviews, generate tailored emails, and practice with AI — from the moment you discover a role to the day you accept the offer.",
+      "AtTrack is a private workspace for your job search. You save jobs, track applications and interviews, draft application emails with AI, and practice for interviews — all in one place. It runs on your own machine, not in someone else's cloud.",
   },
   {
-    question: "How does the AI screenshot import work?",
+    question: "How does the screenshot import work?",
     answer:
-      "Paste a screenshot of a job posting — or several — and our AI extracts the title, company, salary, location, requirements, employment type, and how to apply. Everything is structured and saved in seconds, no copy-pasting required.",
+      "You screenshot a job posting and paste it into AtTrack. The AI reads the image and fills in the title, company, salary, location, and requirements. You can review and edit before saving.",
   },
   {
-    question: "How does the AI email composer work?",
+    question: "How does the application email feature work?",
     answer:
-      "Aven drafts a personalized application email tailored to the role and your experience. You can edit and preview it, attach your resume, and send it directly through your own SMTP account — Gmail, Outlook, or any provider.",
+      "AtTrack drafts an email using the job details and your resume. You edit it, attach your resume if you want, and send it through your own email account — Gmail, Outlook, or any provider you set up in Settings.",
   },
   {
-    question: "What is the resume match score?",
+    question: "What's the resume match score?",
     answer:
-      "AI compares your resume against each job description and returns a percentage match score with a short explanation. Use it to prioritize the roles where you're strongest before you apply.",
+      "AtTrack compares your resume against a job description and gives you a percentage score with a short explanation. It helps you focus on the roles where you're a strong fit.",
   },
   {
-    question: "Can I practice for interviews with Aven?",
+    question: "Can I practice for interviews?",
     answer:
-      "Yes. Aven generates role-specific multiple-choice questions based on the job, shows which questions you missed, and tracks your scores over time so you can study where it matters most.",
+      "Yes. AtTrack generates multiple-choice questions based on a specific job. You take the test, see what you got wrong, and track your scores over time.",
   },
   {
-    question: "Is my data private and secure?",
+    question: "Is my data private?",
     answer:
-      "Completely. Aven is a private workspace, not a job board. Your applications, resumes, and interview notes are encrypted and never shared with third parties — you own your data.",
+      "Yes. AtTrack runs entirely on your machine. Your jobs, applications, resumes, and notes live in a local database — not on a server somewhere. Nothing is shared with third parties.",
   },
   {
-    question: "Is Aven really free?",
+    question: "Is AtTrack free?",
     answer:
-      "Yes. Aven is completely free — unlimited job tracking, AI screenshot import, the AI email composer, resume matching, the interview tracker, and MCQ practice tests are all included. No credit card required.",
+      "Yes, completely. Job tracking, screenshot import, email drafts, resume scoring, interview tracking, and practice tests are all included. There's no account, no subscription, and no credit card required.",
   },
 ];
 
@@ -53,10 +53,10 @@ export function Faq() {
       <div className="mx-auto max-w-4xl">
         <Reveal className="text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Frequently asked questions
+            Questions, answered
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
-            Straight answers to the questions job seekers ask most.
+            The things people usually want to know before they start.
           </p>
         </Reveal>
 
@@ -69,7 +69,7 @@ export function Faq() {
           <motion.div variants={staggerItem}>
             <Accordion
               defaultValue={[faqs[0].question]}
-              className="mt-16 rounded-4xl border-border bg-gradient-to-br from-primary/[0.06] via-card to-card"
+              className="mt-16 rounded-2xl border-border bg-gradient-to-br from-primary/[0.06] via-card to-card"
             >
               {faqs.map((faq) => (
                 <AccordionItem key={faq.question} value={faq.question}>

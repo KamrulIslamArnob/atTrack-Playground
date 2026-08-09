@@ -44,7 +44,7 @@ export function Hero() {
         >
           <Sparkles className="size-3.5 shimmer-icon" />
           <ShinyText
-            text="AI-powered job application tracker"
+            text="Your job search, finally in one place"
             speed={3}
             color="hsl(240 3.8% 46.1%)"
             shineColor="var(--primary)"
@@ -56,13 +56,13 @@ export function Hero() {
           className="font-display text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl"
         >
           <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">
-            Organize
+            Every application.
           </span>
-          <span className="text-foreground"> your applications,</span>
+          <span className="text-foreground"> One board.</span>
           <br />
-          <span className="text-foreground">Accelerate your </span>
+          <span className="text-foreground">No more </span>
           <span className="inline-block bg-primary/15 px-3 -skew-x-6 text-primary">
-            career.
+            spreadsheets.
           </span>
         </motion.h1>
 
@@ -70,11 +70,10 @@ export function Hero() {
           variants={fadeUp}
           className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base"
         >
-          Stop juggling spreadsheets, browser tabs, and forgotten follow-ups.
-          Aven brings your entire job search into one intelligent workspace —
-          from the moment you discover a role to the day you accept the offer.
-          AI handles the busywork so you can focus on what matters: landing the
-          job.
+          You&apos;re tracking applications in a spreadsheet, a notes app, your
+          browser history, and your email inbox — all at once. AtTrack puts it
+          all in one place: every job, every interview, every follow-up. Private,
+          local, and yours.
         </motion.p>
 
         <motion.div
@@ -82,17 +81,11 @@ export function Hero() {
           className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
         >
           <Link
-            href="/signup"
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
+            href="/overview"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
           >
-            Start for free
+            Open AtTrack
             <ArrowRight className="size-4" />
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-4xl border border-border bg-card px-8 text-sm font-medium transition-all hover:bg-muted sm:w-auto"
-          >
-            Sign in
           </Link>
         </motion.div>
 
@@ -133,13 +126,13 @@ export function Hero() {
             </Avatar>
           </AvatarGroup>
           <p className="text-xs text-muted-foreground">
-            Trusted by job seekers worldwide
+            Built for job seekers who want their data to stay theirs
           </p>
         </motion.div>
 
         <motion.div
           variants={scaleIn}
-          className="mt-16 rounded-4xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/5"
+          className="mt-16 rounded-2xl border border-border/60 bg-card p-2 shadow-2xl shadow-primary/5"
         >
           <div className="overflow-hidden rounded-3xl border border-border/50">
             <div className="flex items-center gap-2 border-b border-border/50 bg-muted/30 px-4 py-2.5">
@@ -149,7 +142,7 @@ export function Hero() {
                 <div className="size-2.5 rounded-full bg-emerald-400/60" />
               </div>
               <div className="flex-1 text-center text-[11px] text-muted-foreground">
-                app.aven.dev/overview
+                app.attrack.dev/overview
               </div>
             </div>
             <div className="grid grid-cols-6 gap-3 bg-background p-4">

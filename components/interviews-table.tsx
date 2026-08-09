@@ -220,7 +220,7 @@ export function InterviewsTable({
       {hasActiveFilters && (
         <div className="flex items-center gap-2">
           {initialSearch && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               Search: {initialSearch}
               <button onClick={() => updateParams("search", "")} className="ml-0.5 hover:text-foreground">
                 <X className="size-3" />
@@ -228,7 +228,7 @@ export function InterviewsTable({
             </span>
           )}
           {initialStatus !== "all" && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               Status: {statusLabels[initialStatus]}
               <button onClick={() => updateParams("status", "all")} className="ml-0.5 hover:text-foreground">
                 <X className="size-3" />
@@ -236,7 +236,7 @@ export function InterviewsTable({
             </span>
           )}
           {initialSort !== "newest" && (
-            <span className="inline-flex items-center gap-1 rounded-4xl bg-muted px-2.5 py-1 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               Sort: {initialSort}
               <button onClick={() => updateParams("sort", "newest")} className="ml-0.5 hover:text-foreground">
                 <X className="size-3" />
@@ -264,7 +264,7 @@ export function InterviewsTable({
 
       {/* Table */}
       {interviews.length > 0 ? (
-        <div className="rounded-4xl border border-border overflow-x-auto">
+        <div className="rounded-2xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -310,7 +310,7 @@ export function InterviewsTable({
                     <td className="px-4 py-3">
                       {interview.type ? (
                         <span
-                          className={`inline-block rounded-4xl px-2 py-0.5 text-[10px] font-medium ${typeColors[interview.type] ?? "bg-muted text-muted-foreground"}`}
+                          className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${typeColors[interview.type] ?? "bg-muted text-muted-foreground"}`}
                         >
                           {interview.type}
                         </span>
@@ -343,7 +343,7 @@ export function InterviewsTable({
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-block rounded-4xl px-2 py-0.5 text-[10px] font-medium ${statusColors[interview.status] ?? "bg-muted text-muted-foreground"}`}
+                        className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${statusColors[interview.status] ?? "bg-muted text-muted-foreground"}`}
                       >
                         {statusLabels[interview.status] ?? interview.status}
                       </span>
@@ -377,7 +377,7 @@ export function InterviewsTable({
           </table>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">
             {hasActiveFilters
               ? "No interviews match your filters."

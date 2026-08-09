@@ -41,7 +41,7 @@ export default async function InterviewsPage(props: PageProps) {
           <div>
             <h1 className="font-heading text-2xl font-semibold tracking-tight">Interviews</h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Track and manage your upcoming and past interviews.
+              Every interview you&apos;ve had or have coming up. Add notes, prep, and see how you did.
             </p>
           </div>
           <AddInterviewDialog

@@ -26,16 +26,15 @@ export function Privacy() {
 
       <div className="relative mx-auto max-w-6xl">
         <Reveal className="text-center">
-          <div className="inline-flex items-center gap-2 rounded-4xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
             <ShieldCheck className="size-3" />
-            Privacy & Security
+            Privacy
           </div>
           <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Your data stays yours
+            Your job search isn&apos;t anyone else&apos;s business
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            Aven is built private-first. Your jobs, applications, and notes are
-            protected at the database, at rest, and on their way out.
+            AtTrack runs on your machine. Your data never leaves it.
           </p>
         </Reveal>
 
@@ -48,11 +47,11 @@ export function Privacy() {
         >
           <motion.article
             variants={staggerItem}
-            className="group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2"
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2"
           >
             <div className="absolute -top-24 -right-24 size-64 rounded-full bg-emerald-500/10 blur-3xl transition-opacity duration-300 group-hover:opacity-100 opacity-70" />
             <div className="relative flex items-start justify-between">
-              <div className="flex size-11 items-center justify-center rounded-4xl bg-emerald-500/10">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-emerald-500/10">
                 <ShieldCheck className="size-5 text-emerald-500" />
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-medium text-emerald-600">
@@ -61,12 +60,12 @@ export function Privacy() {
               </span>
             </div>
             <h3 className="relative mt-5 font-heading text-lg font-semibold">
-              Private by design
+              Not a job board
             </h3>
             <p className="relative mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Aven is a personal workspace, not a job board. Your jobs,
-              applications, resumes, and interview notes belong to your account
-              — and no one else&apos;s.
+              AtTrack is a personal workspace. Your jobs, applications, resumes,
+              and interview notes live on your machine — not on a server, not in
+              a database someone else controls.
             </p>
 
             <div className="relative mt-6 flex-1 space-y-2">
@@ -90,45 +89,45 @@ export function Privacy() {
 
           <motion.article
             variants={staggerItem}
-            className="group relative overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 hover:border-primary/30"
+            className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 hover:border-primary/30"
           >
             <div className="absolute -top-16 -right-16 size-40 rounded-full bg-primary/10 opacity-0 blur-3xl transition-opacity duration-300 group-hover:opacity-100" />
-            <div className="relative flex size-11 items-center justify-center rounded-4xl bg-primary/10">
+            <div className="relative flex size-11 items-center justify-center rounded-2xl bg-primary/10">
               <Database className="size-5 text-primary" />
             </div>
             <h3 className="relative mt-5 font-heading text-base font-semibold">
-              Row-level protection
+              Your data stays on your machine
             </h3>
             <p className="relative mt-2 text-sm leading-relaxed text-muted-foreground">
-              Every row of your data is locked to your account with row-level
-              security — you can only ever access what belongs to you.
+              There is no cloud sync, no server, no account system. Your database
+              file lives on your computer, and that&apos;s the only place it exists.
             </p>
           </motion.article>
 
           <motion.article
             variants={staggerItem}
-            className="group relative overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 hover:border-pink-500/30"
+            className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 hover:border-pink-500/30"
           >
             <div className="absolute -top-16 -right-16 size-40 rounded-full bg-pink-500/10 opacity-0 blur-3xl transition-opacity duration-300 group-hover:opacity-100" />
-            <div className="relative flex size-11 items-center justify-center rounded-4xl bg-pink-500/10">
+            <div className="relative flex size-11 items-center justify-center rounded-2xl bg-pink-500/10">
               <Lock className="size-5 text-pink-500" />
             </div>
             <h3 className="relative mt-5 font-heading text-base font-semibold">
-              AES-256-GCM encryption
+              Encrypted email credentials
             </h3>
             <p className="relative mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your email password is encrypted at rest with AES-256-GCM and
-              decrypted only at the moment it sends your application.
+              If you connect an email account to send applications, your password
+              is encrypted and only decrypted when it&apos;s time to send.
             </p>
           </motion.article>
 
           <motion.article
             variants={staggerItem}
-            className="group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2"
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:shadow-black/5 sm:col-span-2"
           >
             <div className="absolute -bottom-24 -left-24 size-64 rounded-full bg-violet-500/10 blur-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             <div className="relative flex items-start justify-between">
-              <div className="flex size-11 items-center justify-center rounded-4xl bg-violet-500/10">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-violet-500/10">
                 <Mail className="size-5 text-violet-500" />
               </div>
               <span className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -136,11 +135,11 @@ export function Privacy() {
               </span>
             </div>
             <h3 className="relative mt-5 font-heading text-lg font-semibold">
-              Send from your own inbox
+              You send from your own email
             </h3>
             <p className="relative mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Application emails go out through your own SMTP account, from your
-              own address. Aven never sends on its own behalf.
+              Application emails come from your Gmail, Outlook, or whatever you
+              set up. AtTrack doesn&apos;t have its own email address — it uses yours.
             </p>
 
             <div className="relative mt-6 flex items-center gap-2">
@@ -162,9 +161,9 @@ export function Privacy() {
         </motion.div>
 
         <Reveal
-          className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 rounded-4xl border border-border/60 bg-card/60 px-6 py-5"
+          className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 rounded-2xl border border-border/60 bg-card/60 px-6 py-5"
         >
-          {["No ads", "No data resale", "No third-party trackers"].map(
+          {["No ads", "No data selling", "No tracking"].map(
             (item) => (
               <span
                 key={item}

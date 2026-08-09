@@ -12,7 +12,7 @@ import {
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How Aven collects, uses, and protects your information while tracking your job search.",
+    "How AtTrack collects, uses, and protects your information while tracking your job search.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -22,32 +22,30 @@ export default function PrivacyPolicyPage() {
       <LegalShell
         badge="Privacy Policy"
         title="Your data stays yours"
-        subtitle="How Aven collects, uses, and protects your information — explained in plain language."
+        subtitle="How AtTrack collects, uses, and protects your information — explained in plain language."
         updated="August 4, 2026"
       >
         <LegalSection index="01" title="Overview">
           <LegalParagraph>
-            Aven is a personal workspace for tracking your job search. You use
+            AtTrack is a personal workspace for tracking your job search. You use
             it to save jobs, manage applications and interviews, upload
             documents, and use AI features that help you draft emails, match
             your resume, and practice for interviews.
           </LegalParagraph>
           <LegalParagraph>
             This policy explains what information we collect, why we collect
-            it, and the choices you have. By creating an account or using Aven,
+            it, and the choices you have. By creating an account or using AtTrack,
             you agree to the practices described here.
           </LegalParagraph>
         </LegalSection>
 
         <LegalSection index="02" title="Information we collect">
           <LegalParagraph>
-            <strong>Account information.</strong> When you sign up, we collect
-            your email address and a password. Passwords are handled by our
-            authentication provider, Supabase Auth, which stores them as secure
-            hashes. You may also add a full name, headline, phone number,
+            <strong>Profile information.</strong> AtTrack runs entirely on your
+            own machine and has no accounts: there is no sign-up, no sign-in, and
+            no password. You may add a full name, headline, phone number,
             location, and website to your profile, and upload an avatar image.
-            You can sign in with email and password, with your Google account,
-            or with a one-time magic link sent to your email.
+            All of it is stored in a database file on your computer.
           </LegalParagraph>
           <LegalParagraph>
             <strong>Job search data.</strong> Everything you save while using
@@ -59,8 +57,8 @@ export default function PrivacyPolicyPage() {
           <LegalParagraph>
             <strong>Files you upload.</strong> Resumes, cover letters, and
             other documents (PDF), job-posting screenshots used for AI
-            extraction, and profile avatars. These are stored in our storage
-            provider (Supabase Storage).
+            extraction, and profile avatars. These are written to a folder on
+            your own machine and are never uploaded anywhere.
           </LegalParagraph>
           <LegalParagraph>
             <strong>Email configuration.</strong> If you connect an email
@@ -102,7 +100,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="04" title="AI features and automated processing">
           <LegalParagraph>
-            Aven&apos;s AI features — screenshot import, the email composer,
+            AtTrack&apos;s AI features — screenshot import, the email composer,
             resume matching, and practice tests — work by sending your input to
             a third-party AI provider (OpenRouter, which routes requests to
             large language models) so it can generate a result.
@@ -134,13 +132,11 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="05" title="Third-party services">
           <LegalParagraph>
-            Aven relies on a small number of service providers to run the app:
+            AtTrack stores everything locally and contacts outside services only
+            when you use a feature that requires one:
           </LegalParagraph>
           <LegalList
             items={[
-              <>
-                <strong>Supabase</strong> hosts our database, authentication, and file storage. All database tables use row-level security so each account can only access its own data.
-              </>,
               <>
                 <strong>OpenRouter</strong> (and the model providers it routes to, including NVIDIA-hosted models) processes the inputs you send to AI features.
               </>,
@@ -161,13 +157,13 @@ export default function PrivacyPolicyPage() {
           <LegalList
             items={[
               <>
-                <strong>Row-level security:</strong> every table in our database is protected so that data is only ever visible to the account that owns it.
+                <strong>Local-only storage:</strong> your database file and uploaded documents live on your own machine. They are not transmitted to us or to any hosting provider.
               </>,
               <>
-                <strong>Encryption:</strong> your SMTP password is encrypted at rest with AES-256-GCM. Data in transit is protected with HTTPS.
+                <strong>Encryption:</strong> your SMTP password is encrypted at rest with AES-256-GCM.
               </>,
               <>
-                <strong>Server-side access control:</strong> pages and actions that need your account verify your session on the server before returning or changing data.
+                <strong>No remote access:</strong> because there is no account and no server holding your data, there is nothing for a third party to sign in to. Anyone with access to your computer, however, has access to the app and its data — protect the machine itself.
               </>,
             ]}
           />
@@ -175,9 +171,9 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="07" title="Data retention">
           <LegalParagraph>
-            We keep your data for as long as your account is active, so it is
-            available when you return to the app. When you delete your account,
-            your data is removed (see below).
+            Your data stays on your machine until you remove it. Deleting the
+            app&apos;s data folder, or using &ldquo;Delete all data&rdquo; in
+            Settings, removes it (see below).
           </LegalParagraph>
         </LegalSection>
 
@@ -190,31 +186,31 @@ export default function PrivacyPolicyPage() {
               <>Edit your profile information at any time.</>,
               <>Delete individual records, including jobs, applications, interviews, and documents.</>,
               <>Remove uploaded documents, avatars, and saved screenshots.</>,
-              <>Delete your account from Settings.</>,
+              <>Delete all of your data from Settings.</>,
             ]}
           />
           <LegalNote>
-            <strong>Account deletion.</strong> To delete your account you must
-            confirm by typing the email address on your account. Aven then
-            permanently removes your profile, jobs, applications, interviews,
-            documents, practice results, email configuration, extraction logs,
-            and uploaded files (including your avatar, resumes, and job
-            screenshots), and closes your authentication account. This action
+            <strong>Deleting your data.</strong> To delete everything you must
+            confirm by typing your profile name. AtTrack then permanently removes
+            your jobs, applications, interviews, documents, practice results,
+            email configuration, extraction logs, board lists, and uploaded files
+            (including your avatar, resumes, and job screenshots). This action
             cannot be undone.
           </LegalNote>
         </LegalSection>
 
         <LegalSection index="09" title="Cookies and local storage">
           <LegalParagraph>
-            Aven uses a session cookie to keep you signed in (set by Supabase
-            Auth) and stores your theme preference in your browser&apos;s local
-            storage. We do not use advertising or cross-site tracking cookies.
+            AtTrack sets no session or authentication cookies — there is nothing
+            to sign in to. Your theme preference is stored in your browser&apos;s
+            local storage. We do not use advertising or cross-site tracking
+            cookies.
           </LegalParagraph>
         </LegalSection>
 
         <LegalSection index="10" title="Children's privacy">
           <LegalParagraph>
-            Aven is not directed to children under the age of 13, and we do not
+            AtTrack is not directed to children under the age of 13, and we do not
             knowingly collect personal information from children. If you believe
             a child has provided us with personal information, please contact
             us so we can remove it.

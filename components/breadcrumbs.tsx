@@ -14,10 +14,12 @@ import {
 
 const routeLabels: Record<string, string> = {
   overview: "Overview",
+  board: "Board",
   jobs: "Jobs",
   applications: "Applications",
   interviews: "Interviews",
-  documents: "Documents",
+  documents: "Resume/CV",
+  crm: "CRM",
   settings: "Settings",
   insights: "Insights",
   admin: "Admin",

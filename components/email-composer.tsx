@@ -198,7 +198,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
       </div>
 
       {/* Recipient info + Resume selector */}
-      <div className="rounded-4xl border border-border bg-card p-4">
+      <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-sm">
             <div>
@@ -220,7 +220,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
                 items={resumes.map((r) => ({ value: r.id, label: r.name }))}
               >
                 <SelectTrigger className="h-9 w-[200px]">
-                  <SelectValue placeholder="Select resume..." />
+                  <SelectValue placeholder="Choose a resume..." />
                 </SelectTrigger>
                 <SelectContent>
                   {resumes.map((r) => (
@@ -275,7 +275,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
         </div>
 
         {isStreaming && !isReady ? (
-          <div className="relative min-h-[300px] rounded-4xl border border-border bg-card p-4">
+          <div className="relative min-h-[300px] rounded-2xl border border-border bg-card p-4">
             <div className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-foreground/90">
               {rawStream ? (
                 <>
@@ -308,7 +308,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
             </div>
           </div>
         ) : body ? (
-          <div className="min-h-[300px] rounded-4xl border border-border bg-card p-4">
+          <div className="min-h-[300px] rounded-2xl border border-border bg-card p-4">
             <div className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-foreground/90">
               {body}
             </div>
@@ -320,20 +320,20 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
       {isReady && (
         <div className="space-y-3">
           {selectedResume && (
-            <div className="flex items-center gap-3 rounded-4xl border border-border bg-card p-4">
-              <div className="flex size-10 items-center justify-center rounded-4xl bg-muted">
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-muted">
                 <Paperclip className="size-5 text-muted-foreground/50" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Resume to attach</p>
                 <p className="text-sm font-medium truncate">{selectedResume.name}</p>
               </div>
-              <span className="rounded-4xl bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">
+              <span className="rounded-2xl bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">
                 Will be attached
               </span>
             </div>
           )}
-          <div className="rounded-4xl bg-muted/50 p-4 text-xs text-muted-foreground">
+          <div className="rounded-2xl bg-muted/50 p-4 text-xs text-muted-foreground">
             <strong>Spam-safe:</strong> This email uses plain text formatting, avoids spam trigger words,
             and follows professional email conventions to maximize deliverability.
           </div>
@@ -343,7 +343,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
       {/* Confirmation dialog */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-md">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-md">
             <h2 className="font-heading text-lg font-semibold">Send email?</h2>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between">

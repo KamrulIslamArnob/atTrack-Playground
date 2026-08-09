@@ -46,7 +46,7 @@ export default async function DocumentPage(props: PageProps) {
               Back to documents
             </Link>
             <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-4xl bg-muted">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-muted">
                 <FileText className="size-5 text-muted-foreground" />
               </div>
               <div>

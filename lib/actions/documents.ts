@@ -225,20 +225,25 @@ async function recalculateAllMatchScores(
     .eq("type", "resume")
     .not("match_data", "is", null);
 
+  // Jobs where the user picked a resume via setJobResume (job-detail-sheet)
+  // keep that pick — this pass would otherwise overwrite it with the AI's own
+  // best-match guess on every resume upload/delete/default change.
   if (!resumes || resumes.length === 0) {
-    // No resumes with match data, clear all scores
+    // No resumes with match data, clear all scores except user-picked ones.
     await supabase
       .from("jobs")
       .update({ match_score: null, matched_resume_id: null, match_reasoning: null })
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .is("resume_id", null);
     return;
   }
 
-  // Get all jobs with descriptions
+  // Get all jobs with descriptions, excluding ones with a user-picked resume.
   const { data: jobs } = await supabase
     .from("jobs")
     .select("id, title, description")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("resume_id", null);
 
   if (!jobs || jobs.length === 0) return;
 
@@ -275,7 +280,69 @@ async function recalculateAllMatchScores(
           matched_resume_id: bestResumeId,
           match_reasoning: bestReasoning,
         })
-        .eq("id", job.id);
+        .eq("id", job.id)
+        .eq("user_id", userId);
     }
   }
+}
+
+// --- job_documents (job-detail-sheet Documents tab) ---------------------
+
+export interface JobDocument {
+  id: string; // documents.id
+  name: string;
+  type: string;
+  generated_kind: string | null;
+  created_at: string;
+}
+
+export async function getJobDocuments(jobId: string): Promise<JobDocument[]> {
+  const { supabase, userId } = await getUser();
+
+  // job_documents carries no user_id of its own — scope through the job so a
+  // stray row from a carried-over multi-user DB can't leak another user's docs.
+  const { data: job } = await supabase.from("jobs").select("id").eq("id", jobId).eq("user_id", userId).maybeSingle();
+  if (!job) return [];
+
+  const { data, error } = await supabase
+    .from("job_documents")
+    .select("document:documents(id, name, type, generated_kind, created_at)")
+    .eq("job_id", jobId);
+
+  if (error) {
+    console.error("Error fetching job documents:", error);
+    return [];
+  }
+
+  return ((data ?? []) as unknown as { document: JobDocument | null }[])
+    .map((row) => row.document)
+    .filter((d): d is JobDocument => d !== null);
+}
+
+export async function linkDocument(jobId: string, documentId: string): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  // Ownership check on both sides before writing the join row.
+  const [{ data: job }, { data: doc }] = await Promise.all([
+    supabase.from("jobs").select("id").eq("id", jobId).eq("user_id", userId).single(),
+    supabase.from("documents").select("id").eq("id", documentId).eq("user_id", userId).single(),
+  ]);
+  if (!job || !doc) throw new Error("Job or document not found.");
+
+  await supabase.from("job_documents").insert({ job_id: jobId, document_id: documentId });
+
+  revalidatePath("/jobs/" + jobId);
+  await logResourceActivity(userId, "link", "job_document", documentId, { job_id: jobId });
+}
+
+export async function unlinkDocument(jobId: string, documentId: string): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  const { data: job } = await supabase.from("jobs").select("id").eq("id", jobId).eq("user_id", userId).single();
+  if (!job) throw new Error("Job not found.");
+
+  await supabase.from("job_documents").delete().eq("job_id", jobId).eq("document_id", documentId);
+
+  revalidatePath("/jobs/" + jobId);
+  await logResourceActivity(userId, "unlink", "job_document", documentId, { job_id: jobId });
 }

@@ -1,4 +1,4 @@
-# Aven
+# AtTrack
 
 Personal career workspace for managing job applications, documents, interviews, and AI-assisted preparation.
 
@@ -9,6 +9,12 @@ npm install
 npm run dev
 ```
 
-## Implementation Plan
+## Project Layout
 
-See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the full development plan.
+- `app/` — Next.js App Router routes (landing, dashboard, admin, API routes).
+- `components/` — UI components and `ui/` primitives.
+- `lib/db/` — local SQLite layer (schema + a supabase-js-shaped query shim).
+- `lib/actions/` — server actions used by the UI.
+- `lib/ai/` — AI integration (Gemini for extraction, OpenRouter for the rest).
+
+See `CLAUDE.md` for the full architecture and `planning.md` for historical design notes.
