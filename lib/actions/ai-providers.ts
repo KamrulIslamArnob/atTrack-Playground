@@ -566,3 +566,110 @@ function getFallbackModelsForBaseUrl(baseUrl: string): FetchedModel[] {
   return [];
 }
 
+export async function exportAiProviders(): Promise<{
+  version: string;
+  exportedAt: string;
+  providers: Array<{
+    name: string;
+    provider_type: ProviderType;
+    base_url: string | null;
+    model: string;
+    api_key: string;
+  }>;
+}> {
+  const { supabase, userId } = await getUser();
+
+  const { data: rawProviders } = await supabase
+    .from("ai_providers")
+    .select("name, provider_type, base_url, model, encrypted_api_key")
+    .eq("user_id", userId);
+
+  const providers = (rawProviders ?? []).map((p) => {
+    let api_key = "";
+    try {
+      if (p.encrypted_api_key) api_key = decrypt(p.encrypted_api_key as string);
+    } catch (err) {
+      console.error("[ExportProviders] Decryption failed:", err);
+    }
+    return {
+      name: p.name as string,
+      provider_type: p.provider_type as ProviderType,
+      base_url: p.base_url as string | null,
+      model: p.model as string,
+      api_key,
+    };
+  });
+
+  return {
+    version: "1.0",
+    exportedAt: new Date().toISOString(),
+    providers,
+  };
+}
+
+export async function importAiProviders(jsonString: string): Promise<{ error?: string; count?: number }> {
+  const { supabase, userId } = await getUser();
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    const providersList = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed.providers)
+      ? parsed.providers
+      : null;
+
+    if (!providersList || providersList.length === 0) {
+      return { error: "No valid providers found in JSON." };
+    }
+
+    let count = 0;
+    for (const item of providersList) {
+      if (!item.name || !item.provider_type || !item.model || !item.api_key) {
+        continue;
+      }
+      if (!PROVIDER_TYPES.includes(item.provider_type)) {
+        continue;
+      }
+
+      const { data: existing } = await supabase
+        .from("ai_providers")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("name", String(item.name).trim())
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("ai_providers")
+          .update({
+            provider_type: item.provider_type,
+            base_url: item.base_url ? String(item.base_url).trim() : null,
+            model: String(item.model).trim(),
+            encrypted_api_key: encrypt(String(item.api_key).trim()),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id)
+          .eq("user_id", userId);
+      } else {
+        await supabase.from("ai_providers").insert({
+          user_id: userId,
+          name: String(item.name).trim(),
+          provider_type: item.provider_type,
+          base_url: item.base_url ? String(item.base_url).trim() : null,
+          model: String(item.model).trim(),
+          encrypted_api_key: encrypt(String(item.api_key).trim()),
+          updated_at: new Date().toISOString(),
+        });
+      }
+      count++;
+    }
+
+    await logResourceActivity(userId, "import", "ai_providers", "", { imported_count: count });
+    revalidatePath("/settings");
+    return { count };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: `Invalid JSON file: ${msg}` };
+  }
+}
+

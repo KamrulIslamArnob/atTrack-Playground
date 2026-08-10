@@ -5,6 +5,9 @@
     "output": "release"
   },
   "files": ["electron/**/*", "package.json"],
+  "publish": {
+    "provider": "github"
+  },
   "afterPack": "scripts/electron-after-pack.js",
   "win": {
     "target": ["nsis"]

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { deleteProvider, getTaskRoutes, listProviders, testProviderConnection } from "@/lib/actions/ai-providers";
+import { useState, useRef } from "react";
+import { deleteProvider, getTaskRoutes, listProviders, testProviderConnection, exportAiProviders, importAiProviders } from "@/lib/actions/ai-providers";
 import { AiProviderDialog } from "@/components/settings/ai-provider-dialog";
 import { AiTaskRoutePicker } from "@/components/settings/ai-task-route-picker";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Pencil, Plus, Trash2, Plug } from "lucide-react";
+import { Pencil, Plus, Trash2, Plug, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { PROVIDER_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
 
@@ -69,6 +69,51 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
     setDeletingId(null);
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleExportJson = async () => {
+    try {
+      const data = await exportAiProviders();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attrack-ai-providers-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("AI Providers exported to JSON file.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to export AI providers.");
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const result = await importAiProviders(text);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Successfully imported ${result.count ?? 0} AI provider(s)!`);
+        await refreshProviders();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to read JSON file.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   // Forces the three pickers to remount (and re-read routes/providers into
   // their own local state) whenever the provider set changes — otherwise a
   // deleted provider would linger in a picker's already-initialized state.
@@ -77,16 +122,44 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Providers</p>
-          <button
-            type="button"
-            onClick={() => setDialogOpen("add")}
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            <Plus className="size-3.5" />
-            Add provider
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              <Upload className="size-3.5" />
+              {importing ? "Importing..." : "Import JSON"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportJson}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Download className="size-3.5" />
+              Export JSON
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDialogOpen("add")}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Plus className="size-3.5" />
+              Add provider
+            </button>
+          </div>
         </div>
 
         {providers.length === 0 ? (

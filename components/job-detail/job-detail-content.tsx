@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Building2, MoveRight, ChevronDown } from "lucide-react";
+import { ExternalLink, Building2, MoveRight, ChevronDown, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoveToMenu } from "@/components/board/move-to-menu";
@@ -31,10 +32,24 @@ interface JobDetailContentProps {
 export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetailContentProps) {
   const { job, company } = data;
   const [tab, setTab] = useState("insights");
+  const [copied, setCopied] = useState(false);
   const band = matchScoreBand(job.match_score);
   const statusColor = { saved: "#94A3B8", interested: "#3B82F6", preparing: "#F59E0B" }[
     job.status as JobStatus
   ] ?? "#94A3B8";
+
+  const handleCopyJson = async () => {
+    try {
+      const jsonString = JSON.stringify(data, null, 2);
+      await navigator.clipboard.writeText(jsonString);
+      setCopied(true);
+      toast.success("Job details copied as JSON to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy job details:", err);
+      toast.error("Failed to copy job details.");
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -46,9 +61,20 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
               <Building2 className="size-4 text-muted-foreground/70" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-sm sm:text-base font-bold tracking-tight max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md">
-                {job.title}
-              </h1>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="truncate text-sm sm:text-base font-bold tracking-tight max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md">
+                  {job.title}
+                </h1>
+                <button
+                  type="button"
+                  onClick={handleCopyJson}
+                  title="Copy job details as JSON"
+                  aria-label="Copy job details as JSON"
+                  className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all"
+                >
+                  {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                </button>
+              </div>
               <p className="truncate text-xs text-muted-foreground max-w-[180px] sm:max-w-xs md:max-w-sm">
                 {company?.name ?? "Unknown company"}
                 {company?.location && <span className="text-muted-foreground/50"> · {company.location}</span>}

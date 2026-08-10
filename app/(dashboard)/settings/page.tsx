@@ -11,6 +11,8 @@ import { AiProvidersSettings } from "@/components/settings/ai-providers-settings
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Mail, Sparkles } from "lucide-react";
 
+import { UpdateChecker } from "@/components/settings/update-checker";
+
 export default async function SettingsPage() {
   const { supabase, userId } = await getUser();
 
@@ -35,6 +37,8 @@ export default async function SettingsPage() {
       </div>
 
       <Breadcrumbs />
+
+      <UpdateChecker />
 
       <Card>
         <CardContent className="pt-0">

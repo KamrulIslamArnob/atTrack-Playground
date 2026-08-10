@@ -91,12 +91,85 @@ async function main() {
     height: 800,
     show: false,
     title: "AtTrack",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
-  mainWindow.once("ready-to-show", () => mainWindow.show());
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    setupAutoUpdater();
+  });
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
   mainWindow.loadURL(url);
+}
+
+function setupAutoUpdater() {
+  try {
+    const { autoUpdater } = require("electron-updater");
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on("checking-for-update", () => {
+      mainWindow?.webContents.send("update-status", { status: "checking" });
+    });
+
+    autoUpdater.on("update-available", (info) => {
+      mainWindow?.webContents.send("update-status", { status: "available", version: info.version });
+    });
+
+    autoUpdater.on("update-not-available", () => {
+      mainWindow?.webContents.send("update-status", { status: "not-available" });
+    });
+
+    autoUpdater.on("download-progress", (progressObj) => {
+      mainWindow?.webContents.send("update-status", {
+        status: "downloading",
+        percent: Math.round(progressObj.percent),
+      });
+    });
+
+    autoUpdater.on("update-downloaded", (info) => {
+      mainWindow?.webContents.send("update-status", { status: "downloaded", version: info.version });
+    });
+
+    autoUpdater.on("error", (err) => {
+      mainWindow?.webContents.send("update-status", {
+        status: "error",
+        error: err?.message || String(err),
+      });
+    });
+
+    ipcMain.handle("app:check-for-updates", async () => {
+      if (!app.isPackaged) {
+        return { status: "dev", message: "Auto-updater is active only in packaged builds." };
+      }
+      try {
+        const result = await autoUpdater.checkForUpdates();
+        return { status: "ok", updateInfo: result?.updateInfo };
+      } catch (err) {
+        return { status: "error", error: err?.message || String(err) };
+      }
+    });
+
+    ipcMain.handle("app:quit-and-install", () => {
+      autoUpdater.quitAndInstall();
+    });
+
+    // Check silently on startup if packaged
+    if (app.isPackaged) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+          console.log("[AutoUpdater] Startup check notice:", err?.message);
+        });
+      }, 5000);
+    }
+  } catch (err) {
+    console.log("[AutoUpdater] Setup error:", err);
+  }
 }
 
 async function promptForDataDir() {
