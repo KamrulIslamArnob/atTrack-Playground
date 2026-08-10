@@ -18,6 +18,3 @@ export default async function JobDetailPage(props: {
     </div>
   );
 }
-    </div>
-  );
-}

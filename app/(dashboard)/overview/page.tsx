@@ -700,7 +700,6 @@ export default async function OverviewPage() {
             Insights
           </Link>
         </div>
-        </div>
       </div>
     </div>
   );
