@@ -5,7 +5,7 @@
 
 export const JSON_COLUMNS: Record<string, readonly string[]> = {
   jobs: ["notes", "project_links"],
-  documents: ["match_data"],
+  documents: ["match_data", "builder_data"],
   mcq_results: ["answers", "questions"],
   activity_logs: ["metadata"],
   ai_usage_logs: ["metadata"],

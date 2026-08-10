@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS documents (
   content TEXT,
   is_default INTEGER NOT NULL DEFAULT 0,
   match_data TEXT,              -- JSON
+  builder_data TEXT,             -- JSON: resume-builder document, NULL for uploaded PDFs
   generated_kind TEXT,          -- job-detail-sheet: AI Tools kind that produced this file, NULL for uploads
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))

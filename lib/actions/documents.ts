@@ -9,6 +9,9 @@ export interface Document {
   id: string;
   name: string;
   type: string;
+  // NOT NULL in schema.sql and unchanged there. A resume-builder document has
+  // no file until its first PDF export, so its create action writes '' here
+  // rather than relaxing the column.
   file_path: string;
   content: string | null;
   is_default: boolean;
