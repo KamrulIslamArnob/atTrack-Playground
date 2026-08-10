@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoveToMenu } from "@/components/board/move-to-menu";
 import { ShortcutsPanel } from "@/components/job-detail/shortcuts-panel";
 import { InsightsTab } from "@/components/job-detail/tabs/insights-tab";
+import { DeadlinesTab } from "@/components/job-detail/tabs/deadlines-tab";
 import { EditTab } from "@/components/job-detail/tabs/edit-tab";
 import { AiToolsTab } from "@/components/job-detail/tabs/ai-tools-tab";
 import { ActivitiesTab } from "@/components/job-detail/tabs/activities-tab";
@@ -101,6 +102,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
         <Tabs value={tab} onValueChange={(v) => setTab(v ?? "insights")}>
           <TabsList variant="line" className="mb-3.5 h-8 w-full justify-start overflow-x-auto gap-0.5 text-xs">
             <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="deadlines">Deadlines</TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="ai-tools">AI Tools</TabsTrigger>
             <TabsTrigger value="activities">Activities</TabsTrigger>
@@ -112,6 +114,9 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
 
           <TabsContent value="insights">
             <InsightsTab data={data} />
+          </TabsContent>
+          <TabsContent value="deadlines">
+            <DeadlinesTab data={data} onRefresh={onRefresh} />
           </TabsContent>
           <TabsContent value="edit">
             <EditTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />

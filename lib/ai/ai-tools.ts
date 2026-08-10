@@ -53,10 +53,15 @@ export async function* streamGenerateAiTool(
 
       try {
         const parsed = JSON.parse(data);
+        if (parsed.error) {
+          throw new Error(parsed.error);
+        }
         const content = parsed.choices?.[0]?.delta?.content;
         if (content) yield content;
-      } catch {
-        // skip malformed chunks
+      } catch (e) {
+        if (e instanceof Error && e.message !== "Unexpected token") {
+          throw e;
+        }
       }
     }
   }

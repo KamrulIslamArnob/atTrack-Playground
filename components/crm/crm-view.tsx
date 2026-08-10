@@ -292,11 +292,12 @@ function ContactsView({
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
-          {filtered.map((contact) => (
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+          {filtered.map((contact, index) => (
             <ContactCard
               key={contact.id}
               contact={contact}
+              index={index}
               onEdit={(c) => {
                 setEditingContact(c);
                 setDialogOpen(true);

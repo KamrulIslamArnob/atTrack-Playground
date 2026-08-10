@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>AtTrack setup</title>
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #0b0b0c;
+    color: #e8e8ea;
+    font: 14px -apple-system, "Segoe UI", sans-serif;
+  }
+  main { width: 360px; padding: 24px; }
+  h1 { font-size: 16px; margin: 0 0 6px; }
+  p { color: #9a9aa2; line-height: 1.5; margin: 0 0 16px; }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3f;
+    background: #1a1a1d;
+    color: #e8e8ea;
+    margin-bottom: 12px;
+  }
+  .row { display: flex; gap: 8px; justify-content: flex-end; }
+  button {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3f;
+    background: #1a1a1d;
+    color: #e8e8ea;
+    cursor: pointer;
+  }
+  button.primary { background: #4f46e5; border-color: #4f46e5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Add a Gemini API key?</h1>
+  <p>
+    Needed for AI features (job matching, email drafting). Optional — you can add or
+    change it any time later from Settings &rarr; AI Providers inside AtTrack.
+  </p>
+  <input id="key" type="password" placeholder="Gemini API key" autofocus />
+  <div class="row">
+    <button id="skip">Skip for now</button>
+    <button id="save" class="primary">Save and continue</button>
+  </div>
+</main>
+<script>
+  document.getElementById("save").addEventListener("click", () => {
+    window.attrackSetup.submit(document.getElementById("key").value.trim());
+  });
+  document.getElementById("skip").addEventListener("click", () => {
+    window.attrackSetup.submit("");
+  });
+  document.getElementById("key").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("save").click();
+  });
+</script>
+</body>
+</html>

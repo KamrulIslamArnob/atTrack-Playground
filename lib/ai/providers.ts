@@ -317,50 +317,80 @@ export async function generateTextStream(
   input: GenerateTextInput,
   logContext: { userId?: string; action: string; metadata?: Record<string, unknown> }
 ): Promise<ReadableStream<Uint8Array>> {
-  const provider = chain[0];
-  if (!provider) {
+  if (chain.length === 0) {
     throw new Error("No AI provider configured for this task and no GEMINI_API_KEY fallback available.");
   }
 
   const encoder = new TextEncoder();
-  const startedAt = Date.now();
 
-  if (provider.provider_type === "gemini") {
-    let usageCaptured = false;
-    return new ReadableStream({
-      async start(controller) {
+  return new ReadableStream({
+    async start(controller) {
+      const errors: string[] = [];
+
+      for (const provider of chain) {
+        const startedAt = Date.now();
+        let enqueuedChunk = false;
+        let usageCaptured = false;
+
         try {
-          const ai = new GoogleGenAI({ apiKey: provider.api_key });
-          const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
-          const response = await ai.models.generateContentStream({ model: provider.model, contents: prompt });
+          if (provider.provider_type === "gemini") {
+            const ai = new GoogleGenAI({ apiKey: provider.api_key });
+            const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
+            const response = await ai.models.generateContentStream({ model: provider.model, contents: prompt });
 
-          for await (const chunk of response) {
-            const text = chunk.text;
-            if (text) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
-              );
+            for await (const chunk of response) {
+              const text = chunk.text;
+              if (text) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
+                );
+                enqueuedChunk = true;
+              }
+              const usage = chunk.usageMetadata;
+              if (usage && !usageCaptured && logContext.userId) {
+                usageCaptured = true;
+                await logUsage({
+                  userId: logContext.userId,
+                  action: logContext.action,
+                  model: `${provider.name}/${provider.model}`,
+                  inputTokens: usage.promptTokenCount ?? 0,
+                  outputTokens: usage.candidatesTokenCount ?? 0,
+                  durationMs: Date.now() - startedAt,
+                  metadata: logContext.metadata,
+                });
+              }
             }
-            const usage = chunk.usageMetadata;
-            if (usage && !usageCaptured && logContext.userId) {
-              usageCaptured = true;
-              await logUsage({
-                userId: logContext.userId,
-                action: logContext.action,
-                model: `${provider.name}/${provider.model}`,
-                inputTokens: usage.promptTokenCount ?? 0,
-                outputTokens: usage.candidatesTokenCount ?? 0,
-                durationMs: Date.now() - startedAt,
-                metadata: logContext.metadata,
-              });
+          } else {
+            const result = await callerFor(provider.provider_type)(provider, input);
+            if (result.text) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: result.text } }] })}\n\n`)
+              );
+              enqueuedChunk = true;
+              if (logContext.userId) {
+                usageCaptured = true;
+                await logUsage({
+                  userId: logContext.userId,
+                  action: logContext.action,
+                  model: `${provider.name}/${result.model}`,
+                  inputTokens: result.inputTokens ?? 0,
+                  outputTokens: result.outputTokens ?? 0,
+                  durationMs: Date.now() - startedAt,
+                  metadata: logContext.metadata,
+                });
+              }
             }
           }
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+
+          if (enqueuedChunk) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+            return;
+          }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
+          errors.push(`${provider.name}: ${message}`);
           if (logContext.userId) {
-            usageCaptured = true;
             await logUsage({
               userId: logContext.userId,
               action: logContext.action,
@@ -371,58 +401,20 @@ export async function generateTextStream(
               metadata: logContext.metadata,
             });
           }
-        } finally {
-          controller.close();
-          if (!usageCaptured && logContext.userId) {
-            await logUsage({
-              userId: logContext.userId,
-              action: logContext.action,
-              model: `${provider.name}/${provider.model}`,
-              durationMs: Date.now() - startedAt,
-              metadata: logContext.metadata,
-            });
+          if (enqueuedChunk) {
+            // Mid-stream failure
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
+            controller.close();
+            return;
           }
         }
-      },
-    });
-  }
-
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        const result = await callerFor(provider.provider_type)(provider, input);
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: result.text } }] })}\n\n`)
-        );
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        if (logContext.userId) {
-          await logUsage({
-            userId: logContext.userId,
-            action: logContext.action,
-            model: `${provider.name}/${result.model}`,
-            inputTokens: result.inputTokens ?? 0,
-            outputTokens: result.outputTokens ?? 0,
-            durationMs: Date.now() - startedAt,
-            metadata: logContext.metadata,
-          });
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
-        if (logContext.userId) {
-          await logUsage({
-            userId: logContext.userId,
-            action: logContext.action,
-            model: `${provider.name}/${provider.model}`,
-            durationMs: Date.now() - startedAt,
-            status: "error",
-            error: message,
-            metadata: logContext.metadata,
-          });
-        }
-      } finally {
-        controller.close();
       }
+
+      // If all providers in chain failed before any token was enqueued
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ error: `All providers failed: ${errors.join("; ")}` })}\n\n`)
+      );
+      controller.close();
     },
   });
 }

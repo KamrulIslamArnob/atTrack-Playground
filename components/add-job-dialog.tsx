@@ -200,13 +200,32 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Deadline</Label>
-                  <Input id="deadline" name="deadline" type="date" defaultValue={initialData?.deadline ?? ""} className="h-10" />
+                  <Label htmlFor="source">Source</Label>
+                  <Input id="source" name="source" placeholder="e.g. LinkedIn" defaultValue={initialData?.source ?? ""} className="h-10" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="source">Source</Label>
-                <Input id="source" name="source" placeholder="e.g. LinkedIn" defaultValue={initialData?.source ?? ""} className="h-10" />
+
+              {/* Deadlines Section — Mandatory */}
+              <div className="rounded-xl border border-border bg-muted/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                    Deadlines <span className="text-red-500">* (At least 1 required)</span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deadline" className="text-xs font-medium">Job Application Deadline</Label>
+                    <Input id="deadline" name="deadline" type="date" defaultValue={initialData?.deadline ?? ""} className="h-9 text-xs" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="section_deadline" className="text-xs font-medium">Section Target Deadline</Label>
+                    <Input id="section_deadline" name="section_deadline" type="date" className="h-9 text-xs" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="section_deadline_list_id" className="text-xs font-medium">Target Section for Deadline</Label>
+                  <Input id="section_deadline_list_id" name="section_deadline_list_id" placeholder="e.g. Applied (Optional)" className="h-9 text-xs" />
+                </div>
               </div>
               <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>

@@ -24,6 +24,7 @@ import {
   Calendar,
   FileText,
   Settings,
+  Sparkles,
   Sun,
   Moon,
   Monitor,
@@ -55,8 +56,8 @@ const resourceNavigation = [
 ];
 
 const secondaryNavigation = [
-  // { name: "Insights", href: "/insights", icon: Lightbulb },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "AI Prompts", href: "/preferences/ai-prompts", icon: Sparkles },
 ];
 
 const adminOverviewNavigation = [

@@ -17,10 +17,11 @@ const SPAM_RULES = `STRICT RULES FOR SPAM AVOIDANCE:
 - Keep the email between 100-300 words
 
 OUTPUT FORMAT:
-Return ONLY a JSON object with this exact structure, no markdown, no code blocks:
+CRITICAL: DO NOT include any thinking process, reasoning text, scratchpad, or preamble (e.g. "Thinking Process:").
+Return ONLY a valid JSON object with this exact structure, no markdown wrappers, no code blocks:
 {"subject": "your subject line here", "body": "your email body here"}
 
-The body should use \\n for line breaks. Do not wrap in quotes.`;
+The body should use \n for line breaks. Do not wrap in quotes.`;
 
 const PURPOSE: Record<AiToolKind, string> = {
   cover_letter:
@@ -82,7 +83,17 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const systemPrompt = `${purpose}\n\n${SPAM_RULES}`;
+  let systemPrompt = `${purpose}\n\n${SPAM_RULES}`;
+  const { data: customPromptRow } = await supabase
+    .from("ai_tool_prompts")
+    .select("system_prompt")
+    .eq("user_id", user.id)
+    .eq("kind", kind)
+    .single();
+
+  if (customPromptRow?.system_prompt?.trim()) {
+    systemPrompt = customPromptRow.system_prompt.trim();
+  }
 
   const userPrompt = `POSITION: ${jobTitle}
 COMPANY: ${companyName}

@@ -1,0 +1,19 @@
+{
+  "appId": "com.attrack.desktop",
+  "productName": "AtTrack",
+  "directories": {
+    "output": "release"
+  },
+  "files": ["electron/**/*", "package.json"],
+  "afterPack": "scripts/electron-after-pack.js",
+  "win": {
+    "target": ["nsis"]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "artifactName": "AtTrack-Setup-${version}.exe"
+  }
+}

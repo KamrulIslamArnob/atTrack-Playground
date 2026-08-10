@@ -56,10 +56,10 @@ export function DocumentsList({ documents }: DocumentsListProps) {
 
   const handleDownload = async (filePath: string, name: string) => {
     try {
-      const url = await getSignedUrl(filePath);
+      const url = filePath.startsWith("/") ? filePath : await getSignedUrl(filePath);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${name}.pdf`;
+      a.download = name.endsWith(".pdf") ? name : `${name}.pdf`;
       a.click();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to download");

@@ -4,6 +4,8 @@ import nodemailer from "nodemailer";
 import { getUser } from "@/lib/auth";
 import { decrypt } from "@/lib/encryption";
 import { logResourceActivity } from "@/lib/actions/activity-log";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 interface SendEmailParams {
   jobId: string;
@@ -48,17 +50,30 @@ export async function sendApplicationEmail(params: SendEmailParams): Promise<{ e
       .single();
 
     if (doc?.file_path) {
-      // Download from storage
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from("job-imports")
-        .download(doc.file_path);
+      if (doc.file_path.startsWith("/resume/")) {
+        const localPath = path.join(process.cwd(), "public", doc.file_path);
+        try {
+          const fileBuffer = await readFile(localPath);
+          resumeAttachment = {
+            filename: doc.name.endsWith(".pdf") ? doc.name : `${doc.name}.pdf`,
+            content: fileBuffer,
+          };
+        } catch (e) {
+          console.error("Failed to read local resume file for email:", e);
+        }
+      } else {
+        // Download from storage fallback
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from("documents")
+          .download(doc.file_path);
 
-      if (!downloadError && fileData) {
-        const arrayBuffer = await fileData.arrayBuffer();
-        resumeAttachment = {
-          filename: doc.name || "resume.pdf",
-          content: Buffer.from(arrayBuffer),
-        };
+        if (!downloadError && fileData) {
+          const arrayBuffer = await fileData.arrayBuffer();
+          resumeAttachment = {
+            filename: doc.name.endsWith(".pdf") ? doc.name : `${doc.name}.pdf`,
+            content: Buffer.from(arrayBuffer),
+          };
+        }
       }
     }
   }

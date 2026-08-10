@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MoveToMenu } from "@/components/board/move-to-menu";
-import { matchScoreBand, type BoardCard, type BoardList } from "@/lib/types/board";
+import {
+  matchScoreBand,
+  getEffectiveDeadlineInfo,
+  type BoardCard,
+  type BoardList,
+} from "@/lib/types/board";
 import { cn } from "@/lib/utils";
 
 interface BoardCardProps {
@@ -39,6 +44,7 @@ export function BoardCardItem({
   const router = useRouter();
   const band = matchScoreBand(card.match_score);
   const linkCount = card.project_links?.length ?? 0;
+  const deadlineInfo = getEffectiveDeadlineInfo(card, lists);
 
   return (
     <div
@@ -60,11 +66,36 @@ export function BoardCardItem({
       }}
       style={{ borderLeftColor: accent }}
       className={cn(
-        "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-shadow duration-200",
+        "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-shadow duration-200 overflow-hidden",
         "hover:border-primary/60 focus-within:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         isDragging && "opacity-40"
       )}
     >
+      {/* Top Section Deadline / Job Deadline Banner */}
+      {deadlineInfo && (
+        <div
+          className={cn(
+            "-mx-3 -mt-3 mb-2.5 flex items-center justify-between border-b px-3 py-1.5 text-[11px] font-semibold tracking-tight transition-colors",
+            deadlineInfo.bannerClassName
+          )}
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate text-[11px] font-semibold tracking-tight">
+              {deadlineInfo.title}
+            </span>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+              deadlineInfo.badgeClassName
+            )}
+          >
+            {deadlineInfo.label}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-1.5">
         <p className="flex-1 text-sm font-semibold leading-tight">{card.title}</p>
 

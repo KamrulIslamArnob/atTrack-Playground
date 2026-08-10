@@ -31,6 +31,8 @@ interface RawJobRow {
   match_reasoning: string | null;
   project_links: ProjectLink[] | null;
   deadline: string | null;
+  section_deadline: string | null;
+  section_deadline_list_id: string | null;
   created_at: string;
   company: { name: string } | null;
   position: { name: string } | null;
@@ -87,6 +89,8 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       match_reasoning,
       project_links,
       deadline,
+      section_deadline,
+      section_deadline_list_id,
       created_at,
       company:companies(name),
       position:positions(name),
@@ -106,6 +110,26 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
     throw boardError("Loading board cards", error);
   }
 
+  const { data: allDeadlines } = await supabase
+    .from("job_deadlines")
+    .select("id, job_id, title, stage_kind, due_date, is_pinned, is_completed, notes")
+    .eq("user_id", userId);
+
+  const deadlinesByJob: Record<string, any[]> = {};
+  for (const d of allDeadlines ?? []) {
+    if (!deadlinesByJob[d.job_id]) deadlinesByJob[d.job_id] = [];
+    deadlinesByJob[d.job_id].push({
+      id: d.id,
+      job_id: d.job_id,
+      title: d.title,
+      stage_kind: d.stage_kind,
+      due_date: d.due_date,
+      is_pinned: Boolean(d.is_pinned),
+      is_completed: Boolean(d.is_completed),
+      notes: d.notes,
+    });
+  }
+
   const cards: BoardCard[] = ((jobs ?? []) as unknown as RawJobRow[])
     .map((j) => {
       const application = j.applications?.[0] ?? null;
@@ -123,6 +147,9 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
         match_reasoning: j.match_reasoning,
         project_links: j.project_links,
         deadline: j.deadline,
+        section_deadline: j.section_deadline,
+        section_deadline_list_id: j.section_deadline_list_id,
+        deadlines: deadlinesByJob[j.id] ?? [],
         created_at: j.created_at,
         application_id: application?.id ?? null,
         application_status: application?.status ?? null,

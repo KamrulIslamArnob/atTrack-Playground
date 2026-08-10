@@ -171,6 +171,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   resume_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
   project_links TEXT,           -- JSON: ProjectLink[]
   color TEXT,                   -- job-detail-sheet: per-job accent override; falls back to list color when NULL
+  section_deadline TEXT,        -- ISO date/time for section target deadline
+  section_deadline_list_id TEXT REFERENCES board_lists(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -377,6 +379,38 @@ CREATE TABLE IF NOT EXISTS ai_task_routes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ai_task_routes_user ON ai_task_routes(user_id);
+
+CREATE TABLE IF NOT EXISTS ai_tool_prompts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  system_prompt TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (user_id, kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_tool_prompts_user ON ai_tool_prompts(user_id);
+
+-- =============================================
+-- job_deadlines
+-- =============================================
+CREATE TABLE IF NOT EXISTS job_deadlines (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  stage_kind TEXT CHECK (stage_kind IN ('wishlist','preparing','applied','interview','offer','accepted','rejected','custom')),
+  due_date TEXT NOT NULL,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
+  is_completed INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_deadlines_job ON job_deadlines(job_id);
+CREATE INDEX IF NOT EXISTS idx_job_deadlines_user ON job_deadlines(user_id);
 
 -- =============================================
 -- ai_extraction_logs (009)

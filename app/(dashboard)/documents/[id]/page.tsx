@@ -24,12 +24,19 @@ export default async function DocumentPage(props: PageProps) {
     redirect("/documents");
   }
 
-  // Get signed URL for the PDF
-  const { data: urlData, error: urlError } = await supabase.storage
-    .from("documents")
-    .createSignedUrl(doc.file_path, 60 * 60);
+  // Get URL for the PDF (direct public path or signed URL fallback)
+  let pdfUrl = doc.file_path;
+  if (!doc.file_path.startsWith("/resume/")) {
+    const { data: urlData } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.file_path, 60 * 60);
 
-  if (urlError || !urlData?.signedUrl) {
+    if (urlData?.signedUrl) {
+      pdfUrl = urlData.signedUrl;
+    }
+  }
+
+  if (!pdfUrl) {
     redirect("/documents");
   }
 
@@ -63,7 +70,7 @@ export default async function DocumentPage(props: PageProps) {
 
       <Breadcrumbs />
 
-      <PdfViewer url={urlData.signedUrl} fileName={doc.name} />
+      <PdfViewer url={pdfUrl} fileName={doc.name} />
     </div>
   );
 }

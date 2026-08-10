@@ -23,10 +23,16 @@ export async function createJob(formData: FormData) {
   const employmentType = formData.get("employment_type") as string | null;
   const workLocation = formData.get("work_location") as string | null;
   const deadline = formData.get("deadline") as string | null;
+  const sectionDeadline = formData.get("section_deadline") as string | null;
+  const sectionDeadlineListId = formData.get("section_deadline_list_id") as string | null;
   const source = formData.get("source") as string | null;
   const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
+
+  if (!deadline?.trim() && !sectionDeadline?.trim()) {
+    throw new Error("A deadline is required. Please provide an Application Deadline or a Section Deadline.");
+  }
 
   // Board placement: the requested column, else Wishlist. Every job must land
   // in a column or it would be invisible on /board.
@@ -109,6 +115,8 @@ export async function createJob(formData: FormData) {
       employment_type: employmentType || null,
       work_location: workLocation || null,
       deadline: deadline || null,
+      section_deadline: sectionDeadline || null,
+      section_deadline_list_id: sectionDeadlineListId || null,
       source: source || null,
       // status is overwritten by the sync_job_status_from_list trigger whenever
       // list_id is set (migration 019). Kept for the no-board fallback path.
@@ -245,10 +253,16 @@ export async function updateJob(formData: FormData) {
   const employmentType = formData.get("employment_type") as string | null;
   const workLocation = formData.get("work_location") as string | null;
   const deadline = formData.get("deadline") as string | null;
+  const sectionDeadline = formData.get("section_deadline") as string | null;
+  const sectionDeadlineListId = formData.get("section_deadline_list_id") as string | null;
   const source = formData.get("source") as string | null;
   const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
+
+  if (!deadline?.trim() && !sectionDeadline?.trim()) {
+    throw new Error("A deadline is required. Please provide an Application Deadline or a Section Deadline.");
+  }
 
   // Find or create company
   let companyId: string;
@@ -289,6 +303,8 @@ export async function updateJob(formData: FormData) {
       employment_type: employmentType || null,
       work_location: workLocation || null,
       deadline: deadline || null,
+      section_deadline: sectionDeadline || null,
+      section_deadline_list_id: sectionDeadlineListId || null,
       source: source || null,
       status,
       notes: notes.length > 0 ? notes : null,

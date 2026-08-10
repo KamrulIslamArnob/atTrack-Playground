@@ -29,6 +29,7 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Interviews", href: "/interviews", keywords: "interview schedule upcoming completed" },
   { title: "Documents", href: "/documents", keywords: "resume cv cover letter file upload" },
   { title: "Settings", href: "/settings", keywords: "account profile smtp email preferences" },
+  { title: "AI Prompts", href: "/preferences/ai-prompts", keywords: "custom ai system prompts cover letter templates preferences" },
 ];
 
 const STATUS_LABELS: Record<string, string> = {

@@ -4,6 +4,8 @@ import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { extractResumeContent, calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
 import { logResourceActivity } from "@/lib/actions/activity-log";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
+import path from "node:path";
 
 export interface Document {
   id: string;
@@ -64,23 +66,17 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
     throw new Error("Could not extract text from PDF. Please ensure the PDF contains selectable text.");
   }
 
-  // AI extraction of structured resume data
-  let matchData: ResumeMatchData | null = null;
-  try {
-    matchData = await extractResumeContent(pdfText, userId);
-  } catch (e) {
-    console.error("AI extraction failed, continuing without match data:", e);
-  }
+  // Save PDF locally to public/resume/
+  const resumeDir = path.join(process.cwd(), "public", "resume");
+  await mkdir(resumeDir, { recursive: true });
 
-  // Upload to storage
-  const filePath = `${userId}/${Date.now()}-${file.name}`;
-  const { error: uploadError } = await supabase.storage
-    .from("documents")
-    .upload(filePath, file);
+  const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const filename = `${Date.now()}-${safeFileName}`;
+  const localDiskPath = path.join(resumeDir, filename);
+  const filePath = `/resume/${filename}`;
 
-  if (uploadError) {
-    throw new Error(`Failed to upload file: ${uploadError.message}`);
-  }
+  const arrayBuffer = await file.arrayBuffer();
+  await writeFile(localDiskPath, Buffer.from(arrayBuffer));
 
   // If setting as default, unset other defaults first
   if (setDefault) {
@@ -91,7 +87,7 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
       .eq("is_default", true);
   }
 
-  // Insert document record
+  // Insert document record immediately without waiting for AI
   const { data: doc, error: insertError } = await supabase
     .from("documents")
     .insert({
@@ -101,7 +97,7 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
       file_path: filePath,
       content: pdfText,
       is_default: setDefault,
-      match_data: matchData,
+      match_data: null,
     })
     .select("id")
     .single();
@@ -110,16 +106,39 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
     throw new Error(`Failed to save document: ${insertError.message}`);
   }
 
-  // If this is a resume (default or not), recalculate match scores for all jobs
-  if (type === "resume") {
-    await recalculateAllMatchScores(supabase, userId);
-  }
+  // Fire AI extraction & match score recalculation in the background asynchronously
+  processResumeBackground(doc.id, pdfText, userId, type, supabase).catch((err) => {
+    console.error("Background resume processing error:", err);
+  });
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
 
   await logResourceActivity(userId, "create", "document", doc.id, { name, type });
   return { documentId: doc.id };
+}
+
+async function processResumeBackground(
+  docId: string,
+  pdfText: string,
+  userId: string,
+  type: string,
+  supabase: Awaited<ReturnType<typeof getUser>>["supabase"]
+): Promise<void> {
+  try {
+    const matchData = await extractResumeContent(pdfText, userId);
+    await supabase
+      .from("documents")
+      .update({ match_data: matchData })
+      .eq("id", docId)
+      .eq("user_id", userId);
+
+    if (type === "resume") {
+      await recalculateAllMatchScores(supabase, userId);
+    }
+  } catch (e) {
+    console.error(`Background processing for document ${docId} failed:`, e);
+  }
 }
 
 export async function deleteDocument(id: string): Promise<void> {
@@ -137,8 +156,15 @@ export async function deleteDocument(id: string): Promise<void> {
     throw new Error("Document not found");
   }
 
-  // Delete from storage
-  await supabase.storage.from("documents").remove([doc.file_path]);
+  // Delete local file if stored in public/resume/ or fallback to storage
+  if (doc.file_path && doc.file_path.startsWith("/resume/")) {
+    const localDiskPath = path.join(process.cwd(), "public", doc.file_path);
+    await unlink(localDiskPath).catch((err) => {
+      console.warn(`Could not delete local file ${localDiskPath}:`, err);
+    });
+  } else if (doc.file_path) {
+    await supabase.storage.from("documents").remove([doc.file_path]).catch(() => {});
+  }
 
   // Delete from DB
   const { error } = await supabase
@@ -151,9 +177,11 @@ export async function deleteDocument(id: string): Promise<void> {
     throw new Error(`Failed to delete document: ${error.message}`);
   }
 
-  // If deleted resume was matched to jobs, recalculate
+  // If deleted resume was matched to jobs, recalculate in background
   if (doc.type === "resume") {
-    await recalculateAllMatchScores(supabase, userId);
+    recalculateAllMatchScores(supabase, userId).catch((err) => {
+      console.error("Background recalculateAllMatchScores failed:", err);
+    });
   }
 
   revalidatePath("/documents");
@@ -182,8 +210,10 @@ export async function setDefaultDocument(id: string): Promise<void> {
     throw new Error(`Failed to set default: ${error.message}`);
   }
 
-  // Recalculate all match scores with new default
-  await recalculateAllMatchScores(supabase, userId);
+  // Recalculate all match scores with new default in background
+  recalculateAllMatchScores(supabase, userId).catch((err) => {
+    console.error("Background recalculateAllMatchScores failed:", err);
+  });
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
@@ -205,12 +235,16 @@ export async function getSignedUrl(filePath: string): Promise<string> {
     throw new Error("Document not found");
   }
 
+  if (filePath.startsWith("/resume/")) {
+    return filePath;
+  }
+
   const { data, error } = await supabase.storage
     .from("documents")
     .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
 
-  if (error) {
-    throw new Error(`Failed to get signed URL: ${error.message}`);
+  if (error || !data?.signedUrl) {
+    return filePath;
   }
 
   return data.signedUrl;
@@ -220,19 +254,16 @@ async function recalculateAllMatchScores(
   supabase: Awaited<ReturnType<typeof getUser>>["supabase"],
   userId: string
 ): Promise<void> {
-  // Get all resumes with match_data
+  // Get all resumes with match_data (prioritize default resume)
   const { data: resumes } = await supabase
     .from("documents")
-    .select("id, match_data")
+    .select("id, match_data, is_default")
     .eq("user_id", userId)
     .eq("type", "resume")
-    .not("match_data", "is", null);
+    .not("match_data", "is", null)
+    .order("is_default", { ascending: false });
 
-  // Jobs where the user picked a resume via setJobResume (job-detail-sheet)
-  // keep that pick — this pass would otherwise overwrite it with the AI's own
-  // best-match guess on every resume upload/delete/default change.
   if (!resumes || resumes.length === 0) {
-    // No resumes with match data, clear all scores except user-picked ones.
     await supabase
       .from("jobs")
       .update({ match_score: null, matched_resume_id: null, match_reasoning: null })
@@ -241,7 +272,7 @@ async function recalculateAllMatchScores(
     return;
   }
 
-  // Get all jobs with descriptions, excluding ones with a user-picked resume.
+  // Get all jobs without explicit resume pick
   const { data: jobs } = await supabase
     .from("jobs")
     .select("id, title, description")
@@ -250,7 +281,7 @@ async function recalculateAllMatchScores(
 
   if (!jobs || jobs.length === 0) return;
 
-  // Score each job against each resume, pick best
+  // Score each job against resumes (prioritize default resume)
   for (const job of jobs) {
     let bestScore = 0;
     let bestReasoning = "";
@@ -271,7 +302,13 @@ async function recalculateAllMatchScores(
           bestResumeId = resume.id;
         }
       } catch (e) {
-        console.error(`Failed to score job ${job.id} against resume ${resume.id}:`, e);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("429") || msg.includes("Rate limit") || msg.includes("limit reached")) {
+          console.warn(`Rate limit reached during match score calculation for job "${job.title}". Pausing score recalculation.`);
+          return; // Stop hammering API when rate limited
+        } else {
+          console.error(`Failed to score job ${job.id} against resume ${resume.id}:`, msg);
+        }
       }
     }
 

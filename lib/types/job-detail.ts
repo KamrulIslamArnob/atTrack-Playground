@@ -62,6 +62,8 @@ export interface JobDetailJob {
   employment_type: string | null;
   work_location: string | null;
   deadline: string | null;
+  section_deadline: string | null;
+  section_deadline_list_id: string | null;
   source: string | null;
   status: string;
   notes: Array<{ title: string; bullets: string[] }> | null;

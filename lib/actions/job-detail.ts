@@ -99,6 +99,8 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       employment_type: job.employment_type ?? null,
       work_location: job.work_location ?? null,
       deadline: job.deadline ?? null,
+      section_deadline: job.section_deadline ?? null,
+      section_deadline_list_id: job.section_deadline_list_id ?? null,
       source: job.source ?? null,
       status: job.status ?? "saved",
       notes: Array.isArray(job.notes) ? job.notes : null,

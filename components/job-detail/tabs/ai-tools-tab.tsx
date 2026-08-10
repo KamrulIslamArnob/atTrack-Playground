@@ -63,8 +63,8 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
       const final = parseEmailFromStream(streamRef.current);
       if (final) setResult(final);
       else toast.error("Could not parse the generated email");
-    } catch {
-      toast.error("Generation failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setGenerating(false);
     }

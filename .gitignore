@@ -43,6 +43,9 @@ next-env.d.ts
 # Local SQLite database and file storage
 .data/
 
+# electron-builder installer output
+/release/
+
 # Temporary test/agent artifacts
 .playwright-mcp/
 .claude/
