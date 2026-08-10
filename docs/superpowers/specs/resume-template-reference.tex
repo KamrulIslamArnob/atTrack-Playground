@@ -1,0 +1,387 @@
+%-------------------------
+\setlength{\footskip}{4.08003pt}
+% Author : Aras Gungore (Highly Optimized Layout)
+% Modified : Dark Grey Professional Theme & Standard Sans-Serif Font
+% License : MIT
+%------------------------
+\documentclass[letterpaper,11pt]{article}
+
+%---------- PACKAGES ----------
+% Layout & Formatting
+\usepackage[empty]{fullpage}
+\usepackage[explicit]{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{hyphenat}
+\usepackage[english]{babel}
+
+% Graphics & Colors
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+
+% Fonts & Icons
+\usepackage{fontawesome5}
+\usepackage{marvosym}
+\usepackage{latexsym}
+\usepackage[default]{sourcesanspro}
+\usepackage[T1]{fontenc}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Utilities
+\usepackage{verbatim}
+\usepackage{hyperref}
+
+
+%---------- BRAND COLORS ----------
+\definecolor{cvDarkGrey}{HTML}{333333}     % Deep, professional dark grey
+\definecolor{cvBackground}{HTML}{FFFFFF}   % Pure white background
+\definecolor{wdOrange}{HTML}{FF6600}       % WellDev Orange
+\definecolor{wdDarkOrange}{HTML}{CC5200}   % Darker Orange for Button Borders and Text
+\definecolor{aiLight}{HTML}{FFF8F2}        % Ultra-light soft orange background
+\definecolor{aiBorder}{HTML}{FF6600}       % AI Skill Box Border
+\definecolor{wdLightGreen}{HTML}{E8F5E9}   % Light green background for live link
+\definecolor{wdDarkGreen}{HTML}{2E7D32}    % Dark green border and text for live link
+\definecolor{apiLight}{HTML}{F3E5F5}       % Soft indigo/purple background for API Doc button
+\definecolor{apiDark}{HTML}{6A1B9A}        % Deep purple border and text for API Doc button
+
+
+%---------- PDF SETUP ----------
+\hypersetup{
+    pdfborder={0 0 0},
+    colorlinks=true,
+    urlcolor=cvDarkGrey,
+    pdfnewwindow=true % Hints to open web links in a new window/tab
+}
+
+
+%---------- PAGE SETUP ----------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-0.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+
+%---------- CUSTOM COMMANDS ----------
+% Section Title Formatting
+\titleformat{\section}{
+  \vspace{-4pt}\large\bfseries\raggedright
+}{}{0em}{%
+  \color{cvDarkGrey}\MakeUppercase{#1}\quad\leaders\hrule height 0.6ex depth -0.45ex\hfill\kern0pt\color{black}
+}[\vspace{-5pt}]
+
+% Resume Item Formatting
+\newcommand{\resumeItem}[1]{
+  \item {\small \textcolor{black}{#1} \vspace{-2pt}}
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textcolor{black}{\textbf{#1}} & \textcolor{cvDarkGrey}{\textbf{#2}} \\
+      \textcolor{black}{\textit{\small#3}} & \textcolor{black}{\textit{\small #4}} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textcolor{black}{\textit{\small#1}} & \textcolor{black}{\textit{\small #2}} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textcolor{black}{\small#1} & \textcolor{black}{#2} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+% Add darker orange color definitions for the Portfolio button
+\definecolor{portLight}{HTML}{FFE0CC}       % Soft orange background
+\definecolor{portDark}{HTML}{B34700}        % Deep/dark orange border and text
+
+% Add dedicated portfolio button macro
+\newcommand{\portbtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=portLight, draw=portDark, line width=0.2pt, rounded corners=4pt, inner xsep=6pt, inner ysep=2pt, text=portDark, font=\scriptsize\bfseries] (char) {\faGlobe\hspace{3pt}\mbox{#1}};}
+
+%---------- CUSTOM COMMANDS ----------
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+\renewcommand\labelitemii{\textcolor{cvDarkGrey}{$\vcenter{\hbox{\tiny$\bullet$}}$}}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-3pt}}
+
+% Button Macros
+\newcommand{\contactbtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=aiLight, rounded corners=5pt, inner xsep=6pt, inner ysep=3pt, text=cvDarkGrey, font=\small] (char) {\mbox{#1}};}
+
+\newcommand{\roundbtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=aiLight, draw=wdDarkOrange, line width=0.1pt, rounded corners=4pt, inner xsep=6pt, inner ysep=2pt, text=wdDarkOrange, font=\scriptsize] (char) {\faLink\hspace{3pt}\mbox{#1}};}
+
+\newcommand{\repobtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=aiLight, draw=wdDarkOrange, line width=0.1pt, rounded corners=4pt, inner xsep=6pt, inner ysep=2pt, text=wdDarkOrange, font=\scriptsize] (char) {\faGithub\hspace{3pt}\mbox{#1}};}
+
+\newcommand{\livebtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=wdLightGreen, draw=wdDarkGreen, line width=0.1pt, rounded corners=4pt, inner xsep=6pt, inner ysep=2pt, text=wdDarkGreen, font=\scriptsize] (char) {\faGlobe\hspace{3pt}\mbox{#1}};}
+
+\newcommand{\apibtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=apiLight, draw=apiDark, line width=0.1pt, rounded corners=4pt, inner xsep=6pt, inner ysep=2pt, text=apiDark, font=\scriptsize] (char) {\faCode\hspace{3pt}\mbox{#1}};}
+
+\newcommand{\categorybtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=aiLight, rounded corners=4pt, inner xsep=5pt, inner ysep=2pt, text=wdDarkOrange, font=\small] (char) {\mbox{#1}};}
+
+% Transparent button macro with a thin dark grey border
+\newcommand{\typebtn}[1]{\tikz[baseline=(char.base)] \node[rectangle, fill=none, draw=cvDarkGrey, line width=0.2pt, rounded corners=4pt, inner xsep=5pt, inner ysep=2pt, text=cvDarkGrey, font=\scriptsize] (char) {\mbox{#1}};}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\pagecolor{cvBackground}
+\color{black}
+
+
+%---------- HEADING ----------
+
+\noindent
+\textbf{\Huge \sffamily \textcolor{wdOrange}{Kamrul Islam Arnob}} \hfill
+\href{https://arnob.codes}{\portbtn{Portfolio}} \
+\href{https://github.com/KamrulIslamArnob}{\contactbtn{\faGithub \hspace{2pt} GitHub}} \
+\href{https://www.linkedin.com/in/kamrulislamarnob/}{\contactbtn{\faLinkedin \hspace{2pt} LinkedIn}} \
+\contactbtn{\faMapPin \hspace{2pt} Dhaka} \\ \vspace{4pt}
+\textbf{\large Software Engineer} \hfill
+\href{mailto:connect.arnob@gmail.com}{\contactbtn{\faEnvelope \hspace{2pt} connect.arnob@gmail.com}} \
+\href{tel:8801984933215}{\contactbtn{\faPhone \hspace{2pt} +880 1984 933215}} \\ \vspace{8pt}
+\color{cvDarkGrey}\textit{\footnotesize Software developer combining full-stack web development with AI integration. Experienced in designing UI/UX, building APIs with FastAPI and Node.js, and managing databases for production applications.} \vspace{8pt}
+
+%----------- WORK EXPERIENCE -----------
+
+\section{Work Experience}
+  \vspace{3pt}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Programming Hero (Phitron Team)}{Semi-Hybrid $|$ Dhaka, Bangladesh \hspace{1pt} \typebtn{Full-Time}}
+      {Senior Executive, Marketing}{Mar 2023 \textbf{--} July 2026}
+      \vspace{5pt}
+        \resumeItemListStart
+            \resumeItem{Acted as \textbf{Product Manager} for Phitron's course platform and blog, managing content architecture, publishing workflows, UX feedback loops, and feature prioritization. \hspace{3pt} \href{https://phitron.io/}{\livebtn{phitron.io}}}
+            \vspace{2pt}
+            \resumeItem{Scaled short-form video output \textbf{3x}, directed \textbf{2 original short films}, and managed the end-to-end \textbf{Meta Ads strategy} across \textbf{5 enrollment cycles}.}
+            \vspace{2pt}
+            \resumeItem{\href{https://www.linkedin.com/posts/kamrulislamarnob_honored-to-receive-the-master-of-content-activity-7400166555340304384-ukSU}{\roundbtn{Credentials}} \hspace{3pt} Awarded \textbf{``Master of Content \& Creativity 2025''} - recognized for technical creativity, execution quality, and measurable business impact.}
+        \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+
+%----------- SKILLS -----------
+
+\section{Skills}
+  \vspace{3pt}
+  \resumeSubHeadingListStart
+    \item{\small
+        \textbf{Languages \& Frameworks:}{ Python, FastAPI, React, Next.js, Node.js (Express.js), TypeScript, C\#, ASP.NET Core} \\ \vspace{3pt}
+        \textbf{AI \& Machine Learning:}{ LangGraph, LangChain, RAG Systems, AI Agent Workflows} \\ \vspace{3pt}
+        \textbf{Databases \& Storage:}{ \categorybtn{RDBMS} PostgreSQL, MySQL \quad \categorybtn{No-SQL} MongoDB, Redis, Firebase, Supabase} \\ \vspace{3pt}
+        \textbf{UI/UX \& Design:}{ UI/UX Design (Intermediate), Figma (Intermediate)} \\ \vspace{3pt}
+        \textbf{Backend \& Architecture:}{ OOP, SOLID Principles, REST, Clean Architecture, CQRS, Event-driven architecture} \\ \vspace{3pt}
+        \textbf{Tools \& Infrastructure:}{ Git, GitHub, Docker, Google Workspace}
+    }
+    \vspace{-1pt}
+    \item[]
+    \begin{tcolorbox}[colback=aiLight, colframe=aiBorder, boxrule=0.5pt, arc=4pt, left=4pt, right=4pt, top=4pt, bottom=4pt, width=\linewidth]
+        \small \textcolor{aiBorder}{\faRobot} \textbf{AI-Driven Development:} Practices context engineering and spec-first development with AI coding agents (Claude Code/Codex), scoping context deliberately, defining requirements before implementation, and verifying every agent-generated change before merge.
+    \end{tcolorbox}
+  \resumeSubHeadingListEnd
+
+%----------- PROJECTS -----------
+
+\section{Projects}
+  \vspace{3pt}
+  \resumeSubHeadingListStart
+
+    \resumeProjectHeading
+      {\textbf{AI-Powered University Tutoring System} \textcolor{cvDarkGrey}{$|$} \emph{LangChain | LangGraph | Python}}{\href{https://github.com/KamrulIslamArnob/COSMOS-Backend}{\repobtn{Repository Link}} \hspace{4pt} \href{https://cosmos-backend-2b614852.fastapicloud.dev/docs\#/default/health_check_health_get}{\apibtn{API Doc}} \hspace{4pt} \href{https://cosmos-ai-powerd-intelligent-tutori.vercel.app/}{\livebtn{Live}}}
+      \vspace{2pt}
+      \resumeItemListStart
+        \resumeItem{Architected an \textbf{AI-powered tutoring platform} for UIU to enable \textbf{RAG-based queries} across institutional question banks, course materials, and academic resources via a \textbf{LangGraph-orchestrated agentic workflow} using \textbf{LangChain} and \textbf{Python}.}
+      \resumeItemListEnd
+
+    \vspace{4pt}
+
+    \resumeProjectHeading
+      {\textbf{Multi-Tenant SaaS E-commerce Platform} \textcolor{cvDarkGrey}{$|$} \emph{.NET Microservices | CQRS | PostgreSQL | Redis}}{\href{https://github.com/KamrulIslamArnob/Dukan-multi-tenant-saas-ecommerce-platform}{\repobtn{Repository Link}} \hspace{4pt} \href{https://www.arnob.codes/projects/dukan}{\livebtn{Architecture}}}
+      \vspace{2pt}
+      \resumeItemListStart
+        \resumeItem{Engineered a \textbf{multi-tenant e-commerce platform} using \textbf{3 .NET microservices} adhering to the \textbf{CQRS pattern}, handling merchant store onboarding, catalog/inventory management, checkout workflows, and administrative oversight. Integrated real-time \textbf{SignalR push notifications}, automated \textbf{email dispatch}, \textbf{MinIO object storage}, automated \textbf{WebP image optimization}, and \textbf{Redis caching} over \textbf{PostgreSQL}.}
+      \resumeItemListEnd
+
+    \vspace{4pt}
+
+    \resumeProjectHeading
+      {\textbf{Fera : Rehab Center Management System} \textcolor{cvDarkGrey}{$|$} \emph{Next.js | TypeScript | Firebase}}{\href{https://rehab-center-management-system.vercel.app/login}{\livebtn{Live}}}
+      \vspace{2pt}
+      \resumeItemListStart
+        \resumeItem{Built production \textbf{ERP software} for rehab center operations, actively deployed across \textbf{3 facilities} with \textbf{$\sim$90 daily staff users} running core operational workflows; self-taught \textbf{Next.js} and \textbf{Firebase Firestore} directly from official docs with no prior production experience.}
+      \resumeItemListEnd
+
+    \vspace{4pt}
+
+  \resumeSubHeadingListEnd
+
+
+%----------- EDUCATION -----------
+
+\section{Education}
+  \vspace{3pt}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {United International University (UIU)}{CGPA: 3.66/4.00}
+      {B.Sc. in Computer Science \& Engineering; Data Science (Major)}{Feb 2022 \textbf{--} May 2026}
+        \resumeItemListStart
+            \resumeItem{Achieved \textbf{5x 50\%} \& \textbf{7x 25\%} result-based scholarships.}
+            \resumeItem{\textbf{2x Winner of `CSE Project Show'.}}
+        \resumeItemListEnd
+
+    \resumeSubheading
+      {Birshreshtha Munshi Abdur Rouf Public College}{GPA: 5.00/5.00}
+      {Higher Secondary School Certificate (Science)}{Apr 2018 \textbf{--} Dec 2020}
+
+    \resumeSubheading
+      {Government Laboratory High School}{GPA: 5.00/5.00}
+      {Secondary School Certificate (Science)}{Feb 2008 \textbf{--} Jan 2018}
+
+  \resumeSubHeadingListEnd
+
+
+%----------- PROFESSIONAL TRAINING -----------
+
+\section{Professional Training}
+  \vspace{2pt}
+  \resumeSubHeadingListStart
+    \resumeProjectHeading
+      {\href{https://drive.google.com/file/d/1Xit40VQszZoJqjJFVxu72qZ07UDrNf0U/view?usp=sharing}{\roundbtn{Credentials}} \hspace{3pt} \textbf{Enterprise .NET \& Microservices Architecture Program}}{}
+      \vspace{2pt}
+      \resumeItemListStart
+        \item[] {\small Demonstrated proficiency in ASP.NET Core, Entity Framework Core, ADO.NET, Clean Architecture, MediatR, SignalR, Microservices, Redis, Kafka, Elasticsearch, Docker, CI/CD \& Deployment, and Unit \& Integration Testing.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+
+%----------- HONORS \& AWARDS -----------
+
+\section{Honors \& Awards}
+  \vspace{2pt}
+  \resumeSubHeadingListStart
+
+    \resumeProjectHeading
+      {\href{https://www.linkedin.com/posts/kamrulislamarnob_i-missed-most-hackathons-during-my-university-activity-7418303421549662208-_Vkv}{\roundbtn{Credentials}} \hspace{3pt} \textbf{"Best Code Quality" Award at UIU Hackday 2026} \textcolor{cvDarkGrey}{$|$} \emph{United International University}}{2026}
+
+    \vspace{3pt}
+
+    \resumeProjectHeading
+      {\href{https://www.linkedin.com/posts/kamrulislamarnob_system-analysis-design-lab-summer-share-7293666500702310400-U7GY/}{\roundbtn{Credentials}} \hspace{3pt} \textbf{1st Runner Up in Software Engineering Lab} \textcolor{cvDarkGrey}{$|$} \emph{United International University}}{2024}
+
+    \vspace{3pt}
+
+    \resumeProjectHeading
+      {\href{https://www.linkedin.com/posts/kamrulislamarnob_through-the-whirlwind-of-a-demanding-semester-ugcPost-7250035070525157376-BJLt/}{\roundbtn{Credentials}} \hspace{3pt} \textbf{Champion at the System Analysis \& Design Laboratory} \textcolor{cvDarkGrey}{$|$} \emph{United International University}}{2023}
+
+    \vspace{3pt}
+
+    \resumeProjectHeading
+      {\href{https://www.linkedin.com/posts/kamrulislamarnob_programming-uiuappforum-activity-7007337589649154048-Vb-M}{\roundbtn{Credentials}} \hspace{3pt} \textbf{1st Runner-Up in Programming for Beginners} \textcolor{cvDarkGrey}{$|$} \emph{United International University}}{2022}
+
+  \resumeSubHeadingListEnd
+  \vspace{3pt}
+
+
+%----------- CERTIFICATIONS -----------
+
+\section{Certifications}
+  \vspace{2pt}
+  \resumeSubHeadingListStart
+    \resumeProjectHeading
+      {\href{https://www.coursera.org/account/accomplishments/verify/Z7LWGBXLZQMH}{\roundbtn{Credentials}} \hspace{3pt} \textbf{Supervised Machine Learning: Regression and Classification} \textcolor{cvDarkGrey}{$|$} \emph{DeepLearning.AI}}{May 2024}
+
+    \vspace{2pt}
+
+    \resumeProjectHeading
+      {\href{https://ostad.app/share/certificate/c17328-kamrul-islam-arnob}{\roundbtn{Credentials}} \hspace{3pt} \textbf{Web Development with PHP \& Laravel} \textcolor{cvDarkGrey}{$|$} \emph{Ostad}}{Mar 2024}
+
+    \vspace{2pt}
+
+    \resumeProjectHeading
+      {\href{https://www.udemy.com/certificate/UC-1eb6d865-1197-417b-b827-97969611112f/}{\roundbtn{Credentials}} \hspace{3pt} \textbf{Learn Coding with Java from Scratch: Essential Training 2023} \textcolor{cvDarkGrey}{$|$} \emph{Udemy}}{Dec 2022}
+  \resumeSubHeadingListEnd
+
+  \vspace{2pt}
+
+
+%----------- LEADERSHIP -----------
+
+\section{Leadership}
+  \vspace{2pt}
+  \resumeSubHeadingListStart
+
+    \resumeProjectHeading
+      {\textbf{UIU App Forum} \textcolor{cvDarkGrey}{$|$} \emph{Coordinator of Student Development \& Innovation Hub}}{Jun 2022 \textbf{--} Nov 2025}
+      \vspace{-2pt}
+      \resumeItemListStart
+        \resumeItem{Advanced through \textbf{4 progressive roles} over 3.5 years to oversee the Software, Student Development, and Data Science departments.}
+        \resumeItem{Transitioned from General Secretary to coordinating the Student Development section, aligning operations with student needs and institutional objectives to foster \textbf{campus-wide tech innovation}.}
+      \resumeItemListEnd
+
+    \vspace{3pt}
+
+    \resumeProjectHeading
+      {\textbf{Science Club of Rouf College} \textcolor{cvDarkGrey}{$|$} \emph{Advisor \& Former General Secretary}}{Nov 2019 \textbf{--} Present}
+      \vspace{-2pt}
+      \resumeItemListStart
+        \resumeItem{Progressed through \textbf{3 executive roles} over 5+ years, currently serving as a strategic Advisor overseeing core team operations.}
+      \resumeItemListEnd
+
+    \vspace{3pt}
+
+    \resumeProjectHeading
+      {\textbf{BASIS Students' Forum UIU Chapter} \textcolor{cvDarkGrey}{$|$} \emph{Co-Convener}}{Dec 2023 \textbf{--} Jan 2025}
+      \vspace{-2pt}
+      \resumeItemListStart
+        \resumeItem{Served as a \textbf{primary liaison}, bridging communication and initiatives between UIU students and the national BASIS chapter.}
+      \resumeItemListEnd
+
+    \vspace{3pt}
+
+   \resumeProjectHeading
+      {\textbf{UIU Finance Forum} \textcolor{cvDarkGrey}{$|$} \emph{Co-Head of Design}}{Mar 2023 \textbf{--} Aug 2024}
+      \vspace{-2pt}
+      \resumeItemListStart
+        \resumeItem{\href{https://drive.google.com/file/d/1RRz0a9WwbuWtrfvbVl_IywGZEeFOaQSC/view}{\roundbtn{Credentials}} \hspace{3pt} Co-led visual branding and creative direction for the Microsoft-authorized event, \textbf{``The Excelist 2022''}}
+      \resumeItemListEnd
+
+    \vspace{3pt}
+
+    \resumeProjectHeading
+      {\textbf{Science Club of Laboratorians} \textcolor{cvDarkGrey}{$|$} \emph{Strategic Coordinator}}{Apr 2019 \textbf{--} Jan 2020}
+      \vspace{-2pt}
+      \resumeItemListStart
+        \resumeItem{Founded and coordinated a targeted program to promote \textbf{financial literacy} among underprivileged high school students.}
+      \resumeItemListEnd
+
+    \vspace{3pt}
+
+  \resumeSubHeadingListEnd
+
+%-------------------------------------------
+\end{document}
