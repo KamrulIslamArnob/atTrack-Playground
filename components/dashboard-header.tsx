@@ -31,8 +31,8 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
 
   return (
     <>
-      <header className="flex h-14 items-center justify-between rounded-2xl border border-border bg-card px-4 md:hidden">
-        <Link href={homeHref} className="flex items-center gap-2">
+      <header className="app-drag-region flex h-14 items-center justify-between rounded-2xl border border-border bg-card px-4 md:hidden">
+        <Link href={homeHref} className="app-no-drag flex items-center gap-2">
           <Image
             src="/logo.png"
             alt="AtTrack"
@@ -45,7 +45,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
 
         <button
           onClick={() => setMobileNavOpen(true)}
-          className="flex size-9 items-center justify-center rounded-2xl border border-border text-foreground transition-colors hover:bg-muted"
+          className="app-no-drag flex size-9 items-center justify-center rounded-2xl border border-border text-foreground transition-colors hover:bg-muted"
           aria-label="Open menu"
         >
           <Menu className="size-4" />

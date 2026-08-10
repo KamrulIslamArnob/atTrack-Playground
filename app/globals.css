@@ -179,10 +179,16 @@
   opacity: 0.8;
 }
 
-/* Firefox scrollbar */
+/* Hide scrollbars globally across all browsers/Electron while keeping scroll functionality */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary) transparent;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 @keyframes shimmer-icon {
@@ -223,4 +229,13 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+}
+
+/* Electron custom window drag regions */
+.app-drag-region {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
 }

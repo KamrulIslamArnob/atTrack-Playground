@@ -259,12 +259,12 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
         )}
         style={resizable ? { width } : undefined}
       >
-        <div className="border-b border-border/50 p-3">
-          <Link href={homeHref} onClick={onNavigate} className="mb-2 flex items-center gap-2 px-1">
+        <div className="app-drag-region border-b border-border/50 p-3">
+          <Link href={homeHref} onClick={onNavigate} className="app-no-drag mb-2 flex items-center gap-2 px-1">
             <Image src="/logo.png" alt="AtTrack" width={22} height={22} priority />
             <span className="font-heading text-sm font-semibold">AtTrack</span>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="app-no-drag flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"

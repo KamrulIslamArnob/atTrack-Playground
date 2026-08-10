@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getUser } from "@/lib/auth";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { Sidebar } from "@/components/sidebar";
+import { WindowTitlebar } from "@/components/window-titlebar";
 
 export default async function DashboardLayout({
   children,
@@ -30,6 +31,8 @@ export default async function DashboardLayout({
     // shell (header + drawer). At md+, sidebar and main share one flush boundary
     // (Sidebar's own border-r) instead of floating as two separate panels.
     <div className="flex h-screen flex-col bg-background p-3 md:p-0">
+      <WindowTitlebar />
+
       <DashboardHeader user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} role={profile?.role} />
 
       <div className="flex flex-1 gap-3 overflow-hidden pt-3 md:gap-0 md:pt-0">
@@ -37,9 +40,11 @@ export default async function DashboardLayout({
           <Sidebar user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} role={profile?.role} resizable />
         </div>
 
-        <main className="flex-1 overflow-y-auto rounded-2xl border border-border bg-card md:rounded-none md:border-0">
-          <div className="px-6 py-8">{children}</div>
-        </main>
+        <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card md:rounded-none md:border-0">
+          <main className="flex-1 overflow-y-auto">
+            <div className="px-6 py-8">{children}</div>
+          </main>
+        </div>
       </div>
     </div>
   );

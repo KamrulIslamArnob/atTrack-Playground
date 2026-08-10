@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu } = require("electron");
 const crypto = require("node:crypto");
 const path = require("node:path");
 const { loadSettings, saveSettings } = require("./settings");
@@ -86,17 +86,34 @@ async function main() {
     return;
   }
 
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
     title: "AtTrack",
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "rgba(0, 0, 0, 0)",
+      symbolColor: "#71717a",
+      height: 36,
+    },
+    trafficLightPosition: { x: 12, y: 12 },
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  mainWindow.on("maximize", () => {
+    mainWindow?.webContents.send("window-maximized-state", true);
+  });
+  mainWindow.on("unmaximize", () => {
+    mainWindow?.webContents.send("window-maximized-state", false);
+  });
+
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     setupAutoUpdater();
@@ -104,6 +121,20 @@ async function main() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  // Setup IPC window control actions
+  ipcMain.on("app:minimize", () => mainWindow?.minimize());
+  ipcMain.on("app:maximize", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  });
+  ipcMain.on("app:close", () => mainWindow?.close());
+  ipcMain.handle("app:is-maximized", () => mainWindow?.isMaximized() ?? false);
+
   mainWindow.loadURL(url);
 }
 
