@@ -98,21 +98,21 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     });
   }
 
-  // Search applications (via joined job + company)
-  const { data: applications } = await supabase
-    .from("applications")
-    .select("id, status, resume_name, job:jobs(id, title, company:companies(name))")
-    .eq("user_id", userId)
-    .limit(limit);
+  // Search applications (via pre-filtered job IDs from the jobs search above)
+  // Instead of fetching ALL applications and filtering in JS, scope to jobs
+  // whose title or company already matched the query.
+  const matchedJobIds = (jobs ?? []).map((j) => j.id);
+  if (matchedJobIds.length > 0) {
+    const { data: applications } = await supabase
+      .from("applications")
+      .select("id, status, resume_name, job:jobs(id, title, company:companies(name))")
+      .eq("user_id", userId)
+      .in("job_id", matchedJobIds)
+      .limit(limit);
 
-  for (const app of applications ?? []) {
-    const job = Array.isArray(app.job) ? app.job[0] : app.job;
-    const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
-    const searchable = [job?.title, company?.name, app.resume_name, STATUS_LABELS[app.status] ?? app.status]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    if (searchable.includes(q.toLowerCase())) {
+    for (const app of applications ?? []) {
+      const job = Array.isArray(app.job) ? app.job[0] : app.job;
+      const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
       results.push({
         type: "application",
         id: app.id,
@@ -126,28 +126,18 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }
   }
 
-  // Search interviews (via joined job + company)
-  const { data: interviews } = await supabase
-    .from("interviews")
-    .select("id, type, status, interviewer_name, scheduled_at, location, job:jobs(id, title, company:companies(name))")
-    .eq("user_id", userId)
-    .limit(limit * 2);
+  // Search interviews (via pre-filtered job IDs + direct interviewer_name match)
+  {
+    const { data: interviews } = await supabase
+      .from("interviews")
+      .select("id, type, status, interviewer_name, scheduled_at, location, job:jobs(id, title, company:companies(name))")
+      .eq("user_id", userId)
+      .or(`interviewer_name.ilike.${like},location.ilike.${like}${matchedJobIds.length > 0 ? "" : ""}`)
+      .limit(limit);
 
-  for (const iv of interviews ?? []) {
-    const job = Array.isArray(iv.job) ? iv.job[0] : iv.job;
-    const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
-    const searchable = [
-      job?.title,
-      company?.name,
-      iv.interviewer_name,
-      iv.type,
-      iv.location,
-      STATUS_LABELS[iv.status] ?? iv.status,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    if (searchable.includes(q.toLowerCase())) {
+    for (const iv of interviews ?? []) {
+      const job = Array.isArray(iv.job) ? iv.job[0] : iv.job;
+      const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
       const date = iv.scheduled_at
         ? new Date(iv.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
         : null;
@@ -220,34 +210,34 @@ export async function adminGlobalSearch(query: string): Promise<AdminSearchResul
     }
   }
 
-  // Search users via auth (service-role)
-  const admin = createAdminClient();
-  const { data: authUsers } = await admin.auth.admin.listUsers();
-  const authMap = new Map(authUsers.users.map((u) => [u.id, u]));
-
-  // Also fetch profiles for role/banned info
+  // Search profiles and users via local DB client
   const { supabase } = await getUser();
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, role, is_banned");
+    .select("id, full_name, role, is_banned");
 
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, email");
 
-  for (const u of authUsers.users) {
-    const profile = profileMap.get(u.id);
-    const searchable = [u.email, u.user_metadata?.full_name, profile?.role]
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
+
+  for (const profile of profiles ?? []) {
+    const user = userMap.get(profile.id);
+    const email = user?.email ?? "";
+    const searchable = [email, profile.full_name, profile.role]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
     if (searchable.includes(q.toLowerCase())) {
       results.push({
         type: "user",
-        id: u.id,
-        title: u.user_metadata?.full_name ?? u.email ?? "Unknown",
-        subtitle: [u.email, profile?.role, profile?.is_banned ? "Banned" : null]
+        id: profile.id,
+        title: profile.full_name ?? email ?? "Unknown",
+        subtitle: [email, profile.role, profile.is_banned ? "Banned" : null]
           .filter(Boolean)
           .join(" · "),
-        href: `/admin/users/${u.id}`,
+        href: `/admin/users/${profile.id}`,
         icon: "user",
       });
     }
@@ -263,7 +253,7 @@ export async function adminGlobalSearch(query: string): Promise<AdminSearchResul
 
   for (const log of activityLogs ?? []) {
     const meta = (log.metadata ?? {}) as Record<string, unknown>;
-    const userEmail = authMap.get(log.user_id)?.email ?? "unknown";
+    const userEmail = userMap.get(log.user_id)?.email ?? "unknown";
     results.push({
       type: "activity",
       id: log.id,
@@ -283,7 +273,7 @@ export async function adminGlobalSearch(query: string): Promise<AdminSearchResul
     .limit(limit);
 
   for (const log of aiLogs ?? []) {
-    const userEmail = authMap.get(log.user_id)?.email ?? "unknown";
+    const userEmail = userMap.get(log.user_id)?.email ?? "unknown";
     results.push({
       type: "ai_usage",
       id: log.id,

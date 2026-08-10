@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { logResourceActivity } from "@/lib/actions/activity-log";
-import type { BoardCard, BoardList, ProjectLink } from "@/lib/types/board";
+import type { BoardCard, BoardList, ListKind, ProjectLink } from "@/lib/types/board";
 
 export interface BoardData {
   lists: BoardList[];
@@ -38,11 +38,23 @@ interface RawJobRow {
   position: { name: string } | null;
   resume: { name: string } | null;
   applications: { id: string; status: string }[] | null;
+  job_deadlines: {
+    id: string;
+    job_id: string;
+    title: string;
+    stage_kind: string | null;
+    due_date: string;
+    is_pinned: boolean;
+    is_completed: boolean;
+    notes: string | null;
+  }[] | null;
 }
 
 /**
- * Reads the whole board in two queries (lists, then jobs) and joins in memory.
- * Consistent with getApplications(), which also pulls the full set per request.
+ * Reads the whole board in two queries (lists, then jobs+embeds) and joins in
+ * memory. The jobs query embeds company, position, resume, applications, and
+ * job_deadlines — the query builder resolves each embed with a single batched
+ * IN() query, so the total is ~7 queries regardless of card count.
  */
 export async function getBoard(params: { positionId?: string } = {}): Promise<BoardData> {
   const { supabase, userId } = await getUser();
@@ -95,7 +107,8 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       company:companies(name),
       position:positions(name),
       resume:documents!jobs_resume_id_fkey(name),
-      applications(id, status)
+      applications(id, status),
+      job_deadlines(id, job_id, title, stage_kind, due_date, is_pinned, is_completed, notes)
     `
     )
     .eq("user_id", userId);
@@ -110,29 +123,19 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
     throw boardError("Loading board cards", error);
   }
 
-  const { data: allDeadlines } = await supabase
-    .from("job_deadlines")
-    .select("id, job_id, title, stage_kind, due_date, is_pinned, is_completed, notes")
-    .eq("user_id", userId);
-
-  const deadlinesByJob: Record<string, any[]> = {};
-  for (const d of allDeadlines ?? []) {
-    if (!deadlinesByJob[d.job_id]) deadlinesByJob[d.job_id] = [];
-    deadlinesByJob[d.job_id].push({
-      id: d.id,
-      job_id: d.job_id,
-      title: d.title,
-      stage_kind: d.stage_kind,
-      due_date: d.due_date,
-      is_pinned: Boolean(d.is_pinned),
-      is_completed: Boolean(d.is_completed),
-      notes: d.notes,
-    });
-  }
-
   const cards: BoardCard[] = ((jobs ?? []) as unknown as RawJobRow[])
     .map((j) => {
       const application = j.applications?.[0] ?? null;
+      const deadlines = (j.job_deadlines ?? []).map((d) => ({
+        id: d.id,
+        job_id: d.job_id,
+        title: d.title,
+        stage_kind: (d.stage_kind as ListKind | "custom" | null) ?? "custom",
+        due_date: d.due_date,
+        is_pinned: Boolean(d.is_pinned),
+        is_completed: Boolean(d.is_completed),
+        notes: d.notes,
+      }));
       return {
         id: j.id,
         title: j.title,
@@ -149,7 +152,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
         deadline: j.deadline,
         section_deadline: j.section_deadline,
         section_deadline_list_id: j.section_deadline_list_id,
-        deadlines: deadlinesByJob[j.id] ?? [],
+        deadlines,
         created_at: j.created_at,
         application_id: application?.id ?? null,
         application_status: application?.status ?? null,
@@ -210,16 +213,35 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
   const index = Math.max(0, Math.min(targetIndex, ordered.length));
   ordered.splice(index, 0, jobId);
 
-  // The moved card also changes list_id, which fires the status-sync trigger.
-  await Promise.all(
-    ordered.map((id, i) =>
-      supabase
-        .from("jobs")
-        .update(id === jobId ? { list_id: listId, board_position: i } : { board_position: i })
-        .eq("id", id)
-        .eq("user_id", userId)
-    )
-  );
+  // Batched reorder: single UPDATE with CASE-WHEN instead of N individual writes.
+  // Split into two statements:
+  //   1. Reorder all siblings' board_position (no list_id change, so the
+  //      trg_jobs_status_from_list_upd trigger does NOT fire for every sibling).
+  //   2. Move the target card's list_id + board_position (fires the trigger once).
+  const { getDb } = await import("@/lib/db/sqlite");
+  const db = getDb();
+
+  const siblingIds = ordered.filter((id) => id !== jobId);
+  if (siblingIds.length > 0) {
+    const cases = siblingIds
+      .map((id, _i) => `WHEN ? THEN ?`)
+      .join(" ");
+    const params: unknown[] = [];
+    siblingIds.forEach((id) => {
+      params.push(id, ordered.indexOf(id));
+    });
+    const ph = siblingIds.map(() => "?").join(",");
+    db.prepare(
+      `UPDATE "jobs" SET board_position = CASE "id" ${cases} END WHERE "id" IN (${ph}) AND "user_id" = ?`
+    ).run(...([...params, ...siblingIds, userId] as never[]));
+  }
+
+  // Move the card itself — fires the status-sync trigger via UPDATE OF list_id.
+  await supabase
+    .from("jobs")
+    .update({ list_id: listId, board_position: ordered.indexOf(jobId) })
+    .eq("id", jobId)
+    .eq("user_id", userId);
 
   // Reaching an "applied" column creates the submission record if absent.
   // Dragging back OUT of it never deletes that record.
@@ -442,17 +464,25 @@ export async function deleteList(id: string) {
 }
 
 export async function reorderLists(orderedIds: string[]) {
-  const { supabase, userId } = await getUser();
+  const { userId } = await getUser();
 
-  await Promise.all(
-    orderedIds.map((id, i) =>
-      supabase
-        .from("board_lists")
-        .update({ sort_order: i + 1 })
-        .eq("id", id)
-        .eq("user_id", userId)
-    )
-  );
+  if (orderedIds.length === 0) {
+    revalidatePath("/board");
+    return;
+  }
+
+  // Batched reorder: single UPDATE with CASE-WHEN instead of N individual writes.
+  const { getDb } = await import("@/lib/db/sqlite");
+  const db = getDb();
+  const cases = orderedIds.map(() => `WHEN ? THEN ?`).join(" ");
+  const params: unknown[] = [];
+  orderedIds.forEach((id, i) => {
+    params.push(id, i + 1);
+  });
+  const ph = orderedIds.map(() => "?").join(",");
+  db.prepare(
+    `UPDATE "board_lists" SET sort_order = CASE "id" ${cases} END WHERE "id" IN (${ph}) AND "user_id" = ?`
+  ).run(...([...params, ...orderedIds, userId] as never[]));
 
   revalidatePath("/board");
 }

@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS companies (
 );
 
 CREATE INDEX IF NOT EXISTS idx_companies_user ON companies(user_id);
+CREATE INDEX IF NOT EXISTS idx_companies_user_name ON companies(user_id, lower(name));
 
 -- =============================================
 -- board_lists (019) — declared before jobs, which references it
@@ -250,6 +251,8 @@ CREATE TABLE IF NOT EXISTS contacts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_contacts_user ON contacts(user_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_user_company ON contacts(user_id, company_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_id, lower(email));
 
 CREATE TABLE IF NOT EXISTS job_contacts (
   job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
@@ -335,6 +338,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_resource ON activity_logs(resource);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_resource_id ON activity_logs(user_id, resource_id);
 
 CREATE TABLE IF NOT EXISTS ai_usage_logs (
   id TEXT PRIMARY KEY,

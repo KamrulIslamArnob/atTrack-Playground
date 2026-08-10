@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { updateJob, setJobColor } from "@/lib/actions/jobs";
+import { updateJob } from "@/lib/actions/jobs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
 import type { JobDetailData } from "@/lib/types/job-detail";
-import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EditTabProps {
@@ -43,9 +42,6 @@ const statusOptions = [
   { value: "preparing", label: "Preparing" },
 ];
 
-// Job-level accent override — falls back to the board list's color when unset.
-const COLOR_SWATCHES = ["#94A3B8", "#F59E0B", "#8B5CF6", "#10B981", "#059669", "#EF4444", "#3B82F6", "#EC4899"];
-
 export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
   const { job } = data;
   const [pending, setPending] = useState(false);
@@ -55,17 +51,6 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
   const [workLocation, setWorkLocation] = useState(job.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(job.employment_type ?? "Full-time");
   const [status, setStatus] = useState(job.status ?? "saved");
-  const [color, setColor] = useState(job.color);
-
-  const handleColor = async (next: string | null) => {
-    setColor(next);
-    try {
-      await setJobColor(job.id, next);
-      onRefresh();
-    } catch {
-      toast.error("Could not update color");
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -89,36 +74,6 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label>Accent color</Label>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => handleColor(null)}
-            className={cn(
-              "flex size-7 items-center justify-center rounded-full border border-dashed border-border text-[10px] text-muted-foreground",
-              color === null && "ring-2 ring-primary ring-offset-2 ring-offset-background"
-            )}
-            title="Use list color"
-          >
-            <X className="size-3" />
-          </button>
-          {COLOR_SWATCHES.map((swatch) => (
-            <button
-              key={swatch}
-              type="button"
-              onClick={() => handleColor(swatch)}
-              className={cn(
-                "flex size-7 items-center justify-center rounded-full",
-                color === swatch && "ring-2 ring-primary ring-offset-2 ring-offset-background"
-              )}
-              style={{ backgroundColor: swatch }}
-            >
-              {color === swatch && <Check className="size-3.5 text-white" />}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="space-y-2">
         <Label htmlFor="title">Job title *</Label>

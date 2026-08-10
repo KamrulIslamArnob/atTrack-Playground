@@ -91,6 +91,15 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     query = query.eq("status", status);
   }
 
+  // Push DB-level ORDER BY for sort modes that operate on application columns.
+  // Sorts on embedded columns (deadline, company name) stay in-memory because
+  // the query builder can't ORDER BY a joined column.
+  if (sort === "applied_oldest") {
+    query = query.order("applied_at", { ascending: true, nullsFirst: false });
+  } else if (sort === "applied_newest" || !sort) {
+    query = query.order("applied_at", { ascending: false, nullsFirst: false });
+  }
+
   // Apply search filter - find matching job IDs and intersect
   let matchingJobIds: string[] | null = null;
   if (search) {
@@ -131,27 +140,8 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
     query = query.in("job_id", matchingJobIds);
   }
 
-  // Get total count for pagination
-  let countQuery = supabase
-    .from("applications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (status && status !== "all") {
-    countQuery = countQuery.eq("status", status);
-  }
-
-  if (matchingJobIds !== null) {
-    countQuery = countQuery.in("job_id", matchingJobIds);
-  }
-
-  const { count } = await countQuery;
-
-  const total = count ?? 0;
-  const totalPages = Math.ceil(total / perPage);
-
-  // Fetch all matching rows
-  const { data, error } = await query;
+  // The main query already uses { count: "exact" }, so no separate count query needed.
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("Error fetching applications:", error);
@@ -159,16 +149,11 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
   }
 
   let applications = (data as unknown as Application[]) ?? [];
+  const total = count ?? applications.length;
+  const totalPages = Math.ceil(total / perPage);
 
-  // Sort in memory
+  // Sort modes that depend on embedded data must still sort in memory.
   switch (sort) {
-    case "applied_oldest":
-      applications = [...applications].sort((a, b) => {
-        const aTime = new Date(a.applied_at ?? a.created_at).getTime();
-        const bTime = new Date(b.applied_at ?? b.created_at).getTime();
-        return aTime - bTime;
-      });
-      break;
     case "deadline_earliest":
       applications = [...applications].sort((a, b) => {
         const aTime = a.job?.deadline ? new Date(a.job.deadline).getTime() : Infinity;
@@ -193,14 +178,7 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
         (b.job?.company?.name ?? "").localeCompare(a.job?.company?.name ?? "")
       );
       break;
-    case "applied_newest":
-    default:
-      applications = [...applications].sort((a, b) => {
-        const aTime = new Date(a.applied_at ?? a.created_at).getTime();
-        const bTime = new Date(b.applied_at ?? b.created_at).getTime();
-        return bTime - aTime;
-      });
-      break;
+    // "applied_newest" and "applied_oldest" are handled by ORDER BY above.
   }
 
   // Paginate in memory

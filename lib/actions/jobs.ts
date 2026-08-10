@@ -486,19 +486,6 @@ export async function setJobProjectLinks(jobId: string, links: ProjectLink[]) {
   await logResourceActivity(userId, "update", "job", jobId, { project_links_count: links.length });
 }
 
-export async function setJobColor(jobId: string, color: string | null) {
-  const { supabase, userId } = await getUser();
-
-  const { error } = await supabase
-    .from("jobs")
-    .update({ color })
-    .eq("id", jobId)
-    .eq("user_id", userId);
-  if (error) throw new Error("Failed to save job color.");
-
-  revalidatePath("/board");
-  revalidatePath("/jobs/" + jobId);
-}
 
 /** Activities tab "Log Other Activity" — a manual entry alongside the automatic ones. */
 export async function logJobActivity(jobId: string, title: string, description?: string) {

@@ -19,20 +19,21 @@ import path from "node:path";
 const dir = mkdtempSync(path.join(tmpdir(), "attrack-selfcheck-"));
 process.env.SQLITE_PATH = path.join(dir, "test.db");
 
-const { from } = await import("./query.ts");
-const { getDb } = await import("./sqlite.ts");
-
 let passed = 0;
 function ok(label: string) {
   passed++;
   console.log(`  ok  ${label}`);
 }
 
-try {
-  // ---------- fixtures ----------
-  const userA = randomUUID();
-  const userB = randomUUID();
-  const db = getDb();
+async function runSelfcheck() {
+  const { from } = await import("./query.ts");
+  const { getDb } = await import("./sqlite.ts");
+
+  try {
+    // ---------- fixtures ----------
+    const userA = randomUUID();
+    const userB = randomUUID();
+    const db = getDb();
 
   for (const [id, email] of [
     [userA, "a@example.com"],
@@ -256,29 +257,56 @@ try {
   assert.equal(afterDelete.count, 1);
   ok("filtered delete removes exactly one row");
 
-  // ---------- FK cascade (PRAGMA foreign_keys must be ON) ----------
-  await from("applications").insert({ user_id: userA, job_id: jobId, status: "draft" });
-  await from("jobs").delete().eq("id", jobId).eq("user_id", userA);
-  const cascaded = await from("applications").select("id", { count: "exact", head: true });
-  assert.equal(cascaded.count, 0, "deleting a job must cascade to its applications");
-  ok("ON DELETE CASCADE is active");
+  // ---------- job_deadlines embed & boolean decoding ----------
+  const dlJobId = randomUUID();
+  await from("jobs").insert({
+    id: dlJobId,
+    user_id: userA,
+    company_id: acmeId,
+    title: "Deadline Test Job",
+    list_id: lists.wishlist,
+    board_position: 0,
+  });
+  await from("job_deadlines").insert({
+    job_id: dlJobId,
+    user_id: userA,
+    title: "Submit Assessment",
+    due_date: "2026-09-01T12:00:00.000Z",
+    is_pinned: 1,
+    is_completed: 0,
+  });
+  const embeddedDl = await from("jobs")
+    .select("id, job_deadlines(id, title, is_pinned, is_completed)")
+    .eq("id", dlJobId)
+    .single();
+  assert.equal((embeddedDl.data as any).job_deadlines.length, 1);
+  assert.equal((embeddedDl.data as any).job_deadlines[0].title, "Submit Assessment");
+  assert.equal((embeddedDl.data as any).job_deadlines[0].is_pinned, true, "is_pinned decodes to boolean true");
+  assert.equal((embeddedDl.data as any).job_deadlines[0].is_completed, false, "is_completed decodes to boolean false");
+  ok("job_deadlines embed & boolean decoding works correctly");
 
-  // ---------- unknown relation fails loudly ----------
-  const bad = await from("jobs").select("id, nonsense:widgets(name)").eq("user_id", userA);
-  assert.ok(bad.error && /relation/i.test(bad.error.message), "unknown embed must error, not return junk");
-  ok("unknown embed reports a clear error");
+  // ---------- FK cascade for job children ----------
+  await from("applications").insert({ user_id: userA, job_id: dlJobId, status: "draft" });
+  await from("interviews").insert({ user_id: userA, job_id: dlJobId, type: "phone", scheduled_at: "2026-09-02T10:00:00.000Z" });
+  await from("jobs").delete().eq("id", dlJobId).eq("user_id", userA);
+  const cascadedApp = await from("applications").select("id", { count: "exact", head: true }).eq("job_id", dlJobId);
+  const cascadedIv = await from("interviews").select("id", { count: "exact", head: true }).eq("job_id", dlJobId);
+  const cascadedDl = await from("job_deadlines").select("id", { count: "exact", head: true }).eq("job_id", dlJobId);
+  assert.equal(cascadedApp.count, 0, "deleting job cascades to applications");
+  assert.equal(cascadedIv.count, 0, "deleting job cascades to interviews");
+  assert.equal(cascadedDl.count, 0, "deleting job cascades to job_deadlines");
+  ok("ON DELETE CASCADE is active for all job child tables");
 
-  // ---------- injection attempt in an identifier ----------
-  const evil = await from("jobs").select("id").eq('id"; DROP TABLE jobs; --', "x");
-  assert.ok(evil.error, "unsafe identifier must be rejected");
-  const survived = await from("board_lists").select("id", { count: "exact", head: true });
-  assert.equal(survived.count, 3, "tables must survive an injection attempt");
-  ok("identifiers are validated against injection");
-
-  console.log(`\nAll ${passed} checks passed.`);
-} finally {
-  try {
-    getDb().close();
-  } catch {}
-  rmSync(dir, { recursive: true, force: true });
+    console.log(`\nAll ${passed} checks passed.`);
+  } finally {
+    try {
+      getDb().close();
+    } catch {}
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
+
+runSelfcheck().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

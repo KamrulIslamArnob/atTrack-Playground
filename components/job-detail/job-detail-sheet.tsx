@@ -49,7 +49,7 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
   return (
     <Sheet open={jobId !== null} onOpenChange={onOpenChange}>
       <SheetContent
-        className="w-full overflow-y-auto data-[side=right]:sm:max-w-3xl data-[side=right]:lg:max-w-5xl data-[side=right]:xl:max-w-6xl"
+        className="w-full max-w-full overflow-y-auto overflow-x-hidden p-0 data-[side=right]:sm:max-w-3xl data-[side=right]:md:max-w-4xl data-[side=right]:lg:max-w-6xl data-[side=right]:xl:max-w-7xl data-[side=right]:2xl:max-w-[1440px]"
       >
         <SheetTitle className="sr-only">Job details</SheetTitle>
         <SheetDescription className="sr-only">

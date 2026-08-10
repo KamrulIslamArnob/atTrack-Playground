@@ -19,6 +19,7 @@ export const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {
   profiles: ["is_banned"],
   documents: ["is_default"],
   positions: ["is_primary"],
+  job_deadlines: ["is_pinned", "is_completed"],
 };
 
 /** Columns that get an auto-generated UUID on insert when absent. */

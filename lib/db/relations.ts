@@ -41,6 +41,7 @@ const RELATIONS: Record<string, Record<string, Relation>> = {
     mcq_results: { target: "mcq_results", kind: "many", column: "job_id" },
     job_contacts: { target: "job_contacts", kind: "many", column: "job_id" },
     job_documents: { target: "job_documents", kind: "many", column: "job_id" },
+    job_deadlines: { target: "job_deadlines", kind: "many", column: "job_id" },
   },
   applications: {
     job: { target: "jobs", kind: "one", column: "job_id" },

@@ -36,6 +36,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     documents,
     smtpReady,
     { data: profile },
+    { data: resumeDoc },
   ] = await Promise.all([
     supabase
       .from("applications")
@@ -68,23 +69,22 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     getJobDocuments(jobId),
     isSmtpConfigured(),
     supabase.from("profiles").select("full_name, headline").eq("id", userId).maybeSingle(),
+    // Resume content for AI Tools — fetched in parallel instead of sequentially.
+    job.resume_id
+      ? supabase
+          .from("documents")
+          .select("content")
+          .eq("id", job.resume_id)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const company = Array.isArray(job.company) ? job.company[0] : job.company;
   const position = Array.isArray(job.position) ? job.position[0] : job.position;
   const resume = Array.isArray(job.resume) ? job.resume[0] : job.resume;
 
-  // AI Tools generation wants the attached resume's extracted text, not just its name.
-  let resumeContent: string | null = null;
-  if (job.resume_id) {
-    const { data: resumeDoc } = await supabase
-      .from("documents")
-      .select("content")
-      .eq("id", job.resume_id)
-      .eq("user_id", userId)
-      .maybeSingle();
-    resumeContent = resumeDoc?.content ?? null;
-  }
+  const resumeContent = resumeDoc?.content ?? null;
 
   return {
     job: {
