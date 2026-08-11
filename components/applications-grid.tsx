@@ -240,26 +240,26 @@ export function ApplicationsGrid({
       {hasActiveFilters && (
         <div className="flex items-center gap-2">
           {initialSearch && (
-            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               &quot;{initialSearch}&quot;
               <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
-                <X className="size-3" />
+                <X className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
           )}
           {initialStatus !== "all" && (
-            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
+            <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 capitalize dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               {statusLabels[initialStatus] ?? initialStatus}
               <button onClick={() => handleStatusChange("all")} className="ml-0.5">
-                <X className="size-3" />
+                <X className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
           )}
           {initialSort !== "applied_newest" && (
-            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               {initialSort === "applied_oldest" ? "Oldest applied" : initialSort === "deadline_earliest" ? "Deadline ↑" : initialSort === "deadline_latest" ? "Deadline ↓" : initialSort === "company_az" ? "Company A→Z" : initialSort === "company_za" ? "Company Z→A" : initialSort}
               <button onClick={() => handleSortChange("applied_newest")} className="ml-0.5">
-                <X className="size-3" />
+                <X className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
           )}
@@ -302,12 +302,12 @@ export function ApplicationsGrid({
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {app.job?.match_score != null && (
                     <span
-                      className={`rounded-2xl px-2.5 py-1 text-[10px] font-medium ${
+                      className={`rounded-2xl border px-2.5 py-1 text-[10px] font-semibold ${
                         app.job.match_score >= 80
-                          ? "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400"
+                          ? "bg-lime-400/25 border-lime-500/50 text-lime-950 dark:bg-lime-500/20 dark:border-lime-400/40 dark:text-lime-200"
                           : app.job.match_score >= 50
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            ? "bg-amber-400/25 border-amber-500/50 text-amber-950 dark:bg-amber-500/20 dark:border-amber-400/40 dark:text-amber-200"
+                            : "bg-rose-400/25 border-rose-500/50 text-rose-950 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-200"
                       }`}
                       title={app.job.match_reasoning ?? undefined}
                     >

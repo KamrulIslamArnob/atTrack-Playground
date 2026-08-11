@@ -1,7 +1,7 @@
 import { getJobsList } from "@/lib/actions/jobs-list";
 import { JobsGrid } from "@/components/jobs-grid";
-import { ImportChoice } from "@/components/import-choice";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { PageHeader } from "@/components/page-header";
+import { JobsToolbar } from "@/components/jobs-toolbar";
 
 interface PageProps {
   searchParams: Promise<{
@@ -31,22 +31,19 @@ export default async function JobsPage(props: PageProps) {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="flex items-center justify-between px-6">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">Jobs</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              Every job you&apos;ve saved, in one list. Search, filter, and open any of them.
-            </p>
-          </div>
-          <div className="flex items-center">
-            <ImportChoice />
-          </div>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+    <div className="space-y-4">
+      <PageHeader
+        title="Jobs"
+        subtitle="Every job you've saved, in one list. Search, filter, and open any of them."
+      >
+        <JobsToolbar
+          initialSearch={search}
+          initialStatus={status}
+          page={result.page}
+          totalPages={result.totalPages}
+          perPage={result.perPage}
+        />
+      </PageHeader>
 
       <JobsGrid
         jobs={result.jobs}

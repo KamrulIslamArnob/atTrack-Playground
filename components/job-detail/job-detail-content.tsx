@@ -2,16 +2,28 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Building2, MoveRight, ChevronDown, Copy, Check } from "lucide-react";
+import {
+  ExternalLink,
+  Building2,
+  MoveRight,
+  ChevronDown,
+  Copy,
+  Check,
+  Sparkles,
+  Calendar,
+  Pencil,
+  Bot,
+  FileText,
+  Users,
+  Folder,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoveToMenu } from "@/components/board/move-to-menu";
-import { ShortcutsPanel } from "@/components/job-detail/shortcuts-panel";
 import { InsightsTab } from "@/components/job-detail/tabs/insights-tab";
 import { DeadlinesTab } from "@/components/job-detail/tabs/deadlines-tab";
 import { EditTab } from "@/components/job-detail/tabs/edit-tab";
 import { AiToolsTab } from "@/components/job-detail/tabs/ai-tools-tab";
-import { ActivitiesTab } from "@/components/job-detail/tabs/activities-tab";
 import { NotesTab } from "@/components/job-detail/tabs/notes-tab";
 import { ContactsTab } from "@/components/job-detail/tabs/contacts-tab";
 import { DocumentsTab } from "@/components/job-detail/tabs/documents-tab";
@@ -19,6 +31,18 @@ import { CompanyTab } from "@/components/job-detail/tabs/company-tab";
 import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/types/job";
 import { matchScoreBand, type BoardList } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
+import { cn } from "@/lib/utils";
+
+const TAB_ITEMS = [
+  { id: "insights", label: "Insights", icon: Sparkles, color: "text-lime-500" },
+  { id: "deadlines", label: "Deadlines", icon: Calendar, color: "text-amber-500" },
+  { id: "edit", label: "Edit", icon: Pencil, color: "text-blue-500" },
+  { id: "ai-tools", label: "AI Tools", icon: Bot, color: "text-purple-500" },
+  { id: "notes", label: "Notes", icon: FileText, color: "text-sky-500" },
+  { id: "contacts", label: "Contacts", icon: Users, color: "text-indigo-500" },
+  { id: "documents", label: "Documents", icon: Folder, color: "text-orange-500" },
+  { id: "company", label: "Company", icon: Building2, color: "text-pink-500" },
+];
 
 interface JobDetailContentProps {
   data: JobDetailData;
@@ -33,6 +57,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   const [tab, setTab] = useState("insights");
   const [copied, setCopied] = useState(false);
   const band = matchScoreBand(job.match_score);
+  const scoreBandKey = job.match_score === null ? null : job.match_score >= 80 ? "strong" : job.match_score >= 50 ? "fair" : "weak";
   const statusColor = { saved: "#94A3B8", interested: "#3B82F6", preparing: "#F59E0B" }[
     job.status as JobStatus
   ] ?? "#94A3B8";
@@ -81,56 +106,61 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            {/* Status Chip - Squarish rounded-xl with hover scale */}
-            <span
-              className="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-semibold tracking-wide border shadow-2xs transition-all duration-200 hover:scale-105 hover:shadow-xs cursor-default"
-              style={{
-                backgroundColor: `${statusColor}18`,
-                borderColor: `${statusColor}35`,
-                color: statusColor,
-              }}
-            >
-              {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Status Chip - Pushable 3D Badge */}
+            <span className="pushable-badge pushable-status">
+              <span className="pushable-shadow" />
+              <span className="pushable-edge" />
+              <span className="pushable-front">
+                {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
+              </span>
             </span>
 
-            {/* Match Score Chip - Squarish rounded-xl with hover scale */}
-            {band && (
-              <span
-                className={`inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-semibold tracking-wide tabular-nums shadow-2xs transition-all duration-200 hover:scale-105 hover:shadow-xs cursor-default ${band.className}`}
-              >
-                {band.label} {Math.round(job.match_score!)}
+            {/* Match Score Chip - Pushable 3D Badge */}
+            {band && scoreBandKey && (
+              <span className={`pushable-badge pushable-match-${scoreBandKey}`}>
+                <span className="pushable-shadow" />
+                <span className="pushable-edge" />
+                <span className="pushable-front">
+                  {band.label} {Math.round(job.match_score!)}
+                </span>
               </span>
             )}
 
-            {/* Apply Now Button - Blue-Indigo Gradient with lift hover */}
+            {/* Apply Now Button - Pushable 3D Royal Blue Button */}
             {job.application_url && (
               <a
                 href={job.application_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center h-8 gap-1.5 px-3.5 text-xs font-semibold text-white rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+                className="pushable-apply"
               >
-                Apply now
-                <ExternalLink className="size-3.5" />
+                <span className="pushable-shadow" />
+                <span className="pushable-edge" />
+                <span className="pushable-front">
+                  <span>Apply now</span>
+                  <ExternalLink className="size-3.5" />
+                </span>
               </a>
             )}
 
-            {/* Move Dropdown Trigger - Purple-Violet Gradient with lift hover */}
+            {/* Move Dropdown Trigger - Pushable 3D Purple Button (Uiverse.io by PriyanshuGupta28) */}
             {lists && onMoveTo && (
               <MoveToMenu
                 lists={lists}
                 currentListId={job.list_id}
                 onMoveTo={onMoveTo}
                 renderTrigger={
-                  <button
-                    className="inline-flex items-center justify-center h-8 gap-1.5 px-3.5 text-xs font-semibold text-white rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
-                  />
+                  <button className="pushable-move" />
                 }
               >
-                <MoveRight className="size-3.5 text-white/90" />
-                <span>Move</span>
-                <ChevronDown className="size-3 text-white/80" />
+                <span className="pushable-shadow" />
+                <span className="pushable-edge" />
+                <span className="pushable-front">
+                  <MoveRight className="size-3.5" />
+                  <span>Move</span>
+                  <ChevronDown className="size-3 opacity-90" />
+                </span>
               </MoveToMenu>
             )}
 
@@ -146,104 +176,54 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
         </div>
       </div>
 
-      {/* Tabs + Shortcuts Grid - Fully Responsive */}
-      <div className="grid flex-1 min-w-0 max-w-full gap-6 p-4 sm:p-5 lg:grid-cols-[1fr_220px] xl:grid-cols-[1fr_250px]">
+      {/* Main Tabs Content - Full Width */}
+      <div className="flex-1 min-w-0 max-w-full p-4 sm:p-5 flex flex-col">
         <Tabs value={tab} onValueChange={(v) => setTab(v ?? "insights")} className="min-w-0 w-full overflow-hidden flex flex-col">
-          <TabsList className="mb-4 flex flex-wrap h-auto w-full justify-start gap-1.5 bg-transparent p-0 text-xs shrink-0">
-            <TabsTrigger
-              value="insights"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Insights
-            </TabsTrigger>
-            <TabsTrigger
-              value="deadlines"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Deadlines
-            </TabsTrigger>
-            <TabsTrigger
-              value="edit"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Edit
-            </TabsTrigger>
-            <TabsTrigger
-              value="ai-tools"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              AI Tools
-            </TabsTrigger>
-            <TabsTrigger
-              value="activities"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Activities
-            </TabsTrigger>
-            <TabsTrigger
-              value="notes"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Notes
-            </TabsTrigger>
-            <TabsTrigger
-              value="contacts"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger
-              value="documents"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Documents
-            </TabsTrigger>
-            <TabsTrigger
-              value="company"
-              className="rounded-xl px-3 py-1.5 font-medium border border-border/60 bg-muted/40 text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:font-semibold shadow-2xs hover:bg-muted transition-all cursor-pointer"
-            >
-              Company
-            </TabsTrigger>
+          <TabsList className="radio-inputs-header h-auto shrink-0">
+            {TAB_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <TabsTrigger
+                  key={item.id}
+                  value={item.id}
+                  className="radio-tab-trigger"
+                >
+                  <Icon className={cn("size-3.5 transition-transform", item.color)} />
+                  <span>{item.label}</span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
-          <div className="min-w-0 flex-1">
-            <TabsContent value="insights">
-              <InsightsTab data={data} />
-            </TabsContent>
-            <TabsContent value="deadlines">
-              <DeadlinesTab data={data} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="edit">
-              <EditTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="ai-tools">
-              <AiToolsTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="activities">
-              <ActivitiesTab data={data} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="notes">
-              <NotesTab data={data} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="contacts">
-              <ContactsTab data={data} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="documents">
-              <DocumentsTab data={data} onRefresh={onRefresh} />
-            </TabsContent>
-            <TabsContent value="company">
-              <CompanyTab data={data} onRefresh={onRefresh} />
-            </TabsContent>
+          <div className="radio-tabs-content-box min-w-0 flex-1">
+            <div className="radio-tabs-content-inner">
+              <TabsContent value="insights" className="radio-tab-content-panel mt-0">
+                <InsightsTab data={data} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="deadlines" className="radio-tab-content-panel mt-0">
+                <DeadlinesTab data={data} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="edit" className="radio-tab-content-panel mt-0">
+                <EditTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="ai-tools" className="radio-tab-content-panel mt-0">
+                <AiToolsTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="notes" className="radio-tab-content-panel mt-0">
+                <NotesTab data={data} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="contacts" className="radio-tab-content-panel mt-0">
+                <ContactsTab data={data} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="documents" className="radio-tab-content-panel mt-0">
+                <DocumentsTab data={data} onRefresh={onRefresh} />
+              </TabsContent>
+              <TabsContent value="company" className="radio-tab-content-panel mt-0">
+                <CompanyTab data={data} onRefresh={onRefresh} />
+              </TabsContent>
+            </div>
           </div>
         </Tabs>
-
-        <div className="min-w-0 shrink-0 border-t border-border/80 pt-5 lg:border-t-0 lg:pt-0">
-          <ShortcutsPanel
-            data={data}
-            onRefresh={onRefresh}
-            onJumpToTab={(t) => setTab(t)}
-          />
-        </div>
       </div>
     </div>
   );

@@ -12,10 +12,16 @@ export async function updateProfile(formData: FormData) {
   const { supabase, userId } = await getUser();
 
   const fullName = formData.get("full_name") as string;
+  const email = formData.get("email") as string | null;
   const headline = formData.get("headline") as string | null;
   const phone = formData.get("phone") as string | null;
   const location = formData.get("location") as string | null;
   const website = formData.get("website") as string | null;
+
+  if (email && email.trim()) {
+    const { getDb } = await import("@/lib/db/sqlite");
+    getDb().prepare("UPDATE users SET email = ? WHERE id = ?").run(email.trim(), userId);
+  }
 
   const { error } = await supabase
     .from("profiles")
@@ -125,9 +131,7 @@ export async function resetAllData(formData: FormData) {
     "smtp_config",
     "jobs",
     "companies",
-    "positions",
     "board_lists",
-    "activity_logs",
     "ai_usage_logs",
   ];
 

@@ -24,12 +24,16 @@ export interface StorageError {
 }
 
 function signingKey(): string {
-  // Reuses the key that already must exist for SMTP credential encryption rather
-  // than introducing another required env var.
-  const key = process.env.SMTP_ENCRYPTION_KEY;
+  const key =
+    process.env.ENCRYPTION_KEY ||
+    process.env.SMTP_ENCRYPTION_KEY ||
+    (process.env.NODE_ENV !== "production"
+      ? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      : undefined);
+
   if (!key) {
     throw new Error(
-      "SMTP_ENCRYPTION_KEY is required to sign storage URLs. Add it to .env.local."
+      "ENCRYPTION_KEY environment variable is required to sign storage URLs. Add it to .env.local."
     );
   }
   return key;

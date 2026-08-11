@@ -3,7 +3,7 @@
 import { getUser } from "@/lib/auth";
 
 export interface SearchResult {
-  type: "job" | "application" | "interview" | "document" | "page";
+  type: "job" | "company" | "contact" | "document" | "application" | "interview" | "page";
   id: string;
   title: string;
   subtitle: string;
@@ -26,6 +26,7 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Jobs", href: "/jobs", keywords: "job listings saved interested preparing" },
   { title: "Applications", href: "/applications", keywords: "application drafts submitted sent" },
   { title: "Interviews", href: "/interviews", keywords: "interview schedule upcoming completed" },
+  { title: "CRM", href: "/crm", keywords: "contacts companies network hiring managers recruiters alumni" },
   { title: "Documents", href: "/documents", keywords: "resume cv cover letter file upload" },
   { title: "Settings", href: "/settings", keywords: "account profile smtp email preferences" },
   { title: "AI Prompts", href: "/preferences/ai-prompts", keywords: "custom ai system prompts cover letter templates preferences" },
@@ -55,10 +56,10 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
   const { supabase, userId } = await getUser();
   const q = query.trim();
   const like = `%${q}%`;
-  const limit = 5;
+  const limit = 6;
   const results: SearchResult[] = [];
 
-  // Search pages
+  // 1. Pages & Navigation
   for (const page of PAGE_RESULTS) {
     if (
       page.title.toLowerCase().includes(q.toLowerCase()) ||
@@ -75,12 +76,12 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }
   }
 
-  // Search jobs
+  // 2. Jobs
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("id, title, status, location, match_score, company:companies(name)")
+    .select("id, title, status, location, tags, company:companies(name)")
     .eq("user_id", userId)
-    .or(`title.ilike.${like},location.ilike.${like}`)
+    .or(`title.ilike.${like},location.ilike.${like},tags.ilike.${like}`)
     .limit(limit);
 
   for (const job of jobs ?? []) {
@@ -89,71 +90,81 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       type: "job",
       id: job.id,
       title: job.title,
-      subtitle: [company?.name, job.location, STATUS_LABELS[job.status] ?? job.status]
+      subtitle: [company?.name, job.location, STATUS_LABELS[job.status] ?? job.status, job.tags ? `Tags: ${job.tags}` : null]
         .filter(Boolean)
         .join(" · "),
-      href: `/jobs`,
+      href: `/board?jobId=${job.id}`,
       icon: "job",
     });
   }
 
-  // Search applications (via pre-filtered job IDs from the jobs search above)
-  // Instead of fetching ALL applications and filtering in JS, scope to jobs
-  // whose title or company already matched the query.
-  const matchedJobIds = (jobs ?? []).map((j) => j.id);
-  if (matchedJobIds.length > 0) {
-    const { data: applications } = await supabase
-      .from("applications")
-      .select("id, status, resume_name, job:jobs(id, title, company:companies(name))")
-      .eq("user_id", userId)
-      .in("job_id", matchedJobIds)
-      .limit(limit);
+  // 3. Companies
+  const { data: companies } = await supabase
+    .from("companies")
+    .select("id, name, website, location, company_type, country")
+    .eq("user_id", userId)
+    .or(`name.ilike.${like},website.ilike.${like},location.ilike.${like},company_type.ilike.${like}`)
+    .limit(limit);
 
-    for (const app of applications ?? []) {
-      const job = Array.isArray(app.job) ? app.job[0] : app.job;
-      const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
-      results.push({
-        type: "application",
-        id: app.id,
-        title: job?.title ?? "Untitled Application",
-        subtitle: [company?.name, STATUS_LABELS[app.status] ?? app.status, app.resume_name]
-          .filter(Boolean)
-          .join(" · "),
-        href: `/applications`,
-        icon: "application",
-      });
-    }
+  for (const comp of companies ?? []) {
+    results.push({
+      type: "company",
+      id: comp.id,
+      title: comp.name,
+      subtitle: [comp.location || comp.country, comp.company_type, comp.website]
+        .filter(Boolean)
+        .join(" · "),
+      href: "/crm",
+      icon: "company",
+    });
   }
 
-  // Search interviews (via pre-filtered job IDs + direct interviewer_name match)
-  {
-    const { data: interviews } = await supabase
-      .from("interviews")
-      .select("id, type, status, interviewer_name, scheduled_at, location, job:jobs(id, title, company:companies(name))")
-      .eq("user_id", userId)
-      .or(`interviewer_name.ilike.${like},location.ilike.${like}${matchedJobIds.length > 0 ? "" : ""}`)
-      .limit(limit);
+  // 4. Contacts
+  const { data: contacts } = await supabase
+    .from("contacts")
+    .select("id, name, email, role, position, notes, company:companies(name)")
+    .eq("user_id", userId)
+    .or(`name.ilike.${like},email.ilike.${like},role.ilike.${like},position.ilike.${like},notes.ilike.${like}`)
+    .limit(limit);
 
-    for (const iv of interviews ?? []) {
-      const job = Array.isArray(iv.job) ? iv.job[0] : iv.job;
-      const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
-      const date = iv.scheduled_at
-        ? new Date(iv.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-        : null;
-      results.push({
-        type: "interview",
-        id: iv.id,
-        title: job?.title ?? "Untitled Interview",
-        subtitle: [company?.name, iv.interviewer_name, iv.type, date]
-          .filter(Boolean)
-          .join(" · "),
-        href: `/interviews`,
-        icon: "interview",
-      });
-    }
+  for (const c of contacts ?? []) {
+    const comp = Array.isArray(c.company) ? c.company[0] : c.company;
+    results.push({
+      type: "contact",
+      id: c.id,
+      title: c.name,
+      subtitle: [c.position, comp?.name, c.email, c.role ? `Tags: ${c.role}` : null]
+        .filter(Boolean)
+        .join(" · "),
+      href: "/crm",
+      icon: "contact",
+    });
   }
 
-  // Search documents
+  // 5. Board Cards & Applications
+  const { data: applications } = await supabase
+    .from("applications")
+    .select("id, status, resume_name, job:jobs(id, title, company:companies(name))")
+    .eq("user_id", userId)
+    .or(`resume_name.ilike.${like},notes.ilike.${like}`)
+    .limit(limit);
+
+  for (const app of applications ?? []) {
+    const job = Array.isArray(app.job) ? app.job[0] : app.job;
+    const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
+    results.push({
+      type: "application",
+      id: app.id,
+      title: job?.title ?? "Application",
+      subtitle: [company?.name, STATUS_LABELS[app.status] ?? app.status, app.resume_name]
+        .filter(Boolean)
+        .join(" · "),
+      href: `/board`,
+      icon: "application",
+    });
+  }
+
+  // 6. Documents & Resumes
   const { data: documents } = await supabase
     .from("documents")
     .select("id, name, type, created_at")
@@ -171,6 +182,32 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
         .join(" · "),
       href: `/documents`,
       icon: "document",
+    });
+  }
+
+  // 7. Interviews
+  const { data: interviews } = await supabase
+    .from("interviews")
+    .select("id, type, status, interviewer_name, scheduled_at, location, job:jobs(id, title, company:companies(name))")
+    .eq("user_id", userId)
+    .or(`interviewer_name.ilike.${like},location.ilike.${like},notes.ilike.${like}`)
+    .limit(limit);
+
+  for (const iv of interviews ?? []) {
+    const job = Array.isArray(iv.job) ? iv.job[0] : iv.job;
+    const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
+    const date = iv.scheduled_at
+      ? new Date(iv.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : null;
+    results.push({
+      type: "interview",
+      id: iv.id,
+      title: job?.title ?? "Interview",
+      subtitle: [company?.name, iv.interviewer_name ? `Interviewer: ${iv.interviewer_name}` : null, iv.type, date]
+        .filter(Boolean)
+        .join(" · "),
+      href: `/interviews`,
+      icon: "interview",
     });
   }
 
@@ -242,26 +279,7 @@ export async function adminGlobalSearch(query: string): Promise<AdminSearchResul
     }
   }
 
-  // Search activity logs
-  const { data: activityLogs } = await supabase
-    .from("activity_logs")
-    .select("id, user_id, action, resource, resource_id, metadata, created_at")
-    .or(`action.ilike.${like},resource.ilike.${like}`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
 
-  for (const log of activityLogs ?? []) {
-    const meta = (log.metadata ?? {}) as Record<string, unknown>;
-    const userEmail = userMap.get(log.user_id)?.email ?? "unknown";
-    results.push({
-      type: "activity",
-      id: log.id,
-      title: `${log.action} ${log.resource}`,
-      subtitle: [userEmail, meta.full_name ?? meta.target_name].filter(Boolean).join(" · "),
-      href: "/admin/activity",
-      icon: "activity",
-    });
-  }
 
   // Search AI usage logs
   const { data: aiLogs } = await supabase

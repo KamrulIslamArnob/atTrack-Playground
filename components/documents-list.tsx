@@ -38,6 +38,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface DocumentsListProps {
   documents: Document[];
@@ -255,6 +257,7 @@ interface ContextMenuState {
 export function DocumentsList({ documents }: DocumentsListProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
 
   // Search and filter state
   const [search, setSearch] = useState("");
@@ -323,13 +326,19 @@ export function DocumentsList({ documents }: DocumentsListProps) {
   }, []);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const confirmed = await confirm({
+      title: "Delete document?",
+      description: `"${name}" will be permanently deleted. This cannot be undone.`,
+      confirmText: "Delete",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     setPendingId(id);
     try {
       await deleteDocument(id);
       router.refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete");
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
     } finally {
       setPendingId(null);
     }
@@ -341,7 +350,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       await setDefaultDocument(id);
       router.refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to set default");
+      toast.error(e instanceof Error ? e.message : "Failed to set default");
     } finally {
       setPendingId(null);
     }
@@ -355,7 +364,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       a.download = name.endsWith(".pdf") ? name : `${name}.pdf`;
       a.click();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to download");
+      toast.error(e instanceof Error ? e.message : "Failed to download");
     }
   };
 
@@ -364,7 +373,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
     try {
       await openDocumentFolder(id);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to open folder");
+      toast.error(e instanceof Error ? e.message : "Failed to open folder");
     } finally {
       setPendingId(null);
     }
@@ -580,7 +589,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
           <div className="flex items-center gap-2">
             <FileText className="size-4 text-muted-foreground shrink-0" />
             <Link
-              href={`/documents/${doc.id}`}
+              href={doc.builder_data ? `/documents/builder/${doc.id}` : `/documents/${doc.id}`}
               className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block truncate"
             >
               {doc.name}
@@ -824,29 +833,29 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                             Set default
                           </Button>
                         )}
-                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1"
-                          title="Open local folder location"
-                          onClick={() => handleOpenFolder(doc.id)}
-                          disabled={pendingId === doc.id}
-                        >
-                          {pendingId === doc.id ? (
-                            <Spinner className="size-3" />
-                          ) : (
-                            <Folder className="size-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1"
-                          title="Download file"
-                          onClick={() => handleDownload(doc.file_path, doc.name)}
-                        >
-                          <Download className="size-3.5" />
-                        </Button>
+                         {!doc.builder_data && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1"
+                              title="Open local folder location"
+                              onClick={() => handleOpenFolder(doc.id)}
+                              disabled={pendingId === doc.id}
+                            >
+                              {pendingId === doc.id ? <Spinner className="size-3" /> : <Folder className="size-3.5" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1"
+                              title="Download file"
+                              onClick={() => handleDownload(doc.file_path, doc.name)}
+                            >
+                              <Download className="size-3.5" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1068,6 +1077,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
           </p>
         </div>
       )}
+      {dialog}
     </div>
   );
 }

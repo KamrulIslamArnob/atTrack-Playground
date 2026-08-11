@@ -8,6 +8,7 @@ import { updateProfile } from "@/lib/actions/auth";
 
 export interface Profile {
   full_name?: string | null;
+  email?: string | null;
   headline?: string | null;
   phone?: string | null;
   location?: string | null;
@@ -38,15 +39,26 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="headline">Professional headline</Label>
+                <Label htmlFor="email">Email address</Label>
                 <Input
-                  id="headline"
-                  name="headline"
-                  defaultValue={profile?.headline ?? ""}
-                  placeholder="e.g. Senior Frontend Engineer"
+                  id="email"
+                  name="email"
+                  type="email"
+                  defaultValue={profile?.email ?? ""}
+                  placeholder="connect.arnob@gmail.com"
                   className="h-10"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="headline">Professional headline</Label>
+              <Input
+                id="headline"
+                name="headline"
+                defaultValue={profile?.headline ?? ""}
+                placeholder="e.g. Senior Frontend Engineer"
+                className="h-10"
+              />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -107,23 +119,29 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 <p className="text-sm font-medium">{profile?.full_name || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Professional headline</p>
-                <p className="text-sm font-medium">{profile?.headline || "—"}</p>
+                <p className="text-sm text-muted-foreground">Email address</p>
+                <p className="text-sm font-medium">{profile?.email || "—"}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
+                <p className="text-sm text-muted-foreground">Professional headline</p>
+                <p className="text-sm font-medium">{profile?.headline || "—"}</p>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground">Location</p>
                 <p className="text-sm font-medium">{profile?.location || "—"}</p>
               </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm text-muted-foreground">Phone</p>
                 <p className="text-sm font-medium">{profile?.phone || "—"}</p>
               </div>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Website</p>
-              <p className="text-sm font-medium">{profile?.website || "—"}</p>
+              <div>
+                <p className="text-sm text-muted-foreground">Website</p>
+                <p className="text-sm font-medium">{profile?.website || "—"}</p>
+              </div>
             </div>
           </div>
         )}

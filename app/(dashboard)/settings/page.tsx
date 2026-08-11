@@ -12,7 +12,7 @@ import { Mail, Sparkles } from "lucide-react";
 import { UpdateChecker } from "@/components/settings/update-checker";
 
 export default async function SettingsPage() {
-  const { supabase, userId } = await getUser();
+  const { supabase, userId, user } = await getUser();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
           <CardTitle className="text-base font-semibold">Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProfileForm profile={profile as unknown as Profile} />
+          <ProfileForm profile={{ ...(profile || {}), email: user.email } as unknown as Profile} />
         </CardContent>
       </Card>
 

@@ -18,6 +18,7 @@ import { X, Calendar, ExternalLink } from "lucide-react";
 import { updateInterview, deleteInterview } from "@/lib/actions/interviews";
 import { getCalendarLinkFromInterview } from "@/lib/calendar";
 import type { Interview } from "@/lib/actions/interviews";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const interviewTypes = [
   { value: "phone", label: "Phone" },
@@ -45,6 +46,7 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
   const [type, setType] = useState(interview.type ?? "");
   const [status, setStatus] = useState(interview.status);
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -73,7 +75,13 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this interview?")) return;
+    const confirmed = await confirm({
+      title: "Delete interview?",
+      description: "This interview will be permanently removed. This cannot be undone.",
+      confirmText: "Delete",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     setPending(true);
     await deleteInterview(interview.id);
     setPending(false);
@@ -280,6 +288,7 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
           </div>
         </form>
       </div>
+      {dialog}
     </div>
   );
 }

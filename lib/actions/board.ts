@@ -312,45 +312,7 @@ export async function ensureApplication(
   });
 }
 
-/** Shortcuts panel "Log Application" — creates the applications row if one doesn't exist yet. */
-export async function logApplication(jobId: string): Promise<void> {
-  const { supabase, userId } = await getUser();
 
-  const { data: job } = await supabase.from("jobs").select("id, title").eq("id", jobId).eq("user_id", userId).single();
-  if (!job) throw new Error("Job not found.");
-
-  await ensureApplication(supabase, userId, jobId);
-
-  revalidatePath("/jobs");
-  revalidatePath("/jobs/" + jobId);
-  revalidatePath("/applications");
-  await logResourceActivity(userId, "log", "application", jobId, { title: job.title });
-}
-
-/** Shortcuts panel "Log Offer" / "Log Accepted" — ensures an application exists, then sets its status. */
-export async function logOffer(jobId: string, status: "offer" | "accepted"): Promise<void> {
-  const { supabase, userId } = await getUser();
-
-  const { data: job } = await supabase.from("jobs").select("id, title").eq("id", jobId).eq("user_id", userId).single();
-  if (!job) throw new Error("Job not found.");
-
-  await ensureApplication(supabase, userId, jobId);
-
-  const { data: application } = await supabase
-    .from("applications")
-    .select("id")
-    .eq("job_id", jobId)
-    .eq("user_id", userId)
-    .single();
-  if (application) {
-    await supabase.from("applications").update({ status }).eq("id", application.id).eq("user_id", userId);
-  }
-
-  revalidatePath("/jobs");
-  revalidatePath("/jobs/" + jobId);
-  revalidatePath("/applications");
-  await logResourceActivity(userId, "update", "application", jobId, { status, title: job.title });
-}
 
 export async function createList(name: string): Promise<{ id: string }> {
   const { supabase, userId } = await getUser();

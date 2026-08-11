@@ -149,3 +149,75 @@ export async function createCompany(formData: FormData): Promise<{ id: string }>
   await logResourceActivity(userId, "create", "company", company.id, { name });
   return { id: company.id };
 }
+
+/** Edit existing company name, website, and location */
+export async function updateCompanyDetails(
+  companyId: string,
+  formData: FormData
+): Promise<CrmCompany> {
+  const { supabase, userId } = await getUser();
+
+  const name = (formData.get("name") as string)?.trim();
+  if (!name) throw new Error("Company name is required.");
+
+  const website = (formData.get("website") as string)?.trim() || null;
+  const location = (formData.get("location") as string)?.trim() || null;
+
+  const { data: updated, error } = await supabase
+    .from("companies")
+    .update({ name, website, location })
+    .eq("id", companyId)
+    .eq("user_id", userId)
+    .select("id, name, website, location, color")
+    .single();
+
+  if (error) throw new Error("Failed to update company.");
+
+  revalidatePath("/crm");
+  await logResourceActivity(userId, "update", "company", companyId, { name });
+
+  const [{ count: jobCount }, { count: contactCount }] = await Promise.all([
+    supabase.from("jobs").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("company_id", companyId),
+    supabase.from("contacts").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("company_id", companyId),
+  ]);
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    website: updated.website,
+    location: updated.location,
+    color: updated.color,
+    job_count: jobCount ?? 0,
+    contact_count: contactCount ?? 0,
+  };
+}
+
+/** Delete a company and unlink any associated contacts/jobs */
+export async function deleteCompany(companyId: string): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  // Unlink contacts
+  await supabase
+    .from("contacts")
+    .update({ company_id: null })
+    .eq("user_id", userId)
+    .eq("company_id", companyId);
+
+  // Unlink jobs
+  await supabase
+    .from("jobs")
+    .update({ company_id: null })
+    .eq("user_id", userId)
+    .eq("company_id", companyId);
+
+  const { error } = await supabase
+    .from("companies")
+    .delete()
+    .eq("id", companyId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error("Failed to delete company.");
+
+  revalidatePath("/crm");
+  await logResourceActivity(userId, "delete", "company", companyId);
+}

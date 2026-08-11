@@ -29,6 +29,7 @@ import {
 import type { JobDeadline, ListKind } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface DeadlinesTabProps {
   data: JobDetailData;
@@ -47,6 +48,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
   const [deadlines, setDeadlines] = useState<JobDeadline[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
 
   // Add Form state
   const [isAdding, setIsAdding] = useState(false);
@@ -203,8 +205,14 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm("Are you sure you want to delete this deadline milestone?")) return;
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: "Delete deadline?",
+      description: "This deadline milestone will be permanently removed.",
+      confirmText: "Delete",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     startTransition(async () => {
       try {
         await deleteJobDeadline(id);
@@ -231,7 +239,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
       <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-xl border border-lime-500/50 bg-lime-400/25 text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200 shadow-2xs">
               <Clock className="size-4" />
             </div>
             <div>
@@ -255,7 +263,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
 
         {/* Quick Add Presets */}
         {!isAdding && (
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border/60">
             <span className="text-[11px] font-medium text-muted-foreground mr-1">Quick Add:</span>
             {STAGE_PRESETS.map((preset) => (
               <button
@@ -444,7 +452,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
                             {item.title}
                           </h4>
                           {item.is_pinned && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-primary/15 text-primary">
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-lime-500/50 bg-lime-400/25 text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
                               <Pin className="size-2.5" /> Pinned to Board Card
                             </span>
                           )}
@@ -491,7 +499,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleTogglePinned(item)}
-                          className={cn("size-7", item.is_pinned && "text-primary bg-primary/10")}
+                          className={cn("size-7", item.is_pinned && "border border-lime-500/50 bg-lime-400/25 text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200")}
                           title={item.is_pinned ? "Unpin from board card" : "Pin to board card"}
                         >
                           <Pin className="size-3.5" />
@@ -523,6 +531,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
           })
         )}
       </div>
+      {dialog}
     </div>
   );
 }

@@ -71,6 +71,7 @@ async function main() {
     env: {
       SQLITE_DIR: settings.dataDir,
       STORAGE_DIR: path.join(settings.dataDir, "storage"),
+      ENCRYPTION_KEY: settings.encryptionKey,
       SMTP_ENCRYPTION_KEY: settings.encryptionKey,
       GEMINI_API_KEY: settings.geminiApiKey || "",
     },

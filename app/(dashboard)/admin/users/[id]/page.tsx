@@ -45,8 +45,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { normalizeIpAddress } from "@/lib/activity-messages";
-import { formatActivityMessage, ACTION_COLORS } from "@/lib/activity-messages";
 import { formatAiUsageMessage, AI_ACTION_COLORS, AI_ACTION_LABELS } from "@/lib/ai-usage-messages";
 
 const DEBOUNCE_MS = 400;
@@ -58,18 +56,6 @@ export default function AdminUserDetailPage() {
 
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Activity tab state
-  const [activity, setActivity] = useState<AdminActivityLogEntry[]>([]);
-  const [activityTotal, setActivityTotal] = useState(0);
-  const [activityLoading, setActivityLoading] = useState(true);
-  const [activityPage, setActivityPage] = useState(1);
-  const [activityPerPage, setActivityPerPage] = useState(20);
-  const [activitySearchInput, setActivitySearchInput] = useState("");
-  const [activitySearch, setActivitySearch] = useState("");
-  const [activityActionFilter, setActivityActionFilter] = useState("all");
-  const [activitySort, setActivitySort] = useState("newest");
-  const activityDebounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   // AI Usage tab state
   const [aiUsage, setAiUsage] = useState<AdminAiUsageEntry[]>([]);
@@ -93,22 +79,6 @@ export default function AdminUserDetailPage() {
     });
   }, [userId]);
 
-  // Load activity logs
-  const loadActivity = useCallback(async () => {
-    setActivityLoading(true);
-    const result = await getAdminActivityLog(activityPage, activityPerPage, {
-      user_id: userId,
-      action: activityActionFilter === "all" ? undefined : activityActionFilter,
-      search: activitySearch || undefined,
-      sort: activitySort,
-    });
-    setActivity(result.logs);
-    setActivityTotal(result.total);
-    setActivityLoading(false);
-  }, [userId, activityPage, activityPerPage, activityActionFilter, activitySearch, activitySort]);
-
-  useEffect(() => { loadActivity(); }, [loadActivity]);
-
   // Load AI usage
   const loadAiUsage = useCallback(async () => {
     setAiLoading(true);
@@ -126,15 +96,6 @@ export default function AdminUserDetailPage() {
   }, [userId, aiPage, aiPerPage, aiActionFilter, aiSearch, aiSort]);
 
   useEffect(() => { loadAiUsage(); }, [loadAiUsage]);
-
-  function handleActivitySearch(value: string) {
-    setActivitySearchInput(value);
-    if (activityDebounceRef.current) clearTimeout(activityDebounceRef.current);
-    activityDebounceRef.current = setTimeout(() => {
-      setActivitySearch(value);
-      setActivityPage(1);
-    }, DEBOUNCE_MS);
-  }
 
   function handleAiSearch(value: string) {
     setAiSearchInput(value);
@@ -297,232 +258,15 @@ export default function AdminUserDetailPage() {
           <StatItem icon={FileText} label="Applications" value={user.application_count} />
           <StatItem icon={FileText} label="Documents" value={user.document_count} />
           <StatItem icon={CalendarDays} label="Interviews" value={user.interview_count} />
-          <StatItem icon={Activity} label="Activity" value={user.activity_count} />
           <StatItem icon={Cpu} label="AI Requests" value={user.ai_usage_count} />
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="activity">
+      <Tabs defaultValue="ai-usage">
         <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="activity" className="flex-1 sm:flex-none">Activity Log</TabsTrigger>
           <TabsTrigger value="ai-usage" className="flex-1 sm:flex-none">AI Usage</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="activity">
-          <div className="mt-4 space-y-4">
-            {/* Search + filters row */}
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <div className="relative w-full lg:w-72">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={activitySearchInput}
-                  onChange={(e) => handleActivitySearch(e.target.value)}
-                  placeholder="Search action or resource..."
-                  className="h-10 pl-9 pr-9 text-sm"
-                />
-                {activitySearchInput && (
-                  <button
-                    onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityPage(1); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 text-xs text-muted-foreground">Action</span>
-                <Select
-                  value={activityActionFilter}
-                  onValueChange={(v) => { setActivityActionFilter(v ?? "all"); setActivityPage(1); }}
-                >
-                  <SelectTrigger className="h-10 w-[130px]">
-                    <SelectValue placeholder="All actions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All actions</SelectItem>
-                    {Object.entries(ACTION_COLORS).map(([action]) => (
-                      <SelectItem key={action} value={action}>
-                        <span className="capitalize">{action.replace(/_/g, " ")}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 text-xs text-muted-foreground">Sort</span>
-                <Select
-                  value={activitySort}
-                  onValueChange={(v) => { setActivitySort(v ?? "newest"); setActivityPage(1); }}
-                >
-                  <SelectTrigger className="h-10 w-[130px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest first</SelectItem>
-                    <SelectItem value="oldest">Oldest first</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-1 lg:ml-auto">
-                <span className="text-xs text-muted-foreground">Per page</span>
-                <Select
-                  value={String(activityPerPage)}
-                  onValueChange={(v) => { setActivityPerPage(Number(v ?? 20)); setActivityPage(1); }}
-                >
-                  <SelectTrigger className="h-10 w-[70px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[20, 30, 50, 100].map((opt) => (
-                      <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 w-10 p-0"
-                  onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
-                  disabled={activityPage <= 1}
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 w-10 p-0"
-                  onClick={() => setActivityPage((p) => Math.min(Math.max(1, Math.ceil(activityTotal / activityPerPage)), p + 1))}
-                  disabled={activityPage >= Math.max(1, Math.ceil(activityTotal / activityPerPage))}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Active filters */}
-            {(activitySearch || activityActionFilter !== "all") && (
-              <div className="flex items-center gap-2">
-                {activitySearch && (
-                  <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
-                    &quot;{activitySearch}&quot;
-                    <button onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityPage(1); }} className="ml-0.5 hover:text-foreground">
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                )}
-                {activityActionFilter !== "all" && (
-                  <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
-                    Action: {activityActionFilter.replace(/_/g, " ")}
-                    <button onClick={() => { setActivityActionFilter("all"); setActivityPage(1); }} className="ml-0.5 hover:text-foreground">
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                )}
-                <button
-                  onClick={() => { setActivitySearchInput(""); setActivitySearch(""); setActivityActionFilter("all"); setActivityPage(1); }}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Clear all
-                </button>
-              </div>
-            )}
-
-            {/* Results count */}
-            <div className="text-xs text-muted-foreground">
-              {activityTotal} activity log{activityTotal !== 1 ? "s" : ""} found
-            </div>
-
-            {/* Table */}
-            {activityLoading ? (
-              <div className="rounded-2xl border border-border">
-                <div className="bg-muted/50 px-4 py-3">
-                  <div className="flex gap-4">
-                    <Skeleton className="h-4 w-10" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                </div>
-                <div className="divide-y divide-border">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="px-4 py-3">
-                      <div className="flex items-center gap-4">
-                        <Skeleton className="h-3 w-8" />
-                        <Skeleton className="h-5 w-16 rounded-full" />
-                        <Skeleton className="h-3 flex-1" />
-                        <Skeleton className="h-3 w-24" />
-                        <Skeleton className="h-3 w-20" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : activity.length > 0 ? (
-              <div className="rounded-2xl border border-border overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground w-10">#</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Message</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">IP</th>
-                      <th className="px-4 py-3 text-right font-medium text-muted-foreground">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activity.map((log, index) => (
-                      <tr
-                        key={log.id}
-                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {(activityPage - 1) * activityPerPage + index + 1}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium ${ACTION_COLORS[log.action] ?? "bg-muted text-muted-foreground"}`}
-                          >
-                            {log.action}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 max-w-[320px]">
-                          <span className="text-sm">{formatActivityMessage(log)}</span>
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            {log.ip_address ? (
-                              <>
-                                <Globe className="size-3.5 shrink-0" />
-                                {normalizeIpAddress(log.ip_address)}
-                              </>
-                            ) : (
-                              <span className="text-muted-foreground/50">-</span>
-                            )}
-                          </span>
-                        </td>
-                        <td
-                          className="px-4 py-3 text-right text-xs text-muted-foreground"
-                          title={new Date(log.created_at).toLocaleString()}
-                        >
-                          {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
-                <p className="text-sm text-muted-foreground">
-                  {activitySearch || activityActionFilter !== "all" ? "No activity matches your filters." : "No activity yet."}
-                </p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
         <TabsContent value="ai-usage">
           <div className="mt-4 space-y-4">
             {/* Summary cards */}

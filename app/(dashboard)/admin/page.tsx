@@ -7,17 +7,13 @@ import {
   Briefcase,
   Send,
   Cpu,
-  Activity,
   Calendar,
-  ArrowUpRight,
 } from "lucide-react";
 import {
   UsersTrendChart,
   JobsStatusChart,
   AiTrendChart,
-  ActivityByActionChart,
 } from "@/components/admin-charts";
-import { ActivityLogItem } from "@/components/activity-log-item";
 
 export default async function AdminDashboardPage() {
   const stats = await getAdminDashboardStats();
@@ -32,8 +28,6 @@ export default async function AdminDashboardPage() {
   });
 
   const activeRate = stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0;
-  const banRate = stats.totalUsers > 0 ? Math.round((stats.bannedUsers / stats.totalUsers) * 100) : 0;
-  const appPerJob = stats.totalJobs > 0 ? (stats.totalApplications / stats.totalJobs).toFixed(1) : "0";
 
   return (
     <div className="space-y-6">
@@ -46,7 +40,7 @@ export default async function AdminDashboardPage() {
             <div>
               <h1 className="font-heading text-3xl font-bold tracking-tight">{greeting}, Admin</h1>
               <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-                Monitor users, activity, and AI usage across your platform.
+                Monitor users, jobs, and AI usage across your platform.
               </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -60,7 +54,7 @@ export default async function AdminDashboardPage() {
       <Breadcrumbs />
 
       {/* Key metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           icon={Users}
           label="Total Users"
@@ -70,7 +64,7 @@ export default async function AdminDashboardPage() {
         />
         <MetricCard
           icon={ShieldCheck}
-          label="Active"
+          label="Active Users"
           value={stats.activeUsers}
           color="text-emerald-500"
           bgColor="bg-emerald-500/10"
@@ -79,19 +73,17 @@ export default async function AdminDashboardPage() {
         />
         <MetricCard
           icon={Ban}
-          label="Banned"
+          label="Banned Users"
           value={stats.bannedUsers}
           color="text-rose-500"
           bgColor="bg-rose-500/10"
-          badge={`${banRate}%`}
-          badgeColor="text-rose-600"
         />
         <MetricCard
           icon={Briefcase}
-          label="Jobs"
+          label="Total Jobs"
           value={stats.totalJobs}
-          color="text-violet-500"
-          bgColor="bg-violet-500/10"
+          color="text-purple-500"
+          bgColor="bg-purple-500/10"
         />
         <MetricCard
           icon={Send}
@@ -99,58 +91,34 @@ export default async function AdminDashboardPage() {
           value={stats.totalApplications}
           color="text-amber-500"
           bgColor="bg-amber-500/10"
-          badge={`${appPerJob}/job`}
-          badgeColor="text-amber-600"
         />
         <MetricCard
           icon={Cpu}
-          label="AI Today"
-          value={stats.aiRequestsToday}
-          color="text-cyan-500"
-          bgColor="bg-cyan-500/10"
-          badge={`${stats.totalAiRequests} total`}
-          badgeColor="text-cyan-600"
+          label="AI Requests"
+          value={stats.totalAiRequests}
+          color="text-indigo-500"
+          bgColor="bg-indigo-500/10"
         />
       </div>
 
-      {/* Charts row 1: Users Trend + AI Usage Trend */}
+      {/* Charts row 1: User Growth + AI Requests */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-heading text-lg font-semibold">New Users</h2>
-                <p className="text-xs text-muted-foreground mt-1">Signups over the last 14 days</p>
-              </div>
-              <div className="flex items-center gap-1 text-sm font-semibold text-emerald-600">
-                <ArrowUpRight className="size-4" />
-                {stats.usersTrend.length > 0
-                  ? stats.usersTrend.reduce((sum, d) => sum + d.count, 0)
-                  : 0}
-              </div>
-            </div>
+          <div className="mb-4">
+            <h2 className="font-heading text-lg font-semibold">User Signups</h2>
+            <p className="text-xs text-muted-foreground mt-1">Last 14 days</p>
           </div>
           {stats.usersTrend.length > 0 ? (
             <UsersTrendChart data={stats.usersTrend} />
           ) : (
-            <EmptyState icon={Users} text="No signups in the last 14 days" />
+            <EmptyState icon={Users} text="No signups yet" />
           )}
         </div>
 
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-heading text-lg font-semibold">AI Usage</h2>
-                <p className="text-xs text-muted-foreground mt-1">Requests over the last 14 days</p>
-              </div>
-              <div className="flex items-center gap-1 text-sm font-semibold text-cyan-600">
-                <ArrowUpRight className="size-4" />
-                {stats.aiTrend.length > 0
-                  ? stats.aiTrend.reduce((sum, d) => sum + d.requests, 0)
-                  : 0}
-              </div>
-            </div>
+          <div className="mb-4">
+            <h2 className="font-heading text-lg font-semibold">AI Requests</h2>
+            <p className="text-xs text-muted-foreground mt-1">Last 14 days</p>
           </div>
           {stats.aiTrend.length > 0 ? (
             <AiTrendChart data={stats.aiTrend} />
@@ -160,47 +128,16 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Charts row 2: Jobs by Status + Activity by Action */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-4">
-            <h2 className="font-heading text-lg font-semibold">Jobs by Status</h2>
-            <p className="text-xs text-muted-foreground mt-1">Distribution across all users</p>
-          </div>
-          {stats.jobsByStatus.length > 0 ? (
-            <JobsStatusChart data={stats.jobsByStatus} />
-          ) : (
-            <EmptyState icon={Briefcase} text="No jobs yet" />
-          )}
-        </div>
-
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-4">
-            <h2 className="font-heading text-lg font-semibold">Activity by Action</h2>
-            <p className="text-xs text-muted-foreground mt-1">Last 14 days</p>
-          </div>
-          {stats.activityByAction.length > 0 ? (
-            <ActivityByActionChart data={stats.activityByAction} />
-          ) : (
-            <EmptyState icon={Activity} text="No activity yet" />
-          )}
-        </div>
-      </div>
-
-      {/* Recent Activity */}
+      {/* Charts row 2: Jobs by Status */}
       <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-        <div className="mb-6">
-          <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
-          <p className="text-xs text-muted-foreground mt-1">Latest actions across the platform</p>
+        <div className="mb-4">
+          <h2 className="font-heading text-lg font-semibold">Jobs by Status</h2>
+          <p className="text-xs text-muted-foreground mt-1">Distribution across all users</p>
         </div>
-        {stats.recentActivity.length > 0 ? (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {stats.recentActivity.map((log) => (
-              <ActivityLogItem key={log.id} log={log} />
-            ))}
-          </div>
+        {stats.jobsByStatus.length > 0 ? (
+          <JobsStatusChart data={stats.jobsByStatus} />
         ) : (
-          <EmptyState icon={Activity} text="No activity yet" />
+          <EmptyState icon={Briefcase} text="No jobs yet" />
         )}
       </div>
     </div>

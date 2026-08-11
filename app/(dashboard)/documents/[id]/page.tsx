@@ -15,13 +15,17 @@ export default async function DocumentPage(props: PageProps) {
 
   const { data: doc } = await supabase
     .from("documents")
-    .select("id, name, type, file_path, content, is_default, match_data, created_at")
+    .select("id, name, type, file_path, content, is_default, match_data, builder_data, created_at")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
 
   if (!doc) {
     redirect("/documents");
+  }
+
+  if (doc.builder_data) {
+    redirect(`/documents/builder/${id}`);
   }
 
   // Get URL for the PDF (direct public path or signed URL fallback)

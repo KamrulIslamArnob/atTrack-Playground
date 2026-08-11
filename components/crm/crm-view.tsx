@@ -1,12 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -17,27 +26,40 @@ import {
 import {
   createCompanyContact,
   deleteContact,
+  deleteTag,
   getCompanyContacts,
   getOrphanContacts,
+  renameTag,
   setContactCompany,
   updateContact,
   type Contact,
 } from "@/lib/actions/contacts";
-import { createCompany, getCompanyJobs, updateCompanyColor, type CompanyJob, type CrmCompany } from "@/lib/actions/companies";
+import {
+  createCompany,
+  deleteCompany,
+  getCompanyJobs,
+  updateCompanyColor,
+  updateCompanyDetails,
+  type CompanyJob,
+  type CrmCompany,
+} from "@/lib/actions/companies";
 import { ContactCard } from "@/components/crm/contact-card";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/types/job";
-import { getContactAvatarColorClass, cn } from "@/lib/utils";
+import { getContactAvatarColorClass, getTagColorClass, cn } from "@/lib/utils";
 import {
   Briefcase,
   Building2,
   ChevronDown,
+  Globe,
   Link2,
   Mail,
+  Pencil,
   Phone,
   Plus,
   Search,
+  Tag,
   Trash2,
   UserRound,
   X,
@@ -48,13 +70,21 @@ interface CrmViewProps {
   contacts: Contact[];
 }
 
-
 export function CrmView({ companies: initialCompanies, contacts: initialContacts }: CrmViewProps) {
   const [companies, setCompanies] = useState(initialCompanies);
+  const [contacts, setContacts] = useState(initialContacts);
   const [view, setView] = useState<"contacts" | "companies">("contacts");
   const [addingCompany, setAddingCompany] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [pending, setPending] = useState(false);
+
+  // Edit / Delete Company dialog state
+  const [editingCompany, setEditingCompany] = useState<CrmCompany | null>(null);
+  const [deletingCompanyObj, setDeletingCompanyObj] = useState<CrmCompany | null>(null);
+  const [deletingCompanyPending, setDeletingCompanyPending] = useState(false);
+
+  // Manage Tags dialog state
+  const [manageTagsOpen, setManageTagsOpen] = useState(false);
 
   const handleCreateCompany = async () => {
     if (!companyName.trim()) return;
@@ -72,6 +102,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       );
       setCompanyName("");
       setAddingCompany(false);
+      toast.success("Company created");
     } catch {
       toast.error("Could not create company");
     } finally {
@@ -87,102 +118,233 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
     );
   };
 
+  const handleCompanyUpdated = (updated: CrmCompany) => {
+    setCompanies((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  };
+
+  const handleDeleteCompanyConfirm = async () => {
+    if (!deletingCompanyObj) return;
+    setDeletingCompanyPending(true);
+    try {
+      await deleteCompany(deletingCompanyObj.id);
+      setCompanies((prev) => prev.filter((c) => c.id !== deletingCompanyObj.id));
+      // Unlink company from contacts in state
+      setContacts((prev) =>
+        prev.map((c) => (c.company_id === deletingCompanyObj.id ? { ...c, company_id: null, company_name: null } : c))
+      );
+      toast.success(`Company "${deletingCompanyObj.name}" deleted`);
+      setDeletingCompanyObj(null);
+    } catch {
+      toast.error("Failed to delete company");
+    } finally {
+      setDeletingCompanyPending(false);
+    }
+  };
+
   const bumpContactCount = (companyId: string | null, delta: number) => {
     if (!companyId) return;
     setCompanies((prev) =>
-      prev.map((c) => (c.id === companyId ? { ...c, contact_count: c.contact_count + delta } : c))
+      prev.map((c) => (c.id === companyId ? { ...c, contact_count: Math.max(0, c.contact_count + delta) } : c))
+    );
+  };
+
+  // Tag management handlers
+  const handleTagDeleted = (deletedTag: string) => {
+    const lower = deletedTag.toLowerCase();
+    setContacts((prev) =>
+      prev.map((c) => {
+        if (!c.role) return c;
+        const remaining = c.role.split(",").map((t) => t.trim()).filter((t) => t && t.toLowerCase() !== lower);
+        return { ...c, role: remaining.length > 0 ? remaining.join(", ") : null };
+      })
+    );
+  };
+
+  const handleTagRenamed = (oldTag: string, newTag: string) => {
+    const oldLower = oldTag.toLowerCase();
+    setContacts((prev) =>
+      prev.map((c) => {
+        if (!c.role) return c;
+        const current = c.role.split(",").map((t) => t.trim()).filter(Boolean);
+        if (current.some((t) => t.toLowerCase() === oldLower)) {
+          const updated = current.map((t) => (t.toLowerCase() === oldLower ? newTag : t));
+          const unique = Array.from(new Set(updated));
+          return { ...c, role: unique.join(", ") };
+        }
+        return c;
+      })
     );
   };
 
   return (
-    <Tabs value={view} onValueChange={(v) => setView((v as "contacts" | "companies") ?? "contacts")}>
-      <div className="flex items-center justify-between gap-2">
-        <TabsList>
-          <TabsTrigger value="contacts">Contacts</TabsTrigger>
-          <TabsTrigger value="companies">Companies</TabsTrigger>
-        </TabsList>
+    <>
+      <Tabs value={view} onValueChange={(v) => setView((v as "contacts" | "companies") ?? "contacts")}>
+        <div className="flex items-center justify-between gap-2">
+          <TabsList className="radio-inputs-header h-auto shrink-0 max-w-xs">
+            <TabsTrigger value="contacts" className="radio-tab-trigger">
+              <span>Contacts</span>
+            </TabsTrigger>
+            <TabsTrigger value="companies" className="radio-tab-trigger">
+              <span>Companies</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {view === "companies" &&
-          (addingCompany ? (
-            <div className="flex items-center gap-2">
-              <Input
-                autoFocus
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateCompany();
-                  if (e.key === "Escape") {
-                    setCompanyName("");
-                    setAddingCompany(false);
-                  }
-                }}
-                placeholder="Company name"
-                className="h-9 w-56"
+          {view === "companies" &&
+            (addingCompany ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  autoFocus
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreateCompany();
+                    if (e.key === "Escape") {
+                      setCompanyName("");
+                      setAddingCompany(false);
+                    }
+                  }}
+                  placeholder="Company name"
+                  className="h-9 w-56"
+                />
+                <Button size="sm" onClick={handleCreateCompany} disabled={pending}>
+                  {pending && <Spinner className="mr-1 size-4" />}
+                  Add
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setCompanyName(""); setAddingCompany(false); }}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" onClick={() => setAddingCompany(true)}>
+                <Plus className="mr-1 size-4" />
+                Add company
+              </Button>
+            ))}
+        </div>
+
+        <div className="radio-tabs-content-box mt-0">
+          <div className="radio-tabs-content-inner">
+            <TabsContent value="contacts" className="radio-tab-content-panel mt-0">
+              <ContactsView
+                contacts={contacts}
+                setContacts={setContacts}
+                companies={companies}
+                onCompanyCountChange={bumpContactCount}
+                onCompanyCreated={handleCompanyCreated}
+                onOpenManageTags={() => setManageTagsOpen(true)}
+                onTagDeleted={handleTagDeleted}
               />
-              <Button size="sm" onClick={handleCreateCompany} disabled={pending}>
-                {pending && <Spinner className="mr-1" />}
-                Add
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => { setCompanyName(""); setAddingCompany(false); }}>
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button size="sm" onClick={() => setAddingCompany(true)}>
-              <Plus className="mr-1 size-4" />
-              Add company
-            </Button>
-          ))}
-      </div>
+            </TabsContent>
 
-      <TabsContent value="contacts" className="mt-4">
-        <ContactsView
-          initialContacts={initialContacts}
-          companies={companies}
-          onCompanyCountChange={bumpContactCount}
-          onCompanyCreated={handleCompanyCreated}
-        />
-      </TabsContent>
+            <TabsContent value="companies" className="radio-tab-content-panel mt-0">
+              {companies.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
+                  <p className="text-sm text-muted-foreground">No companies yet.</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">
+                    Companies appear automatically as you save jobs, or add one directly.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {companies.map((company) => (
+                    <CompanyRow
+                      key={company.id}
+                      company={company}
+                      onEdit={(c) => setEditingCompany(c)}
+                      onDelete={(c) => setDeletingCompanyObj(c)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </div>
+        </div>
+      </Tabs>
 
-      <TabsContent value="companies" className="mt-4">
-        {companies.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
-            <p className="text-sm text-muted-foreground">No companies yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground/70">
-              Companies appear automatically as you save jobs, or add one directly.
+      {/* Edit Company Dialog */}
+      <CompanyEditDialog
+        open={!!editingCompany}
+        onOpenChange={(open) => !open && setEditingCompany(null)}
+        company={editingCompany}
+        onSaved={handleCompanyUpdated}
+      />
+
+      {/* Delete Company Confirmation Dialog */}
+      <Dialog open={!!deletingCompanyObj} onOpenChange={(open) => !open && setDeletingCompanyObj(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Company</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-sm text-foreground">
+              Are you sure you want to delete <strong className="font-semibold">{deletingCompanyObj?.name}</strong>?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Linked contacts and jobs will not be deleted, but will be unlinked from this company.
             </p>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {companies.map((company) => (
-              <CompanyRow key={company.id} company={company} />
-            ))}
-          </div>
-        )}
-      </TabsContent>
-    </Tabs>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setDeletingCompanyObj(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteCompanyConfirm} disabled={deletingCompanyPending}>
+              {deletingCompanyPending && <Spinner className="mr-1 size-4" />}
+              Delete Company
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Tags Dialog */}
+      <ManageTagsDialog
+        open={manageTagsOpen}
+        onOpenChange={setManageTagsOpen}
+        contacts={contacts}
+        onTagDeleted={handleTagDeleted}
+        onTagRenamed={handleTagRenamed}
+      />
+    </>
   );
 }
 
 /** Person-first roster — every contact regardless of company, with company as a filterable/reassignable tag. */
 function ContactsView({
-  initialContacts,
+  contacts,
+  setContacts,
   companies,
   onCompanyCountChange,
   onCompanyCreated,
+  onOpenManageTags,
+  onTagDeleted,
 }: {
-  initialContacts: Contact[];
+  contacts: Contact[];
+  setContacts: React.Dispatch<React.SetStateAction<Contact[]>>;
   companies: CrmCompany[];
   onCompanyCountChange: (companyId: string | null, delta: number) => void;
   onCompanyCreated?: (company: CrmCompany) => void;
+  onOpenManageTags: () => void;
+  onTagDeleted: (tag: string) => void;
 }) {
-  const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined);
 
   const companyName = (id: string | null) => companies.find((c) => c.id === id)?.name ?? null;
+
+  // Gather all unique tag suggestions across contacts
+  const tagSuggestions = useMemo(() => {
+    const set = new Set<string>(PRESET_TAGS);
+    contacts.forEach((c) => {
+      if (c.role) {
+        c.role.split(",").forEach((t) => {
+          const trimmed = t.trim();
+          if (trimmed) set.add(trimmed);
+        });
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [contacts]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -255,6 +417,11 @@ function ContactsView({
           </SelectContent>
         </Select>
 
+        <Button variant="outline" size="sm" onClick={onOpenManageTags}>
+          <Tag className="mr-1 size-4 text-muted-foreground" />
+          Manage Tags
+        </Button>
+
         <Button
           size="sm"
           onClick={() => {
@@ -298,8 +465,15 @@ function ContactsView({
         onOpenChange={setDialogOpen}
         contact={editingContact}
         companies={companies}
-        tagSuggestions={[]}
+        tagSuggestions={tagSuggestions}
         onSaved={handleSaved}
+        onDeleted={(deletedId) => {
+          const deletedContact = contacts.find((c) => c.id === deletedId);
+          if (deletedContact) {
+            setContacts((prev) => prev.filter((c) => c.id !== deletedId));
+            onCompanyCountChange(deletedContact.company_id, -1);
+          }
+        }}
       />
     </div>
   );
@@ -317,7 +491,15 @@ const COMPANY_COLORS = [
 ];
 
 /** Company-grouped view — same roster, sorted under the company tag; a job list rides along for context. */
-function CompanyRow({ company }: { company: CrmCompany }) {
+function CompanyRow({
+  company,
+  onEdit,
+  onDelete,
+}: {
+  company: CrmCompany;
+  onEdit?: (company: CrmCompany) => void;
+  onDelete?: (company: CrmCompany) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [color, setColor] = useState<string | null>(company.color);
   const [contacts, setContacts] = useState<Contact[] | null>(null);
@@ -373,7 +555,7 @@ function CompanyRow({ company }: { company: CrmCompany }) {
           </div>
         </button>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Color picker */}
           <div className="relative">
             <button
@@ -420,6 +602,27 @@ function CompanyRow({ company }: { company: CrmCompany }) {
             <UserRound className="size-3.5" />
             {contactCount}
           </span>
+
+          {/* Edit Company */}
+          <button
+            type="button"
+            onClick={() => onEdit?.(company)}
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            title="Edit company details"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+
+          {/* Delete Company */}
+          <button
+            type="button"
+            onClick={() => onDelete?.(company)}
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            title="Delete company"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+
           <button type="button" onClick={handleToggle} aria-label="Toggle section">
             <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
@@ -708,5 +911,312 @@ function ContactsPanel({
         {contacts.length === 0 && <p className="text-xs text-muted-foreground">No contacts at this company yet.</p>}
       </div>
     </div>
+  );
+}
+
+const PRESET_TAGS = [
+  "Alumni",
+  "Recruiter",
+  "Hiring Manager",
+  "Employee",
+  "Executive",
+  "Referral",
+  "Peer",
+  "Primary Contact",
+];
+
+function CompanyEditDialog({
+  company,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  company: CrmCompany | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (updated: CrmCompany) => void;
+}) {
+  const [name, setName] = useState(company?.name ?? "");
+  const [website, setWebsite] = useState(company?.website ?? "");
+  const [location, setLocation] = useState(company?.location ?? "");
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (company) {
+      setName(company.name ?? "");
+      setWebsite(company.website ?? "");
+      setLocation(company.location ?? "");
+    }
+  }, [company]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!company || !name.trim()) return;
+    setPending(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", name.trim());
+      formData.append("website", website.trim());
+      formData.append("location", location.trim());
+      const updated = await updateCompanyDetails(company.id, formData);
+      onSaved(updated);
+      onOpenChange(false);
+      toast.success("Company updated");
+    } catch {
+      toast.error("Failed to update company");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Company</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="company-name">Company Name *</Label>
+            <Input
+              id="company-name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Google"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-website">Website</Label>
+            <Input
+              id="company-website"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://example.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company-location">Location</Label>
+            <Input
+              id="company-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. San Francisco, CA"
+            />
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending && <Spinner className="mr-1 size-4" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ManageTagsDialog({
+  open,
+  onOpenChange,
+  contacts,
+  onTagDeleted,
+  onTagRenamed,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  contacts: Contact[];
+  onTagDeleted: (deletedTag: string) => void;
+  onTagRenamed: (oldTag: string, newTag: string) => void;
+}) {
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deletingTag, setDeletingTag] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  // Compute unique active tags across contacts + preset tags
+  const allTags = useMemo(() => {
+    const set = new Set<string>(PRESET_TAGS);
+    contacts.forEach((c) => {
+      if (c.role) {
+        c.role.split(",").forEach((t) => {
+          const trimmed = t.trim();
+          if (trimmed) set.add(trimmed);
+        });
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [contacts]);
+
+  // Compute contact count per tag
+  const tagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    contacts.forEach((c) => {
+      if (c.role) {
+        c.role.split(",").forEach((t) => {
+          const trimmed = t.trim();
+          if (trimmed) {
+            map.set(trimmed, (map.get(trimmed) ?? 0) + 1);
+          }
+        });
+      }
+    });
+    return map;
+  }, [contacts]);
+
+  const handleDeleteTag = async (tag: string) => {
+    setPending(true);
+    try {
+      await deleteTag(tag);
+      onTagDeleted(tag);
+      toast.success(`Tag "${tag}" deleted`);
+      setDeletingTag(null);
+    } catch {
+      toast.error(`Failed to delete tag "${tag}"`);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleRenameTag = async (oldTag: string) => {
+    const target = renameValue.trim();
+    if (!target || target.toLowerCase() === oldTag.toLowerCase()) {
+      setEditingTag(null);
+      return;
+    }
+    setPending(true);
+    try {
+      await renameTag(oldTag, target);
+      onTagRenamed(oldTag, target);
+      toast.success(`Renamed tag to "${target}"`);
+      setEditingTag(null);
+    } catch {
+      toast.error("Failed to rename tag");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Tag className="size-5 text-primary" />
+            Manage Tags
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          <p className="text-xs text-muted-foreground">
+            Manage your Notion-style tags. Deleting a tag will automatically remove it from all assigned contacts.
+          </p>
+
+          <div className="max-h-[350px] overflow-y-auto space-y-2 pr-1">
+            {allTags.map((tag) => {
+              const count = tagCounts.get(tag) ?? 0;
+              const isEditing = editingTag === tag;
+              const isConfirmingDelete = deletingTag === tag;
+
+              return (
+                <div
+                  key={tag}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card p-2.5 transition-colors"
+                >
+                  {isEditing ? (
+                    <div className="flex flex-1 items-center gap-2">
+                      <Input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRenameTag(tag);
+                          if (e.key === "Escape") setEditingTag(null);
+                        }}
+                        className="h-8 text-xs flex-1"
+                      />
+                      <Button size="sm" onClick={() => handleRenameTag(tag)} disabled={pending}>
+                        Save
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingTag(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : isConfirmingDelete ? (
+                    <div className="flex flex-1 items-center justify-between text-xs">
+                      <span className="font-medium text-destructive">
+                        Delete &quot;{tag}&quot;? ({count} contact{count !== 1 ? "s" : ""})
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-7 text-xs px-2.5"
+                          onClick={() => handleDeleteTag(tag)}
+                          disabled={pending}
+                        >
+                          {pending && <Spinner className="mr-1 size-3" />}
+                          Confirm
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setDeletingTag(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge
+                          className={cn(
+                            "border font-medium text-xs px-2.5 py-1 rounded-md shrink-0",
+                            getTagColorClass(tag)
+                          )}
+                        >
+                          {tag}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {count === 0 ? "Not assigned" : `${count} contact${count !== 1 ? "s" : ""}`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTag(tag);
+                            setRenameValue(tag);
+                          }}
+                          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          title="Rename tag"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingTag(tag)}
+                          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          title="Delete tag"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

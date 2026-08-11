@@ -7,7 +7,8 @@ import { logResourceActivity } from "@/lib/actions/activity-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import fs from "node:fs";
-import { exec, spawn } from "node:child_process";
+import { exec } from "node:child_process";
+import type { ResumeDoc } from "@/lib/types/resume-builder";
 
 export interface Document {
   id: string;
@@ -20,6 +21,7 @@ export interface Document {
   content: string | null;
   is_default: boolean;
   match_data: ResumeMatchData | null;
+  builder_data: ResumeDoc | null;
   created_at: string;
 }
 
@@ -28,7 +30,7 @@ export async function getDocuments(): Promise<Document[]> {
 
   const { data, error } = await supabase
     .from("documents")
-    .select("id, name, type, file_path, content, is_default, match_data, created_at")
+    .select("id, name, type, file_path, content, is_default, match_data, builder_data, created_at")
     .eq("user_id", userId)
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });

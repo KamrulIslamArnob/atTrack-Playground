@@ -277,16 +277,17 @@ export function matchScoreBand(score: number | null): {
     return {
       label: "Strong",
       className:
-        "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
+        "bg-lime-400/25 border border-lime-500/50 text-lime-950 dark:bg-lime-500/20 dark:border-lime-400/40 dark:text-lime-200",
     };
   if (score >= 50)
     return {
       label: "Fair",
       className:
-        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+        "bg-amber-400/25 border border-amber-500/50 text-amber-950 dark:bg-amber-500/20 dark:border-amber-400/40 dark:text-amber-200",
     };
   return {
     label: "Weak",
-    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    className:
+      "bg-rose-400/25 border border-rose-500/50 text-rose-950 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-200",
   };
 }

@@ -3,20 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Search,
   X,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Mail,
   ArrowUp,
@@ -696,101 +685,26 @@ export function JobsGrid({
 
   return (
     <div className="space-y-4">
-      {/* Search and filters */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search by role, company, or location..."
-            className="h-10 pl-9 text-sm"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-xs text-muted-foreground">Status</span>
-          <Select value={statusFilter} onValueChange={(v) => handleStatusChange(v ?? "all")}>
-            <SelectTrigger className="h-10 w-full lg:w-[130px]">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              {statusOptions.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {statusLabels[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-1 lg:ml-auto">
-          <span className="text-xs text-muted-foreground">Per page</span>
-          <Select
-            value={String(perPage)}
-            onValueChange={(v) => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("perPage", v ?? "30");
-              params.set("page", "1");
-              router.push(`?${params.toString()}`);
-            }}
-          >
-            <SelectTrigger className="h-10 w-[70px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[20, 30, 50, 100].map((opt) => (
-                <SelectItem key={opt} value={String(opt)}>
-                  {opt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("page", String(Math.max(1, page - 1)));
-              router.push(`?${params.toString()}`);
-            }}
-            disabled={page <= 1}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("page", String(Math.min(totalPages, page + 1)));
-              router.push(`?${params.toString()}`);
-            }}
-            disabled={page >= totalPages}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      {/* Active filters & Table Customization actions — these remain here,
+          the search/filter/pagination controls are now in <JobsToolbar>. */}
 
       {/* Active filters & Table Customization actions */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         {hasActiveFilters ? (
           <div className="flex items-center gap-2">
             {initialSearch && (
-              <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+              <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
                 &quot;{initialSearch}&quot;
                 <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
-                  <X className="size-3" />
+                  <X className="size-3 text-lime-900 dark:text-lime-300" />
                 </button>
               </span>
             )}
             {initialStatus !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
+              <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 capitalize dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
                 {statusLabels[initialStatus] ?? initialStatus}
                 <button onClick={() => handleStatusChange("all")} className="ml-0.5">
-                  <X className="size-3" />
+                  <X className="size-3 text-lime-900 dark:text-lime-300" />
                 </button>
               </span>
             )}

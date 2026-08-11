@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
 import type { JobDetailData } from "@/lib/types/job-detail";
 
 interface EditTabProps {
@@ -44,9 +43,6 @@ const statusOptions = [
 export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
   const { job } = data;
   const [pending, setPending] = useState(false);
-  const [notes, setNotes] = useState<JobNote[]>(
-    (job.notes ?? []).map((n) => ({ id: crypto.randomUUID(), title: n.title, bullets: n.bullets }))
-  );
   const [workLocation, setWorkLocation] = useState(job.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(job.employment_type ?? "Full-time");
   const [status, setStatus] = useState(job.status ?? "saved");
@@ -57,7 +53,6 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
     try {
       const formData = new FormData(e.currentTarget);
       formData.append("job_id", job.id);
-      formData.append("notes", JSON.stringify(notes));
       formData.append("work_location", workLocation);
       formData.append("employment_type", employmentType);
       formData.append("status", status);
@@ -165,8 +160,6 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
         <Label htmlFor="description">Job description</Label>
         <Textarea id="description" name="description" rows={4} defaultValue={job.description ?? ""} />
       </div>
-
-      <JobNotesEditor notes={notes} onChange={setNotes} />
 
       <div className="flex justify-end pt-2">
         <Button type="submit" size="sm" disabled={pending}>

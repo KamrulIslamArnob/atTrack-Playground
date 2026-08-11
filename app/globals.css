@@ -239,3 +239,633 @@
 .app-no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Bell ringing animation (From Uiverse.io by vinodjangid07) */
+@keyframes bellRing {
+  0%,
+  100% {
+    transform-origin: top;
+  }
+
+  15% {
+    transform: rotateZ(10deg);
+  }
+
+  30% {
+    transform: rotateZ(-10deg);
+  }
+
+  45% {
+    transform: rotateZ(5deg);
+  }
+
+  60% {
+    transform: rotateZ(-5deg);
+  }
+
+  75% {
+    transform: rotateZ(2deg);
+  }
+}
+
+.notification-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+}
+
+.notification-btn .bell,
+.notification-btn .bell-icon,
+.notification-btn svg {
+  transform-origin: top;
+}
+
+.notification-btn:hover .bell,
+.notification-btn:hover .bell-icon,
+.notification-btn:hover svg {
+  animation: bellRing 0.9s both;
+  transform-origin: top;
+}
+
+.notification-btn:active {
+  transform: scale(0.8);
+}
+
+/* ==========================================
+   Folder Tab Animation (From Uiverse.io by german_7619)
+   Adapted for AtTrack Brand System
+   ========================================== */
+
+/* ==========================================
+   Folder Tab Animation (Exact match to Screenshot 2)
+   ========================================== */
+
+/* ==========================================
+   Exact Uiverse Folder Tab Animation (by german_7619)
+   Brand Color Integration (#70c489)
+   ========================================== */
+
+:root {
+  --uiverse-green: #70c489;
+  --uiverse-card: var(--card);
+  --uiverse-card-border: var(--border);
+}
+
+.dark {
+  --uiverse-green: #256639;
+  --uiverse-card: var(--card);
+}
+
+.radio-inputs-container {
+  position: relative;
+  width: 100%;
+}
+
+/* ==========================================
+   Exact Uiverse 00Kubi Particle Tab Animation
+   Adapted for AtTrack Brand System
+   ========================================== */
+
+.radio-inputs-header {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border-radius: 0.75rem;
+  background-color: var(--muted);
+  box-sizing: border-box;
+  box-shadow: 0 0 0px 1px var(--border);
+  padding: 0.35rem;
+  width: 100%;
+  font-size: 14px;
+  gap: 0.35rem;
+}
+
+.radio-tab-trigger {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: none;
+  padding: 0.45rem 0.85rem;
+  color: var(--muted-foreground);
+  transition: all 0.15s ease-in-out;
+  background-color: transparent;
+  outline: none;
+  gap: 0.4rem;
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.radio-tab-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+  color: var(--foreground);
+}
+
+.dark .radio-tab-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Active State & Bounce Animation */
+.radio-tab-trigger[data-state="active"],
+.radio-tab-trigger[data-active] {
+  position: relative;
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: tab-select 0.3s ease;
+  z-index: 5;
+}
+
+@keyframes tab-select {
+  0% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Shooting Particle Effects */
+.radio-tab-trigger[data-state="active"]::before,
+.radio-tab-trigger[data-state="active"]::after,
+.radio-tab-trigger[data-active]::before,
+.radio-tab-trigger[data-active]::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #84cc16; /* Lime green brand particle */
+  opacity: 0;
+  animation: tab-particles 0.5s ease forwards;
+  pointer-events: none;
+}
+
+.radio-tab-trigger[data-state="active"]::before,
+.radio-tab-trigger[data-active]::before {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  --direction: -10px;
+}
+
+.radio-tab-trigger[data-state="active"]::after,
+.radio-tab-trigger[data-active]::after {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  --direction: 10px;
+}
+
+@keyframes tab-particles {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(var(--direction));
+  }
+}
+
+.radio-tabs-content-box {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin-top: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+
+.radio-tabs-content-inner {
+  width: 100%;
+}
+
+.radio-tab-content-panel[data-state="active"],
+.radio-tab-content-panel[data-active] {
+  animation: tab-panel-fade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tab-panel-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================
+   Pushable 3D Move Button (From Uiverse.io by PriyanshuGupta28)
+   ========================================== */
+.pushable-move {
+  position: relative;
+  background: transparent;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  outline-offset: 4px;
+  outline-color: #a855f7;
+  transition: filter 250ms;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.pushable-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: hsl(270, 30%, 75%);
+  border-radius: 9999px;
+  filter: blur(2px);
+  will-change: transform;
+  transform: translateY(2px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.dark .pushable-shadow {
+  background: hsl(270, 30%, 20%);
+}
+
+.pushable-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    hsl(275, 80%, 35%) 0%,
+    hsl(275, 80%, 45%) 8%,
+    hsl(275, 80%, 35%) 92%,
+    hsl(275, 80%, 25%) 100%
+  );
+}
+
+.pushable-front {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  position: relative;
+  border-radius: 9999px;
+  background: hsl(273, 91%, 55%);
+  padding: 0.375rem 0.85rem;
+  color: white;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  transform: translateY(-4px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.pushable-move:hover {
+  filter: brightness(110%);
+}
+
+.pushable-move:hover .pushable-front {
+  transform: translateY(-6px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.pushable-move:active .pushable-front {
+  transform: translateY(-2px);
+  transition: transform 34ms;
+}
+
+.pushable-move:hover .pushable-shadow {
+  transform: translateY(4px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.pushable-move:active .pushable-shadow {
+  transform: translateY(1px);
+  transition: transform 34ms;
+}
+
+.pushable-move:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ==========================================
+   Pushable 3D Badges (Status & Match Score)
+   ========================================== */
+.pushable-badge {
+  position: relative;
+  background: transparent;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  outline-offset: 4px;
+  transition: filter 250ms;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.pushable-badge .pushable-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  filter: blur(2px);
+  will-change: transform;
+  transform: translateY(2px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.pushable-badge .pushable-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+}
+
+.pushable-badge .pushable-front {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  position: relative;
+  border-radius: 9999px;
+  padding: 0.375rem 0.85rem;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  transform: translateY(-4px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.pushable-badge:hover {
+  filter: brightness(108%);
+}
+
+.pushable-badge:hover .pushable-front {
+  transform: translateY(-6px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.pushable-badge:active .pushable-front {
+  transform: translateY(-2px);
+  transition: transform 34ms;
+}
+
+.pushable-badge:hover .pushable-shadow {
+  transform: translateY(4px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.pushable-badge:active .pushable-shadow {
+  transform: translateY(1px);
+  transition: transform 34ms;
+}
+
+/* Status Badge (Default / Saved / Neutral) */
+.pushable-status .pushable-shadow {
+  background: hsl(220, 15%, 80%);
+}
+.dark .pushable-status .pushable-shadow {
+  background: hsl(220, 15%, 20%);
+}
+.pushable-status .pushable-edge {
+  background: linear-gradient(
+    to right,
+    hsl(220, 15%, 70%) 0%,
+    hsl(220, 15%, 80%) 8%,
+    hsl(220, 15%, 70%) 92%,
+    hsl(220, 15%, 60%) 100%
+  );
+}
+.dark .pushable-status .pushable-edge {
+  background: linear-gradient(
+    to right,
+    hsl(220, 15%, 20%) 0%,
+    hsl(220, 15%, 30%) 8%,
+    hsl(220, 15%, 20%) 92%,
+    hsl(220, 15%, 15%) 100%
+  );
+}
+.pushable-status .pushable-front {
+  background: hsl(220, 20%, 95%);
+  color: hsl(220, 25%, 30%);
+  border: 1px solid hsl(220, 15%, 80%);
+}
+.dark .pushable-status .pushable-front {
+  background: hsl(220, 15%, 18%);
+  color: hsl(220, 15%, 85%);
+  border: 1px solid hsl(220, 15%, 28%);
+}
+
+/* Match Score: Strong (Lime) */
+.pushable-match-strong .pushable-shadow {
+  background: hsl(84, 70%, 75%);
+}
+.dark .pushable-match-strong .pushable-shadow {
+  background: hsl(84, 50%, 18%);
+}
+.pushable-match-strong .pushable-edge {
+  background: linear-gradient(
+    to right,
+    hsl(84, 70%, 40%) 0%,
+    hsl(84, 70%, 52%) 8%,
+    hsl(84, 70%, 40%) 92%,
+    hsl(84, 70%, 30%) 100%
+  );
+}
+.pushable-match-strong .pushable-front {
+  background: #bef264;
+  color: #1a2e05;
+  border: 1px solid #84cc16;
+}
+.dark .pushable-match-strong .pushable-front {
+  background: #365314;
+  color: #ecfccb;
+  border: 1px solid #65a30d;
+}
+
+/* Match Score: Fair (Amber) */
+.pushable-match-fair .pushable-shadow {
+  background: hsl(38, 90%, 75%);
+}
+.dark .pushable-match-fair .pushable-shadow {
+  background: hsl(38, 70%, 18%);
+}
+.pushable-match-fair .pushable-edge {
+  background: linear-gradient(
+    to right,
+    hsl(38, 90%, 40%) 0%,
+    hsl(38, 90%, 52%) 8%,
+    hsl(38, 90%, 40%) 92%,
+    hsl(38, 90%, 30%) 100%
+  );
+}
+.pushable-match-fair .pushable-front {
+  background: #fde047;
+  color: #422006;
+  border: 1px solid #eab308;
+}
+.dark .pushable-match-fair .pushable-front {
+  background: #713f12;
+  color: #fef08a;
+  border: 1px solid #ca8a04;
+}
+
+/* Match Score: Weak (Rose/Red) */
+.pushable-match-weak .pushable-shadow {
+  background: hsl(350, 80%, 75%);
+}
+.dark .pushable-match-weak .pushable-shadow {
+  background: hsl(350, 60%, 18%);
+}
+.pushable-match-weak .pushable-edge {
+  background: linear-gradient(
+    to right,
+    hsl(350, 80%, 40%) 0%,
+    hsl(350, 80%, 52%) 8%,
+    hsl(350, 80%, 40%) 92%,
+    hsl(350, 80%, 30%) 100%
+  );
+}
+.pushable-match-weak .pushable-front {
+  background: #fca5a5;
+  color: #450a0a;
+  border: 1px solid #f87171;
+}
+.dark .pushable-match-weak .pushable-front {
+  background: #881337;
+  color: #fecdd3;
+  border: 1px solid #f43f5e;
+}
+
+/* ==========================================
+   Pushable 3D Apply Now Button (Royal Blue / Indigo)
+   ========================================== */
+.pushable-apply {
+  position: relative;
+  background: transparent;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  outline-offset: 4px;
+  outline-color: #6366f1;
+  transition: filter 250ms;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  text-decoration: none;
+}
+
+.pushable-apply .pushable-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: hsl(235, 70%, 75%);
+  border-radius: 9999px;
+  filter: blur(2px);
+  will-change: transform;
+  transform: translateY(2px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.dark .pushable-apply .pushable-shadow {
+  background: hsl(235, 50%, 20%);
+}
+
+.pushable-apply .pushable-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    hsl(235, 80%, 35%) 0%,
+    hsl(235, 80%, 45%) 8%,
+    hsl(235, 80%, 35%) 92%,
+    hsl(235, 80%, 25%) 100%
+  );
+}
+
+.pushable-apply .pushable-front {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  position: relative;
+  border-radius: 9999px;
+  background: hsl(238, 85%, 60%);
+  padding: 0.375rem 0.85rem;
+  color: white;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  transform: translateY(-4px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.pushable-apply:hover {
+  filter: brightness(110%);
+}
+
+.pushable-apply:hover .pushable-front {
+  transform: translateY(-6px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.pushable-apply:active .pushable-front {
+  transform: translateY(-2px);
+  transition: transform 34ms;
+}
+
+.pushable-apply:hover .pushable-shadow {
+  transform: translateY(4px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.pushable-apply:active .pushable-shadow {
+  transform: translateY(1px);
+  transition: transform 34ms;
+}
+
+.pushable-apply:focus:not(:focus-visible) {
+  outline: none;
+}
+

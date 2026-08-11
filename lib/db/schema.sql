@@ -322,25 +322,8 @@ CREATE INDEX IF NOT EXISTS idx_application_emails_job ON application_emails(job_
 CREATE INDEX IF NOT EXISTS idx_application_emails_application ON application_emails(application_id);
 
 -- =============================================
--- activity_logs, ai_usage_logs (017)
+-- ai_usage_logs (017)
 -- =============================================
-CREATE TABLE IF NOT EXISTS activity_logs (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  action TEXT NOT NULL,
-  resource TEXT NOT NULL,
-  resource_id TEXT,
-  metadata TEXT DEFAULT '{}',   -- JSON
-  ip_address TEXT,
-  user_agent TEXT,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON activity_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_resource ON activity_logs(resource);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_user_resource_id ON activity_logs(user_id, resource_id);
 
 CREATE TABLE IF NOT EXISTS ai_usage_logs (
   id TEXT PRIMARY KEY,

@@ -21,6 +21,7 @@ import {
 } from "@/lib/ai/prompts-defaults";
 import { Sparkles, RotateCcw, Save, Mail, Info } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function AiPromptsPreferencesPage() {
   const [selectedKind, setSelectedKind] = useState<AiToolKind>("cover_letter");
@@ -29,6 +30,7 @@ export default function AiPromptsPreferencesPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, startSaveTransition] = useTransition();
   const [isResetting, startResetTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
 
   useEffect(() => {
     async function load() {
@@ -67,8 +69,14 @@ export default function AiPromptsPreferencesPage() {
     });
   };
 
-  const handleReset = () => {
-    if (!confirm(`Reset prompt for "${activeTool.label}" back to default?`)) return;
+  const handleReset = async () => {
+    const confirmed = await confirm({
+      title: "Reset prompt?",
+      description: `Reset the prompt for "${activeTool.label}" back to the default template. Your custom changes will be lost.`,
+      confirmText: "Reset",
+      variant: "default",
+    });
+    if (!confirmed) return;
     startResetTransition(async () => {
       try {
         await resetCustomPrompt(selectedKind);
@@ -101,7 +109,7 @@ export default function AiPromptsPreferencesPage() {
         <div className="flex items-center justify-between px-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <div className="flex size-10 items-center justify-center rounded-2xl border border-lime-500/50 bg-lime-400/25 text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200 shadow-2xs">
                 <Sparkles className="size-5" />
               </div>
               <div>
@@ -247,6 +255,7 @@ export default function AiPromptsPreferencesPage() {
           </div>
         </div>
       </div>
+      {dialog}
     </div>
   );
 }

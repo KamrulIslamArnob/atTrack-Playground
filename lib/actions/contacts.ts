@@ -465,4 +465,103 @@ export async function createPersonContact(formData: FormData): Promise<{ id: str
   return { id: contact.id };
 }
 
+/** Removes a tag from all contacts that currently have it in their role/tags field. */
+export async function deleteTag(tagToDelete: string): Promise<{ affectedCount: number }> {
+  const { supabase, userId } = await getUser();
+  const targetTag = tagToDelete.trim();
+  if (!targetTag) return { affectedCount: 0 };
+
+  const { data: contacts, error } = await supabase
+    .from("contacts")
+    .select("id, role")
+    .eq("user_id", userId);
+
+  if (error || !contacts) throw new Error("Failed to fetch contacts for tag deletion.");
+
+  let affectedCount = 0;
+  for (const c of contacts) {
+    if (!c.role) continue;
+    const currentTags = c.role.split(",").map((t: string) => t.trim()).filter(Boolean);
+    if (currentTags.some((t: string) => t.toLowerCase() === targetTag.toLowerCase())) {
+      const remainingTags = currentTags.filter((t: string) => t.toLowerCase() !== targetTag.toLowerCase());
+      const newRole = remainingTags.length > 0 ? remainingTags.join(", ") : null;
+
+      await supabase
+        .from("contacts")
+        .update({ role: newRole })
+        .eq("id", c.id)
+        .eq("user_id", userId);
+
+      affectedCount++;
+    }
+  }
+
+  revalidatePath("/crm");
+  return { affectedCount };
+}
+
+/** Renames a tag across all contacts. */
+export async function renameTag(oldTag: string, newTag: string): Promise<{ affectedCount: number }> {
+  const { supabase, userId } = await getUser();
+  const source = oldTag.trim();
+  const target = newTag.trim();
+  if (!source || !target || source.toLowerCase() === target.toLowerCase()) {
+    return { affectedCount: 0 };
+  }
+
+  const { data: contacts, error } = await supabase
+    .from("contacts")
+    .select("id, role")
+    .eq("user_id", userId);
+
+  if (error || !contacts) throw new Error("Failed to fetch contacts for tag rename.");
+
+  let affectedCount = 0;
+  for (const c of contacts) {
+    if (!c.role) continue;
+    const currentTags = c.role.split(",").map((t: string) => t.trim()).filter(Boolean);
+    if (currentTags.some((t: string) => t.toLowerCase() === source.toLowerCase())) {
+      const updatedTags = currentTags.map((t: string) =>
+        t.toLowerCase() === source.toLowerCase() ? target : t
+      );
+      const uniqueTags = Array.from(new Set(updatedTags));
+      const newRole = uniqueTags.join(", ");
+
+      await supabase
+        .from("contacts")
+        .update({ role: newRole })
+        .eq("id", c.id)
+        .eq("user_id", userId);
+
+      affectedCount++;
+    }
+  }
+
+  revalidatePath("/crm");
+  return { affectedCount };
+}
+
+/** Returns all unique tags across all user contacts. */
+export async function getAllUserTags(): Promise<string[]> {
+  const { supabase, userId } = await getUser();
+
+  const { data: contacts } = await supabase
+    .from("contacts")
+    .select("role")
+    .eq("user_id", userId);
+
+  const tagSet = new Set<string>();
+
+  (contacts ?? []).forEach((c) => {
+    if (c.role) {
+      c.role.split(",").forEach((t: string) => {
+        const trimmed = t.trim();
+        if (trimmed) tagSet.add(trimmed);
+      });
+    }
+  });
+
+  return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+}
+
 

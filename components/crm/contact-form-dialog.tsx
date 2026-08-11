@@ -28,6 +28,7 @@ import {
   createPersonContact,
   updateContact,
   uploadContactAvatar,
+  deleteContact,
   type Contact,
 } from "@/lib/actions/contacts";
 import { createCompany, type CrmCompany } from "@/lib/actions/companies";
@@ -69,6 +70,7 @@ interface ContactFormDialogProps {
   lockedCompanyId?: string | null;
   tagSuggestions?: string[];
   onSaved: (contact: Contact, createdCompany?: CrmCompany) => void;
+  onDeleted?: (contactId: string) => void;
 }
 
 interface SocialLinkStateItem {
@@ -83,10 +85,30 @@ export function ContactFormDialog({
   contact,
   companies,
   lockedCompanyId,
+  tagSuggestions,
   onSaved,
+  onDeleted,
 }: ContactFormDialogProps) {
   const mode = contact ? "edit" : "create";
   const [pending, setPending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteContact = async () => {
+    if (!contact) return;
+    if (!confirm(`Are you sure you want to delete "${contact.name}"?`)) return;
+
+    try {
+      setDeleting(true);
+      await deleteContact(contact.id);
+      toast.success("Contact deleted");
+      onDeleted?.(contact.id);
+      onOpenChange(false);
+    } catch {
+      toast.error("Could not delete contact");
+    } finally {
+      setDeleting(false);
+    }
+  };
   
   // Name & Avatar state
   const [contactName, setContactName] = useState(contact?.name ?? "");
@@ -586,27 +608,29 @@ export function ContactFormDialog({
               />
             </div>
 
-            {/* Quick preset tags */}
+            {/* Available tag suggestions (Presets + Created Tags) */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[11px] text-muted-foreground font-medium">Presets:</span>
-              {PRESET_TAGS.map((preset) => {
-                const isSelected = tags.some((t) => t.toLowerCase() === preset.toLowerCase());
-                return (
-                  <button
-                    type="button"
-                    key={preset}
-                    onClick={() => (isSelected ? handleRemoveTag(preset) : handleAddTag(preset))}
-                    className={cn(
-                      "rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
-                      isSelected
-                        ? getTagColorClass(preset)
-                        : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    + {preset}
-                  </button>
-                );
-              })}
+              <span className="text-[11px] text-muted-foreground font-medium">Tags:</span>
+              {Array.from(new Set([...PRESET_TAGS, ...(tagSuggestions ?? [])]))
+                .sort((a, b) => a.localeCompare(b))
+                .map((suggestion) => {
+                  const isSelected = tags.some((t) => t.toLowerCase() === suggestion.toLowerCase());
+                  return (
+                    <button
+                      type="button"
+                      key={suggestion}
+                      onClick={() => (isSelected ? handleRemoveTag(suggestion) : handleAddTag(suggestion))}
+                      className={cn(
+                        "rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors flex items-center gap-1",
+                        isSelected
+                          ? getTagColorClass(suggestion)
+                          : "border-border bg-background text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      <span>{isSelected ? "✓" : "+"} {suggestion}</span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
@@ -703,14 +727,31 @@ export function ContactFormDialog({
             )}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending && <Spinner className="mr-2" />}
-              {mode === "edit" ? "Save changes" : "Add contact"}
-            </Button>
+          <DialogFooter className="flex flex-row items-center justify-between sm:justify-between w-full pt-2">
+            {mode === "edit" && contact ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5 px-2.5"
+                disabled={pending || deleting}
+                onClick={handleDeleteContact}
+              >
+                {deleting ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5 text-destructive" />}
+                <span>Delete contact</span>
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={pending || deleting}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={pending || deleting}>
+                {pending && <Spinner className="mr-2" />}
+                {mode === "edit" ? "Save changes" : "Add contact"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

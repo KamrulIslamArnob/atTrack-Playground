@@ -40,10 +40,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     docsRes,
     aiTotalRes,
     aiTodayRes,
-    activityRes,
     usersTrendRes,
     jobsStatusRes,
-    activityActionRes,
     aiTrendRes,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -56,10 +54,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     supabase.from("ai_usage_logs").select("id", { count: "exact", head: true }),
     supabase.from("ai_usage_logs").select("id", { count: "exact", head: true })
       .gte("created_at", new Date(Date.now() - 86400000).toISOString()),
-    supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(20),
     supabase.from("profiles").select("created_at").gte("created_at", sinceIso),
     supabase.from("jobs").select("status"),
-    supabase.from("activity_logs").select("action").gte("created_at", sinceIso),
     supabase.from("ai_usage_logs").select("created_at").gte("created_at", sinceIso),
   ]);
 
@@ -78,14 +74,6 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   }
   const jobsByStatus = Object.entries(statusMap)
     .map(([status, count]) => ({ status, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const actionMap: Record<string, number> = {};
-  for (const row of activityActionRes.data ?? []) {
-    actionMap[row.action] = (actionMap[row.action] ?? 0) + 1;
-  }
-  const activityByAction = Object.entries(actionMap)
-    .map(([action, count]) => ({ action, count }))
     .sort((a, b) => b.count - a.count);
 
   const aiTrendMap: Record<string, number> = {};
@@ -107,10 +95,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     totalDocuments: docsRes.count ?? 0,
     totalAiRequests: aiTotalRes.count ?? 0,
     aiRequestsToday: aiTodayRes.count ?? 0,
-    recentActivity: (activityRes.data ?? []) as ActivityLog[],
+    recentActivity: [],
     usersTrend,
     jobsByStatus,
-    activityByAction,
+    activityByAction: [],
     aiTrend,
   };
 }
@@ -187,7 +175,6 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     appsRes,
     docsRes,
     interviewsRes,
-    activityRes,
     aiUsageRes,
     aiTokensRes,
   ] = await Promise.all([
@@ -195,7 +182,6 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("interviews").select("id", { count: "exact", head: true }).eq("user_id", userId),
-    supabase.from("activity_logs").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("ai_usage_logs").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("ai_usage_logs").select("input_tokens, output_tokens, cost_usd").eq("user_id", userId),
   ]);
@@ -223,7 +209,7 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     application_count: appsRes.count ?? 0,
     document_count: docsRes.count ?? 0,
     interview_count: interviewsRes.count ?? 0,
-    activity_count: activityRes.count ?? 0,
+    activity_count: 0,
     ai_usage_count: aiUsageRes.count ?? 0,
     total_ai_tokens: totalTokens,
     total_ai_cost: totalCost,
@@ -330,55 +316,11 @@ export interface AdminActivityLogEntry {
 }
 
 export async function getAdminActivityLog(
-  page: number = 1,
-  limit: number = 50,
-  filter?: { action?: string; resource?: string; user_id?: string; search?: string; sort?: string }
+  _page: number = 1,
+  _limit: number = 50,
+  _filter?: { action?: string; resource?: string; user_id?: string; search?: string; sort?: string }
 ): Promise<{ logs: AdminActivityLogEntry[]; total: number }> {
-  const { supabase } = await getAdminUser();
-
-  let query = supabase
-    .from("activity_logs")
-    .select("*", { count: "exact" });
-
-  if (filter?.action) query = query.eq("action", filter.action);
-  if (filter?.resource) query = query.eq("resource", filter.resource);
-  if (filter?.user_id) query = query.eq("user_id", filter.user_id);
-  if (filter?.search) {
-    query = query.or(`action.ilike.%${filter.search}%,resource.ilike.%${filter.search}%`);
-  }
-
-  const sortCol = filter?.sort === "oldest" ? "created_at" : "created_at";
-  const sortAsc = filter?.sort === "oldest";
-  query = query.order(sortCol, { ascending: sortAsc });
-
-  const { data, count } = await query
-    .range((page - 1) * limit, page * limit - 1);
-
-  if (!data) return { logs: [], total: 0 };
-
-  // Batch fetch auth users for emails (requires service-role key)
-  const { data: authUsers } = await createAdminClient().auth.admin.listUsers();
-  const authMap = new Map(authUsers.users.map((u) => [u.id, u]));
-
-  return {
-    logs: data.map((l) => {
-      const auth = authMap.get(l.user_id);
-      return {
-        id: l.id,
-        user_id: l.user_id,
-        user_email: auth?.email ?? "unknown",
-        user_name: auth?.user_metadata?.full_name ?? "Unknown",
-        action: l.action,
-        resource: l.resource,
-        resource_id: l.resource_id,
-        metadata: l.metadata ?? {},
-        ip_address: l.ip_address ?? "",
-        user_agent: l.user_agent ?? "",
-        created_at: l.created_at,
-      };
-    }),
-    total: count ?? 0,
-  };
+  return { logs: [], total: 0 };
 }
 
 export interface AdminActivityStats {
@@ -390,36 +332,12 @@ export interface AdminActivityStats {
 }
 
 export async function getAdminActivityStats(): Promise<AdminActivityStats> {
-  const { supabase } = await getAdminUser();
-
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-
-  const [{ count: total }, { count: today }, { count: week }, usersRes, topActionRes] = await Promise.all([
-    supabase.from("activity_logs").select("id", { count: "exact", head: true }),
-    supabase.from("activity_logs").select("id", { count: "exact", head: true }).gte("created_at", startOfToday.toISOString()),
-    supabase.from("activity_logs").select("id", { count: "exact", head: true }).gte("created_at", weekAgo.toISOString()),
-    supabase.from("activity_logs").select("user_id").gte("created_at", weekAgo.toISOString()),
-    supabase.from("activity_logs").select("action").gte("created_at", weekAgo.toISOString()),
-  ]);
-
-  const topActionMap: Record<string, number> = {};
-  for (const row of topActionRes.data ?? []) {
-    topActionMap[row.action] = (topActionMap[row.action] ?? 0) + 1;
-  }
-  const topAction = Object.entries(topActionMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-
-  const uniqueUsers = new Set((usersRes.data ?? []).map((u) => u.user_id)).size;
-
   return {
-    totalEntries: total ?? 0,
-    entriesToday: today ?? 0,
-    entriesThisWeek: week ?? 0,
-    uniqueUsers,
-    topAction,
+    totalEntries: 0,
+    entriesToday: 0,
+    entriesThisWeek: 0,
+    uniqueUsers: 0,
+    topAction: null,
   };
 }
 

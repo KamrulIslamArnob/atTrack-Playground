@@ -1,9 +1,9 @@
-import type { ResumeDoc } from "@/lib/types/resume-builder";
+import { DEFAULT_RESUME_APPEARANCE, type ResumeDoc } from "@/lib/types/resume-builder";
 
 /**
- * The user's real resume content, transcribed verbatim from
- * docs/superpowers/specs/resume-template-reference.tex into the inline
- * markup grammar Task 2 implements (**bold**, *italic*, ` | `,
+ * Seed resume content translated from the historical LaTeX template context
+ * summarized in docs/PlanningSummary.md into the inline markup grammar
+ * Task 2 implements (**bold**, *italic*, ` | `,
  * [live](url "Label")-shaped badges, [cat](Label)/[type](Label) chips).
  *
  * Returns a fresh object every call — never share/mutate a module-level
@@ -11,6 +11,7 @@ import type { ResumeDoc } from "@/lib/types/resume-builder";
  */
 export function seedResumeDoc(): ResumeDoc {
   return {
+    appearance: { ...DEFAULT_RESUME_APPEARANCE },
     header: {
       name: "Kamrul Islam Arnob",
       title: "Software Engineer",

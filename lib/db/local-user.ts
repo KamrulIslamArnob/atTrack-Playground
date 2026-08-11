@@ -35,9 +35,14 @@ export function getOrCreateLocalUser(): LocalUser {
     | undefined;
 
   if (existing) {
+    let email = existing.email;
+    if (!email || email === "owner@attrack.local" || email.endsWith("@attrack.local")) {
+      email = OWNER_EMAIL;
+      db.prepare("UPDATE users SET email = ? WHERE id = ?").run(email, existing.id);
+    }
     return {
       id: existing.id,
-      email: existing.email,
+      email,
       raw_user_meta_data: parseMeta(existing.raw_user_meta_data),
     };
   }

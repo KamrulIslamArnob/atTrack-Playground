@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
+import { resolveProviderChain, generateText } from "@/lib/ai/providers";
 import { logResourceActivity } from "@/lib/actions/activity-log";
 import type { ProjectLink } from "@/lib/types/board";
 
@@ -257,8 +258,8 @@ export async function updateJob(formData: FormData) {
   const sectionDeadlineListId = formData.get("section_deadline_list_id") as string | null;
   const source = formData.get("source") as string | null;
   const status = (formData.get("status") as string) || "saved";
-  const notesRaw = formData.get("notes") as string | null;
-  const notes = notesRaw ? JSON.parse(notesRaw) : [];
+  const notesRaw = formData.has("notes") ? (formData.get("notes") as string | null) : undefined;
+  const notes = notesRaw ? JSON.parse(notesRaw) : undefined;
 
   if (!deadline?.trim() && !sectionDeadline?.trim()) {
     throw new Error("A deadline is required. Please provide an Application Deadline or a Section Deadline.");
@@ -289,26 +290,31 @@ export async function updateJob(formData: FormData) {
     companyId = newCompany.id;
   }
 
+  const updateData: Record<string, unknown> = {
+    company_id: companyId,
+    title,
+    application_url: applicationUrl || null,
+    application_email: applicationEmail || null,
+    application_process: applicationProcess || null,
+    location: location || null,
+    salary_range: salaryRange || null,
+    description: description || null,
+    employment_type: employmentType || null,
+    work_location: workLocation || null,
+    deadline: deadline || null,
+    section_deadline: sectionDeadline || null,
+    section_deadline_list_id: sectionDeadlineListId || null,
+    source: source || null,
+    status,
+  };
+
+  if (notes !== undefined) {
+    updateData.notes = notes.length > 0 ? notes : null;
+  }
+
   const { error: jobError } = await supabase
     .from("jobs")
-    .update({
-      company_id: companyId,
-      title,
-      application_url: applicationUrl || null,
-      application_email: applicationEmail || null,
-      application_process: applicationProcess || null,
-      location: location || null,
-      salary_range: salaryRange || null,
-      description: description || null,
-      employment_type: employmentType || null,
-      work_location: workLocation || null,
-      deadline: deadline || null,
-      section_deadline: sectionDeadline || null,
-      section_deadline_list_id: sectionDeadlineListId || null,
-      source: source || null,
-      status,
-      notes: notes.length > 0 ? notes : null,
-    })
+    .update(updateData)
     .eq("id", jobId)
     .eq("user_id", userId);
 
@@ -501,4 +507,90 @@ export async function logJobActivity(jobId: string, title: string, description?:
 
   await logResourceActivity(userId, "log", "job", jobId, { title, description: description || undefined });
   revalidatePath("/jobs/" + jobId);
+}
+
+/** Extracts key technical skills, tools, and domain keywords using AI and saves them as a note. */
+export async function extractJobKeywords(jobId: string): Promise<{ keywords: string[]; error?: string }> {
+  const { supabase, userId } = await getUser();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, title, description, notes, resume_id")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .single();
+
+  if (!job) return { keywords: [], error: "Job not found." };
+  if (!job.description) return { keywords: [], error: "No job description available to analyze." };
+
+  let resumeText = "";
+  if (job.resume_id) {
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("content")
+      .eq("id", job.resume_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (doc?.content) {
+      resumeText = doc.content.slice(0, 4000);
+    }
+  }
+
+  const prompt = `You are an expert technical recruiter and ATS keyword analyst.
+Analyze this job posting (and candidate resume if provided). Extract 8 to 15 key skills, technologies, frameworks, tools, qualifications, and core domain terms essential for this position.
+
+Job Title: ${job.title}
+Job Description:
+${job.description.slice(0, 6000)}
+
+${resumeText ? `Candidate Resume Context:\n${resumeText}\n` : ""}
+
+Return ONLY a valid JSON object in this exact format:
+{
+  "keywords": ["React", "Next.js", "Node.js", "REST API", "SQL/NoSQL", "Git"]
+}
+IMPORTANT: Each keyword must be concise (1-3 words). No extra markdown commentary outside the JSON object.`;
+
+  const chain = await resolveProviderChain(userId, "text");
+  if (chain.length === 0) {
+    return { keywords: [], error: "No AI provider configured. Please configure an AI provider in Settings." };
+  }
+
+  try {
+    const result = await generateText(chain, { userPrompt: prompt }, { userId, action: "extract_keywords", metadata: { job_id: jobId } });
+    const jsonMatch = result.text.match(/```json\n([\s\S]*?)\n```/) || result.text.match(/(\{[\s\S]*\})/);
+    if (!jsonMatch) {
+      throw new Error("Failed to extract JSON from AI response.");
+    }
+    const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    const keywords: string[] = Array.isArray(parsed.keywords)
+      ? parsed.keywords.map((k: unknown) => String(k).trim()).filter(Boolean)
+      : [];
+
+    if (keywords.length === 0) {
+      throw new Error("No keywords were generated.");
+    }
+
+    const existingNotes: Array<{ title: string; bullets: string[] }> = Array.isArray(job.notes) ? job.notes : [];
+    const otherNotes = existingNotes.filter((n) => n.title.toLowerCase() !== "keywords" && n.title !== "__keywords__");
+    const updatedNotes = [...otherNotes, { title: "Keywords", bullets: keywords }];
+
+    const { error: updateError } = await supabase
+      .from("jobs")
+      .update({ notes: updatedNotes })
+      .eq("id", jobId)
+      .eq("user_id", userId);
+
+    if (updateError) {
+      throw new Error("Failed to save keywords.");
+    }
+
+    revalidatePath("/jobs/" + jobId);
+    await logResourceActivity(userId, "extract", "keywords", jobId, { count: keywords.length });
+
+    return { keywords };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { keywords: [], error: msg };
+  }
 }

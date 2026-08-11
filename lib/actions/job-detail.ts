@@ -30,7 +30,6 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
   const [
     { data: applications },
     { data: interviews },
-    { data: activity },
     { data: resumes },
     contacts,
     documents,
@@ -52,13 +51,6 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       .eq("job_id", jobId)
       .eq("user_id", userId)
       .order("scheduled_at", { ascending: true }),
-    supabase
-      .from("activity_logs")
-      .select("id, action, resource, resource_id, metadata, created_at")
-      .eq("user_id", userId)
-      .eq("resource_id", jobId)
-      .order("created_at", { ascending: false })
-      .limit(50),
     supabase
       .from("documents")
       .select("id, name")
@@ -131,7 +123,6 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     contacts,
     documents,
     resumeOptions: (resumes ?? []) as unknown as JobDetailData["resumeOptions"],
-    activity: (activity ?? []) as JobDetailData["activity"],
     smtpReady,
     applicantName: profile?.full_name ?? "",
     applicantHeadline: profile?.headline ?? null,

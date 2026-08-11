@@ -17,6 +17,7 @@ import {
   CommandEmpty,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
+import { NotificationButton } from "@/components/ui/notification-button";
 import {
   LayoutDashboard,
   Briefcase,
@@ -38,6 +39,13 @@ import {
   Loader2,
   Copy,
   Check,
+  PanelLeftClose,
+  PanelLeftOpen,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Building2,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -85,20 +93,20 @@ const NAV_ITEMS = [
 const ADMIN_NAV_ITEMS = [
   { name: "Dashboard", href: "/admin", keywords: "admin dashboard overview" },
   { name: "Users", href: "/admin/users", keywords: "users accounts manage" },
-  { name: "Activity Log", href: "/admin/activity", keywords: "activity audit log" },
   { name: "AI Usage", href: "/admin/ai-usage", keywords: "ai usage tokens cost" },
 ];
 
 const ADMIN_NAV_ICONS: Record<string, React.ReactNode> = {
   "/admin": <LayoutDashboard className="mr-2 size-4 shrink-0 text-muted-foreground" />,
   "/admin/users": <Users className="mr-2 size-4 shrink-0 text-muted-foreground" />,
-  "/admin/activity": <Activity className="mr-2 size-4 shrink-0 text-muted-foreground" />,
   "/admin/ai-usage": <Cpu className="mr-2 size-4 shrink-0 text-muted-foreground" />,
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   page: <File className="size-4 shrink-0 text-muted-foreground" />,
   job: <Briefcase className="size-4 shrink-0 text-blue-500" />,
+  company: <Building2 className="size-4 shrink-0 text-indigo-500" />,
+  contact: <User className="size-4 shrink-0 text-teal-500" />,
   application: <Send className="size-4 shrink-0 text-violet-500" />,
   interview: <Calendar className="size-4 shrink-0 text-emerald-500" />,
   document: <FileText className="size-4 shrink-0 text-amber-500" />,
@@ -123,9 +131,11 @@ export interface SidebarProps {
 }
 
 const SIDEBAR_WIDTH_KEY = "attrack-sidebar-width";
+const SIDEBAR_COLLAPSED_KEY = "attrack-sidebar-collapsed";
 const SIDEBAR_MIN_WIDTH = 200;
 const SIDEBAR_MAX_WIDTH = 360;
 const SIDEBAR_DEFAULT_WIDTH = 224;
+const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNavigate, resizable }: SidebarProps) {
   const pathname = usePathname();
@@ -133,14 +143,32 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
   const [mounted, setMounted] = useState(false);
 
   const [width, setWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   useEffect(() => {
     if (!resizable) return;
-    const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
-    if (stored < SIDEBAR_MIN_WIDTH || stored > SIDEBAR_MAX_WIDTH) return;
-    // Deferred like `mounted` below — avoids a synchronous setState-in-effect.
-    const timeout = setTimeout(() => setWidth(stored), 0);
-    return () => clearTimeout(timeout);
+    const storedWidth = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+    if (storedWidth >= SIDEBAR_MIN_WIDTH && storedWidth <= SIDEBAR_MAX_WIDTH) {
+      const timeout = setTimeout(() => setWidth(storedWidth), 0);
+      return () => clearTimeout(timeout);
+    }
   }, [resizable]);
+
+  useEffect(() => {
+    if (!resizable) return;
+    const storedCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    if (storedCollapsed === "true") {
+      setIsCollapsed(true);
+    }
+  }, [resizable]);
+
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
@@ -175,11 +203,17 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
     if (e.key === "Escape") {
       setSearchOpen(false);
     }
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
       setSearchOpen((prev) => !prev);
     }
-  }, []);
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+      if (resizable) {
+        e.preventDefault();
+        toggleCollapse();
+      }
+    }
+  }, [resizable, toggleCollapse]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
@@ -254,38 +288,36 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
     <>
       <aside
         className={cn(
-          "relative flex h-full flex-col bg-background",
+          "relative flex h-full flex-col bg-background transition-[width] duration-300 ease-in-out select-none",
           resizable ? "border-r border-border" : "w-full"
         )}
-        style={resizable ? { width } : undefined}
+        style={resizable ? { width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : width } : undefined}
       >
-        <div className="app-drag-region border-b border-border/50 p-3">
-          <Link href={homeHref} onClick={onNavigate} className="app-no-drag mb-2 flex items-center gap-2 px-1">
-            <Image src="/logo.png" alt="AtTrack" width={22} height={22} priority />
-            <span className="font-heading text-sm font-semibold">AtTrack</span>
-          </Link>
-          <div className="app-no-drag flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex flex-1 items-center gap-1.5 justify-start rounded-2xl border border-border px-2.5 text-muted-foreground"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search className="size-4" />
-              <span className="flex-1 text-left">Search...</span>
-              <kbd className="pointer-events-none select-none rounded-2xl border border-border bg-muted px-1.5 text-[10px] font-medium">
-                ⌘K
-              </kbd>
-            </Button>
-            <Button variant="ghost" size="icon" className="size-9 shrink-0 rounded-2xl">
-              <Bell className="size-4" />
-            </Button>
-          </div>
-        </div>
+        {resizable && (
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className={cn(
+              "app-no-drag absolute -right-2.5 top-8 z-30 flex h-7 w-4.5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-all duration-200 hover:scale-110 hover:bg-accent hover:text-foreground hover:shadow-md focus:outline-none"
+            )}
+            title={isCollapsed ? "Expand sidebar (⌘B)" : "Minimize sidebar (⌘B)"}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="size-3" />
+            ) : (
+              <MoreVertical className="size-3" />
+            )}
+          </button>
+        )}
 
-        <div className="border-b border-border/50 p-4">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        {/* Top Section: User Profile */}
+        <div className={cn("app-drag-region border-b border-border/50", isCollapsed ? "p-2.5 flex justify-center" : "p-4")}>
+          {isCollapsed ? (
+            <button
+              onClick={handleCopyEmail}
+              className="relative group rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              title={`${fullName} (${user.email || "No email"}) — Click to copy email`}
+            >
               {avatarUrl ? (
                 <Image
                   src={avatarUrl}
@@ -300,47 +332,68 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                 </div>
               )}
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-card bg-emerald-500" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium leading-none truncate">
-                  {fullName}
-                </p>
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={fullName}
+                    width={36}
+                    height={36}
+                    className="size-9 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                    {initials}
+                  </div>
+                )}
+                <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-card bg-emerald-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium leading-none truncate">
+                    {fullName}
+                  </p>
+                  {role === "admin" && (
+                    <span className="shrink-0 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handleCopyEmail}
+                  className="mt-1 flex w-full items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground transition-colors group"
+                  title="Copy email"
+                >
+                  <span className="truncate">{user.email || "No email"}</span>
+                  {copied ? (
+                    <Check className="size-3 shrink-0 text-emerald-500" />
+                  ) : (
+                    <Copy className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </button>
                 {role === "admin" && (
-                  <span className="shrink-0 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-                    Admin
-                  </span>
+                  <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/60">
+                    Admin Panel
+                  </p>
                 )}
               </div>
-              <button
-                onClick={handleCopyEmail}
-                className="mt-1 flex w-full items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground transition-colors group"
-                title="Copy email"
-              >
-                <span className="truncate">{user.email || "No email"}</span>
-                {copied ? (
-                  <Check className="size-3 shrink-0 text-emerald-500" />
-                ) : (
-                  <Copy className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                )}
-              </button>
-              {role === "admin" && (
-                <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/60">
-                  Admin Panel
-                </p>
-              )}
             </div>
-          </div>
+          )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-2">
+        <nav className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-2" : "px-3")}>
           {role === "admin" ? (
             <>
-              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                Admin
-              </div>
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Admin
+                </div>
+              )}
 
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {adminOverviewNavigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -350,26 +403,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
               </div>
 
-              <div className="my-4 h-px bg-border/50" />
+              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
 
-              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                Management
-              </div>
-              <div className="space-y-0.5">
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Management
+                </div>
+              )}
+              <div className="space-y-1">
                 {adminManagementNavigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -379,26 +436,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
               </div>
 
-              <div className="my-4 h-px bg-border/50" />
+              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
 
-              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                Monitoring
-              </div>
-              <div className="space-y-0.5">
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Monitoring
+                </div>
+              )}
+              <div className="space-y-1">
                 {adminMonitoringNavigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -408,15 +469,17 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
@@ -424,7 +487,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
             </>
           ) : (
             <>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {navigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -434,26 +497,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
               </div>
 
-              <div className="my-4 h-px bg-border/50" />
+              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
 
-              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                Job Search
-              </div>
-              <div className="space-y-0.5">
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Job Search
+                </div>
+              )}
+              <div className="space-y-1">
                 {pipelineNavigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -463,26 +530,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
               </div>
 
-              <div className="my-4 h-px bg-border/50" />
+              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
 
-              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                Network
-              </div>
-              <div className="space-y-0.5">
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Network
+                </div>
+              )}
+              <div className="space-y-1">
                 {resourceNavigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -492,26 +563,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
               </div>
 
-              <div className="my-4 h-px bg-border/50" />
+              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
 
-              <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                Preferences
-              </div>
-              <div className="space-y-0.5">
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  Preferences
+                </div>
+              )}
+              <div className="space-y-1">
                 {secondaryNavigation.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -519,15 +594,17 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       key={item.name}
                       href={item.href}
                       onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      {item.name}
+                      {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
                 })}
@@ -536,9 +613,69 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
           )}
         </nav>
 
-        <div className="border-t border-border/50 p-3">
-          <div className="mb-3">
-            <div className="flex items-center justify-between px-3">
+        {/* Bottom Section: AtTrack Logo, Search, Notification & Theme */}
+        <div className={cn("border-t border-border/50 space-y-2.5", isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3")}>
+          {/* Row 1: Logo & Notification Button */}
+          <div className="app-no-drag flex items-center justify-between">
+            <Link
+              href={homeHref}
+              onClick={onNavigate}
+              className="flex items-center gap-2 min-w-0 px-1"
+              title={isCollapsed ? "AtTrack Overview" : undefined}
+            >
+              <Image src="/logo.png" alt="AtTrack" width={22} height={22} priority />
+              {!isCollapsed && <span className="font-heading text-sm font-semibold truncate">AtTrack</span>}
+            </Link>
+            {!isCollapsed && <NotificationButton />}
+          </div>
+
+          {/* Row 2: Search Bar (Full Width) */}
+          {isCollapsed ? (
+            <div className="app-no-drag flex flex-col items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-lg border border-border text-muted-foreground"
+                onClick={() => setSearchOpen(true)}
+                title="Search... (⌘K)"
+              >
+                <Search className="size-4" />
+              </Button>
+              <NotificationButton />
+            </div>
+          ) : (
+            <div className="app-no-drag w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex w-full items-center gap-1.5 justify-start rounded-2xl border border-border px-2.5 text-muted-foreground"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="size-4 shrink-0" />
+                <span className="flex-1 text-left text-xs">Search...</span>
+                <kbd className="pointer-events-none select-none rounded-2xl border border-border bg-muted px-1.5 text-[10px] font-medium">
+                  ⌘K
+                </kbd>
+              </Button>
+            </div>
+          )}
+
+          {/* Theme Selector */}
+          {isCollapsed ? (
+            mounted && (
+              <button
+                onClick={() => {
+                  const nextTheme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+                  setTheme(nextTheme);
+                }}
+                className="flex size-8 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
+                title={`Theme: ${theme ?? "system"} (Click to cycle)`}
+              >
+                {theme === "light" ? <Sun className="size-4" /> : theme === "dark" ? <Moon className="size-4" /> : <Monitor className="size-4" />}
+              </button>
+            )
+          ) : (
+            <div className="flex items-center justify-between px-1 pt-0.5">
               <span className="text-xs font-medium text-muted-foreground">
                 Theme
               </span>
@@ -552,6 +689,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     )}
+                    title="Light Theme"
                   >
                     <Sun className="size-3" />
                   </button>
@@ -563,6 +701,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     )}
+                    title="Dark Theme"
                   >
                     <Moon className="size-3" />
                   </button>
@@ -574,16 +713,17 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     )}
+                    title="System Theme"
                   >
                     <Monitor className="size-3" />
                   </button>
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
 
-        {resizable && (
+        {resizable && !isCollapsed && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -595,10 +735,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
       </aside>
 
       {mounted && searchOpen && createPortal(
-        <>
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSearchOpen(false);
+          }}
+        >
           <Command value={query} onValueChange={handleSearch} className="w-full max-w-lg">
-              <CommandInput placeholder={isAdmin ? "Search users, activity, AI usage..." : "Search jobs, applications, interviews..."} />
+            <CommandInput placeholder={isAdmin ? "Search users, AI usage..." : "Search jobs, companies, contacts, documents..."} />
             <CommandList>
               {loading && (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
@@ -663,69 +807,6 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                 </CommandGroup>
               )}
 
-              {!loading && hasQuery && grouped.user && (
-                <CommandGroup heading="Users">
-                  {grouped.user.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`user-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <Users className="mr-2 size-4 shrink-0 text-blue-500" />
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.activity && (
-                <CommandGroup heading="Activity Logs">
-                  {grouped.activity.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`activity-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <Activity className="mr-2 size-4 shrink-0 text-emerald-500" />
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.ai_usage && (
-                <CommandGroup heading="AI Usage">
-                  {grouped.ai_usage.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`ai-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <Cpu className="mr-2 size-4 shrink-0 text-violet-500" />
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
               {!loading && hasQuery && grouped.job && (
                 <CommandGroup heading="Jobs">
                   {grouped.job.map((r) => (
@@ -738,6 +819,48 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       }}
                     >
                       {TYPE_ICONS.job}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.company && (
+                <CommandGroup heading="Companies">
+                  {grouped.company.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`company-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setSearchOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.company}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.contact && (
+                <CommandGroup heading="Contacts">
+                  {grouped.contact.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`contact-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setSearchOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.contact}
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
@@ -809,14 +932,52 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                   ))}
                 </CommandGroup>
               )}
+
+              {/* Admin-only groups */}
+              {!loading && hasQuery && grouped.user && (
+                <CommandGroup heading="Users">
+                  {grouped.user.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`user-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setSearchOpen(false);
+                      }}
+                    >
+                      <Users className="mr-2 size-4 shrink-0 text-blue-500" />
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.ai_usage && (
+                <CommandGroup heading="AI Usage">
+                  {grouped.ai_usage.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`ai-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setSearchOpen(false);
+                      }}
+                    >
+                      <Cpu className="mr-2 size-4 shrink-0 text-violet-500" />
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
-        </div>
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setSearchOpen(false)}
-        />
-        </>,
+        </div>,
         document.body
       )}
     </>

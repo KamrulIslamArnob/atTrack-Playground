@@ -3,16 +3,29 @@ import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
 
+const DEV_FALLBACK_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 function getKey(): Buffer {
-  const key = process.env.SMTP_ENCRYPTION_KEY;
+  const key =
+    process.env.ENCRYPTION_KEY ||
+    process.env.SMTP_ENCRYPTION_KEY ||
+    (process.env.NODE_ENV !== "production" ? DEV_FALLBACK_KEY : undefined);
+
   if (!key) {
-    throw new Error("SMTP_ENCRYPTION_KEY environment variable is not set");
+    throw new Error("ENCRYPTION_KEY environment variable is not set");
   }
-  // Accept hex (64 chars = 32 bytes) or base64
+
+  // Accept hex (64 chars = 32 bytes), base64, or raw string
   if (key.length === 64) {
     return Buffer.from(key, "hex");
   }
-  return Buffer.from(key, "base64");
+
+  const b64 = Buffer.from(key, "base64");
+  if (b64.length === 32) {
+    return b64;
+  }
+
+  return Buffer.from(key.padEnd(32, "0").slice(0, 32), "utf8");
 }
 
 export function encrypt(plaintext: string): string {

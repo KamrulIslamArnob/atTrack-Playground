@@ -56,7 +56,46 @@ export interface SkillRow {
 
 export interface SectionState { visible: boolean }
 
+/** Appearance values mirror the original LaTeX palette and can be overridden per resume. */
+export interface ResumeAppearance {
+  fontFamily: string;
+  fontSize: number;
+  textColor: string;
+  mutedColor: string;
+  accentColor: string;
+  accentDarkColor: string;
+  pageColor: string;
+  softAccentColor: string;
+  portfolioFillColor: string;
+  portfolioBorderColor: string;
+  liveFillColor: string;
+  liveBorderColor: string;
+  apiFillColor: string;
+  apiBorderColor: string;
+  borderColor: string;
+}
+
+export const DEFAULT_RESUME_APPEARANCE: ResumeAppearance = {
+  // `sourcesanspro` in the supplied LaTeX template.
+  fontFamily: '"Source Sans Pro", "Source Sans 3", Arial, sans-serif',
+  fontSize: 11,
+  textColor: "#000000",
+  mutedColor: "#333333",
+  accentColor: "#FF6600",
+  accentDarkColor: "#CC5200",
+  pageColor: "#FFFFFF",
+  softAccentColor: "#FFF8F2",
+  portfolioFillColor: "#FFE0CC",
+  portfolioBorderColor: "#B34700",
+  liveFillColor: "#E8F5E9",
+  liveBorderColor: "#2E7D32",
+  apiFillColor: "#F3E5F5",
+  apiBorderColor: "#6A1B9A",
+  borderColor: "#333333",
+};
+
 export interface ResumeDoc {
+  appearance?: ResumeAppearance;
   header: ResumeHeader;
   experience:     SectionState & { entries: SubheadingEntry[] };
   skills:         SectionState & { rows: SkillRow[]; callout: string };

@@ -34,6 +34,7 @@ import {
   reorderLists,
 } from "@/lib/actions/board";
 import type { BoardCard, BoardList } from "@/lib/types/board";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface BoardViewProps {
   lists: BoardList[];
@@ -61,6 +62,7 @@ const GROUP_LABELS: Record<GroupOption, string> = {
 export function BoardView({ lists, cards }: BoardViewProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
 
   // A drag paints immediately, then React discards the optimistic layer when the
   // transition settles — reverting on failure and picking up server truth on
@@ -220,14 +222,20 @@ export function BoardView({ lists, cards }: BoardViewProps) {
     });
   };
 
-  const handleDeleteList = (listId: string) => {
+  const handleDeleteList = async (listId: string) => {
     const list = lists.find((l) => l.id === listId);
     const count = optimisticCards.filter((c) => c.list_id === listId).length;
     const message = count
       ? `Delete "${list?.name}"? Its ${count} job${count === 1 ? "" : "s"} will move to Wishlist.`
       : `Delete "${list?.name}"?`;
 
-    if (!window.confirm(message)) return;
+    const confirmed = await confirm({
+      title: "Delete list?",
+      description: message,
+      confirmText: "Delete",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
       try {
@@ -453,6 +461,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         onOpenChange={(open) => setOpenJobId(open ? openJobId : null)}
         onMoveTo={handleMove}
       />
+      {dialog}
     </>
   );
 }

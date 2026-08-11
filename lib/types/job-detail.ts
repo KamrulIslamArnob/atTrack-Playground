@@ -36,15 +36,6 @@ export interface JobDetailInterview {
   status: string;
 }
 
-export interface JobDetailActivity {
-  id: string;
-  action: string;
-  resource: string;
-  resource_id: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
-}
-
 export interface JobDetailResumeOption {
   id: string;
   name: string;
@@ -87,7 +78,6 @@ export interface JobDetailData {
   contacts: Contact[];
   documents: JobDocument[];
   resumeOptions: JobDetailResumeOption[];
-  activity: JobDetailActivity[];
   smtpReady: boolean;
   applicantName: string;
   applicantHeadline: string | null;
