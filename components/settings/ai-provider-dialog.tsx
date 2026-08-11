@@ -253,7 +253,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                 type="button"
                 onClick={handleFetchModels}
                 disabled={isFetchingModels}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-green-800 dark:text-lime-400 hover:underline disabled:opacity-50"
               >
                 {isFetchingModels ? <Spinner className="size-3" /> : <RefreshCw className="size-3" />}
                 Fetch Models

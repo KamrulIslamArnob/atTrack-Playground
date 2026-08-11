@@ -57,9 +57,9 @@ const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   submitted: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
   acknowledged: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  interview: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  offer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  interview: "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
+  offer: "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
+  accepted: "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
   rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   withdrawn: "bg-muted text-muted-foreground",
 };
@@ -291,7 +291,7 @@ export function ApplicationsGrid({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold leading-tight group-hover:text-primary transition-colors sm:text-base">
+                  <h3 className="text-sm font-semibold leading-tight group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors sm:text-base">
                     {app.job?.title ?? "Untitled"}
                   </h3>
                   <p className="mt-3 text-sm text-muted-foreground flex items-center gap-1.5">
@@ -304,7 +304,7 @@ export function ApplicationsGrid({
                     <span
                       className={`rounded-2xl px-2.5 py-1 text-[10px] font-medium ${
                         app.job.match_score >= 80
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          ? "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400"
                           : app.job.match_score >= 50
                             ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                             : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -356,10 +356,10 @@ export function ApplicationsGrid({
                       : "No deadline"}
                 </span>
                 {app.job?.application_url && (
-                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
                 )}
                 {!app.job?.application_url && app.job?.application_email && (
-                  <Mail className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                  <Mail className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
                 )}
               </div>
             </Link>

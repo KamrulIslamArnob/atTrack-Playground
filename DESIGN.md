@@ -95,19 +95,19 @@ Signature accent gradient (lime → olive-lime → deep green), matching `--prim
 
 *(Superseded three times this round — a green Kanban-import palette, a pastel gold→sage swatch, a teal/lime poster reference — before landing on this named 6-swatch brand palette (Primary Lime / Lime Accent / Deep Green / Dark Green / Light Lime / Off White) as the one actually in use now. `git log -p app/globals.css` has the trail if an earlier one needs resurrecting.)*
 
-**Default is white/light.** The app's base theme (`--background`, `--card`, etc. in `app/globals.css`) stays plain white/near-white surfaces. `--primary` is Deep Green (`#0b3d3a` light / Dark Green `#14534b` dark, white foreground) and `--ring` is Primary Lime (`#dfff2f`, both modes). The green carries the contrast load for buttons/links/nav; the lime is kept to the ring and the gradient/tint tokens below rather than painted across surfaces, which is what actually keeps the white/light rule intact.
+**Default is white/light.** The app's base theme (`--background`, `--card`, etc. in `app/globals.css`) stays plain white/near-white surfaces. `--primary` is Primary Lime (`#bef264` light / `#a3e635` dark, dark foreground `#09090b`) and `--ring` is `#84cc16`.
 
-`--sidebar-primary`/`--sidebar-primary-foreground` drive the active nav item (`components/sidebar.tsx`): `bg-sidebar-primary text-sidebar-primary-foreground` — Light Lime fill (`#ecff9c`, lighter than `--ring` on purpose so the selected row reads soft, not neon) with Deep Green text (`#0b3d3a`), both modes. Was dead shadcn-default oklch amber before; now the only place `--sidebar-primary` is actually used.
+`--sidebar-primary`/`--sidebar-primary-foreground` drive the active nav item (`components/sidebar.tsx`): `bg-sidebar-primary text-sidebar-primary-foreground` — Primary Lime fill (`#bef264`) with dark text (`#09090b`), both modes.
 
 ### Tokens (`app/globals.css`)
 
 | Token | Value (light) | Purpose |
 |---|---|---|
-| `--gradient-brand-from` | `#dfff2f` | Primary Lime, gradient start — same value as `--ring` |
-| `--gradient-brand-via` | `#c4ea17` | Lime Accent, gradient midpoint |
-| `--gradient-brand-to` | `#0b3d3a` | Deep Green, gradient end — same value as `--primary` (light mode) |
-| `--gradient-brand-tint` | `#ecff9c` | Light Lime wash — for backgrounds, not the gradient itself; also `--sidebar-primary`'s fill |
-| `--gradient-brand-tint-strong` | `#c4ea17` | Lime Accent wash — hover/selected state on a tinted surface |
+| `--gradient-brand-from` | `#bef264` | Primary Lime, gradient start — same value as `--primary` (light mode) |
+| `--gradient-brand-via` | `#a3e635` | Lime Accent, gradient midpoint |
+| `--gradient-brand-to` | `#84cc16` | Deep Lime, gradient end — same value as `--ring` |
+| `--gradient-brand-tint` | `#f7fee7` | Light Lime wash — for backgrounds, not the gradient itself; also `--sidebar-primary`'s fill |
+| `--gradient-brand-tint-strong` | `#ecfccb` | Lime Accent wash — hover/selected state on a tinted surface |
 
 In `.dark`, `-from`/`-via`/`-to` stay the same (brand color shouldn't shift), only the two tint tokens flip to a dark-mix so they don't paint a bright block on a dark page.
 

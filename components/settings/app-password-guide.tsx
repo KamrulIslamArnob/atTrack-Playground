@@ -40,7 +40,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
                 href="https://myaccount.google.com/security"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-green-800 dark:text-lime-400 hover:underline"
               >
                 Google Security Settings
                 <ExternalLink className="size-3" />
@@ -62,7 +62,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
                 href="https://myaccount.google.com/apppasswords"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-green-800 dark:text-lime-400 hover:underline"
               >
                 Open App Passwords
                 <ExternalLink className="size-3" />

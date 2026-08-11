@@ -72,7 +72,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
               <button
                 type="button"
                 onClick={onSetupGuide}
-                className="text-xs text-primary hover:underline"
+                className="text-xs text-green-800 dark:text-lime-400 hover:underline"
               >
                 How to get an App Password
               </button>

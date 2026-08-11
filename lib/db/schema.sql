@@ -244,6 +244,8 @@ CREATE TABLE IF NOT EXISTS contacts (
   position TEXT,
   linkedin_url TEXT,
   github_url TEXT,
+  social_links TEXT,
+  avatar_url TEXT,
   company_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),

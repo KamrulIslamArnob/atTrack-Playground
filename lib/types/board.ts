@@ -261,7 +261,7 @@ export const DEFAULT_LIST_COLORS: Record<ListKind, string> = {
   applied: "#c084fc",
   interview: "#84cc16",
   offer: "#14b8a6",
-  accepted: "#22c55e",
+  accepted: "#a3e635",
   rejected: "#f87171",
   custom: "#38bdf8",
 };
@@ -277,7 +277,7 @@ export function matchScoreBand(score: number | null): {
     return {
       label: "Strong",
       className:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+        "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
     };
   if (score >= 50)
     return {

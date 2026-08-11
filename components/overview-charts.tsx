@@ -34,9 +34,9 @@ const statusColors: Record<string, string> = {
   interested: "#3B82F6",
   preparing: "#F59E0B",
   applied: "#8B5CF6",
-  interview: "#10B981",
-  offer: "#059669",
-  accepted: "#047857",
+  interview: "#84cc16",
+  offer: "#65a30d",
+  accepted: "#4d7c0f",
   rejected: "#EF4444",
   withdrawn: "#6B7280",
 };
@@ -128,8 +128,8 @@ export function ApplicationTrendChart({ data }: { data: TrendData[] }) {
             <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="colorInterviews" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+            <stop offset="5%" stopColor="#84cc16" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#84cc16" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
@@ -137,7 +137,7 @@ export function ApplicationTrendChart({ data }: { data: TrendData[] }) {
         <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
         <Area type="monotone" dataKey="applications" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorApplications)" strokeWidth={2} />
-        <Area type="monotone" dataKey="interviews" stroke="#10B981" fillOpacity={1} fill="url(#colorInterviews)" strokeWidth={2} />
+        <Area type="monotone" dataKey="interviews" stroke="#84cc16" fillOpacity={1} fill="url(#colorInterviews)" strokeWidth={2} />
       </AreaChart>
     </ResponsiveContainer>
   );

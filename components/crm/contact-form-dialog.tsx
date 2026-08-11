@@ -27,19 +27,21 @@ import {
   createCompanyContact,
   createPersonContact,
   updateContact,
+  uploadContactAvatar,
   type Contact,
 } from "@/lib/actions/contacts";
 import { createCompany, type CrmCompany } from "@/lib/actions/companies";
 import { getJobsForMention, type JobMentionOption } from "@/lib/actions/jobs-list";
 import { insertMentionToken } from "@/lib/mentions";
-import { getTagColorClass, cn } from "@/lib/utils";
-import { Plus, Trash2, X, Building2 } from "lucide-react";
+import { getTagColorClass, getContactAvatarColorClass, cn } from "@/lib/utils";
+import { Plus, Trash2, X, Building2, Camera, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
 import { parseContactSocialLinks } from "./contact-card";
 
 const NO_COMPANY = "__none__";
 const NEW_COMPANY = "__new__";
 
 const PRESET_TAGS = [
+  "Alumni",
   "Recruiter",
   "Hiring Manager",
   "Employee",
@@ -86,6 +88,13 @@ export function ContactFormDialog({
   const mode = contact ? "edit" : "create";
   const [pending, setPending] = useState(false);
   
+  // Name & Avatar state
+  const [contactName, setContactName] = useState(contact?.name ?? "");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(contact?.avatar_url ?? null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Company state
   const [companyId, setCompanyId] = useState<string>(contact?.company_id ?? lockedCompanyId ?? NO_COMPANY);
   const [customCompanyName, setCustomCompanyName] = useState("");
@@ -110,6 +119,9 @@ export function ContactFormDialog({
   // Reset local state on open/contact change
   useEffect(() => {
     if (!open) return;
+    setContactName(contact?.name ?? "");
+    setAvatarUrl(contact?.avatar_url ?? null);
+    setShowUrlInput(false);
     setCompanyId(contact?.company_id ?? lockedCompanyId ?? NO_COMPANY);
     setCustomCompanyName("");
     setTags(
@@ -143,6 +155,31 @@ export function ContactFormDialog({
     if (!open) return;
     getJobsForMention().then(setJobOptions);
   }, [open]);
+
+  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("name", contactName);
+      formData.append("company_name", companyName(companyId) ?? "");
+      formData.append("role", tags.join(", "));
+      formData.append("email", contact?.email ?? "");
+      // Pass the current avatar URL so the server can delete the old file
+      if (avatarUrl) formData.append("old_avatar_url", avatarUrl);
+
+      const url = await uploadContactAvatar(formData);
+      setAvatarUrl(url);
+      toast.success("Contact photo processed & uploaded");
+    } catch {
+      toast.error("Could not upload photo");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const companyName = (id: string | null) => {
     if (id === NEW_COMPANY) return customCompanyName || "New Company";
@@ -234,7 +271,7 @@ export function ContactFormDialog({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const nameVal = (e.currentTarget.elements.namedItem("name") as HTMLInputElement)?.value.trim();
+    const nameVal = contactName.trim();
     if (!nameVal) {
       toast.error("Name is required");
       return;
@@ -243,7 +280,9 @@ export function ContactFormDialog({
     setPending(true);
     try {
       const formData = new FormData(e.currentTarget);
-      
+      formData.set("name", nameVal);
+      formData.set("avatar_url", avatarUrl ?? "");
+
       let resolvedCompanyId = lockedCompanyId ?? (companyId === NO_COMPANY ? null : companyId);
       let resolvedCompanyName: string | null = companyName(resolvedCompanyId);
       let createdCompanyObj: CrmCompany | undefined = undefined;
@@ -294,6 +333,7 @@ export function ContactFormDialog({
         linkedin_url: linkedinItem?.url ?? (formData.get("linkedin_url") as string) ?? null,
         github_url: githubItem?.url ?? (formData.get("github_url") as string) ?? null,
         social_links: JSON.stringify(cleanSocialLinks),
+        avatar_url: avatarUrl || null,
         notes: (formData.get("notes") as string) || null,
         company_id: resolvedCompanyId,
         company_name: resolvedCompanyName,
@@ -340,6 +380,9 @@ export function ContactFormDialog({
     }
   };
 
+  const initialLetter = (contactName.trim()[0] || "C").toUpperCase();
+  const avatarColorClass = getContactAvatarColorClass(tags, contactName);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
@@ -348,10 +391,103 @@ export function ContactFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Profile Photo / Avatar Option */}
+          <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/10 p-3">
+            <div className="relative shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Contact avatar"
+                  className="size-14 rounded-full object-cover border-2 border-border shadow-xs"
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "flex size-14 items-center justify-center rounded-full text-xl font-bold shadow-xs transition-colors",
+                    avatarColorClass
+                  )}
+                >
+                  {initialLetter}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Profile Picture
+                </Label>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl(null)}
+                    className="text-[11px] font-medium text-destructive hover:underline"
+                  >
+                    Remove photo
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploadingAvatar}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-7 text-xs"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                  ) : (
+                    <Upload className="mr-1 size-3" />
+                  )}
+                  Upload photo
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowUrlInput((v) => !v)}
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <LinkIcon className="mr-1 size-3" />
+                  {showUrlInput ? "Hide Image URL" : "Image URL"}
+                </Button>
+              </div>
+
+              {showUrlInput && (
+                <Input
+                  type="url"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={avatarUrl ?? ""}
+                  onChange={(e) => setAvatarUrl(e.target.value.trim() || null)}
+                  className="h-8 text-xs mt-1"
+                />
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleAvatarFileSelect}
+              />
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="contact-name">Name *</Label>
-              <Input id="contact-name" name="name" required placeholder="e.g. Sarah Connor" defaultValue={contact?.name ?? ""} />
+              <Input
+                id="contact-name"
+                name="name"
+                required
+                placeholder="e.g. Sarah Connor"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="contact-email">Email</Label>

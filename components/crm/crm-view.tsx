@@ -28,6 +28,7 @@ import { ContactCard } from "@/components/crm/contact-card";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/types/job";
+import { getContactAvatarColorClass, cn } from "@/lib/utils";
 import {
   Briefcase,
   Building2,
@@ -276,7 +277,7 @@ function ContactsView({
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
           {filtered.map((contact, index) => (
             <ContactCard
               key={contact.id}
@@ -502,6 +503,7 @@ function ContactsPanel({
         linkedin_url: (formData.get("linkedin_url") as string) || null,
         github_url: (formData.get("github_url") as string) || null,
         social_links: null,
+        avatar_url: null,
         notes: null,
         company_id: companyId,
         company_name: null,
@@ -649,19 +651,37 @@ function ContactsPanel({
         {contacts.map((contact) => (
           <div key={contact.id} className="rounded-lg border border-border p-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{contact.name}</p>
-                <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                  {contact.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="size-3" /> {contact.email}
-                    </span>
-                  )}
-                  {contact.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="size-3" /> {contact.phone}
-                    </span>
-                  )}
+              <div className="flex items-start gap-2 min-w-0">
+                {contact.avatar_url ? (
+                  <img
+                    src={contact.avatar_url}
+                    alt={contact.name}
+                    className="size-7 shrink-0 rounded-full object-cover shadow-xs border border-border mt-0.5"
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold shadow-xs mt-0.5",
+                      getContactAvatarColorClass(contact.role, contact.name)
+                    )}
+                  >
+                    {(contact.name.trim()[0] || "C").toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{contact.name}</p>
+                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    {contact.email && (
+                      <span className="flex items-center gap-1">
+                        <Mail className="size-3" /> {contact.email}
+                      </span>
+                    )}
+                    {contact.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="size-3" /> {contact.phone}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button

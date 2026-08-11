@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,22 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronsUpDown,
+  GripVertical,
+  MoveLeft,
+  MoveRight,
+  Palette,
+  RotateCcw,
+  Trash2,
+  Check,
+  Briefcase,
+  Building2,
+  MapPin,
+  Clock,
+  Laptop,
+  Banknote,
+  Sparkles,
+  CircleDot,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { JOB_STATUS_LABELS } from "@/lib/types/job";
@@ -73,7 +89,7 @@ const statusLabels: Record<string, string> = JOB_STATUS_LABELS;
 const statusOptions = ["saved", "interested", "preparing"];
 
 function matchBadgeClass(score: number) {
-  if (score >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
+  if (score >= 80) return "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400";
   if (score >= 50) return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
   return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
 }
@@ -82,8 +98,6 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 }
 
-// One enriched row shape the table sorts and renders from — computed once per
-// jobs/prop change instead of re-derived per cell.
 interface Row {
   job: JobListItem;
   displayStatus: string;
@@ -121,10 +135,30 @@ type SortKey =
   | "match_score"
   | "status"
   | "date";
+
 type SortDir = "asc" | "desc";
 
-// Numeric/date columns read best newest/highest-first on first click; text
-// columns read best A→Z first.
+interface ColumnDef {
+  key: SortKey;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  className?: string;
+}
+
+const ALL_COLUMNS: ColumnDef[] = [
+  { key: "title", label: "Title", icon: Briefcase, className: "min-w-[200px]" },
+  { key: "company", label: "Company", icon: Building2, className: "min-w-[140px] max-w-[180px] truncate" },
+  { key: "location", label: "Location", icon: MapPin, className: "min-w-[160px] max-w-[200px] truncate" },
+  { key: "employment_type", label: "Type", icon: Clock },
+  { key: "work_location", label: "Work", icon: Laptop },
+  { key: "salary_range", label: "Salary", icon: Banknote, className: "min-w-[140px]" },
+  { key: "match_score", label: "Match", icon: Sparkles },
+  { key: "status", label: "Status", icon: CircleDot },
+  { key: "date", label: "Date", icon: Calendar, className: "min-w-[140px]" },
+];
+
+const DEFAULT_COLUMN_KEYS: SortKey[] = ALL_COLUMNS.map((c) => c.key);
+
 const DEFAULT_DIR: Record<SortKey, SortDir> = {
   title: "asc",
   company: "asc",
@@ -136,6 +170,18 @@ const DEFAULT_DIR: Record<SortKey, SortDir> = {
   status: "asc",
   date: "desc",
 };
+
+const COLOR_PALETTE = [
+  { name: "Soft Red", value: "rgba(254, 226, 226, 0.6)" },
+  { name: "Soft Amber", value: "rgba(254, 243, 199, 0.6)" },
+  { name: "Soft Green", value: "rgba(220, 252, 231, 0.6)" },
+  { name: "Soft Teal", value: "rgba(204, 251, 241, 0.6)" },
+  { name: "Soft Blue", value: "rgba(219, 234, 254, 0.6)" },
+  { name: "Soft Indigo", value: "rgba(224, 231, 255, 0.6)" },
+  { name: "Soft Purple", value: "rgba(243, 232, 255, 0.6)" },
+  { name: "Soft Pink", value: "rgba(252, 231, 243, 0.6)" },
+  { name: "Soft Slate", value: "rgba(241, 245, 249, 0.6)" },
+];
 
 function sortValue(row: Row, key: SortKey): string | number | null {
   switch (key) {
@@ -160,9 +206,6 @@ function sortValue(row: Row, key: SortKey): string | number | null {
   }
 }
 
-// Nulls always sort last regardless of direction — an empty salary or match
-// score isn't "less than zero", it's "unknown", so it shouldn't lead an
-// ascending sort.
 function compareRows(a: Row, b: Row, key: SortKey, dir: SortDir): number {
   const av = sortValue(a, key);
   const bv = sortValue(b, key);
@@ -178,45 +221,118 @@ function compareRows(a: Row, b: Row, key: SortKey, dir: SortDir): number {
   return dir === "asc" ? cmp : -cmp;
 }
 
-function SortHeader({
-  label,
-  columnKey,
-  sortKey,
-  sortDir,
-  onSort,
-  className,
-}: {
+interface SortHeaderProps {
   label: string;
   columnKey: SortKey;
+  icon?: React.ComponentType<{ className?: string }>;
   sortKey: SortKey | null;
   sortDir: SortDir;
   onSort: (key: SortKey) => void;
   className?: string;
-}) {
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  bgColor?: string;
+  width?: number;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onDragEnd: (e: React.DragEvent) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onResizeStart?: (e: React.MouseEvent) => void;
+}
+
+function SortHeader({
+  label,
+  columnKey,
+  icon: Icon,
+  sortKey,
+  sortDir,
+  onSort,
+  className,
+  isDragging,
+  isDragOver,
+  bgColor,
+  width,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  onContextMenu,
+  onResizeStart,
+}: SortHeaderProps) {
   const active = sortKey === columnKey;
+
   return (
-    <th scope="col" className={cn("border-r border-border px-3 py-2.5 text-left last:border-r-0", className)}>
-      <button
-        type="button"
-        onClick={() => onSort(columnKey)}
-        className={cn(
-          "inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide transition-colors hover:text-foreground",
-          active ? "text-foreground" : "text-muted-foreground"
-        )}
-      >
-        {label}
-        {active ? (
-          sortDir === "asc" ? (
-            <ArrowUp className="size-3" aria-hidden="true" />
+    <th
+      scope="col"
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      onContextMenu={onContextMenu}
+      style={{
+        width: width ? `${width}px` : undefined,
+        minWidth: width ? `${width}px` : undefined,
+        backgroundColor: bgColor || undefined,
+      }}
+      className={cn(
+        "group/th border-r border-border px-3 py-2.5 text-left last:border-r-0 select-none transition-colors relative",
+        isDragging && "opacity-40 bg-primary/10",
+        isDragOver && "border-l-2 border-l-primary bg-primary/20",
+        className
+      )}
+    >
+      <div className="flex items-center gap-1 min-w-0 pr-1.5">
+        <span
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground inline-flex items-center shrink-0"
+          title="Drag to reorder column"
+        >
+          <GripVertical className="size-3.5" />
+        </span>
+        <button
+          type="button"
+          onClick={() => onSort(columnKey)}
+          className={cn(
+            "group/btn inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 -mx-1.5 rounded-md transition-all duration-200 ease-out hover:scale-[1.04] active:scale-95 hover:bg-lime-500/10 hover:text-green-800 dark:hover:text-lime-400 truncate",
+            active ? "text-foreground font-bold" : "text-muted-foreground"
+          )}
+        >
+          {Icon && (
+            <Icon className="size-3.5 shrink-0 opacity-70 group-hover/btn:opacity-100 group-hover/btn:scale-110 group-hover/btn:-rotate-6 group-hover/btn:text-green-800 dark:group-hover/btn:text-lime-400 transition-all duration-200" />
+          )}
+          <span>{label}</span>
+          {active ? (
+            sortDir === "asc" ? (
+              <ArrowUp className="size-3 shrink-0" aria-hidden="true" />
+            ) : (
+              <ArrowDown className="size-3 shrink-0" aria-hidden="true" />
+            )
           ) : (
-            <ArrowDown className="size-3" aria-hidden="true" />
-          )
-        ) : (
-          <ChevronsUpDown className="size-3 opacity-30" aria-hidden="true" />
-        )}
-      </button>
+            <ChevronsUpDown className="size-3 shrink-0 opacity-30 group-hover/btn:opacity-60" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onResizeStart?.(e);
+        }}
+        className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 group-hover/th:bg-border/60 transition-colors z-20"
+        title="Drag to resize column width"
+      />
     </th>
   );
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  columnKey: SortKey;
+  jobId?: string;
+  jobTitle?: string;
 }
 
 export function JobsGrid({
@@ -234,6 +350,64 @@ export function JobsGrid({
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  // Dynamic Column Order, Column Colors, Column Widths, and Row Colors state
+  const [columnOrder, setColumnOrder] = useState<SortKey[]>(DEFAULT_COLUMN_KEYS);
+  const [columnColors, setColumnColors] = useState<Record<string, string>>({});
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [rowColors, setRowColors] = useState<Record<string, string>>({});
+
+  // Drag and Drop state
+  const [draggedCol, setDraggedCol] = useState<SortKey | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<SortKey | null>(null);
+
+  // Context Menu state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  // Hydrate from localStorage on client load
+  useEffect(() => {
+    try {
+      const savedOrder = localStorage.getItem("attrack_jobs_column_order");
+      if (savedOrder) {
+        const parsed = JSON.parse(savedOrder) as SortKey[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const validKeys = parsed.filter((k) => DEFAULT_COLUMN_KEYS.includes(k));
+          const missingKeys = DEFAULT_COLUMN_KEYS.filter((k) => !validKeys.includes(k));
+          setColumnOrder([...validKeys, ...missingKeys]);
+        }
+      }
+      const savedColColors = localStorage.getItem("attrack_jobs_column_colors");
+      if (savedColColors) {
+        setColumnColors(JSON.parse(savedColColors));
+      }
+      const savedColWidths = localStorage.getItem("attrack_jobs_column_widths");
+      if (savedColWidths) {
+        setColumnWidths(JSON.parse(savedColWidths));
+      }
+      const savedRowColors = localStorage.getItem("attrack_jobs_row_colors");
+      if (savedRowColors) {
+        setRowColors(JSON.parse(savedRowColors));
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  // Close context menu on outside click or escape
+  useEffect(() => {
+    const handleClose = () => setContextMenu(null);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setContextMenu(null);
+    };
+    window.addEventListener("click", handleClose);
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("click", handleClose);
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const updateParams = useCallback(
     (key: string, value: string) => {
@@ -270,8 +444,6 @@ export function JobsGrid({
     [updateParams]
   );
 
-  // Column-header click is the sort UI now — same three-state cycle a table
-  // like this should have: unsorted → this column's natural direction → flipped.
   const handleHeaderSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -281,6 +453,166 @@ export function JobsGrid({
     }
   };
 
+  // Column Resizing Handler
+  const handleResizeStart = (e: React.MouseEvent, columnKey: SortKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const targetHeader = (e.currentTarget as HTMLElement).parentElement;
+    const startWidth = columnWidths[columnKey] || (targetHeader ? targetHeader.getBoundingClientRect().width : 140);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(70, Math.round(startWidth + deltaX));
+      setColumnWidths((prev) => {
+        const next = { ...prev, [columnKey]: newWidth };
+        try {
+          localStorage.setItem("attrack_jobs_column_widths", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  // Reorder column helper
+  const moveColumn = useCallback(
+    (key: SortKey, direction: "left" | "right") => {
+      setColumnOrder((prev) => {
+        const index = prev.indexOf(key);
+        if (index === -1) return prev;
+        const targetIndex = direction === "left" ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+        const newOrder = [...prev];
+        const [moved] = newOrder.splice(index, 1);
+        newOrder.splice(targetIndex, 0, moved);
+        try {
+          localStorage.setItem("attrack_jobs_column_order", JSON.stringify(newOrder));
+        } catch {}
+        return newOrder;
+      });
+    },
+    []
+  );
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, key: SortKey) => {
+    e.dataTransfer.setData("text/plain", key);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedCol(key);
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: SortKey) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverCol !== key) {
+      setDragOverCol(key);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetKey: SortKey) => {
+    e.preventDefault();
+    if (!draggedCol || draggedCol === targetKey) {
+      setDraggedCol(null);
+      setDragOverCol(null);
+      return;
+    }
+    setColumnOrder((prev) => {
+      const fromIndex = prev.indexOf(draggedCol);
+      const toIndex = prev.indexOf(targetKey);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const newOrder = [...prev];
+      const [moved] = newOrder.splice(fromIndex, 1);
+      newOrder.splice(toIndex, 0, moved);
+      try {
+        localStorage.setItem("attrack_jobs_column_order", JSON.stringify(newOrder));
+      } catch {}
+      return newOrder;
+    });
+    setDraggedCol(null);
+    setDragOverCol(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCol(null);
+    setDragOverCol(null);
+  };
+
+  // Color management
+  const setColumnColor = (key: SortKey, color: string) => {
+    setColumnColors((prev) => {
+      const next = { ...prev };
+      if (!color) {
+        delete next[key];
+      } else {
+        next[key] = color;
+      }
+      try {
+        localStorage.setItem("attrack_jobs_column_colors", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setRowColor = (jobId: string, color: string) => {
+    setRowColors((prev) => {
+      const next = { ...prev };
+      if (!color) {
+        delete next[jobId];
+      } else {
+        next[jobId] = color;
+      }
+      try {
+        localStorage.setItem("attrack_jobs_row_colors", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const resetColumnOrder = () => {
+    setColumnOrder(DEFAULT_COLUMN_KEYS);
+    try {
+      localStorage.removeItem("attrack_jobs_column_order");
+    } catch {}
+  };
+
+  const resetColumnWidths = () => {
+    setColumnWidths({});
+    try {
+      localStorage.removeItem("attrack_jobs_column_widths");
+    } catch {}
+  };
+
+  const resetAllColors = () => {
+    setColumnColors({});
+    setRowColors({});
+    try {
+      localStorage.removeItem("attrack_jobs_column_colors");
+      localStorage.removeItem("attrack_jobs_row_colors");
+    } catch {}
+  };
+
+  // Context Menu trigger
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    columnKey: SortKey,
+    jobId?: string,
+    jobTitle?: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.min(e.clientX, window.innerWidth - 260);
+    const y = Math.min(e.clientY, window.innerHeight - 380);
+    setContextMenu({ x, y, columnKey, jobId, jobTitle });
+  };
+
   const hasActiveFilters = initialStatus !== "all" || initialSearch !== "";
 
   const rows = useMemo(() => {
@@ -288,6 +620,79 @@ export function JobsGrid({
     if (!sortKey) return enriched;
     return [...enriched].sort((a, b) => compareRows(a, b, sortKey, sortDir));
   }, [jobs, sortKey, sortDir]);
+
+  // Lookup map for column definition
+  const columnDefMap = useMemo(() => {
+    const map = new Map<SortKey, ColumnDef>();
+    ALL_COLUMNS.forEach((c) => map.set(c.key, c));
+    return map;
+  }, []);
+
+  // Helper to render individual table cell by column key
+  const renderCellContent = (key: SortKey, row: Row) => {
+    const { job, displayStatus, dateLabel } = row;
+    switch (key) {
+      case "title":
+        return (
+          <Link
+            href={`/jobs/${job.id}`}
+            className="static font-semibold hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
+          >
+            <span className="absolute inset-0" aria-hidden="true" />
+            {job.title}
+          </Link>
+        );
+      case "company":
+        return job.company?.name ?? "Unknown company";
+      case "location":
+        return job.location ?? "—";
+      case "employment_type":
+        return job.employment_type ? (
+          <span className="whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {job.employment_type}
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50">—</span>
+        );
+      case "work_location":
+        return job.work_location ? (
+          <span className="whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {job.work_location}
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50">—</span>
+        );
+      case "salary_range":
+        return job.salary_range || <span className="text-muted-foreground/50">Unspecified</span>;
+      case "match_score":
+        return job.match_score != null ? (
+          <span
+            className={cn(
+              "whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium",
+              matchBadgeClass(job.match_score)
+            )}
+            title={job.match_reasoning ?? undefined}
+          >
+            {job.match_score}%
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50">—</span>
+        );
+      case "status":
+        return (
+          <span
+            className={cn(
+              "whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium",
+              statusColors[displayStatus] ?? "bg-muted text-muted-foreground"
+            )}
+          >
+            {displayStatus === "applied" ? "Applied" : statusLabels[displayStatus] ?? displayStatus}
+          </span>
+        );
+      case "date":
+        return dateLabel;
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -369,36 +774,73 @@ export function JobsGrid({
         </div>
       </div>
 
-      {/* Active filters display */}
-      {hasActiveFilters && (
-        <div className="flex items-center gap-2">
-          {initialSearch && (
-            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              &quot;{initialSearch}&quot;
-              <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
-                <X className="size-3" />
-              </button>
-            </span>
+      {/* Active filters & Table Customization actions */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {hasActiveFilters ? (
+          <div className="flex items-center gap-2">
+            {initialSearch && (
+              <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                &quot;{initialSearch}&quot;
+                <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+            {initialStatus !== "all" && (
+              <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
+                {statusLabels[initialStatus] ?? initialStatus}
+                <button onClick={() => handleStatusChange("all")} className="ml-0.5">
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setSearch("");
+                router.push("/jobs");
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear all
+            </button>
+          </div>
+        ) : (
+          <div />
+        )}
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground ml-auto">
+          {Object.keys(columnWidths).length > 0 && (
+            <button
+              onClick={resetColumnWidths}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              title="Reset column widths to default"
+            >
+              <RotateCcw className="size-3" />
+              Reset Widths
+            </button>
           )}
-          {initialStatus !== "all" && (
-            <span className="inline-flex items-center gap-1 rounded-2xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary capitalize">
-              {statusLabels[initialStatus] ?? initialStatus}
-              <button onClick={() => handleStatusChange("all")} className="ml-0.5">
-                <X className="size-3" />
-              </button>
-            </span>
+          {(Object.keys(columnColors).length > 0 || Object.keys(rowColors).length > 0) && (
+            <button
+              onClick={resetAllColors}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+              title="Reset all custom column and row colors"
+            >
+              <RotateCcw className="size-3" />
+              Reset Colors
+            </button>
           )}
-          <button
-            onClick={() => {
-              setSearch("");
-              router.push("/jobs");
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            Clear all
-          </button>
+          {JSON.stringify(columnOrder) !== JSON.stringify(DEFAULT_COLUMN_KEYS) && (
+            <button
+              onClick={resetColumnOrder}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              title="Reset column order to default"
+            >
+              <RotateCcw className="size-3" />
+              Reset Columns
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Results count */}
       <div className="text-xs text-muted-foreground">
@@ -407,115 +849,303 @@ export function JobsGrid({
 
       {/* Table */}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full border-collapse text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-border relative">
+          <table className="w-full border-collapse text-sm select-none">
             <thead>
               <tr className="border-b border-border bg-muted/60">
-                <SortHeader label="Title" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} className="min-w-[200px]" />
-                <SortHeader label="Company" columnKey="company" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} className="min-w-[140px]" />
-                <SortHeader label="Location" columnKey="location" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} className="min-w-[160px]" />
-                <SortHeader label="Type" columnKey="employment_type" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} />
-                <SortHeader label="Work" columnKey="work_location" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} />
-                <SortHeader label="Salary" columnKey="salary_range" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} className="min-w-[140px]" />
-                <SortHeader label="Match" columnKey="match_score" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} />
-                <SortHeader label="Status" columnKey="status" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} />
-                <SortHeader label="Date" columnKey="date" sortKey={sortKey} sortDir={sortDir} onSort={handleHeaderSort} className="min-w-[140px]" />
-                <th scope="col" className="px-3 py-2.5">
+                {columnOrder.map((key) => {
+                  const col = columnDefMap.get(key);
+                  if (!col) return null;
+                  return (
+                    <SortHeader
+                      key={key}
+                      label={col.label}
+                      columnKey={key}
+                      icon={col.icon}
+                      sortKey={sortKey}
+                      sortDir={sortDir}
+                      onSort={handleHeaderSort}
+                      className={col.className}
+                      isDragging={draggedCol === key}
+                      isDragOver={dragOverCol === key}
+                      bgColor={columnColors[key]}
+                      width={columnWidths[key]}
+                      onDragStart={(e) => handleDragStart(e, key)}
+                      onDragOver={(e) => handleDragOver(e, key)}
+                      onDrop={(e) => handleDrop(e, key)}
+                      onDragEnd={handleDragEnd}
+                      onContextMenu={(e) => handleContextMenu(e, key)}
+                      onResizeStart={(e) => handleResizeStart(e, key)}
+                    />
+                  );
+                })}
+                <th scope="col" className="px-3 py-2.5 w-10">
                   <span className="sr-only">Link</span>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ job, displayStatus, dateLabel }) => (
-                <tr
-                  key={job.id}
-                  className="group relative border-b border-border/60 odd:bg-card even:bg-muted/30 last:border-b-0 hover:bg-primary/5"
-                >
-                  <td className="border-r border-border px-3 py-3 font-semibold last:border-r-0">
-                    <Link href={`/jobs/${job.id}`} className="static group-hover:text-primary transition-colors">
-                      <span className="absolute inset-0" aria-hidden="true" />
-                      {job.title}
-                    </Link>
-                  </td>
-                  <td className="border-r border-border max-w-[180px] truncate px-3 py-3 text-muted-foreground last:border-r-0">
-                    {job.company?.name ?? "Unknown company"}
-                  </td>
-                  <td className="border-r border-border max-w-[200px] truncate px-3 py-3 text-muted-foreground last:border-r-0">
-                    {job.location ?? "—"}
-                  </td>
-                  <td className="border-r border-border px-3 py-3 last:border-r-0">
-                    {job.employment_type ? (
-                      <span className="whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                        {job.employment_type}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/50">—</span>
+              {rows.map((row) => {
+                const { job } = row;
+                const rowBg = rowColors[job.id];
+                return (
+                  <tr
+                    key={job.id}
+                    style={rowBg ? { backgroundColor: rowBg } : undefined}
+                    className={cn(
+                      "group relative border-b border-border/60 last:border-b-0 transition-colors",
+                      !rowBg && "odd:bg-card even:bg-muted/30 hover:bg-primary/5"
                     )}
-                  </td>
-                  <td className="border-r border-border px-3 py-3 last:border-r-0">
-                    {job.work_location ? (
-                      <span className="whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                        {job.work_location}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/50">—</span>
-                    )}
-                  </td>
-                  <td className="border-r border-border px-3 py-3 text-muted-foreground last:border-r-0">
-                    {job.salary_range || <span className="text-muted-foreground/50">Unspecified</span>}
-                  </td>
-                  <td className="border-r border-border px-3 py-3 last:border-r-0">
-                    {job.match_score != null ? (
-                      <span
-                        className={cn(
-                          "whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium",
-                          matchBadgeClass(job.match_score)
-                        )}
-                        title={job.match_reasoning ?? undefined}
-                      >
-                        {job.match_score}%
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/50">—</span>
-                    )}
-                  </td>
-                  <td className="border-r border-border px-3 py-3 last:border-r-0">
-                    <span
-                      className={cn(
-                        "whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium",
-                        statusColors[displayStatus] ?? "bg-muted text-muted-foreground"
+                  >
+                    {columnOrder.map((key) => {
+                      const col = columnDefMap.get(key);
+                      if (!col) return null;
+                      const colBg = columnColors[key];
+                      const colWidth = columnWidths[key];
+                      const isTitle = key === "title";
+                      const isMeta = key === "company" || key === "location" || key === "salary_range" || key === "date";
+
+                      return (
+                        <td
+                          key={key}
+                          onContextMenu={(e) => handleContextMenu(e, key, job.id, job.title)}
+                          style={{
+                            width: colWidth ? `${colWidth}px` : undefined,
+                            minWidth: colWidth ? `${colWidth}px` : undefined,
+                            backgroundColor: colBg && !rowBg ? colBg : undefined,
+                          }}
+                          className={cn(
+                            "border-r border-border px-3 py-3 last:border-r-0",
+                            isTitle && "font-semibold",
+                            isMeta && "text-muted-foreground",
+                            key === "date" && "whitespace-nowrap text-xs text-muted-foreground",
+                            col.className
+                          )}
+                        >
+                          {renderCellContent(key, row)}
+                        </td>
+                      );
+                    })}
+                    <td className="relative z-10 px-3 py-3 text-right">
+                      {job.application_url && (
+                        <a
+                          href={job.application_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label="Open application link"
+                          className="inline-flex text-muted-foreground/40 transition-colors hover:text-green-800 dark:hover:text-lime-400"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </a>
                       )}
-                    >
-                      {displayStatus === "applied" ? "Applied" : statusLabels[displayStatus] ?? displayStatus}
-                    </span>
-                  </td>
-                  <td className="border-r border-border whitespace-nowrap px-3 py-3 text-xs text-muted-foreground last:border-r-0">{dateLabel}</td>
-                  <td className="relative z-10 px-3 py-3 text-right">
-                    {job.application_url && (
-                      <a
-                        href={job.application_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Open application link"
-                        className="inline-flex text-muted-foreground/40 transition-colors hover:text-primary"
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
-                    {!job.application_url && job.application_email && (
-                      <a
-                        href={`mailto:${job.application_email}`}
-                        aria-label="Email application contact"
-                        className="inline-flex text-muted-foreground/40 transition-colors hover:text-primary"
-                      >
-                        <Mail className="size-3.5" />
-                      </a>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      {!job.application_url && job.application_email && (
+                        <a
+                          href={`mailto:${job.application_email}`}
+                          aria-label="Email application contact"
+                          className="inline-flex text-muted-foreground/40 transition-colors hover:text-green-800 dark:hover:text-lime-400"
+                        >
+                          <Mail className="size-3.5" />
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+
+          {/* Context Menu Overlay */}
+          {contextMenu && (
+            <div
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed z-50 min-w-[240px] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-xl animate-in fade-in-50 zoom-in-95"
+            >
+              {/* Column Header section */}
+              <div className="mb-2 pb-2 border-b border-border space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                  <span className="truncate">Column: {columnDefMap.get(contextMenu.columnKey)?.label}</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={columnOrder.indexOf(contextMenu.columnKey) === 0}
+                      onClick={() => {
+                        moveColumn(contextMenu.columnKey, "left");
+                        setContextMenu(null);
+                      }}
+                      title="Move Left"
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <MoveLeft className="size-3.5" />
+                    </button>
+                    <button
+                      disabled={columnOrder.indexOf(contextMenu.columnKey) === columnOrder.length - 1}
+                      onClick={() => {
+                        moveColumn(contextMenu.columnKey, "right");
+                        setContextMenu(null);
+                      }}
+                      title="Move Right"
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <MoveRight className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Column color swatches */}
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
+                    Column Color
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    {COLOR_PALETTE.map((p) => (
+                      <button
+                        key={p.name}
+                        onClick={() => {
+                          setColumnColor(contextMenu.columnKey, p.value);
+                          setContextMenu(null);
+                        }}
+                        style={{ backgroundColor: p.value }}
+                        title={p.name}
+                        className={cn(
+                          "size-5 rounded-full border border-border/80 transition-transform hover:scale-110 flex items-center justify-center",
+                          columnColors[contextMenu.columnKey] === p.value && "ring-2 ring-primary ring-offset-1"
+                        )}
+                      >
+                        {columnColors[contextMenu.columnKey] === p.value && (
+                          <Check className="size-3 text-foreground" />
+                        )}
+                      </button>
+                    ))}
+                    {/* Custom Color Input */}
+                    <label
+                      title="Custom Color"
+                      className="size-5 rounded-full border border-border/80 cursor-pointer overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-500 hover:scale-110 transition-transform"
+                    >
+                      <input
+                        type="color"
+                        className="opacity-0 absolute size-0"
+                        onChange={(e) => {
+                          setColumnColor(contextMenu.columnKey, e.target.value);
+                          setContextMenu(null);
+                        }}
+                      />
+                      <Palette className="size-3 text-white drop-shadow" />
+                    </label>
+                    {columnColors[contextMenu.columnKey] && (
+                      <button
+                        onClick={() => {
+                          setColumnColor(contextMenu.columnKey, "");
+                          setContextMenu(null);
+                        }}
+                        title="Clear Column Color"
+                        className="p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row Color section if clicked on row */}
+              {contextMenu.jobId && (
+                <div className="mb-2 pb-2 border-b border-border space-y-1.5">
+                  <div className="text-xs font-semibold text-foreground truncate">
+                    Row: {contextMenu.jobTitle || "Job"}
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
+                      Row Color
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {COLOR_PALETTE.map((p) => (
+                        <button
+                          key={p.name}
+                          onClick={() => {
+                            setRowColor(contextMenu.jobId!, p.value);
+                            setContextMenu(null);
+                          }}
+                          style={{ backgroundColor: p.value }}
+                          title={p.name}
+                          className={cn(
+                            "size-5 rounded-full border border-border/80 transition-transform hover:scale-110 flex items-center justify-center",
+                            rowColors[contextMenu.jobId!] === p.value && "ring-2 ring-primary ring-offset-1"
+                          )}
+                        >
+                          {rowColors[contextMenu.jobId!] === p.value && (
+                            <Check className="size-3 text-foreground" />
+                          )}
+                        </button>
+                      ))}
+                      {/* Custom Color Input */}
+                      <label
+                        title="Custom Color"
+                        className="size-5 rounded-full border border-border/80 cursor-pointer overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-500 hover:scale-110 transition-transform"
+                      >
+                        <input
+                          type="color"
+                          className="opacity-0 absolute size-0"
+                          onChange={(e) => {
+                            setRowColor(contextMenu.jobId!, e.target.value);
+                            setContextMenu(null);
+                          }}
+                        />
+                        <Palette className="size-3 text-white drop-shadow" />
+                      </label>
+                      {rowColors[contextMenu.jobId!] && (
+                        <button
+                          onClick={() => {
+                            setRowColor(contextMenu.jobId!, "");
+                            setContextMenu(null);
+                          }}
+                          title="Clear Row Color"
+                          className="p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* General Options */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    resetColumnOrder();
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+                >
+                  <RotateCcw className="size-3" />
+                  Reset Column Order
+                </button>
+                {Object.keys(columnWidths).length > 0 && (
+                  <button
+                    onClick={() => {
+                      resetColumnWidths();
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+                  >
+                    <RotateCcw className="size-3" />
+                    Reset Column Widths
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    resetAllColors();
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-destructive/80 hover:text-destructive flex items-center gap-1.5 transition-colors"
+                >
+                  <Trash2 className="size-3" />
+                  Clear All Table Colors
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">

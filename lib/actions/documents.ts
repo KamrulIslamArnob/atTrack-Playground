@@ -6,6 +6,8 @@ import { extractResumeContent, calculateMatchScore, type ResumeMatchData } from 
 import { logResourceActivity } from "@/lib/actions/activity-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
+import fs from "node:fs";
+import { exec, spawn } from "node:child_process";
 
 export interface Document {
   id: string;
@@ -386,3 +388,67 @@ export async function unlinkDocument(jobId: string, documentId: string): Promise
   revalidatePath("/jobs/" + jobId);
   await logResourceActivity(userId, "unlink", "job_document", documentId, { job_id: jobId });
 }
+
+export async function openDocumentFolder(id: string): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  const { data: doc, error } = await supabase
+    .from("documents")
+    .select("file_path, name")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !doc) {
+    throw new Error("Document not found");
+  }
+
+  if (!doc.file_path) {
+    throw new Error("No local file path recorded for this document.");
+  }
+
+  let absPath = doc.file_path;
+  if (doc.file_path.startsWith("/")) {
+    absPath = path.join(process.cwd(), "public", doc.file_path);
+  } else if (!path.isAbsolute(absPath)) {
+    const storageDir = process.env.STORAGE_DIR ?? path.join(process.cwd(), ".data", "storage");
+    const candidateStoragePath = path.join(storageDir, doc.file_path);
+    if (fs.existsSync(candidateStoragePath)) {
+      absPath = candidateStoragePath;
+    } else {
+      absPath = path.resolve(process.cwd(), absPath);
+    }
+  }
+
+  const folderPath = path.dirname(absPath);
+  const fileExists = fs.existsSync(absPath);
+  const folderExists = fs.existsSync(folderPath);
+
+  if (!fileExists && !folderExists) {
+    throw new Error(`Local directory does not exist: ${folderPath}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    let command = "";
+    if (process.platform === "win32") {
+      const winPath = (fileExists ? absPath : folderPath).replace(/\//g, "\\");
+      command = fileExists
+        ? `cmd.exe /c start explorer.exe /select,"${winPath}"`
+        : `cmd.exe /c start explorer.exe "${winPath}"`;
+    } else if (process.platform === "darwin") {
+      command = fileExists ? `open -R "${absPath}"` : `open "${folderPath}"`;
+    } else {
+      command = `xdg-open "${folderPath}"`;
+    }
+
+    exec(command, (err) => {
+      if (err) {
+        console.error("Error opening document folder:", err);
+        reject(new Error(`Failed to open folder: ${err.message}`));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+

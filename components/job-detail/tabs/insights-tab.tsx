@@ -30,7 +30,7 @@ export function InsightsTab({ data }: InsightsTabProps) {
             <div
               className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                 job.match_score >= 80
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  ? "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400"
                   : job.match_score >= 50
                     ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                     : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"

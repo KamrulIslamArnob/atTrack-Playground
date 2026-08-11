@@ -37,9 +37,9 @@ const appStatusColors: Record<string, string> = {
   draft: "bg-muted",
   submitted: "bg-blue-500",
   acknowledged: "bg-amber-500",
-  interview: "bg-emerald-500",
-  offer: "bg-emerald-600",
-  accepted: "bg-emerald-600",
+  interview: "bg-lime-500",
+  offer: "bg-lime-600",
+  accepted: "bg-lime-600",
   rejected: "bg-red-500",
   withdrawn: "bg-muted",
 };
@@ -84,7 +84,7 @@ export default async function InsightsPage() {
           icon={Calendar}
           label="Interviews"
           value={insights.totalInterviews}
-          color="bg-emerald-500"
+          color="bg-lime-500"
         />
         <StatCard
           icon={Target}

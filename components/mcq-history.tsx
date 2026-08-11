@@ -58,7 +58,7 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
                   <div
                     className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${
                       percentage >= 70
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        ? "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400"
                         : percentage >= 50
                           ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                           : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -85,7 +85,7 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
                   variant="secondary"
                   className={
                     percentage >= 70
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      ? "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400"
                       : percentage >= 50
                         ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                         : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -107,13 +107,13 @@ export function MCQHistory({ jobId }: MCQHistoryProps) {
                           key={q.id}
                           className={`rounded-2xl border p-3 ${
                             isCorrect
-                              ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
+                              ? "border-lime-300 bg-lime-50 dark:border-lime-800 dark:bg-lime-950/30"
                               : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
                           }`}
                         >
                           <div className="flex items-start gap-2">
                             {isCorrect ? (
-                              <Check className="mt-0.5 size-4 shrink-0 text-green-600" />
+                              <Check className="mt-0.5 size-4 shrink-0 text-lime-600 dark:text-lime-400" />
                             ) : (
                               <XIcon className="mt-0.5 size-4 shrink-0 text-red-600" />
                             )}

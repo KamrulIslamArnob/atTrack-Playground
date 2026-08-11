@@ -19,10 +19,23 @@ const TAG_COLORS = [
 ];
 
 export function getTagColorClass(tag: string): string {
+  const normalized = tag.trim().toLowerCase();
+  if (normalized === "alumni") {
+    return "bg-orange-500/15 text-orange-700 border-orange-500/30 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40";
+  }
+  if (normalized === "recruiter" || normalized === "hiring manager" || normalized === "hiring_manager") {
+    return "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40";
+  }
+  if (normalized === "employee" || normalized === "executive") {
+    return "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40";
+  }
+  if (normalized === "referral") {
+    return "bg-rose-500/15 text-rose-700 border-rose-500/30 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40";
+  }
+
   let hash = 0;
-  const str = tag.trim().toLowerCase();
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < normalized.length; i++) {
+    hash = normalized.charCodeAt(i) + ((hash << 5) - hash);
   }
   const index = Math.abs(hash) % TAG_COLORS.length;
   return TAG_COLORS[index];
@@ -48,4 +61,59 @@ export function getAvatarColorClass(name: string): string {
   const index = Math.abs(hash) % AVATAR_COLORS.length;
   return AVATAR_COLORS[index];
 }
+
+/**
+ * Returns specific avatar color class based on role/tags:
+ * - Alumni -> Orangish
+ * - Recruiter / Hiring Manager -> Greenish
+ * - Employee / Executive -> Yellowish
+ * - Referral -> Red
+ * - Fallback -> Hash of name or default avatar color
+ */
+export function getContactAvatarColorClass(
+  roleOrTags?: string | string[] | null,
+  name?: string
+): string {
+  const tagsList: string[] = [];
+
+  if (Array.isArray(roleOrTags)) {
+    tagsList.push(...roleOrTags.map((t) => t.trim().toLowerCase()));
+  } else if (typeof roleOrTags === "string" && roleOrTags.trim()) {
+    tagsList.push(
+      ...roleOrTags
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean)
+    );
+  }
+
+  // Check tags in order
+  for (const t of tagsList) {
+    if (t === "alumni") {
+      return "bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30";
+    }
+  }
+  for (const t of tagsList) {
+    if (t === "recruiter" || t === "hiring manager" || t === "hiring_manager") {
+      return "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30";
+    }
+  }
+  for (const t of tagsList) {
+    if (t === "employee" || t === "executive") {
+      return "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30";
+    }
+  }
+  for (const t of tagsList) {
+    if (t === "referral") {
+      return "bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30";
+    }
+  }
+
+  if (name) {
+    return getAvatarColorClass(name);
+  }
+
+  return "bg-primary/10 text-primary border border-primary/20";
+}
+
 

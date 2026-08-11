@@ -168,13 +168,13 @@ export function MCQTest({ jobId, onClose }: MCQTestProps) {
                   key={q.id}
                   className={`rounded-2xl border p-4 ${
                     isCorrect
-                      ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
+                      ? "border-lime-300 bg-lime-50 dark:border-lime-800 dark:bg-lime-950/30"
                       : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
                   }`}
                 >
                   <div className="flex items-start gap-2">
                     {isCorrect ? (
-                      <Check className="mt-0.5 size-4 shrink-0 text-green-600" />
+                      <Check className="mt-0.5 size-4 shrink-0 text-lime-600 dark:text-lime-400" />
                     ) : (
                       <XIcon className="mt-0.5 size-4 shrink-0 text-red-600" />
                     )}

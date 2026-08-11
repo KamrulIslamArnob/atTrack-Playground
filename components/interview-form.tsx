@@ -248,7 +248,7 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
                 }) ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-green-800 dark:text-lime-400 hover:underline"
               >
                 <Calendar className="size-3" />
                 Open in Google Calendar

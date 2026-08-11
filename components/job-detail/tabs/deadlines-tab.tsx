@@ -423,7 +423,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
                     <div className="flex items-center gap-3 min-w-0">
                       <button
                         onClick={() => handleToggleCompleted(item)}
-                        className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                        className="text-muted-foreground hover:text-green-800 dark:hover:text-lime-400 transition-colors shrink-0"
                         title={item.is_completed ? "Mark incomplete" : "Mark completed"}
                       >
                         {item.is_completed ? (

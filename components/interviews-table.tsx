@@ -44,13 +44,13 @@ const typeColors: Record<string, string> = {
   video: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
   onsite: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   technical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  behavioral: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  behavioral: "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
   panel: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
 };
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  completed: "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   rescheduled: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
 };
@@ -293,7 +293,7 @@ export function InterviewsTable({
                     <td className="px-4 py-3">
                       <Link
                         href={`/jobs/${interview.job?.id}`}
-                        className="font-medium hover:text-primary transition-colors"
+                        className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
                       >
                         {interview.job?.title ?? "Untitled"}
                       </Link>
@@ -355,7 +355,7 @@ export function InterviewsTable({
                             href={calendarUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-green-800 dark:hover:text-lime-400 transition-colors"
                           >
                             <ExternalLink className="size-3.5" />
                             Calendar
@@ -363,7 +363,7 @@ export function InterviewsTable({
                         )}
                         <button
                           onClick={() => setSelectedInterview(interview)}
-                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-green-800 dark:hover:text-lime-400 transition-colors"
                         >
                           <Pencil className="size-3.5" />
                           Edit

@@ -44,9 +44,9 @@ const pipelineColors: Record<string, string> = {
   interested: "#3B82F6",
   preparing: "#F59E0B",
   applied: "#8B5CF6",
-  interview: "#10B981",
-  offer: "#059669",
-  accepted: "#047857",
+  interview: "#84cc16",
+  offer: "#65a30d",
+  accepted: "#4d7c0f",
   rejected: "#EF4444",
   withdrawn: "#6B7280",
 };
@@ -74,7 +74,7 @@ const employmentTypeColors: Record<string, string> = {
 };
 
 const workLocationColors: Record<string, string> = {
-  Remote: "#10B981",
+  Remote: "#84cc16",
   Hybrid: "#F59E0B",
   "On-site": "#6366F1",
   Unspecified: "#6B7280",
@@ -126,8 +126,8 @@ export default async function OverviewPage() {
   let totalScore = 0;
   let scoredCount = 0;
   const matchScoreDistribution = [
-    { range: "90-100%", count: 0, fill: "#10B981" },
-    { range: "70-89%", count: 0, fill: "#22C55E" },
+    { range: "90-100%", count: 0, fill: "#84cc16" },
+    { range: "70-89%", count: 0, fill: "#a3e635" },
     { range: "50-69%", count: 0, fill: "#F59E0B" },
     { range: "30-49%", count: 0, fill: "#F97316" },
     { range: "0-29%", count: 0, fill: "#EF4444" },
@@ -397,7 +397,7 @@ export default async function OverviewPage() {
                <h2 className="font-heading text-lg font-semibold">Pipeline</h2>
                <p className="text-xs text-muted-foreground mt-1">Where your jobs are right now</p>
             </div>
-            <Link href="/jobs" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
+            <Link href="/jobs" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
           {Object.keys(pipeline).length > 0 ? (
             <>
@@ -596,7 +596,7 @@ export default async function OverviewPage() {
                <h2 className="font-heading text-lg font-semibold">Practice Tests</h2>
                <p className="text-xs text-muted-foreground mt-1">How you&apos;re scoring</p>
             </div>
-            <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
+            <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
           </div>
           {totalTests > 0 ? (
             <>
@@ -624,7 +624,7 @@ export default async function OverviewPage() {
                <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
                <p className="text-xs text-muted-foreground mt-1">What&apos;s on the calendar</p>
             </div>
-            <Link href="/interviews" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
+            <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
           {upcomingInterviews.length > 0 ? (
             <div className="space-y-3">

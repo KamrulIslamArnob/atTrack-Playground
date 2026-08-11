@@ -21,7 +21,7 @@ const statusColors: Record<string, string> = {
   interested: "#3B82F6",
   preparing: "#F59E0B",
   applied: "#8B5CF6",
-  interview: "#10B981",
+  interview: "#84cc16",
   offer: "#059669",
   accepted: "#047857",
   rejected: "#EF4444",
