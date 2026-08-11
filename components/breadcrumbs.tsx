@@ -47,7 +47,7 @@ export function Breadcrumbs({ labels }: { labels?: Record<string, string> }) {
             {isAdmin ? "Admin" : "Home"}
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {crumbs.slice(isAdmin ? 1 : 0).map((crumb, index) => (
+        {crumbs.slice(isAdmin ? 1 : 0).map((crumb) => (
           <Fragment key={crumb.href}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>

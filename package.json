@@ -1,6 +1,8 @@
 {
-  "name": "attrack",
+  "name": "aven",
   "version": "0.1.0",
+  "description": "Personal career workspace for managing job applications, documents, interviews, and AI-assisted preparation.",
+  "license": "MIT",
   "private": true,
   "main": "electron/main.js",
   "scripts": {

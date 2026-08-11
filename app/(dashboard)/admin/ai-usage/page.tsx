@@ -45,7 +45,6 @@ export default function AdminAiUsagePage() {
   const [emailToUserId, setEmailToUserId] = useState<Record<string, string>>({});
 
   const loadLogs = useCallback(async () => {
-    setLoading(true);
     const filter: Record<string, string> = {};
     if (actionFilter && actionFilter !== "all") filter.action = actionFilter;
     if (userIdFilter) filter.user_id = userIdFilter;
@@ -59,6 +58,7 @@ export default function AdminAiUsagePage() {
   }, [page, perPage, actionFilter, userIdFilter]);
 
   useEffect(() => {
+    setLoading(true);
     loadLogs();
   }, [loadLogs]);
 

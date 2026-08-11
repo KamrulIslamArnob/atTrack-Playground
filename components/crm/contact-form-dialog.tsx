@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +33,8 @@ import { createCompany, type CrmCompany } from "@/lib/actions/companies";
 import { getJobsForMention, type JobMentionOption } from "@/lib/actions/jobs-list";
 import { insertMentionToken } from "@/lib/mentions";
 import { getTagColorClass, cn } from "@/lib/utils";
-import { Plus, Trash2, X, Link2, Building2 } from "lucide-react";
-import { parseContactSocialLinks, type SocialLinkItem } from "./contact-card";
+import { Plus, Trash2, X, Building2 } from "lucide-react";
+import { parseContactSocialLinks } from "./contact-card";
 
 const NO_COMPANY = "__none__";
 const NEW_COMPANY = "__new__";
@@ -43,10 +43,10 @@ const PRESET_TAGS = [
   "Recruiter",
   "Hiring Manager",
   "Employee",
-  "Alumni",
+  "Executive",
   "Referral",
-  "HR",
-  "Technical Lead",
+  "Peer",
+  "Primary Contact",
 ];
 
 const SOCIAL_PLATFORMS = [
@@ -62,10 +62,10 @@ const SOCIAL_PLATFORMS = [
 interface ContactFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contact?: Contact;
+  contact?: Contact | null;
   companies: CrmCompany[];
-  lockedCompanyId?: string;
-  tagSuggestions: string[];
+  lockedCompanyId?: string | null;
+  tagSuggestions?: string[];
   onSaved: (contact: Contact, createdCompany?: CrmCompany) => void;
 }
 
@@ -81,7 +81,6 @@ export function ContactFormDialog({
   contact,
   companies,
   lockedCompanyId,
-  tagSuggestions,
   onSaved,
 }: ContactFormDialogProps) {
   const mode = contact ? "edit" : "create";

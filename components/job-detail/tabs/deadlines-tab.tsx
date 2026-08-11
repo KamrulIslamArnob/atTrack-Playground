@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { formatDistanceToNow, format, addDays, differenceInDays } from "date-fns";
+import { useState, useEffect, useCallback, useTransition } from "react";
+import { format, addDays, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import {
-  Calendar,
   Clock,
   Plus,
   Pin,
@@ -14,14 +13,10 @@ import {
   Edit2,
   Save,
   X,
-  AlertCircle,
-  Sparkles,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
   getJobDeadlines,
@@ -68,7 +63,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
   const [editDaysRemaining, setEditDaysRemaining] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
-  const loadDeadlines = async () => {
+  const loadDeadlines = useCallback(async () => {
     try {
       const items = await getJobDeadlines(jobId);
       setDeadlines(items);
@@ -77,11 +72,11 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobId]);
 
   useEffect(() => {
     loadDeadlines();
-  }, [jobId]);
+  }, [loadDeadlines]);
 
   // Sync date and days remaining in Add form
   const handleNewDateChange = (val: string) => {

@@ -1,7 +1,6 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface SearchResult {
   type: "job" | "application" | "interview" | "document" | "page";

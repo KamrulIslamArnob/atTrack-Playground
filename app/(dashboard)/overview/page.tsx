@@ -98,12 +98,10 @@ export default async function OverviewPage() {
     { count: totalJobs },
     { count: totalApplications },
     { count: totalInterviews },
-    { count: totalDocuments },
   ] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("applications").select("*", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("interviews").select("*", { count: "exact", head: true }).eq("user_id", userId),
-    supabase.from("documents").select("*", { count: "exact", head: true }).eq("user_id", userId),
   ]);
 
   const { data: mcqResults } = await supabase

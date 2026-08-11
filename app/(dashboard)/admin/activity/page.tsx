@@ -45,7 +45,6 @@ export default function AdminActivityPage() {
   const [stats, setStats] = useState<AdminActivityStats | null>(null);
 
   const loadLogs = useCallback(async () => {
-    setLoading(true);
     const filter: Record<string, string> = {};
     if (actionFilter && actionFilter !== "all") filter.action = actionFilter;
     if (resourceFilter && resourceFilter !== "all") filter.resource = resourceFilter;
@@ -58,6 +57,7 @@ export default function AdminActivityPage() {
   }, [page, perPage, actionFilter, resourceFilter, userIdFilter]);
 
   useEffect(() => {
+    setLoading(true);
     loadLogs();
   }, [loadLogs]);
 

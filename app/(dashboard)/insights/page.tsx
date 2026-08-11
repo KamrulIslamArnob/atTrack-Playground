@@ -5,13 +5,9 @@ import {
   FileText,
   Calendar,
   Target,
-  TrendingUp,
   Building2,
   Globe,
   BookOpen,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
 } from "lucide-react";
 
 const jobPipelineLabels: Record<string, string> = {

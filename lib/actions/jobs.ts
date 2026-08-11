@@ -136,7 +136,7 @@ export async function createJob(formData: FormData) {
 
   // Calculate match score against user's resumes
   try {
-    const { data: resumes, error: resumeError } = await supabase
+    const { data: resumes } = await supabase
       .from("documents")
       .select("id, match_data")
       .eq("user_id", userId)

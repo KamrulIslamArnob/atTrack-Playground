@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import {
   createCompanyContact,
-  createPersonContact,
   deleteContact,
   getCompanyContacts,
   getOrphanContacts,
@@ -49,7 +47,6 @@ interface CrmViewProps {
   contacts: Contact[];
 }
 
-const NO_COMPANY = "__none__";
 
 export function CrmView({ companies: initialCompanies, contacts: initialContacts }: CrmViewProps) {
   const [companies, setCompanies] = useState(initialCompanies);
@@ -216,19 +213,6 @@ function ContactsView({
       }
       return [...prev, saved].sort((a, b) => a.name.localeCompare(b.name));
     });
-  };
-
-  const handleTagChange = async (contact: Contact, companyId: string | null) => {
-    try {
-      await setContactCompany(contact.id, companyId);
-      onCompanyCountChange(contact.company_id, -1);
-      onCompanyCountChange(companyId, 1);
-      setContacts((prev) =>
-        prev.map((c) => (c.id === contact.id ? { ...c, company_id: companyId, company_name: companyName(companyId) } : c))
-      );
-    } catch {
-      toast.error("Could not update company");
-    }
   };
 
   const handleDelete = async (contact: Contact) => {

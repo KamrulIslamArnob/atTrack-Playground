@@ -115,8 +115,9 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
 
   // Auto-generate on mount
   useEffect(() => {
+    const controller = abortRef.current;
     generateEmail(selectedResumeId);
-    return () => abortRef.current?.abort();
+    return () => controller?.abort();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResumeChange = (resumeId: string | null) => {

@@ -3,14 +3,6 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      isElectron?: boolean;
-    };
-  }
-}
-
 export function WindowTitlebar({ className }: { className?: string }) {
   const [isElectron, setIsElectron] = useState(false);
 

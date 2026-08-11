@@ -5,8 +5,6 @@ import { listProviders, getTaskRoutes } from "@/lib/actions/ai-providers";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ProfileForm, type Profile } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
-import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
-import { AppPasswordGuide } from "@/components/settings/app-password-guide";
 import { AiProvidersSettings } from "@/components/settings/ai-providers-settings";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Mail, Sparkles } from "lucide-react";

@@ -19,7 +19,7 @@ import {
   getDefaultPrompt,
   DEFAULT_PURPOSES,
 } from "@/lib/ai/prompts-defaults";
-import { Sparkles, RotateCcw, Save, Check, FileText, Mail, Info } from "lucide-react";
+import { Sparkles, RotateCcw, Save, Mail, Info } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AiPromptsPreferencesPage() {

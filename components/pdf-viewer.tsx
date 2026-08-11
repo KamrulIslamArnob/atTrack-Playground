@@ -12,7 +12,7 @@ interface PdfViewerProps {
   fileName: string;
 }
 
-export function PdfViewer({ url, fileName }: PdfViewerProps) {
+export function PdfViewer({ url }: PdfViewerProps) {
   const [pages, setPages] = useState<number[]>([]);
   const [scale, setScale] = useState(1.0);
   const [loading, setLoading] = useState(true);

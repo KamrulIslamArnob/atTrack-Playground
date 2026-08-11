@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
 import type { JobDetailData } from "@/lib/types/job-detail";
-import { cn } from "@/lib/utils";
 
 interface EditTabProps {
   data: JobDetailData;

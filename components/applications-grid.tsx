@@ -13,8 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink, Mail } from "lucide-react";
-import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from "@/lib/types/job";
-import type { ApplicationStatus } from "@/lib/types/job";
+import { APPLICATION_STATUS_LABELS } from "@/lib/types/job";
 
 interface Application {
   id: string;

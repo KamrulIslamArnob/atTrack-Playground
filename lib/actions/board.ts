@@ -224,7 +224,7 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
   const siblingIds = ordered.filter((id) => id !== jobId);
   if (siblingIds.length > 0) {
     const cases = siblingIds
-      .map((id, _i) => `WHEN ? THEN ?`)
+      .map(() => `WHEN ? THEN ?`)
       .join(" ");
     const params: unknown[] = [];
     siblingIds.forEach((id) => {

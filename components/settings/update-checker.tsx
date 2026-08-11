@@ -6,23 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-interface UpdateStatus {
-  status: "idle" | "checking" | "available" | "not-available" | "downloading" | "downloaded" | "error" | "dev";
-  version?: string;
-  percent?: number;
-  error?: string;
-  message?: string;
-}
+import type { ElectronUpdateStatus } from "@/lib/types/electron";
 
 export function UpdateChecker() {
   const [isElectron, setIsElectron] = useState(false);
-  const [updateState, setUpdateState] = useState<UpdateStatus>({ status: "idle" });
+  const [updateState, setUpdateState] = useState<ElectronUpdateStatus>({ status: "idle" });
   const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).electronAPI) {
+    if (typeof window !== "undefined" && window.electronAPI) {
       setIsElectron(true);
-      const unsubscribe = (window as any).electronAPI.onUpdateStatus((data: UpdateStatus) => {
+      const unsubscribe = window.electronAPI.onUpdateStatus?.((data: ElectronUpdateStatus) => {
         setUpdateState(data);
         if (data.status === "available") {
           toast.info(`Version ${data.version} is available! Downloading update...`);
@@ -42,12 +36,12 @@ export function UpdateChecker() {
   }, []);
 
   const handleCheckForUpdates = async () => {
-    if (!(window as any).electronAPI) return;
+    if (!window.electronAPI) return;
     setIsChecking(true);
     setUpdateState({ status: "checking" });
 
     try {
-      const res = await (window as any).electronAPI.checkForUpdates();
+      const res = await window.electronAPI.checkForUpdates?.();
       if (res?.status === "dev") {
         setUpdateState({ status: "dev", message: res.message });
         toast.info(res.message || "Auto-updates active in packaged desktop build.");
@@ -61,8 +55,8 @@ export function UpdateChecker() {
   };
 
   const handleQuitAndInstall = () => {
-    if ((window as any).electronAPI) {
-      (window as any).electronAPI.quitAndInstall();
+    if (window.electronAPI) {
+      window.electronAPI.quitAndInstall?.();
     }
   };
 

@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { X, Check, XIcon, RotateCcw, ChevronRight } from "lucide-react";
 import { generateMCQTest, saveMCQResult } from "@/lib/actions/mcq";
-import type { MCQTest, MCQQuestion } from "@/lib/types/mcq";
+import type { MCQTest } from "@/lib/types/mcq";
 
 interface MCQTestProps {
   jobId: string;

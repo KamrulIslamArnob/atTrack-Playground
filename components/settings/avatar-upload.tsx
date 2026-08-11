@@ -40,7 +40,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
     return true;
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = useCallback((file: File) => {
     if (validateFile(file)) {
       setSelectedFile(file);
       const reader = new FileReader();
@@ -49,7 +49,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,7 +77,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
       handleFile(file);
       setDialogOpen(false);
     }
-  }, []);
+  }, [handleFile]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

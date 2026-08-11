@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Building2, MoveRight, ChevronDown, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
-import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoveToMenu } from "@/components/board/move-to-menu";
 import { ShortcutsPanel } from "@/components/job-detail/shortcuts-panel";
