@@ -6,8 +6,11 @@ import { getUser } from "@/lib/auth";
 import { resolveProviderChain, generateText } from "@/lib/ai/providers";
 import { scheduleJobScore } from "@/lib/ai/background";
 import { calculateMatchScore, extractResumeContent, type ResumeMatchData, type TotalJobInfo } from "@/lib/ai/resume";
+import { unlink } from "fs/promises";
+import path from "path";
 import { logResourceActivity } from "@/lib/actions/activity-log";
 import type { ProjectLink } from "@/lib/types/board";
+import type { JobState } from "@/lib/types/job";
 
 export async function createJob(formData: FormData) {
   const { supabase, userId } = await getUser();
@@ -737,4 +740,156 @@ export async function checkJobResumeScore(
     const msg = err instanceof Error ? err.message : String(err);
     return { score: 0, reasoning: "", error: msg };
   }
+}
+
+export async function deleteJobWithSmartCascade(
+  jobId: string
+): Promise<{ success: boolean; companyDeleted: boolean }> {
+  const { supabase, userId } = await getUser();
+
+  // 1. Fetch target job details from jobs table for current user
+  const { data: job, error: jobErr } = await supabase
+    .from("jobs")
+    .select("id, company_id, resume_id, matched_resume_id")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .single();
+
+  if (jobErr || !job) {
+    throw new Error("Job not found.");
+  }
+
+  // 2. Store companyId
+  const companyId = job.company_id;
+
+  // 3. Fetch linked contacts from job_contacts WHERE job_id = jobId
+  const { data: jobContacts } = await supabase
+    .from("job_contacts")
+    .select("contact_id")
+    .eq("job_id", jobId);
+  const contactIds = (jobContacts ?? []).map((jc) => jc.contact_id);
+
+  // 4. Fetch linked documents from job_documents WHERE job_id = jobId plus job.resume_id and job.matched_resume_id
+  const { data: jobDocs } = await supabase
+    .from("job_documents")
+    .select("document_id")
+    .eq("job_id", jobId);
+  const docIds = new Set<string>();
+  (jobDocs ?? []).forEach((jd) => docIds.add(jd.document_id));
+  if (job.resume_id) docIds.add(job.resume_id);
+  if (job.matched_resume_id) docIds.add(job.matched_resume_id);
+
+  // 5. Delete 1:1 job links/records
+  await supabase.from("job_contacts").delete().eq("job_id", jobId);
+  await supabase.from("job_documents").delete().eq("job_id", jobId);
+  await supabase.from("applications").delete().eq("job_id", jobId);
+  await supabase.from("interviews").delete().eq("job_id", jobId);
+  await supabase.from("job_deadlines").delete().eq("job_id", jobId);
+
+  // 6. Delete job record
+  const { error: delJobErr } = await supabase
+    .from("jobs")
+    .delete()
+    .eq("id", jobId)
+    .eq("user_id", userId);
+  if (delJobErr) throw new Error("Failed to delete job.");
+
+  // 7. Company cascade check
+  let companyDeleted = false;
+  if (companyId) {
+    const { count } = await supabase
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("user_id", userId);
+
+    if (count === 0) {
+      await supabase.from("companies").delete().eq("id", companyId).eq("user_id", userId);
+      companyDeleted = true;
+    }
+  }
+
+  // 8. Contacts cascade check
+  for (const cid of contactIds) {
+    const { count: jobLinkCount } = await supabase
+      .from("job_contacts")
+      .select("job_id", { count: "exact", head: true })
+      .eq("contact_id", cid);
+
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("company_id")
+      .eq("id", cid)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if ((jobLinkCount ?? 0) === 0 && (!contact?.company_id || companyDeleted)) {
+      await supabase.from("contacts").delete().eq("id", cid).eq("user_id", userId);
+    }
+  }
+
+  // 9. Documents cascade check
+  for (const did of Array.from(docIds)) {
+    const { count: jobDocCount } = await supabase
+      .from("job_documents")
+      .select("job_id", { count: "exact", head: true })
+      .eq("document_id", did);
+
+    const { count: jobResumeCount } = await supabase
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .or(`resume_id.eq.${did},matched_resume_id.eq.${did}`);
+
+    const { count: posCount } = await supabase
+      .from("positions")
+      .select("id", { count: "exact", head: true })
+      .eq("resume_id", did);
+
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("file_path, is_default")
+      .eq("id", did)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if ((jobDocCount ?? 0) === 0 && (jobResumeCount ?? 0) === 0 && (posCount ?? 0) === 0 && !doc?.is_default) {
+      if (doc?.file_path && doc.file_path.startsWith("/resume/")) {
+        const localDiskPath = path.join(process.cwd(), "public", doc.file_path);
+        await unlink(localDiskPath).catch((err) => {
+          console.warn(`Could not delete local file ${localDiskPath}:`, err);
+        });
+      } else if (doc?.file_path) {
+        await supabase.storage.from("documents").remove([doc.file_path]).catch(() => {});
+      }
+      await supabase.from("documents").delete().eq("id", did).eq("user_id", userId);
+    }
+  }
+
+  // 10. Revalidate paths & log activity
+  revalidatePath("/board");
+  revalidatePath("/jobs");
+  revalidatePath("/crm");
+  await logResourceActivity(userId, "delete", "job", jobId, { companyDeleted });
+
+  return { success: true, companyDeleted };
+}
+
+export async function updateJobState(
+  jobId: string,
+  state: JobState
+): Promise<{ success: boolean }> {
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ state, updated_at: new Date().toISOString() })
+    .eq("id", jobId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error("Failed to update job state.");
+
+  revalidatePath("/board");
+  revalidatePath("/jobs");
+  await logResourceActivity(userId, "update", "job", jobId, { state });
+  return { success: true };
 }
