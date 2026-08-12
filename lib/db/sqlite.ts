@@ -17,7 +17,7 @@ declare global {
   var __attrackDb: DatabaseSync | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 
 function open(): DatabaseSync {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -267,6 +267,7 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "jobs", column: "salary_max", ddl: "ALTER TABLE jobs ADD COLUMN salary_max REAL" },
   { table: "jobs", column: "salary_currency", ddl: "ALTER TABLE jobs ADD COLUMN salary_currency TEXT" },
   { table: "jobs", column: "salary_period", ddl: "ALTER TABLE jobs ADD COLUMN salary_period TEXT" },
+  { table: "jobs", column: "state", ddl: "ALTER TABLE jobs ADD COLUMN state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active','on_hold','archived'))" },
 ];
 
 function addMissingColumns(db: DatabaseSync) {

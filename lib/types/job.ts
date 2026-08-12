@@ -1,3 +1,5 @@
+export type JobState = "active" | "on_hold" | "archived";
+
 // Job pipeline statuses (pre-application only)
 export type JobStatus = "saved" | "interested" | "preparing";
 

@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   description TEXT,
   location TEXT,
   status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('saved','interested','preparing')),
+  state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active','on_hold','archived')),
   employment_type TEXT DEFAULT 'Full-time',
   salary_range TEXT,
   application_url TEXT,

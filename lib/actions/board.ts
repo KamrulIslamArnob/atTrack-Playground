@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { logResourceActivity } from "@/lib/actions/activity-log";
 import type { BoardCard, BoardList, ListKind, ProjectLink } from "@/lib/types/board";
+import type { JobState } from "@/lib/types/job";
 
 export interface BoardData {
   lists: BoardList[];
@@ -23,6 +24,7 @@ function boardError(context: string, error: { message?: string }): Error {
 interface RawJobRow {
   id: string;
   title: string;
+  state?: JobState;
   list_id: string | null;
   board_position: number | null;
   position_id: string | null;
@@ -93,6 +95,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       `
       id,
       title,
+      state,
       list_id,
       board_position,
       position_id,
@@ -139,6 +142,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       return {
         id: j.id,
         title: j.title,
+        state: (j.state as JobState) ?? "active",
         company_name: j.company?.name ?? null,
         list_id: j.list_id,
         board_position: j.board_position,

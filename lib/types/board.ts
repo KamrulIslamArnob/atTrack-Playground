@@ -1,3 +1,5 @@
+import type { JobState } from "./job";
+
 // Board = a single unified pipeline over `jobs`. One card per job opportunity,
 // spanning Wishlist -> Offer. Columns live in the `board_lists` table (migration
 // 019) so users can add their own; `kind` is the semantic anchor that tells the
@@ -42,6 +44,7 @@ export interface JobDeadline {
 export interface BoardCard {
   id: string; // jobs.id
   title: string;
+  state: JobState;
   company_name: string | null;
   list_id: string | null;
   board_position: number | null;
