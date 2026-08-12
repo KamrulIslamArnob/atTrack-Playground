@@ -108,14 +108,43 @@ ${pdfText.slice(0, 8000)}`;
   return validated.data;
 }
 
+export interface TotalJobInfo {
+  companyName?: string | null;
+  positionName?: string | null;
+  location?: string | null;
+  workLocation?: string | null;
+  employmentType?: string | null;
+  salaryRange?: string | null;
+  notes?: Array<{ title: string; bullets: string[] }> | null;
+}
+
 export async function calculateMatchScore(
   jobTitle: string,
   jobDescription: string | null,
   resumeMatchData: ResumeMatchData,
-  userId?: string
+  userId?: string,
+  totalJobInfo?: TotalJobInfo
 ): Promise<MatchScore> {
   const startedAt = Date.now();
-  const jobContext = [jobTitle, jobDescription].filter(Boolean).join("\n");
+
+  const notesContext =
+    totalJobInfo?.notes && totalJobInfo.notes.length > 0
+      ? totalJobInfo.notes.map((n) => `${n.title}: ${n.bullets.join(", ")}`).join("\n")
+      : null;
+
+  const jobContextDetails = [
+    `Job Title: ${jobTitle}`,
+    totalJobInfo?.companyName ? `Company: ${totalJobInfo.companyName}` : null,
+    totalJobInfo?.positionName ? `Position/Role: ${totalJobInfo.positionName}` : null,
+    totalJobInfo?.location ? `Location: ${totalJobInfo.location}` : null,
+    totalJobInfo?.workLocation ? `Work Setup: ${totalJobInfo.workLocation}` : null,
+    totalJobInfo?.employmentType ? `Employment Type: ${totalJobInfo.employmentType}` : null,
+    totalJobInfo?.salaryRange ? `Salary Range: ${totalJobInfo.salaryRange}` : null,
+    jobDescription ? `Job Description:\n${jobDescription}` : null,
+    notesContext ? `Additional Job Details & Keywords:\n${notesContext}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const resumeContext = [
     `Skills: ${resumeMatchData.skills.join(", ")}`,
@@ -124,21 +153,21 @@ export async function calculateMatchScore(
     `Summary: ${resumeMatchData.summary}`,
   ].join("\n");
 
-  const prompt = `You are a job-match analyst. Compare this job posting against this candidate's resume and give a match score from 0-100.
+  const prompt = `You are an expert ATS and job-match analyst. Compare this job posting and its total job information against this candidate's resume and calculate an accurate fit match score from 0-100.
 
 Consider:
-- Skills alignment (most important)
-- Experience relevance
-- Education match
-- Overall fit
+- Core Skills & Technical Alignment (highest weight)
+- Experience & Role Relevance
+- Education & Domain Match
+- Work Setup, Location & Salary fit (if specified)
 
-Job:
-${jobContext}
+Job Context & Requirements:
+${jobContextDetails}
 
 Candidate Resume:
 ${resumeContext}
 
-Return JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation>" }`;
+Return ONLY valid JSON: { "score": <number 0-100>, "reasoning": "<1-2 sentence explanation of match strength and key gaps or fits>" }`;
 
   const chain = userId ? await resolveProviderChain(userId, "text") : [];
   if (chain.length === 0) {

@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("window-maximized-state", handler);
     return () => ipcRenderer.removeListener("window-maximized-state", handler);
   },
+  getSystemPerformance: () => ipcRenderer.invoke("app:get-system-performance"),
 });

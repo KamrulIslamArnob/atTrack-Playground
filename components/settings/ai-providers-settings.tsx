@@ -122,9 +122,9 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-medium">Providers</p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -167,15 +167,18 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
             No providers configured — using the default Gemini key from GEMINI_API_KEY for everything.
           </p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {providers.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-2 rounded-2xl border border-border px-3 py-2">
-                <div className="flex items-center gap-2 text-sm">
+              <li
+                key={p.id}
+                className="flex flex-col gap-3 rounded-2xl border border-border px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
                   <Badge variant="outline">{PROVIDER_TYPE_LABELS[p.provider_type]}</Badge>
-                  <span className="font-medium">{p.name}</span>
-                  <span className="text-muted-foreground font-mono text-xs">{p.model}</span>
+                  <span className="min-w-0 truncate font-medium">{p.name}</span>
+                  <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{p.model}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1 self-start sm:shrink-0 sm:self-auto">
                   <button
                     type="button"
                     onClick={() => handleTest(p)}
@@ -211,7 +214,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Task routing</p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {(Object.keys(TASK_DESCRIPTIONS) as TaskType[]).map((taskType) => (
             <AiTaskRoutePicker
               key={`${taskType}-${providerSetKey}`}
@@ -224,7 +227,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
         </div>
       </div>
 
-      {dialogOpen !== null && (
+      {dialogOpen && (
         <AiProviderDialog
           provider={dialogOpen === "add" ? null : dialogOpen}
           onClose={() => setDialogOpen(null)}

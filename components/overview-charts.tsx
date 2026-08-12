@@ -76,8 +76,8 @@ export function PipelineChart({ pipeline }: { pipeline: Record<string, number> }
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
         <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
@@ -120,8 +120,8 @@ export function MatchScoreChart({ data }: { data: ChartDataItem[] }) {
 
 export function ApplicationTrendChart({ data }: { data: TrendData[] }) {
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={180}>
+      <AreaChart data={data} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>
         <defs>
           <linearGradient id="colorApplications" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />

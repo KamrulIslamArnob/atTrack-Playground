@@ -6,8 +6,12 @@ import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/
 import { Spinner } from "@/components/ui/spinner";
 import { JobDetailContent } from "@/components/job-detail/job-detail-content";
 import { getJobDetail } from "@/lib/actions/job-detail";
+import { useIsElectron } from "@/lib/hooks/use-is-electron";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import type { BoardList } from "@/lib/types/board";
+
+// Matches WindowTitlebar's h-9 (Tailwind: 9 * 4px = 36px).
+const ELECTRON_TITLEBAR_HEIGHT = "36px";
 
 interface JobDetailSheetProps {
   jobId: string | null;
@@ -24,6 +28,7 @@ interface JobDetailSheetProps {
  */
 export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDetailSheetProps) {
   const router = useRouter();
+  const isElectron = useIsElectron();
   const [data, setData] = useState<JobDetailData | null>(null);
   // Derived, not stored: avoids a synchronous setState at the top of the
   // fetch effect (react-hooks/set-state-in-effect) — the spinner shows
@@ -49,6 +54,7 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
   return (
     <Sheet open={jobId !== null} onOpenChange={onOpenChange}>
       <SheetContent
+        style={isElectron ? { top: ELECTRON_TITLEBAR_HEIGHT } : undefined}
         className="w-full max-w-full overflow-y-auto overflow-x-hidden p-0 data-[side=right]:sm:max-w-3xl data-[side=right]:md:max-w-4xl data-[side=right]:lg:max-w-6xl data-[side=right]:xl:max-w-7xl data-[side=right]:2xl:max-w-[1440px]"
       >
         <SheetTitle className="sr-only">Job details</SheetTitle>

@@ -76,7 +76,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
   const position = Array.isArray(job.position) ? job.position[0] : job.position;
   const resume = Array.isArray(job.resume) ? job.resume[0] : job.resume;
 
-  const resumeContent = resumeDoc?.content ?? null;
+  const resumeContent = resumeDoc?.content?.slice(0, 4000) ?? null;
 
   return {
     job: {
@@ -88,6 +88,11 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       application_process: job.application_process ?? null,
       location: job.location ?? null,
       salary_range: job.salary_range ?? null,
+      salary_min: typeof job.salary_min === "number" ? job.salary_min : null,
+      salary_max: typeof job.salary_max === "number" ? job.salary_max : null,
+      salary_currency: job.salary_currency ?? null,
+      salary_period: job.salary_period ?? null,
+      is_unpaid: Boolean(job.is_unpaid),
       employment_type: job.employment_type ?? null,
       work_location: job.work_location ?? null,
       deadline: job.deadline ?? null,
@@ -96,6 +101,12 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       source: job.source ?? null,
       status: job.status ?? "saved",
       notes: Array.isArray(job.notes) ? job.notes : null,
+      skills: Array.isArray(job.skills) ? job.skills : null,
+      educational_requirements: job.educational_requirements ?? null,
+      benefits: Array.isArray(job.benefits) ? job.benefits : null,
+      work_schedule: job.work_schedule ?? null,
+      holiday_policy: job.holiday_policy ?? null,
+      map_url: job.map_url ?? null,
       match_score: typeof job.match_score === "number" ? job.match_score : null,
       match_reasoning: job.match_reasoning ?? null,
       resume_id: job.resume_id ?? null,

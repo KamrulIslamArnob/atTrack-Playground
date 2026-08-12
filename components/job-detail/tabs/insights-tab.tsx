@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Tag, RefreshCw } from "lucide-react";
+import { Sparkles, Tag, RefreshCw, MapPin, DollarSign, GraduationCap, Gift, Clock, Calendar, ExternalLink, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { extractJobKeywords } from "@/lib/actions/jobs";
+import { extractJobKeywords, checkJobResumeScore } from "@/lib/actions/jobs";
 import { matchScoreBand } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
@@ -16,8 +17,33 @@ interface InsightsTabProps {
 }
 
 export function InsightsTab({ data, onRefresh }: InsightsTabProps) {
-  const { job } = data;
+  const { job, company } = data;
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isScoringMatch, setIsScoringMatch] = useState(false);
+
+  const handleScoreMatch = async () => {
+    if (!job.resume_id) {
+      toast.error("Please attach a resume in the Documents tab first.");
+      return;
+    }
+    setIsScoringMatch(true);
+    try {
+      const res = await checkJobResumeScore(job.id, job.resume_id);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success(`Match score updated: ${Math.round(res.score)}%!`);
+        onRefresh?.();
+      }
+    } catch {
+      toast.error("Failed to calculate match score.");
+    } finally {
+      setIsScoringMatch(false);
+    }
+  };
+
+  const skillsList = job.skills ?? [];
+  const benefitsList = job.benefits ?? [];
 
   // Find keywords note if present
   const keywordNote = (job.notes ?? []).find(
@@ -49,11 +75,140 @@ export function InsightsTab({ data, onRefresh }: InsightsTabProps) {
     }
   };
 
+  const handleOpenMap = () => {
+    const query = job.location || company?.name || "Job Location";
+    const targetUrl = job.map_url?.trim() || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="space-y-5">
+      {/* Key Job Badges & Location Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-border bg-card/60 p-3.5 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {job.location && (
+            <div className="flex items-center gap-1 font-medium text-foreground">
+              <MapPin className="size-3.5 text-cyan-500 shrink-0" />
+              <span>{job.location}</span>
+            </div>
+          )}
+          {job.is_unpaid ? (
+            <Badge variant="secondary" className="bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30">
+              Unpaid Position
+            </Badge>
+          ) : job.salary_range ? (
+            <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30">
+              <DollarSign className="size-3 mr-0.5" />
+              {job.salary_range}
+            </Badge>
+          ) : null}
+          {job.employment_type && (
+            <Badge variant="outline" className="text-[11px]">
+              {job.employment_type}
+            </Badge>
+          )}
+          {job.work_location && (
+            <Badge variant="outline" className="text-[11px] capitalize">
+              {job.work_location}
+            </Badge>
+          )}
+        </div>
+
+        {(job.location || job.map_url) && (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={handleOpenMap}
+            className="gap-1 text-[11px] h-7 text-cyan-600 dark:text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
+          >
+            <MapPin className="size-3" /> View Map <ExternalLink className="size-3 ml-0.5 opacity-70" />
+          </Button>
+        )}
+      </div>
+
+      {/* Required Tech Skills (First-Class Badges) */}
+      {skillsList.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Code2 className="size-3.5 text-cyan-500" />
+            <h3 className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
+              Required Tech Skills ({skillsList.length})
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-3">
+            {skillsList.map((skill, i) => (
+              <Badge
+                key={i}
+                variant="secondary"
+                className="bg-cyan-500/15 text-cyan-900 dark:text-cyan-200 border-cyan-500/30 text-xs py-1 px-2.5 font-mono font-medium"
+              >
+                {skill}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Educational Requirements */}
+      {job.educational_requirements && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300 font-semibold text-xs uppercase tracking-wider">
+            <GraduationCap className="size-4" /> Educational Requirements
+          </div>
+          <p className="text-xs text-foreground/90 leading-relaxed font-medium">
+            {job.educational_requirements}
+          </p>
+        </div>
+      )}
+
+      {/* Benefits & What We Offer */}
+      {benefitsList.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Gift className="size-3.5 text-pink-500" />
+            <h3 className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
+              Benefits & What We Offer
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-1.5 rounded-xl border border-pink-500/30 bg-pink-500/5 p-3">
+            {benefitsList.map((benefit, i) => (
+              <Badge
+                key={i}
+                variant="secondary"
+                className="bg-pink-500/15 text-pink-900 dark:text-pink-200 border-pink-500/30 text-xs py-1 px-2.5"
+              >
+                ✓ {benefit}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Schedule & Holiday Policy */}
+      {(job.work_schedule || job.holiday_policy) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {job.work_schedule && (
+            <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-semibold text-xs">
+                <Clock className="size-3.5" /> Working Schedule
+              </div>
+              <p className="text-xs text-foreground/90">{job.work_schedule}</p>
+            </div>
+          )}
+          {job.holiday_policy && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold text-xs">
+                <Calendar className="size-3.5" /> Holidays & Leave
+              </div>
+              <p className="text-xs text-foreground/90">{job.holiday_policy}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Job Description */}
       <div>
-        <h3 className="text-xs font-semibold text-foreground/80 mb-1.5">Job description</h3>
+        <h3 className="text-xs font-semibold text-foreground/80 mb-1.5">Full Job Description</h3>
         {job.description ? (
           <div className="max-h-56 overflow-y-auto rounded-xl border border-border/60 bg-muted/20 p-3.5 text-xs leading-relaxed text-foreground/90 select-text">
             {job.description}
@@ -69,13 +224,30 @@ export function InsightsTab({ data, onRefresh }: InsightsTabProps) {
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <h3 className="text-xs font-semibold text-foreground/80">Profile match</h3>
-          <span className="text-[11px] font-medium text-muted-foreground">AI Fit Analysis</span>
+          <div className="flex items-center gap-2">
+            {job.resume_id && (
+              <Button
+                variant="ghost"
+                size="xs"
+                className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={handleScoreMatch}
+                disabled={isScoringMatch}
+              >
+                {isScoringMatch ? (
+                  <Spinner className="mr-1 size-3" />
+                ) : (
+                  <Sparkles className="mr-1 size-3 text-lime-500" />
+                )}
+                {job.match_score != null ? "Re-calculate Match" : "Check Match Score"}
+              </Button>
+            )}
+            <span className="text-[11px] font-medium text-muted-foreground">AI Fit Analysis</span>
+          </div>
         </div>
 
         {job.match_score != null ? (
           <div className="rounded-xl border border-border/60 bg-card/60 p-4 shadow-2xs space-y-3.5 transition-all">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              {/* Badge fitting - spacious, scalable, tabular numbers */}
               <div
                 className={cn(
                   "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-bold shadow-2xs border transition-all",
@@ -94,7 +266,6 @@ export function InsightsTab({ data, onRefresh }: InsightsTabProps) {
               </div>
             </div>
 
-            {/* Visual score progress bar */}
             <div className="w-full overflow-hidden rounded-full bg-muted/70 h-2">
               <div
                 className={cn(
@@ -109,7 +280,6 @@ export function InsightsTab({ data, onRefresh }: InsightsTabProps) {
               />
             </div>
 
-            {/* Match reasoning text */}
             <div className="text-xs leading-relaxed text-foreground/80 bg-muted/30 rounded-lg p-3 border border-border/40">
               {job.match_reasoning || "Based on candidate resume vs. job requirements."}
             </div>
@@ -127,7 +297,7 @@ export function InsightsTab({ data, onRefresh }: InsightsTabProps) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <h3 className="text-xs font-semibold text-foreground/80">Keywords</h3>
+            <h3 className="text-xs font-semibold text-foreground/80">AI Extracted Keywords</h3>
             {keywords.length > 0 && (
               <span className="inline-flex items-center rounded-full border border-lime-500/60 bg-lime-400/25 px-2.5 py-0.5 text-[10px] font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
                 {keywords.length} extracted

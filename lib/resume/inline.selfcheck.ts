@@ -5,15 +5,16 @@
 
 import assert from "node:assert/strict";
 
-const { parseInline } = await import("./inline.ts");
-const { seedResumeDoc } = await import("./seed.ts");
+async function main() {
+  const { parseInline } = await import("./inline.ts");
+  const { seedResumeDoc } = await import("./seed.ts");
 
-let passed = 0;
-function check(label: string, fn: () => void) {
-  fn();
-  passed++;
-  console.log(`  ok  ${label}`);
-}
+  let passed = 0;
+  function check(label: string, fn: () => void) {
+    fn();
+    passed++;
+    console.log(`  ok  ${label}`);
+  }
 
 check("1. plain text -> one text node", () => {
   assert.deepEqual(parseInline("hello world"), [{ type: "text", value: "hello world" }]);
@@ -91,4 +92,7 @@ check("11. a real bullet from the seed round-trips to the expected node kinds", 
   assert.equal(badge.label, "phitron.io", "badge label");
 });
 
-console.log(`\nlib/resume/inline.ts self-check: ${passed}/11 passed`);
+  console.log(`\nlib/resume/inline.ts self-check: ${passed}/11 passed`);
+}
+
+main();

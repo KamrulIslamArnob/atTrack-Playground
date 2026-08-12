@@ -50,6 +50,11 @@ export interface JobDetailJob {
   application_process: string | null;
   location: string | null;
   salary_range: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  is_unpaid: boolean | null;
   employment_type: string | null;
   work_location: string | null;
   deadline: string | null;
@@ -58,6 +63,12 @@ export interface JobDetailJob {
   source: string | null;
   status: string;
   notes: Array<{ title: string; bullets: string[] }> | null;
+  skills: string[] | null;
+  educational_requirements: string | null;
+  benefits: string[] | null;
+  work_schedule: string | null;
+  holiday_policy: string | null;
+  map_url: string | null;
   match_score: number | null;
   match_reasoning: string | null;
   resume_id: string | null;

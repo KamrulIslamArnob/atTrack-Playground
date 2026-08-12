@@ -153,13 +153,14 @@ async function saveLog(
   status: "success" | "error",
   durationMs: number,
   extractedFields?: string[],
-  errorMessage?: string
+  errorMessage?: string,
+  model?: string
 ) {
   const { error } = await supabase.from("ai_extraction_logs").insert({
     user_id: userId,
     screenshot_id: screenshotId,
     status,
-    model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    model: model ?? "unknown",
     duration_ms: durationMs,
     extracted_fields: extractedFields ?? null,
     error_message: errorMessage ?? null,

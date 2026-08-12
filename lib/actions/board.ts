@@ -164,14 +164,14 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
 }
 
 /**
- * Moves a card into `listId` at `targetIndex`, then renumbers that column.
+ * Moves a card into `listId` at `targetIndex` using Fractional Indexing.
  *
- * Renumbering the whole destination column (rather than computing a fractional
- * board_position) keeps the ordering exactly correct with no float-precision
- * collapse after repeated drags, at the cost of one write per card in that column.
+ * Computes `board_position` as the midpoint between adjacent cards:
+ *   newPos = (prevPos + nextPos) / 2
  *
- * ponytail: rewrites one column's ordering per move. Switch to fractional
- * board_position only if a single column ever exceeds ~200 cards.
+ * This reduces database writes from O(N) sibling column updates down to O(1)
+ * for a single card update. If precision collapses below 1e-6, it performs an
+ * automatic single-pass rebalance.
  */
 export async function moveCard(jobId: string, listId: string, targetIndex: number) {
   const { supabase, userId } = await getUser();
@@ -188,7 +188,7 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
     throw new Error("List not found.");
   }
 
-  // Ownership check on the card itself. Title is carried into the activity log.
+  // Ownership check on the card itself.
   const { data: job } = await supabase
     .from("jobs")
     .select("id, title")
@@ -201,7 +201,7 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
   }
 
   // Current occupants of the destination column, minus the card being moved.
-  const { data: siblings } = await supabase
+  const { data: siblingRows } = await supabase
     .from("jobs")
     .select("id, board_position")
     .eq("user_id", userId)
@@ -209,42 +209,59 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
     .neq("id", jobId)
     .order("board_position", { ascending: true });
 
-  const ordered = (siblings ?? []).map((s) => s.id);
-  const index = Math.max(0, Math.min(targetIndex, ordered.length));
-  ordered.splice(index, 0, jobId);
+  const siblings = siblingRows ?? [];
+  let newPosition: number;
+  const GAP = 1000;
 
-  // Batched reorder: single UPDATE with CASE-WHEN instead of N individual writes.
-  // Split into two statements:
-  //   1. Reorder all siblings' board_position (no list_id change, so the
-  //      trg_jobs_status_from_list_upd trigger does NOT fire for every sibling).
-  //   2. Move the target card's list_id + board_position (fires the trigger once).
-  const { getDb } = await import("@/lib/db/sqlite");
-  const db = getDb();
+  if (siblings.length === 0) {
+    newPosition = GAP;
+  } else {
+    const clampedIndex = Math.max(0, Math.min(targetIndex, siblings.length));
+    if (clampedIndex === 0) {
+      // Placed before the first card
+      const firstPos = siblings[0].board_position ?? GAP;
+      newPosition = firstPos / 2;
+    } else if (clampedIndex === siblings.length) {
+      // Placed after the last card
+      const lastPos = siblings[siblings.length - 1].board_position ?? 0;
+      newPosition = lastPos + GAP;
+    } else {
+      // Placed between two cards
+      const prevPos = siblings[clampedIndex - 1].board_position ?? 0;
+      const nextPos = siblings[clampedIndex].board_position ?? (prevPos + GAP * 2);
 
-  const siblingIds = ordered.filter((id) => id !== jobId);
-  if (siblingIds.length > 0) {
-    const cases = siblingIds
-      .map(() => `WHEN ? THEN ?`)
-      .join(" ");
-    const params: unknown[] = [];
-    siblingIds.forEach((id) => {
-      params.push(id, ordered.indexOf(id));
-    });
-    const ph = siblingIds.map(() => "?").join(",");
-    db.prepare(
-      `UPDATE "jobs" SET board_position = CASE "id" ${cases} END WHERE "id" IN (${ph}) AND "user_id" = ?`
-    ).run(...([...params, ...siblingIds, userId] as never[]));
+      if (Math.abs(nextPos - prevPos) < 1e-6) {
+        // Precision threshold reached: rebalance column to restore wide gaps
+        const { getDb } = await import("@/lib/db/sqlite");
+        const db = getDb();
+        const rebalanced = siblings.map((s) => s.id);
+        rebalanced.splice(clampedIndex, 0, jobId);
+        
+        const cases = rebalanced.map(() => `WHEN ? THEN ?`).join(" ");
+        const params: unknown[] = [];
+        rebalanced.forEach((id, idx) => {
+          params.push(id, (idx + 1) * GAP);
+        });
+        const ph = rebalanced.map(() => "?").join(",");
+        db.prepare(
+          `UPDATE "jobs" SET board_position = CASE "id" ${cases} END WHERE "id" IN (${ph}) AND "user_id" = ?`
+        ).run(...([...params, ...rebalanced, userId] as never[]));
+
+        newPosition = (clampedIndex + 1) * GAP;
+      } else {
+        newPosition = (prevPos + nextPos) / 2;
+      }
+    }
   }
 
   // Move the card itself — fires the status-sync trigger via UPDATE OF list_id.
   await supabase
     .from("jobs")
-    .update({ list_id: listId, board_position: ordered.indexOf(jobId) })
+    .update({ list_id: listId, board_position: newPosition })
     .eq("id", jobId)
     .eq("user_id", userId);
 
   // Reaching an "applied" column creates the submission record if absent.
-  // Dragging back OUT of it never deletes that record.
   if (list.kind === "applied") {
     await ensureApplication(supabase, userId, jobId);
   }

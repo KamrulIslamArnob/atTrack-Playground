@@ -7,6 +7,8 @@ interface PageHeaderProps {
   children?: React.ReactNode;
   /** Optional breadcrumb label overrides. */
   breadcrumbLabels?: Record<string, string>;
+  /** Hide the breadcrumb + toolbar row (Layer 2) when the page handles it elsewhere. */
+  hideBreadcrumbRow?: boolean;
 }
 
 /**
@@ -20,6 +22,7 @@ export function PageHeader({
   subtitle,
   children,
   breadcrumbLabels,
+  hideBreadcrumbRow,
 }: PageHeaderProps) {
   return (
     <div className="space-y-0">
@@ -36,11 +39,13 @@ export function PageHeader({
       </div>
 
       {/* Layer 2 — Breadcrumbs + Toolbar */}
-      <div className="-mx-6 flex flex-wrap items-center gap-3 border-b border-border px-6 py-3">
-        <Breadcrumbs labels={breadcrumbLabels} />
-        <div className="flex-1" />
-        {children}
-      </div>
+      {!hideBreadcrumbRow && (
+        <div className="-mx-6 flex flex-wrap items-center gap-3 border-b border-border px-6 py-3">
+          <Breadcrumbs labels={breadcrumbLabels} />
+          <div className="flex-1" />
+          {children}
+        </div>
+      )}
     </div>
   );
 }

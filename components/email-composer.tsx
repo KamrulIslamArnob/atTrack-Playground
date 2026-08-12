@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { streamGenerateEmail, parseEmailFromStream, type EmailGenerationParams } from "@/lib/ai/email";
 import { sendApplicationEmail } from "@/lib/actions/email";
+import { getCachedOutput } from "@/lib/actions/ai-cache";
 import { ArrowLeft, RefreshCw, Copy, Check, Loader2, FileText, Paperclip, Send, Pencil } from "lucide-react";
 
 interface Resume {
@@ -60,7 +61,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
 
   const selectedResume = resumes.find((r) => r.id === selectedResumeId) ?? null;
 
-  const generateEmail = useCallback(async (resumeId: string) => {
+  const generateEmail = useCallback(async (resumeId: string, signal?: AbortSignal) => {
     const resume = resumes.find((r) => r.id === resumeId);
 
     setIsStreaming(true);
@@ -81,8 +82,25 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
       resumeContent: resume?.content ?? null,
     };
 
+    // Check cache first — if the same inputs were generated before, skip streaming.
     try {
-      for await (const chunk of streamGenerateEmail(params)) {
+      const cached = await getCachedOutput("email", {
+        kind: "email",
+        ...params,
+      });
+      if (cached && !signal?.aborted) {
+        setSubject(cached.subject);
+        setBody(cached.body);
+        setIsStreaming(false);
+        setIsReady(true);
+        return;
+      }
+    } catch {
+      // cache miss or error — fall through to streaming
+    }
+
+    try {
+      for await (const chunk of streamGenerateEmail(params, signal)) {
         streamRef.current += chunk;
         setRawStream(streamRef.current);
 
@@ -113,17 +131,21 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
     }
   }, [job, applicant, resumes]);
 
-  // Auto-generate on mount
+  // Auto-generate on mount (with abort cleanup)
   useEffect(() => {
-    const controller = abortRef.current;
-    generateEmail(selectedResumeId);
-    return () => controller?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    generateEmail(selectedResumeId, controller.signal);
+    return () => controller.abort();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResumeChange = (resumeId: string | null) => {
     if (!resumeId) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setSelectedResumeId(resumeId);
-    generateEmail(resumeId);
+    generateEmail(resumeId, controller.signal);
   };
 
   const handleCopy = () => {
@@ -178,7 +200,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
         </button>
         <div className="flex flex-wrap items-center gap-2">
           {!isStreaming && (
-            <Button variant="outline" size="sm" onClick={() => generateEmail(selectedResumeId)} className="gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => { abortRef.current?.abort(); const c = new AbortController(); abortRef.current = c; generateEmail(selectedResumeId, c.signal); }} className="gap-1.5">
               <RefreshCw className="size-3.5" />
               Regenerate
             </Button>

@@ -10,6 +10,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Mail, Sparkles } from "lucide-react";
 
 import { UpdateChecker } from "@/components/settings/update-checker";
+import { ExtensionSettings } from "@/components/settings/extension-settings";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -37,6 +38,8 @@ export default async function SettingsPage() {
       <Breadcrumbs />
 
       <UpdateChecker />
+
+      <ExtensionSettings />
 
       <Card>
         <CardContent className="pt-0">

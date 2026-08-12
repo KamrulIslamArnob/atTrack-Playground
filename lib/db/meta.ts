@@ -4,12 +4,13 @@
 // in the same change or reads will hand back a raw string / 0|1 to the callers.
 
 export const JSON_COLUMNS: Record<string, readonly string[]> = {
-  jobs: ["notes", "project_links"],
+  jobs: ["notes", "project_links", "skills", "benefits"],
   documents: ["match_data", "builder_data"],
   mcq_results: ["answers", "questions"],
+  mcq_question_cache: ["questions"],
+  ai_output_cache: ["output"],
   ai_usage_logs: ["metadata"],
   ai_extraction_logs: ["extracted_fields"],
-  timeline_events: ["metadata"],
   users: ["raw_user_meta_data"],
   ai_task_routes: ["provider_ids"],
 };
@@ -19,6 +20,7 @@ export const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {
   documents: ["is_default"],
   positions: ["is_primary"],
   job_deadlines: ["is_pinned", "is_completed"],
+  jobs: ["is_unpaid"],
 };
 
 /** Columns that get an auto-generated UUID on insert when absent. */

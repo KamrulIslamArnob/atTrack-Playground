@@ -20,6 +20,10 @@ The original task documents were implementation plans generated during earlier d
 | `tasks/archive/superpowers/plans/2026-08-10-resume-builder-plan.md` | Detailed resume-builder plan, including data shape, editor flow, HTML/LaTeX renderers, PDF export, and self-check strategy. | Preserve architectural summary only. |
 | `tasks/archive/superpowers/specs/2026-08-10-resume-builder-design.md` | Design spec for a LaTeX-faithful resume builder. | Preserve decisions and constraints only. |
 | `tasks/archive/superpowers/specs/resume-template-reference.tex` | Private/template reference used to seed a resume-builder implementation. | Do not keep as a public docs artifact. Avoid preserving private resume content in docs. |
+| `docs/ai-optimization.md` | AI request queue, caching, timeout/abort, and output validation plan/report. | Consolidated into `PlanningSummary.md` and `DEVELOPMENT.md`. |
+| `docs/resume-builder-interaction-plan.md` | Interactive resume editor component architecture plan. | Consolidated into `PlanningSummary.md` and `Design.md`. |
+| `docs/resume-builder-interactions-prompt.md` | Implementation prompt for Novorésumé-style interactive editor. | Consolidated into `PlanningSummary.md`. |
+| `docs/resume-builder-product-vision.md` | Product vision and personas for local-first resume builder. | Consolidated into `PlanningSummary.md`. |
 
 ## Contributor guidance from the old task files
 
@@ -166,26 +170,35 @@ Current contributor takeaway:
 - Keep company as a tag/linking concept rather than a hard container.
 - Use existing UI primitives and design rules for dialogs/cards.
 
-### Resume builder
+### AI subsystem optimization (P0/P1/P2)
 
-The old resume-builder plan proposed:
+The AI subsystem optimization established key request-layer, caching, and validation infrastructure:
 
-- A structured `ResumeDoc` data shape.
-- Builder data stored on `documents` rows.
-- HTML/CSS preview and print route.
-- `.tex` export.
-- PDF export through Electron `printToPDF`.
-- Shared parsing so HTML and LaTeX renderers do not drift.
+- **Request Layer (`lib/ai/background.ts`)**: Serialized processing queue for AI operations, per-job deduplication, rate limit handling with exponential backoff, 60s timeout per hop, and AbortSignal support across fetches.
+- **SQLite Output & Question Caching**: Content-hash keyed caching in SQLite tables (`ai_output_cache`, `mcq_question_cache`) for extractions, resume matching, and MCQ generation to avoid duplicate provider API calls.
+- **Strict Validation & Logging**: Schema validation on MCQ, keyword, and email outputs; strict output contract preservation; accurate model attribution in telemetry logs.
 
 Current contributor takeaway:
 
-- The resume builder now uses one canonical `ResumeDoc` data shape, shared inline parsing, an editable UI, a Letter-size print route, and `.tex` export.
-- Keep renderer behavior consistent through shared parsing/formatting utilities.
-- Avoid preserving private resume content in public docs.
-- Keep the printable resume surface deterministic and light-mode independent.
+- All LLM calls pass through provider routing (`lib/ai/providers.ts`) and background queue helpers where applicable.
+- Do not bypass output caching or schema validation when creating new AI tools.
+
+### Resume builder & interactive editor
+
+The resume builder initiative delivered a local-first, Novorésumé-inspired interactive workspace:
+
+- **Canonical Data Schema**: Frozen `ResumeDoc` structure (`lib/types/resume-builder.ts`) stored in `documents.builder_data`.
+- **Interactive Editing**: Novorésumé-style click-to-edit fields (`components/resume-builder/interactive/`), inline rich text parsing (`lib/resume/inline.ts`), drag-reorder for sections and bullets (`draggable-section.tsx`), and a live Letter-size preview pane.
+- **LaTeX & HTML Parity**: Dual rendering path (`lib/resume/render-html.tsx`, `lib/resume/render-tex.ts`) ensuring on-screen preview and downloadable `.tex` exports produce identical formatting.
+
+Current contributor takeaway:
+
+- Keep the `ResumeDoc` schema frozen to maintain 100% backward compatibility for stored user documents.
+- Any new resume layout or formatting rules must update both the HTML preview renderer and the LaTeX export generator.
+- Maintain light-mode independent, deterministic output for print routes (`/print/resume/[id]`).
 
 ## What happened to the old task files?
 
-The old `tasks/` documents were consolidated into this file so the repository has one documentation home: `docs/`.
+The historical `tasks/` documents and one-off task artifacts (`ai-optimization.md`, `resume-builder-*.md`) were consolidated into this file so the repository has a single, clean documentation index in `docs/`.
 
-If a future feature needs a detailed implementation plan, place the active plan in `docs/ROADMAP.md` or add a short section here. Avoid adding many separate planning files unless the project genuinely needs them.
+If a future feature needs a detailed implementation plan, place the active plan in `docs/ROADMAP.md` or add a short summary section here once implemented. Avoid adding standalone planning files to the `docs/` root.

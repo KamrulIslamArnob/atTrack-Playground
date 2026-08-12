@@ -2,7 +2,7 @@
   "appId": "com.attrack.desktop",
   "productName": "AtTrack",
   "directories": {
-    "output": "release"
+    "output": "C:/Users/Kamru/AtTrack-Release"
   },
   "files": ["electron/**/*", "package.json"],
   "publish": {

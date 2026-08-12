@@ -1,14 +1,16 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
+import { getDb } from "@/lib/db/sqlite";
 
 export interface SearchResult {
-  type: "job" | "company" | "contact" | "document" | "application" | "interview" | "page";
+  type: "job" | "company" | "contact" | "document" | "application" | "interview" | "deadline" | "position" | "page";
   id: string;
   title: string;
   subtitle: string;
   href: string;
   icon: string;
+  contentSnippet?: string;
 }
 
 export interface AdminSearchResult {
@@ -30,33 +32,15 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Documents", href: "/documents", keywords: "resume cv cover letter file upload" },
   { title: "Settings", href: "/settings", keywords: "account profile smtp email preferences" },
   { title: "AI Prompts", href: "/preferences/ai-prompts", keywords: "custom ai system prompts cover letter templates preferences" },
+  { title: "Database", href: "/preferences/database", keywords: "database sqlite tables schema viewer data preferences" },
+  { title: "Performance", href: "/preferences/performance", keywords: "performance ram memory cpu system ports root path connection process status details preferences" },
 ];
-
-const STATUS_LABELS: Record<string, string> = {
-  saved: "Saved",
-  interested: "Interested",
-  preparing: "Preparing",
-  draft: "Draft",
-  submitted: "Submitted",
-  acknowledged: "Acknowledged",
-  interview: "Interview",
-  offer: "Offer",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
-  scheduled: "Scheduled",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  rescheduled: "Rescheduled",
-};
 
 export async function globalSearch(query: string): Promise<SearchResult[]> {
   if (!query || query.trim().length < 2) return [];
 
-  const { supabase, userId } = await getUser();
+  const { userId } = await getUser();
   const q = query.trim();
-  const like = `%${q}%`;
-  const limit = 6;
   const results: SearchResult[] = [];
 
   // 1. Pages & Navigation
@@ -76,139 +60,77 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }
   }
 
-  // 2. Jobs
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, title, status, location, tags, company:companies(name)")
-    .eq("user_id", userId)
-    .or(`title.ilike.${like},location.ilike.${like},tags.ilike.${like}`)
-    .limit(limit);
+  // 2. Omni-Search FTS5 Single Query (O(1) inverted index term lookup time complexity)
+  try {
+    const db = getDb();
+    const sanitized = q.replace(/[^a-zA-Z0-9\s]/g, "").trim();
+    let ftsRows: Array<{
+      entity_type: string;
+      entity_id: string;
+      title: string;
+      subtitle: string;
+      content: string;
+      href: string;
+      icon: string;
+    }> = [];
 
-  for (const job of jobs ?? []) {
-    const company = Array.isArray(job.company) ? job.company[0] : job.company;
-    results.push({
-      type: "job",
-      id: job.id,
-      title: job.title,
-      subtitle: [company?.name, job.location, STATUS_LABELS[job.status] ?? job.status, job.tags ? `Tags: ${job.tags}` : null]
-        .filter(Boolean)
-        .join(" · "),
-      href: `/board?jobId=${job.id}`,
-      icon: "job",
-    });
-  }
+    if (sanitized.length > 0) {
+      const ftsQuery = sanitized.split(/\s+/).filter(Boolean).map((term) => `"${term}"*`).join(" ");
+      try {
+        ftsRows = db.prepare(`
+          SELECT entity_type, entity_id, title, subtitle, content, href, icon
+          FROM omni_search_index
+          WHERE user_id = ? AND omni_search_index MATCH ?
+          ORDER BY bm25(omni_search_index, 10.0, 5.0, 2.0)
+          LIMIT 150
+        `).all(userId, ftsQuery) as typeof ftsRows;
+      } catch {
+        const like = `%${q}%`;
+        ftsRows = db.prepare(`
+          SELECT entity_type, entity_id, title, subtitle, content, href, icon
+          FROM omni_search_index
+          WHERE user_id = ? AND (title LIKE ? OR subtitle LIKE ? OR content LIKE ?)
+          LIMIT 150
+        `).all(userId, like, like, like) as typeof ftsRows;
+      }
+    } else {
+      const like = `%${q}%`;
+      ftsRows = db.prepare(`
+        SELECT entity_type, entity_id, title, subtitle, content, href, icon
+        FROM omni_search_index
+        WHERE user_id = ? AND (title LIKE ? OR subtitle LIKE ? OR content LIKE ?)
+        LIMIT 150
+      `).all(userId, like, like, like) as typeof ftsRows;
+    }
 
-  // 3. Companies
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name, website, location, company_type, country")
-    .eq("user_id", userId)
-    .or(`name.ilike.${like},website.ilike.${like},location.ilike.${like},company_type.ilike.${like}`)
-    .limit(limit);
+    for (const r of ftsRows) {
+      let snippet: string | undefined = undefined;
+      if (r.content && r.content.trim().length > 0) {
+        const cleanContent = r.content.trim();
+        const matchIdx = cleanContent.toLowerCase().indexOf(q.toLowerCase());
+        if (matchIdx >= 0) {
+          const start = Math.max(0, matchIdx - 30);
+          const end = Math.min(cleanContent.length, matchIdx + q.length + 50);
+          snippet = (start > 0 ? "..." : "") + cleanContent.slice(start, end) + (end < cleanContent.length ? "..." : "");
+        } else if (cleanContent.length > 100) {
+          snippet = cleanContent.slice(0, 100) + "...";
+        } else {
+          snippet = cleanContent;
+        }
+      }
 
-  for (const comp of companies ?? []) {
-    results.push({
-      type: "company",
-      id: comp.id,
-      title: comp.name,
-      subtitle: [comp.location || comp.country, comp.company_type, comp.website]
-        .filter(Boolean)
-        .join(" · "),
-      href: "/crm",
-      icon: "company",
-    });
-  }
-
-  // 4. Contacts
-  const { data: contacts } = await supabase
-    .from("contacts")
-    .select("id, name, email, role, position, notes, company:companies(name)")
-    .eq("user_id", userId)
-    .or(`name.ilike.${like},email.ilike.${like},role.ilike.${like},position.ilike.${like},notes.ilike.${like}`)
-    .limit(limit);
-
-  for (const c of contacts ?? []) {
-    const comp = Array.isArray(c.company) ? c.company[0] : c.company;
-    results.push({
-      type: "contact",
-      id: c.id,
-      title: c.name,
-      subtitle: [c.position, comp?.name, c.email, c.role ? `Tags: ${c.role}` : null]
-        .filter(Boolean)
-        .join(" · "),
-      href: "/crm",
-      icon: "contact",
-    });
-  }
-
-  // 5. Board Cards & Applications
-  const { data: applications } = await supabase
-    .from("applications")
-    .select("id, status, resume_name, job:jobs(id, title, company:companies(name))")
-    .eq("user_id", userId)
-    .or(`resume_name.ilike.${like},notes.ilike.${like}`)
-    .limit(limit);
-
-  for (const app of applications ?? []) {
-    const job = Array.isArray(app.job) ? app.job[0] : app.job;
-    const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
-    results.push({
-      type: "application",
-      id: app.id,
-      title: job?.title ?? "Application",
-      subtitle: [company?.name, STATUS_LABELS[app.status] ?? app.status, app.resume_name]
-        .filter(Boolean)
-        .join(" · "),
-      href: `/board`,
-      icon: "application",
-    });
-  }
-
-  // 6. Documents & Resumes
-  const { data: documents } = await supabase
-    .from("documents")
-    .select("id, name, type, created_at")
-    .eq("user_id", userId)
-    .or(`name.ilike.${like}`)
-    .limit(limit);
-
-  for (const doc of documents ?? []) {
-    results.push({
-      type: "document",
-      id: doc.id,
-      title: doc.name,
-      subtitle: [doc.type === "resume" ? "Resume" : doc.type === "cover_letter" ? "Cover Letter" : "Document"]
-        .filter(Boolean)
-        .join(" · "),
-      href: `/documents`,
-      icon: "document",
-    });
-  }
-
-  // 7. Interviews
-  const { data: interviews } = await supabase
-    .from("interviews")
-    .select("id, type, status, interviewer_name, scheduled_at, location, job:jobs(id, title, company:companies(name))")
-    .eq("user_id", userId)
-    .or(`interviewer_name.ilike.${like},location.ilike.${like},notes.ilike.${like}`)
-    .limit(limit);
-
-  for (const iv of interviews ?? []) {
-    const job = Array.isArray(iv.job) ? iv.job[0] : iv.job;
-    const company = job ? (Array.isArray(job.company) ? job.company[0] : job.company) : null;
-    const date = iv.scheduled_at
-      ? new Date(iv.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-      : null;
-    results.push({
-      type: "interview",
-      id: iv.id,
-      title: job?.title ?? "Interview",
-      subtitle: [company?.name, iv.interviewer_name ? `Interviewer: ${iv.interviewer_name}` : null, iv.type, date]
-        .filter(Boolean)
-        .join(" · "),
-      href: `/interviews`,
-      icon: "interview",
-    });
+      results.push({
+        type: r.entity_type as SearchResult["type"],
+        id: r.entity_id,
+        title: r.title || "Untitled",
+        subtitle: r.subtitle || "",
+        href: r.href || "#",
+        icon: r.icon || r.entity_type,
+        contentSnippet: snippet,
+      });
+    }
+  } catch (err) {
+    console.error("Omni search query failed:", err);
   }
 
   return results;
@@ -246,56 +168,56 @@ export async function adminGlobalSearch(query: string): Promise<AdminSearchResul
     }
   }
 
-  // Search profiles and users via local DB client
-  const { supabase } = await getUser();
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, role, is_banned");
+  // Optimized indexed SQL join search directly against SQLite engine
+  const db = getDb();
+  const matchedProfiles = db.prepare(`
+    SELECT p.id, p.full_name, p.role, p.is_banned, u.email
+    FROM profiles p
+    LEFT JOIN users u ON p.id = u.id
+    WHERE p.full_name LIKE ? OR p.role LIKE ? OR u.email LIKE ?
+    LIMIT ?
+  `).all(like, like, like, limit) as Array<{
+    id: string;
+    full_name: string | null;
+    role: string | null;
+    is_banned: boolean | null;
+    email: string | null;
+  }>;
 
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, email");
-
-  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
-
-  for (const profile of profiles ?? []) {
-    const user = userMap.get(profile.id);
-    const email = user?.email ?? "";
-    const searchable = [email, profile.full_name, profile.role]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    if (searchable.includes(q.toLowerCase())) {
-      results.push({
-        type: "user",
-        id: profile.id,
-        title: profile.full_name ?? email ?? "Unknown",
-        subtitle: [email, profile.role, profile.is_banned ? "Banned" : null]
-          .filter(Boolean)
-          .join(" · "),
-        href: `/admin/users/${profile.id}`,
-        icon: "user",
-      });
-    }
+  for (const p of matchedProfiles) {
+    results.push({
+      type: "user",
+      id: p.id,
+      title: p.full_name ?? p.email ?? "Unknown",
+      subtitle: [p.email, p.role, p.is_banned ? "Banned" : null]
+        .filter(Boolean)
+        .join(" · "),
+      href: `/admin/users/${p.id}`,
+      icon: "user",
+    });
   }
 
+  const matchedAiLogs = db.prepare(`
+    SELECT l.id, l.action, l.model, l.user_id, u.email
+    FROM ai_usage_logs l
+    LEFT JOIN users u ON l.user_id = u.id
+    WHERE l.action LIKE ? OR l.model LIKE ?
+    ORDER BY l.created_at DESC
+    LIMIT ?
+  `).all(like, like, limit) as Array<{
+    id: string;
+    action: string;
+    model: string;
+    user_id: string;
+    email: string | null;
+  }>;
 
-
-  // Search AI usage logs
-  const { data: aiLogs } = await supabase
-    .from("ai_usage_logs")
-    .select("id, action, model, user_id, created_at")
-    .or(`action.ilike.${like},model.ilike.${like}`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  for (const log of aiLogs ?? []) {
-    const userEmail = userMap.get(log.user_id)?.email ?? "unknown";
+  for (const log of matchedAiLogs) {
     results.push({
       type: "ai_usage",
       id: log.id,
       title: `${log.action} (${log.model})`,
-      subtitle: userEmail,
+      subtitle: log.email ?? "unknown",
       href: "/admin/ai-usage",
       icon: "ai_usage",
     });

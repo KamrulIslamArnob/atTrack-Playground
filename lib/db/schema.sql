@@ -105,7 +105,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_board_lists_one_per_kind
 CREATE TABLE IF NOT EXISTS documents (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  application_id TEXT,          -- legacy from 001, unused by current code
   type TEXT NOT NULL CHECK (type IN ('resume','cover_letter','other')),
   name TEXT NOT NULL,
   file_path TEXT NOT NULL,
@@ -119,6 +118,7 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 CREATE INDEX IF NOT EXISTS idx_documents_user ON documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_documents_user_type ON documents(user_id, type);
 -- One default document per user, matching migration 013.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_documents_one_default
   ON documents(user_id) WHERE is_default = 1;
@@ -174,13 +174,29 @@ CREATE TABLE IF NOT EXISTS jobs (
   color TEXT,                   -- job-detail-sheet: per-job accent override; falls back to list color when NULL
   section_deadline TEXT,        -- ISO date/time for section target deadline
   section_deadline_list_id TEXT REFERENCES board_lists(id) ON DELETE SET NULL,
+  skills TEXT,                  -- JSON: string[]
+  educational_requirements TEXT,
+  benefits TEXT,                -- JSON: string[]
+  work_schedule TEXT,
+  holiday_policy TEXT,
+  map_url TEXT,
+  is_unpaid INTEGER DEFAULT 0,
+  salary_min REAL,
+  salary_max REAL,
+  salary_currency TEXT,
+  salary_period TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_jobs_user ON jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_user_status ON jobs(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_jobs_user_created ON jobs(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_board ON jobs(user_id, list_id, board_position);
 CREATE INDEX IF NOT EXISTS idx_jobs_position_id ON jobs(position_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_company_id ON jobs(company_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_resume_id ON jobs(resume_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_matched_resume_id ON jobs(matched_resume_id);
 
 -- =============================================
 -- applications (001, 010, 016)
@@ -200,6 +216,7 @@ CREATE TABLE IF NOT EXISTS applications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_applications_user_status ON applications(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_applications_job ON applications(job_id);
 
 -- =============================================
@@ -225,6 +242,7 @@ CREATE TABLE IF NOT EXISTS interviews (
 );
 
 CREATE INDEX IF NOT EXISTS idx_interviews_user ON interviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_interviews_user_scheduled ON interviews(user_id, scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_interviews_job ON interviews(job_id);
 
 -- =============================================
@@ -274,28 +292,8 @@ CREATE TABLE IF NOT EXISTS job_documents (
 
 CREATE INDEX IF NOT EXISTS idx_job_documents_document ON job_documents(document_id);
 
--- =============================================
--- timeline_events, notes (001) — present for parity; unused by current code
--- =============================================
-CREATE TABLE IF NOT EXISTS timeline_events (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-  type TEXT NOT NULL,
-  title TEXT,
-  description TEXT,
-  metadata TEXT DEFAULT '{}',   -- JSON
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
-
-CREATE TABLE IF NOT EXISTS notes (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
+-- timeline_events and notes removed: unused by current code. Migration in
+-- sqlite.ts drops them from databases that predate this deletion.
 
 -- =============================================
 -- application_emails (016)
@@ -406,7 +404,7 @@ CREATE INDEX IF NOT EXISTS idx_job_deadlines_user ON job_deadlines(user_id);
 -- =============================================
 CREATE TABLE IF NOT EXISTS ai_extraction_logs (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   screenshot_id TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending','success','error')),
   model TEXT NOT NULL,
@@ -436,11 +434,42 @@ CREATE INDEX IF NOT EXISTS idx_mcq_results_user ON mcq_results(user_id);
 CREATE INDEX IF NOT EXISTS idx_mcq_results_job ON mcq_results(job_id);
 
 -- =============================================
+-- mcq_question_cache (020): last generated question set per job. A retake is
+-- served from here while the job's content hash matches, so re-opening the
+-- practice modal costs zero tokens.
+-- =============================================
+CREATE TABLE IF NOT EXISTS mcq_question_cache (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  content_hash TEXT NOT NULL,
+  questions TEXT NOT NULL,      -- JSON
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_mcq_question_cache_job ON mcq_question_cache(job_id);
+
+-- =============================================
+-- ai_output_cache (021): caches the last generated email / AI tool output for
+-- a given content hash so re-opening a tab is instant and costs no tokens.
+-- =============================================
+CREATE TABLE IF NOT EXISTS ai_output_cache (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  content_hash TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  output TEXT NOT NULL,          -- JSON { subject, body }
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_output_cache_hash ON ai_output_cache(user_id, content_hash);
+
+-- =============================================
 -- smtp_config (015)
 -- =============================================
 CREATE TABLE IF NOT EXISTS smtp_config (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
   host TEXT NOT NULL DEFAULT 'smtp.gmail.com',
   port INTEGER NOT NULL DEFAULT 465,
   user_email TEXT NOT NULL,
@@ -463,9 +492,6 @@ BEGIN UPDATE applications SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') 
 
 CREATE TRIGGER IF NOT EXISTS trg_interviews_updated AFTER UPDATE ON interviews
 BEGIN UPDATE interviews SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
-
-CREATE TRIGGER IF NOT EXISTS trg_notes_updated AFTER UPDATE ON notes
-BEGIN UPDATE notes SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
 
 CREATE TRIGGER IF NOT EXISTS trg_board_lists_updated AFTER UPDATE ON board_lists
 BEGIN UPDATE board_lists SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
@@ -506,3 +532,232 @@ BEGIN
     ELSE 'preparing' END
   WHERE id = NEW.id;
 END;
+
+-- =============================================
+-- Omni-Search FTS5 Index & Triggers (022)
+-- Enables unified O(1) term lookup time complexity across all app entities.
+-- =============================================
+CREATE VIRTUAL TABLE IF NOT EXISTS omni_search_index USING fts5(
+  entity_type UNINDEXED,
+  entity_id UNINDEXED,
+  user_id UNINDEXED,
+  title,
+  subtitle,
+  content,
+  href UNINDEXED,
+  icon UNINDEXED,
+  tokenize = 'unicode61 remove_diacritics 2'
+);
+
+-- Triggers for jobs
+CREATE TRIGGER IF NOT EXISTS trg_omni_jobs_ins AFTER INSERT ON jobs BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'job', NEW.id, NEW.user_id, NEW.title,
+    COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.employment_type, '') || ' ' || COALESCE(NEW.status, '') || ' ' || COALESCE(NEW.source, ''),
+    COALESCE(NEW.description, '') || ' ' || COALESCE(NEW.notes, ''),
+    '/board?jobId=' || NEW.id, 'job'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_jobs_upd AFTER UPDATE ON jobs BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'job' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'job', NEW.id, NEW.user_id, NEW.title,
+    COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.employment_type, '') || ' ' || COALESCE(NEW.status, '') || ' ' || COALESCE(NEW.source, ''),
+    COALESCE(NEW.description, '') || ' ' || COALESCE(NEW.notes, ''),
+    '/board?jobId=' || NEW.id, 'job'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_jobs_del AFTER DELETE ON jobs BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'job' AND entity_id = OLD.id;
+END;
+
+-- Triggers for contacts
+CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_ins AFTER INSERT ON contacts BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'contact', NEW.id, NEW.user_id, NEW.name,
+    COALESCE(NEW.position, '') || ' ' || COALESCE(NEW.role, '') || ' ' || COALESCE(NEW.email, '') || ' ' || COALESCE(NEW.phone, ''),
+    COALESCE(NEW.notes, '') || ' ' || COALESCE(NEW.linkedin_url, '') || ' ' || COALESCE(NEW.github_url, ''),
+    '/crm', 'contact'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_upd AFTER UPDATE ON contacts BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'contact' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'contact', NEW.id, NEW.user_id, NEW.name,
+    COALESCE(NEW.position, '') || ' ' || COALESCE(NEW.role, '') || ' ' || COALESCE(NEW.email, '') || ' ' || COALESCE(NEW.phone, ''),
+    COALESCE(NEW.notes, '') || ' ' || COALESCE(NEW.linkedin_url, '') || ' ' || COALESCE(NEW.github_url, ''),
+    '/crm', 'contact'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_del AFTER DELETE ON contacts BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'contact' AND entity_id = OLD.id;
+END;
+
+-- Triggers for companies
+CREATE TRIGGER IF NOT EXISTS trg_omni_companies_ins AFTER INSERT ON companies BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'company', NEW.id, NEW.user_id, NEW.name,
+    COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.company_type, '') || ' ' || COALESCE(NEW.country, ''),
+    COALESCE(NEW.website, ''),
+    '/crm', 'company'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_companies_upd AFTER UPDATE ON companies BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'company' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'company', NEW.id, NEW.user_id, NEW.name,
+    COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.company_type, '') || ' ' || COALESCE(NEW.country, ''),
+    COALESCE(NEW.website, ''),
+    '/crm', 'company'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_companies_del AFTER DELETE ON companies BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'company' AND entity_id = OLD.id;
+END;
+
+-- Triggers for applications
+CREATE TRIGGER IF NOT EXISTS trg_omni_applications_ins AFTER INSERT ON applications BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'application', NEW.id, NEW.user_id,
+    COALESCE(NEW.resume_name, 'Application'),
+    'Status: ' || COALESCE(NEW.status, 'draft'),
+    COALESCE(NEW.notes, ''),
+    '/applications', 'application'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_applications_upd AFTER UPDATE ON applications BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'application' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'application', NEW.id, NEW.user_id,
+    COALESCE(NEW.resume_name, 'Application'),
+    'Status: ' || COALESCE(NEW.status, 'draft'),
+    COALESCE(NEW.notes, ''),
+    '/applications', 'application'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_applications_del AFTER DELETE ON applications BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'application' AND entity_id = OLD.id;
+END;
+
+-- Triggers for interviews
+CREATE TRIGGER IF NOT EXISTS trg_omni_interviews_ins AFTER INSERT ON interviews BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'interview', NEW.id, NEW.user_id,
+    'Interview' || (CASE WHEN NEW.type IS NOT NULL THEN ' (' || NEW.type || ')' ELSE '' END),
+    COALESCE(NEW.interviewer_name, '') || ' ' || COALESCE(NEW.interviewer_email, '') || ' ' || COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.status, ''),
+    COALESCE(NEW.notes, '') || ' ' || COALESCE(NEW.prep_notes, ''),
+    '/interviews', 'interview'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_interviews_upd AFTER UPDATE ON interviews BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'interview' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'interview', NEW.id, NEW.user_id,
+    'Interview' || (CASE WHEN NEW.type IS NOT NULL THEN ' (' || NEW.type || ')' ELSE '' END),
+    COALESCE(NEW.interviewer_name, '') || ' ' || COALESCE(NEW.interviewer_email, '') || ' ' || COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.status, ''),
+    COALESCE(NEW.notes, '') || ' ' || COALESCE(NEW.prep_notes, ''),
+    '/interviews', 'interview'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_interviews_del AFTER DELETE ON interviews BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'interview' AND entity_id = OLD.id;
+END;
+
+-- Triggers for documents
+CREATE TRIGGER IF NOT EXISTS trg_omni_documents_ins AFTER INSERT ON documents BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'document', NEW.id, NEW.user_id, NEW.name,
+    'Type: ' || NEW.type,
+    COALESCE(NEW.content, '') || ' ' || COALESCE(NEW.file_path, ''),
+    '/documents', 'document'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_documents_upd AFTER UPDATE ON documents BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'document' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'document', NEW.id, NEW.user_id, NEW.name,
+    'Type: ' || NEW.type,
+    COALESCE(NEW.content, '') || ' ' || COALESCE(NEW.file_path, ''),
+    '/documents', 'document'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_documents_del AFTER DELETE ON documents BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'document' AND entity_id = OLD.id;
+END;
+
+-- Triggers for job_deadlines
+CREATE TRIGGER IF NOT EXISTS trg_omni_deadlines_ins AFTER INSERT ON job_deadlines BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'deadline', NEW.id, NEW.user_id, NEW.title,
+    'Due: ' || NEW.due_date || (CASE WHEN NEW.stage_kind IS NOT NULL THEN ' · ' || NEW.stage_kind ELSE '' END),
+    COALESCE(NEW.notes, ''),
+    '/board', 'deadline'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_deadlines_upd AFTER UPDATE ON job_deadlines BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'deadline' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'deadline', NEW.id, NEW.user_id, NEW.title,
+    'Due: ' || NEW.due_date || (CASE WHEN NEW.stage_kind IS NOT NULL THEN ' · ' || NEW.stage_kind ELSE '' END),
+    COALESCE(NEW.notes, ''),
+    '/board', 'deadline'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_deadlines_del AFTER DELETE ON job_deadlines BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'deadline' AND entity_id = OLD.id;
+END;
+
+-- Triggers for positions
+CREATE TRIGGER IF NOT EXISTS trg_omni_positions_ins AFTER INSERT ON positions BEGIN
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'position', NEW.id, NEW.user_id, NEW.name,
+    'Level: ' || COALESCE(NEW.experience_level, 'Standard'),
+    '',
+    '/board', 'position'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_positions_upd AFTER UPDATE ON positions BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'position' AND entity_id = OLD.id;
+  INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
+  VALUES (
+    'position', NEW.id, NEW.user_id, NEW.name,
+    'Level: ' || COALESCE(NEW.experience_level, 'Standard'),
+    '',
+    '/board', 'position'
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_omni_positions_del AFTER DELETE ON positions BEGIN
+  DELETE FROM omni_search_index WHERE entity_type = 'position' AND entity_id = OLD.id;
+END;
+

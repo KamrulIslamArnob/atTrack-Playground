@@ -97,7 +97,7 @@ export function ContactCard({
     setSavingNote(true);
     try {
       await updateContactNotes(contact.id, noteText);
-      contact.notes = noteText.trim() || null;
+      setNoteText(noteText.trim());
       setEditingNote(false);
       toast.success("Note updated");
     } catch {

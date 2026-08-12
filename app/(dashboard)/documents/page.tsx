@@ -11,9 +11,9 @@ export default async function DocumentsPage() {
       <div className="-mx-6 border-b border-border pb-6">
         <div className="flex items-center justify-between px-6">
           <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">Resume/CV</h1>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">Documents & Resumes</h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Your resumes and cover letters. Upload once, attach to any application.
+              Your central hub for resumes, cover letters, and AI-generated documents.
             </p>
           </div>
           <DocumentsUploadInline />

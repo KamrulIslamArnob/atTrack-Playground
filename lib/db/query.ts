@@ -96,7 +96,24 @@ function splitTopLevel(input: string): string[] {
   return parts.map((p) => p.trim()).filter(Boolean);
 }
 
+const MAX_SELECT_CACHE_SIZE = 200;
+const selectAstCache = new Map<string, SelectSpec>();
+
 function parseSelect(select: string): SelectSpec {
+  const normalized = select.trim();
+  const cached = selectAstCache.get(normalized);
+  if (cached) return cached;
+
+  const spec = parseSelectUncached(normalized);
+  if (selectAstCache.size >= MAX_SELECT_CACHE_SIZE) {
+    const firstKey = selectAstCache.keys().next().value;
+    if (firstKey !== undefined) selectAstCache.delete(firstKey);
+  }
+  selectAstCache.set(normalized, spec);
+  return spec;
+}
+
+function parseSelectUncached(select: string): SelectSpec {
   const columns: string[] = [];
   const embeds: EmbedSpec[] = [];
 
@@ -421,9 +438,8 @@ class QueryBuilder implements PromiseLike<DbResult> {
       return { data: [] as unknown as DbData, error: null, count };
     }
 
-    // Always fetch whole rows: embeds need FK columns the caller may not have
-    // listed, and projecting afterwards is cheaper than tracking that.
-    let sql = `SELECT * FROM ${quoteIdent(this.table)}${whereSql}`;
+    const selectClause = buildSelectProjection(this.table, spec, this.orderBy);
+    let sql = `SELECT ${selectClause} FROM ${quoteIdent(this.table)}${whereSql}`;
     if (this.orderBy.length) {
       sql +=
         " ORDER BY " +
@@ -547,9 +563,10 @@ class QueryBuilder implements PromiseLike<DbResult> {
 
     if (ids.length === 0) return this.shapeRows([]);
 
+    const selectClause = buildSelectProjection(this.table, spec, this.orderBy);
     const raw = db
       .prepare(
-        `SELECT * FROM ${quoteIdent(this.table)} WHERE id IN (${ids.map(() => "?").join(",")})`
+        `SELECT ${selectClause} FROM ${quoteIdent(this.table)} WHERE id IN (${ids.map(() => "?").join(",")})`
       )
       .all(...(ids as never[])) as Record<string, unknown>[];
 
@@ -557,6 +574,83 @@ class QueryBuilder implements PromiseLike<DbResult> {
     resolveEmbeds(this.table, rows, spec.embeds);
     return this.shapeRows(rows.map((r) => project(r, spec)));
   }
+}
+
+function buildSelectProjection(
+  parentTable: string,
+  spec: SelectSpec,
+  orderBy: { column: string }[] = []
+): string {
+  if (spec.columns.includes("*") || spec.columns.length === 0) {
+    return "*";
+  }
+
+  const set = new Set<string>();
+
+  for (const col of spec.columns) {
+    const colon = col.indexOf(":");
+    const sourceCol = colon !== -1 ? col.slice(colon + 1).trim() : col;
+    if (sourceCol === "*") return "*";
+    set.add(sourceCol);
+  }
+
+  for (const o of orderBy) {
+    set.add(o.column);
+  }
+
+  for (const embed of spec.embeds) {
+    const rel = findRelation(parentTable, embed.alias, embed.table, embed.fkHint);
+    if (rel) {
+      if (rel.kind === "one") {
+        set.add(rel.column);
+      } else {
+        set.add("id");
+      }
+    }
+  }
+
+  if (set.size === 0) return "*";
+  return Array.from(set).map(quoteIdent).join(", ");
+}
+
+function buildEmbedProjection(
+  relTarget: string,
+  embed: EmbedSpec,
+  relKind: "one" | "many",
+  relColumn: string
+): string {
+  if (embed.columns.includes("*") || embed.columns.length === 0) {
+    return "*";
+  }
+
+  const set = new Set<string>();
+
+  for (const col of embed.columns) {
+    const colon = col.indexOf(":");
+    const sourceCol = colon !== -1 ? col.slice(colon + 1).trim() : col;
+    if (sourceCol === "*") return "*";
+    set.add(sourceCol);
+  }
+
+  if (relKind === "one") {
+    set.add("id");
+  } else {
+    set.add(relColumn);
+  }
+
+  for (const childEmbed of embed.embeds) {
+    const childRel = findRelation(relTarget, childEmbed.alias, childEmbed.table, childEmbed.fkHint);
+    if (childRel) {
+      if (childRel.kind === "one") {
+        set.add(childRel.column);
+      } else {
+        set.add("id");
+      }
+    }
+  }
+
+  if (set.size === 0) return "*";
+  return Array.from(set).map(quoteIdent).join(", ");
 }
 
 /** Keeps only the requested columns, plus whatever the embeds attached. */
@@ -623,9 +717,10 @@ function resolveEmbeds(
 
       const byId = new Map<string, Record<string, unknown>>();
       if (keys.length) {
+        const childSelect = buildEmbedProjection(rel.target, embed, "one", rel.column);
         const raw = db
           .prepare(
-            `SELECT * FROM ${quoteIdent(rel.target)} WHERE id IN (${keys.map(() => "?").join(",")})`
+            `SELECT ${childSelect} FROM ${quoteIdent(rel.target)} WHERE id IN (${keys.map(() => "?").join(",")})`
           )
           .all(...(keys as never[])) as Record<string, unknown>[];
         const decoded = raw.map((r) => decodeRow(rel.target, r)!) as Record<string, unknown>[];
@@ -649,9 +744,10 @@ function resolveEmbeds(
 
     const grouped = new Map<string, Record<string, unknown>[]>();
     if (parentIds.length) {
+      const childSelect = buildEmbedProjection(rel.target, embed, "many", rel.column);
       const raw = db
         .prepare(
-          `SELECT * FROM ${quoteIdent(rel.target)} ` +
+          `SELECT ${childSelect} FROM ${quoteIdent(rel.target)} ` +
             `WHERE ${quoteIdent(rel.column)} IN (${parentIds.map(() => "?").join(",")})`
         )
         .all(...(parentIds as never[])) as Record<string, unknown>[];

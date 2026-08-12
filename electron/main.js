@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, Menu } = require("electron");
 const crypto = require("node:crypto");
 const path = require("node:path");
+const os = require("node:os");
 const { loadSettings, saveSettings } = require("./settings");
 const { findFreePort, waitForReady, spawnServer, stopServer } = require("./server");
 
@@ -10,6 +11,8 @@ app.setName("AtTrack");
 
 let mainWindow = null;
 let serverProcess = null;
+let currentPort = null;
+let currentSettings = null;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -36,6 +39,7 @@ if (!gotLock) {
 
 async function main() {
   const settings = loadSettings();
+  currentSettings = settings;
 
   if (!settings.dataDir) {
     const chosen = await promptForDataDir();
@@ -48,6 +52,7 @@ async function main() {
       return;
     }
     settings.dataDir = chosen;
+    currentSettings = settings;
   }
 
   if (!settings.encryptionKey) {
@@ -61,6 +66,8 @@ async function main() {
   saveSettings(settings);
 
   const port = await findFreePort();
+  currentPort = port;
+
   const standaloneDir = app.isPackaged
     ? path.join(process.resourcesPath, "standalone")
     : path.join(__dirname, "..", ".next", "standalone");
@@ -135,6 +142,78 @@ async function main() {
   });
   ipcMain.on("app:close", () => mainWindow?.close());
   ipcMain.handle("app:is-maximized", () => mainWindow?.isMaximized() ?? false);
+
+  ipcMain.handle("app:get-system-performance", async () => {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memUsage = process.memoryUsage();
+    let procMem = null;
+    try {
+      procMem = await process.getProcessMemoryInfo();
+    } catch (e) {
+      // process.getProcessMemoryInfo fallback
+    }
+    const cpuUsage = process.getCPUUsage();
+    const cpus = os.cpus();
+    const cpuModel = cpus && cpus.length > 0 ? cpus[0].model : "Unknown CPU";
+
+    return {
+      appVersion: app.getVersion(),
+      appName: app.getName(),
+      isPackaged: app.isPackaged,
+      electronVersion: process.versions.electron,
+      nodeVersion: process.versions.node,
+      v8Version: process.versions.v8,
+      platform: os.platform(),
+      osRelease: os.release(),
+      arch: os.arch(),
+      cpus: {
+        model: cpuModel,
+        speed: cpus && cpus.length > 0 ? cpus[0].speed : 0,
+        count: cpus ? cpus.length : 0,
+      },
+      cpuUsage: {
+        percentCPUUsage: Math.round(cpuUsage.percentCPUUsage * 100) / 100,
+        idleWakeupsPerSecond: cpuUsage.idleWakeupsPerSecond,
+      },
+      memory: {
+        totalSystemRamMB: Math.round(totalMem / (1024 * 1024)),
+        freeSystemRamMB: Math.round(freeMem / (1024 * 1024)),
+        usedSystemRamMB: Math.round(usedMem / (1024 * 1024)),
+        ramUsagePercent: Math.round((usedMem / totalMem) * 100),
+        processRssMB: Math.round(memUsage.rss / (1024 * 1024)),
+        processHeapTotalMB: Math.round(memUsage.heapTotal / (1024 * 1024)),
+        processHeapUsedMB: Math.round(memUsage.heapUsed / (1024 * 1024)),
+        electronPrivateMB: procMem ? Math.round(procMem.private / 1024) : undefined,
+        electronSharedMB: procMem ? Math.round(procMem.shared / 1024) : undefined,
+      },
+      paths: {
+        rootFolder: app.getAppPath(),
+        dataDir: currentSettings?.dataDir || app.getPath("userData"),
+        userDataDir: app.getPath("userData"),
+        exePath: app.getPath("exe"),
+        storageDir: currentSettings?.dataDir
+          ? path.join(currentSettings.dataDir, "storage")
+          : path.join(app.getPath("userData"), "storage"),
+      },
+      network: {
+        port: currentPort || 3308,
+        serverUrl: `http://127.0.0.1:${currentPort || 3308}`,
+        host: "127.0.0.1",
+        isOnline: true,
+        dbStatus: "Connected",
+        dbPath: currentSettings?.dataDir
+          ? path.join(currentSettings.dataDir, "attrack.db")
+          : "In-Memory / Default",
+      },
+      uptime: {
+        systemUptimeSec: Math.round(os.uptime()),
+        processUptimeSec: Math.round(process.uptime()),
+      },
+      timestamp: new Date().toISOString(),
+    };
+  });
 
   mainWindow.loadURL(url);
 }

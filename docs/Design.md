@@ -89,6 +89,15 @@ Person-first, not company-nested: contacts are people you know, and a company is
 
 Contact role is always a `Select` over `CONTACT_ROLES` (`lib/types/contacts.ts`), never free text — shown as plain muted text/pill, not a colored badge, since six roles don't carry the same "which one matters" signal a status pill does. Inline add/link forms reuse the same bordered-box pattern as the job-detail-sheet's tabs (Contacts, Documents) rather than a new dialog.
 
+## Resume Builder (`components/resume-builder/`)
+
+Novorésumé-inspired local interactive editor with two-pane layout:
+
+- **Desktop Layout (`xl:` grid)**: Left pane (~55% width) holds the scrollable interactive editor; right pane holds the sticky Letter-size live preview (`ResumePreview`).
+- **Inline Click-to-Edit**: Fields use `click-to-edit-field.tsx` for immediate in-place editing without modal dialogs.
+- **Rich Text & Formatting**: Summary and bullet points use `inline-rich-text.tsx` emitting standard inline markup (`**bold**`, `*italic*`, links, ` · ` separators) consumed identically by the HTML preview and LaTeX export (`lib/resume/render-tex.ts`).
+- **Drag & Reorder**: Section cards and list bullets utilize `@dnd-kit` wrappers (`draggable-section.tsx`) with keyboard accessible move fallback controls.
+
 ## Brand gradient
 
 Signature accent gradient (lime → olive-lime → deep green), matching `--primary`/`--ring` below — the gradient's `-to` endpoint is literally `--primary`'s green, `-from` is `--ring`'s lime. Defined once in [app/globals.css](app/globals.css) as CSS custom properties + utility classes, so it's used consistently instead of re-picked per component.

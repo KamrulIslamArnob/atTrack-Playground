@@ -47,6 +47,26 @@ interface ProviderRow {
 
 const DEFAULT_GEMINI_MODEL = "models/gemini-2.0-flash";
 
+/** Hard ceiling on one provider call. A hung provider must not stall the
+ *  whole chain (non-streaming hops) or the UI's first token (streaming). */
+const HOP_TIMEOUT_MS = 60_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 /** Zero-config fallback: today's single hardcoded Gemini client, used
  *  whenever a task has no configured chain — keeps the app working out of
  *  the box with nothing but GEMINI_API_KEY set. */
@@ -115,6 +135,8 @@ export interface GenerateTextInput {
   systemPrompt?: string;
   userPrompt: string;
   images?: { mimeType: string; data: string }[];
+  temperature?: number;
+  maxOutputTokens?: number;
 }
 
 export interface GenerateTextResult {
@@ -139,6 +161,10 @@ export async function callGemini(provider: ResolvedProvider, input: GenerateText
   const response = await ai.models.generateContent({
     model: provider.model,
     contents: [{ role: "user", parts }],
+    config: {
+      ...(input.temperature != null ? { temperature: input.temperature } : {}),
+      ...(input.maxOutputTokens != null ? { maxOutputTokens: input.maxOutputTokens } : {}),
+    },
   });
 
   const text = response.text;
@@ -169,10 +195,12 @@ export async function callAnthropic(provider: ResolvedProvider, input: GenerateT
     },
     body: JSON.stringify({
       model: provider.model,
-      max_tokens: 8192,
+      max_tokens: input.maxOutputTokens ?? 8192,
+      ...(input.temperature != null ? { temperature: input.temperature } : {}),
       ...(input.systemPrompt ? { system: input.systemPrompt } : {}),
       messages: [{ role: "user", content }],
     }),
+    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -209,13 +237,20 @@ export async function callOpenAICompatible(
     { role: "user", content },
   ];
 
-  const res = await fetch(`${provider.base_url}/chat/completions`, {
+  const baseUrl = (provider.base_url || "").replace(/\/+$/, "");
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${provider.api_key}`,
     },
-    body: JSON.stringify({ model: provider.model, messages }),
+    body: JSON.stringify({
+      model: provider.model,
+      messages,
+      ...(input.temperature != null ? { temperature: input.temperature } : {}),
+      ...(input.maxOutputTokens != null ? { max_tokens: input.maxOutputTokens } : {}),
+    }),
+    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -265,7 +300,7 @@ export async function runChain(
   for (const provider of chain) {
     const startedAt = Date.now();
     try {
-      const result = await resolveCaller(provider.provider_type)(provider, input);
+      const result = await withTimeout(resolveCaller(provider.provider_type)(provider, input), HOP_TIMEOUT_MS, provider.name);
       if (logContext.userId) {
         await logUsage({
           userId: logContext.userId,
@@ -336,17 +371,26 @@ export async function generateTextStream(
           if (provider.provider_type === "gemini") {
             const ai = new GoogleGenAI({ apiKey: provider.api_key });
             const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
-            const response = await ai.models.generateContentStream({ model: provider.model, contents: prompt });
+            const response = await ai.models.generateContentStream({
+              model: provider.model,
+              contents: prompt,
+              config: {
+                ...(input.temperature != null ? { temperature: input.temperature } : {}),
+                ...(input.maxOutputTokens != null ? { maxOutputTokens: input.maxOutputTokens } : {}),
+              },
+            });
 
-            for await (const chunk of response) {
-              const text = chunk.text;
+            const iterator = response[Symbol.asyncIterator]();
+            let chunk = await withTimeout(iterator.next(), HOP_TIMEOUT_MS, `${provider.name} first token`);
+            while (!chunk.done) {
+              const text = chunk.value.text;
               if (text) {
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
                 );
                 enqueuedChunk = true;
               }
-              const usage = chunk.usageMetadata;
+              const usage = chunk.value.usageMetadata;
               if (usage && !usageCaptured && logContext.userId) {
                 usageCaptured = true;
                 await logUsage({
@@ -359,9 +403,14 @@ export async function generateTextStream(
                   metadata: logContext.metadata,
                 });
               }
+              chunk = await iterator.next();
             }
           } else {
-            const result = await callerFor(provider.provider_type)(provider, input);
+            const result = await withTimeout(
+              callerFor(provider.provider_type)(provider, input),
+              HOP_TIMEOUT_MS,
+              provider.name
+            );
             if (result.text) {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: result.text } }] })}\n\n`)
@@ -426,6 +475,7 @@ export async function generateTextStream(
 export async function fetchUrlAsText(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: { "user-agent": "Mozilla/5.0 (compatible; AtTrack/1.0)" },
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
   return stripHtml(await res.text());

@@ -52,8 +52,8 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
 
   return (
     <div className="space-y-2 rounded-2xl border border-border p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div>
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+        <div className="min-w-0">
           <p className="text-sm font-medium">{TASK_TYPE_LABELS[taskType]}</p>
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
@@ -67,13 +67,14 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
           {selected.map((p, i) => (
             <li
               key={p.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5"
+              className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 sm:flex-row sm:items-center sm:justify-between"
             >
-              <span className="flex items-center gap-2 text-sm">
+              <span className="flex min-w-0 items-center gap-2 text-sm">
                 <Badge variant="secondary">{i + 1}</Badge>
-                {p.name} <span className="text-muted-foreground">({p.model})</span>
+                <span className="min-w-0 truncate">{p.name}</span>
+                <span className="min-w-0 truncate text-muted-foreground">({p.model})</span>
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
                 <button
                   type="button"
                   onClick={() => move(i, -1)}

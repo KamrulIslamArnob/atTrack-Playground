@@ -14,12 +14,14 @@ export interface GeneratedEmail {
 }
 
 export async function* streamGenerateEmail(
-  params: EmailGenerationParams
+  params: EmailGenerationParams,
+  signal?: AbortSignal
 ): AsyncGenerator<string, void, unknown> {
   const response = await fetch("/api/ai/generate-email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
+    signal,
   });
 
   if (!response.ok) {

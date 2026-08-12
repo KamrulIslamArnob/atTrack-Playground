@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` for browser development.
+Open `http://localhost:3308` for browser development.
 
 For the desktop shell:
 
@@ -28,7 +28,7 @@ npm run electron:dev
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | Start the Next.js development server. |
+| `npm run dev` | Start the Next.js development server (port 3308). |
 | `npm run build` | Build the production Next.js app. |
 | `npm run start` | Run the production server. |
 | `npm run lint` | Run ESLint. |
@@ -45,7 +45,8 @@ Aven / AtTrack is a local-first, single-user app:
 - **Data:** local SQLite through `lib/db/`; no hosted database is required.
 - **Uploads:** local filesystem buckets under `.data/storage/` or an Electron user-data directory.
 - **Desktop:** Electron main process in `electron/`, build preparation scripts in `scripts/`.
-- **AI:** provider-backed flows for import, matching, MCQ preparation, and writing tools.
+- **AI Subsystem:** Task-routed provider chain (`lib/ai/providers.ts`), serialized background queue (`lib/ai/background.ts`), content-hash output caching (`ai_output_cache`, `mcq_question_cache`), and strict schema validation.
+- **Resume Engine:** Novorésumé-style interactive editor (`components/resume-builder/`), frozen `ResumeDoc` schema, inline rich text parser (`lib/resume/inline.ts`), live Letter-size preview, and dual HTML/LaTeX export engine (`lib/resume/render-tex.ts`).
 - **Email:** SMTP credentials are encrypted before storage.
 
 The app intentionally has no public multi-user auth surface. Whoever can access the local running process is treated as the owner.
@@ -53,16 +54,17 @@ The app intentionally has no public multi-user auth surface. Whoever can access 
 ## Important folders
 
 ```text
-app/                  # Next.js routes and API handlers
-components/           # React UI and shadcn/base-ui components
+app/                  # Next.js routes, page layouts, and API handlers
+components/           # React UI components, dashboard widgets, and resume builder
 electron/             # Electron main process and desktop integration
-lib/actions/          # Server actions by domain
-lib/ai/               # AI clients, prompts, schemas, logging helpers
-lib/db/               # SQLite schema, connection, query shim, storage helpers
+lib/actions/          # Server actions organized by domain
+lib/ai/               # AI background queue, task router, prompts, output caching, and logging
+lib/db/               # SQLite schema, connection singleton, query shim, and storage helpers
+lib/resume/           # Resume document parsing, HTML preview renderer, and LaTeX exporter
 lib/types/            # Shared TypeScript domain types
 public/               # Public static assets
 scripts/              # Build and packaging helpers
-docs/                 # Current public documentation, including planning summaries
+docs/                 # Project documentation index and category guides
 ```
 
 ## Data layer: local SQLite

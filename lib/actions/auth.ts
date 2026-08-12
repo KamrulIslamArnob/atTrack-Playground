@@ -123,8 +123,6 @@ export async function resetAllData(formData: FormData) {
     "mcq_results",
     "application_emails",
     "interviews",
-    "timeline_events",
-    "notes",
     "applications",
     "documents",
     "ai_extraction_logs",

@@ -356,12 +356,23 @@ export function DocumentsList({ documents }: DocumentsListProps) {
     }
   };
 
-  const handleDownload = async (filePath: string, name: string) => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const url = filePath.startsWith("/") ? filePath : await getSignedUrl(filePath);
+      if (doc.content || doc.file_path.startsWith("generated/") || doc.generated_kind) {
+        const blob = new Blob([doc.content ?? ""], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${doc.name.replace(/[^a-zA-Z0-9.-]/g, "_")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Downloaded document text");
+        return;
+      }
+      const url = doc.file_path.startsWith("/") ? doc.file_path : await getSignedUrl(doc.file_path);
       const a = document.createElement("a");
       a.href = url;
-      a.download = name.endsWith(".pdf") ? name : `${name}.pdf`;
+      a.download = doc.name.endsWith(".pdf") ? doc.name : `${doc.name}.pdf`;
       a.click();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to download");
@@ -587,7 +598,11 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       case "name":
         return (
           <div className="flex items-center gap-2">
-            <FileText className="size-4 text-muted-foreground shrink-0" />
+            {doc.generated_kind ? (
+              <Sparkles className="size-4 text-purple-500 shrink-0" />
+            ) : (
+              <FileText className="size-4 text-muted-foreground shrink-0" />
+            )}
             <Link
               href={doc.builder_data ? `/documents/builder/${doc.id}` : `/documents/${doc.id}`}
               className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block truncate"
@@ -606,11 +621,15 @@ export function DocumentsList({ documents }: DocumentsListProps) {
         return (
           <span
             className={cn(
-              "inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium whitespace-nowrap",
-              typeColors[doc.type] ?? "bg-muted text-muted-foreground"
+              "inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium whitespace-nowrap capitalize",
+              doc.generated_kind
+                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                : typeColors[doc.type] ?? "bg-muted text-muted-foreground"
             )}
           >
-            {typeLabels[doc.type] ?? doc.type}
+            {doc.generated_kind
+              ? doc.generated_kind.replace(/_/g, " ")
+              : typeLabels[doc.type] ?? doc.type}
           </span>
         );
       case "uploaded":
@@ -849,8 +868,8 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                               variant="ghost"
                               size="sm"
                               className="h-8 gap-1"
-                              title="Download file"
-                              onClick={() => handleDownload(doc.file_path, doc.name)}
+                              title="Download document"
+                              onClick={() => handleDownload(doc)}
                             >
                               <Download className="size-3.5" />
                             </Button>

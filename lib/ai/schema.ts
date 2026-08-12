@@ -24,6 +24,17 @@ export const extractionSchema = z.object({
   application_process: z.string().nullable(),
   source: z.string().nullable(),
   deadline: z.string().nullable(),
+  skills: z.array(z.string()).nullable().optional(),
+  educational_requirements: z.string().nullable().optional(),
+  benefits: z.array(z.string()).nullable().optional(),
+  work_schedule: z.string().nullable().optional(),
+  holiday_policy: z.string().nullable().optional(),
+  map_url: z.string().nullable().optional(),
+  is_unpaid: z.boolean().nullable().optional(),
+  salary_min: z.number().nullable().optional(),
+  salary_max: z.number().nullable().optional(),
+  salary_currency: z.string().nullable().optional(),
+  salary_period: z.enum(["yearly", "monthly", "hourly"]).nullable().optional(),
   notes: z
     .array(
       z.object({
@@ -32,9 +43,6 @@ export const extractionSchema = z.object({
       })
     )
     .nullable(),
-  // A recruiter/hiring-manager named in the posting, if any — feeds the CRM
-  // (lib/actions/jobs.ts's createJob find-or-creates this contact under the
-  // job's company and links it). Null when the posting doesn't name a person.
   contact: z
     .object({
       name: z.string().nullable(),

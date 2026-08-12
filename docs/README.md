@@ -13,6 +13,7 @@ The docs are intentionally kept small and category-based so contributors can fin
 | Security model and vulnerability reporting | [`SECURITY.md`](SECURITY.md) |
 | UI, brand, layout, and design rules | [`Design.md`](Design.md) |
 | Current feature backlog and roadmap notes | [`ROADMAP.md`](ROADMAP.md) |
+| Release checklist for web and desktop builds | [`RELEASE.md`](RELEASE.md) |
 | Latest codebase audit status | [`AuditReport.md`](AuditReport.md) |
 | Historical task/plan summaries | [`PlanningSummary.md`](PlanningSummary.md) |
 | AI-agent/code-assistant navigation map | [`CLAUDE.md`](CLAUDE.md) |
@@ -36,6 +37,7 @@ docs/
 ├── CONTRIBUTING.md  # Contributor workflow and PR checklist
 ├── SECURITY.md      # Security and privacy policy
 ├── DEVELOPMENT.md   # Architecture, setup, commands, Electron notes
+├── RELEASE.md       # Step-by-step release and update checklist
 ├── Design.md        # Design system and UI rules
 ├── ROADMAP.md          # Current backlog policy
 ├── PlanningSummary.md  # Condensed history from old task docs

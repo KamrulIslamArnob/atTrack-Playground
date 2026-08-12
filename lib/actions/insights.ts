@@ -30,115 +30,72 @@ export interface InsightsData {
   }[];
 }
 
+import { getDb } from "@/lib/db/sqlite";
+
 export async function getInsights(): Promise<InsightsData> {
-  const { supabase, userId } = await getUser();
+  const { userId } = await getUser();
+  const db = getDb();
 
-  // Fetch all jobs
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, status, match_score, source, employment_type, work_location, created_at")
-    .eq("user_id", userId);
+  // Execute parallelized SQL engine aggregations
+  const [
+    totalJobsRow,
+    totalAppsRow,
+    totalInterviewsRow,
+    totalDocsRow,
+    pipelineRows,
+    appStatusRows,
+    matchScoreStats,
+    sourceRows,
+    employmentRows,
+    workLocationRows,
+    mcqStatsRow,
+    recentActivityRows,
+  ] = await Promise.all([
+    Promise.resolve(db.prepare(`SELECT count(*) as c FROM jobs WHERE user_id = ?`).get(userId) as { c: number }),
+    Promise.resolve(db.prepare(`SELECT count(*) as c FROM applications WHERE user_id = ?`).get(userId) as { c: number }),
+    Promise.resolve(db.prepare(`SELECT count(*) as c FROM interviews WHERE user_id = ?`).get(userId) as { c: number }),
+    Promise.resolve(db.prepare(`SELECT count(*) as c FROM documents WHERE user_id = ?`).get(userId) as { c: number }),
+    Promise.resolve(db.prepare(`SELECT status, count(*) as count FROM jobs WHERE user_id = ? GROUP BY status`).all(userId) as Array<{ status: string; count: number }>),
+    Promise.resolve(db.prepare(`SELECT status, count(*) as count FROM applications WHERE user_id = ? GROUP BY status`).all(userId) as Array<{ status: string; count: number }>),
+    Promise.resolve(db.prepare(`
+      SELECT 
+        SUM(CASE WHEN match_score >= 80 THEN 1 ELSE 0 END) as high,
+        SUM(CASE WHEN match_score >= 50 AND match_score < 80 THEN 1 ELSE 0 END) as medium,
+        SUM(CASE WHEN match_score < 50 THEN 1 ELSE 0 END) as low,
+        SUM(CASE WHEN match_score IS NULL THEN 1 ELSE 0 END) as none,
+        AVG(match_score) as avg_score
+      FROM jobs WHERE user_id = ?
+    `).get(userId) as { high: number; medium: number; low: number; none: number; avg_score: number | null }),
+    Promise.resolve(db.prepare(`SELECT COALESCE(source, 'Unknown') as source, count(*) as count FROM jobs WHERE user_id = ? GROUP BY source`).all(userId) as Array<{ source: string; count: number }>),
+    Promise.resolve(db.prepare(`SELECT COALESCE(employment_type, 'Unknown') as type, count(*) as count FROM jobs WHERE user_id = ? GROUP BY employment_type`).all(userId) as Array<{ type: string; count: number }>),
+    Promise.resolve(db.prepare(`SELECT COALESCE(work_location, 'Unknown') as loc, count(*) as count FROM jobs WHERE user_id = ? GROUP BY work_location`).all(userId) as Array<{ loc: string; count: number }>),
+    Promise.resolve(db.prepare(`
+      SELECT count(*) as totalTests, AVG(score * 1.0 / total) as avgScore, MAX(score * 1.0 / total) as bestScore 
+      FROM mcq_results WHERE user_id = ?
+    `).get(userId) as { totalTests: number; avgScore: number | null; bestScore: number | null }),
+    Promise.resolve(db.prepare(`
+      SELECT created_at FROM jobs 
+      WHERE user_id = ? AND created_at >= datetime('now', '-30 days')
+    `).all(userId) as Array<{ created_at: string }>),
+  ]);
 
-  // Fetch all applications with status
-  const { data: applications } = await supabase
-    .from("applications")
-    .select("id, status, created_at")
-    .eq("user_id", userId);
-
-  // Fetch interviews count
-  const { count: totalInterviews } = await supabase
-    .from("interviews")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  // Fetch documents count
-  const { count: totalDocuments } = await supabase
-    .from("documents")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  // Fetch MCQ results
-  const { data: mcqResults } = await supabase
-    .from("mcq_results")
-    .select("score, total")
-    .eq("user_id", userId);
-
-  const allJobs = jobs ?? [];
-  const allApplications = applications ?? [];
-
-  // Job pipeline breakdown (pre-application stages only)
   const jobPipelineBreakdown: Record<string, number> = {};
-  for (const job of allJobs) {
-    jobPipelineBreakdown[job.status] = (jobPipelineBreakdown[job.status] || 0) + 1;
-  }
+  for (const r of pipelineRows) jobPipelineBreakdown[r.status] = r.count;
 
-  // Application status breakdown (full lifecycle)
   const applicationStatusBreakdown: Record<string, number> = {};
-  for (const app of allApplications) {
-    applicationStatusBreakdown[app.status] = (applicationStatusBreakdown[app.status] || 0) + 1;
-  }
+  for (const r of appStatusRows) applicationStatusBreakdown[r.status] = r.count;
 
-  // Match score distribution
-  let highMatches = 0;
-  let mediumMatches = 0;
-  let lowMatches = 0;
-  let noScore = 0;
-  let totalScore = 0;
-  let scoredCount = 0;
-
-  for (const job of allJobs) {
-    if (job.match_score == null) {
-      noScore++;
-    } else {
-      const score = Number(job.match_score);
-      totalScore += score;
-      scoredCount++;
-      if (score >= 80) highMatches++;
-      else if (score >= 50) mediumMatches++;
-      else lowMatches++;
-    }
-  }
-
-  // Source breakdown
   const sourceBreakdown: Record<string, number> = {};
-  for (const job of allJobs) {
-    const source = job.source || "Unknown";
-    sourceBreakdown[source] = (sourceBreakdown[source] || 0) + 1;
-  }
+  for (const r of sourceRows) sourceBreakdown[r.source] = r.count;
 
-  // Employment type breakdown
   const employmentTypeBreakdown: Record<string, number> = {};
-  for (const job of allJobs) {
-    const type = job.employment_type || "Unknown";
-    employmentTypeBreakdown[type] = (employmentTypeBreakdown[type] || 0) + 1;
-  }
+  for (const r of employmentRows) employmentTypeBreakdown[r.type] = r.count;
 
-  // Work location breakdown
   const workLocationBreakdown: Record<string, number> = {};
-  for (const job of allJobs) {
-    const loc = job.work_location || "Unknown";
-    workLocationBreakdown[loc] = (workLocationBreakdown[loc] || 0) + 1;
-  }
-
-  // MCQ stats
-  const totalTests = mcqResults?.length ?? 0;
-  const avgScore = totalTests > 0
-    ? Math.round(mcqResults!.reduce((sum, r) => sum + (r.score / r.total), 0) / totalTests * 100)
-    : null;
-  const bestScore = totalTests > 0
-    ? Math.round(Math.max(...mcqResults!.map(r => r.score / r.total)) * 100)
-    : null;
-
-  // Recent activity (last 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const recentJobs = allJobs.filter(
-    (j) => new Date(j.created_at) >= thirtyDaysAgo
-  );
+  for (const r of workLocationRows) workLocationBreakdown[r.loc] = r.count;
 
   const activityByDate: Record<string, number> = {};
-  for (const job of recentJobs) {
+  for (const job of recentActivityRows) {
     const date = new Date(job.created_at).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -151,26 +108,26 @@ export async function getInsights(): Promise<InsightsData> {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return {
-    totalJobs: allJobs.length,
-    totalApplications: allApplications.length,
-    totalInterviews: totalInterviews ?? 0,
-    totalDocuments: totalDocuments ?? 0,
+    totalJobs: totalJobsRow?.c ?? 0,
+    totalApplications: totalAppsRow?.c ?? 0,
+    totalInterviews: totalInterviewsRow?.c ?? 0,
+    totalDocuments: totalDocsRow?.c ?? 0,
     jobPipelineBreakdown,
     applicationStatusBreakdown,
     matchScoreDistribution: {
-      high: highMatches,
-      medium: mediumMatches,
-      low: lowMatches,
-      none: noScore,
+      high: matchScoreStats?.high ?? 0,
+      medium: matchScoreStats?.medium ?? 0,
+      low: matchScoreStats?.low ?? 0,
+      none: matchScoreStats?.none ?? 0,
     },
-    averageMatchScore: scoredCount > 0 ? Math.round(totalScore / scoredCount) : null,
+    averageMatchScore: matchScoreStats?.avg_score != null ? Math.round(matchScoreStats.avg_score) : null,
     sourceBreakdown,
     employmentTypeBreakdown,
     workLocationBreakdown,
     mcqStats: {
-      totalTests,
-      averageScore: avgScore,
-      bestScore,
+      totalTests: mcqStatsRow?.totalTests ?? 0,
+      averageScore: mcqStatsRow?.avgScore != null ? Math.round(mcqStatsRow.avgScore * 100) : null,
+      bestScore: mcqStatsRow?.bestScore != null ? Math.round(mcqStatsRow.bestScore * 100) : null,
     },
     recentActivity,
   };

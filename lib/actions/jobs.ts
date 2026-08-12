@@ -1,9 +1,11 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
 import { resolveProviderChain, generateText } from "@/lib/ai/providers";
+import { scheduleJobScore } from "@/lib/ai/background";
+import { calculateMatchScore, extractResumeContent, type ResumeMatchData, type TotalJobInfo } from "@/lib/ai/resume";
 import { logResourceActivity } from "@/lib/actions/activity-log";
 import type { ProjectLink } from "@/lib/types/board";
 
@@ -19,7 +21,25 @@ export async function createJob(formData: FormData) {
   const applicationEmail = formData.get("application_email") as string | null;
   const applicationProcess = formData.get("application_process") as string | null;
   const location = formData.get("location") as string | null;
+  const mapUrl = formData.get("map_url") as string | null;
   const salaryRange = formData.get("salary_range") as string | null;
+  const salaryMinRaw = formData.get("salary_min") as string | null;
+  const salaryMaxRaw = formData.get("salary_max") as string | null;
+  const salaryCurrency = formData.get("salary_currency") as string | null;
+  const salaryPeriod = formData.get("salary_period") as string | null;
+  const isUnpaidRaw = formData.get("is_unpaid");
+  const isUnpaid = isUnpaidRaw === "true" || isUnpaidRaw === "on" || isUnpaidRaw === "1";
+  const salaryMin = salaryMinRaw ? parseFloat(salaryMinRaw) : null;
+  const salaryMax = salaryMaxRaw ? parseFloat(salaryMaxRaw) : null;
+
+  const skillsRaw = formData.get("skills") as string | null;
+  const skills = skillsRaw ? JSON.parse(skillsRaw) : null;
+  const educationalRequirements = formData.get("educational_requirements") as string | null;
+  const benefitsRaw = formData.get("benefits") as string | null;
+  const benefits = benefitsRaw ? JSON.parse(benefitsRaw) : null;
+  const workSchedule = formData.get("work_schedule") as string | null;
+  const holidayPolicy = formData.get("holiday_policy") as string | null;
+
   const description = formData.get("description") as string | null;
   const employmentType = formData.get("employment_type") as string | null;
   const workLocation = formData.get("work_location") as string | null;
@@ -111,7 +131,18 @@ export async function createJob(formData: FormData) {
       application_email: applicationEmail || null,
       application_process: applicationProcess || null,
       location: location || null,
+      map_url: mapUrl || null,
       salary_range: salaryRange || null,
+      salary_min: salaryMin,
+      salary_max: salaryMax,
+      salary_currency: salaryCurrency || null,
+      salary_period: salaryPeriod || null,
+      is_unpaid: isUnpaid ? 1 : 0,
+      skills: Array.isArray(skills) && skills.length > 0 ? skills : null,
+      educational_requirements: educationalRequirements || null,
+      benefits: Array.isArray(benefits) && benefits.length > 0 ? benefits : null,
+      work_schedule: workSchedule || null,
+      holiday_policy: holidayPolicy || null,
       description: description || null,
       employment_type: employmentType || null,
       work_location: workLocation || null,
@@ -135,50 +166,9 @@ export async function createJob(formData: FormData) {
     throw new Error("Failed to save job.");
   }
 
-  // Calculate match score against user's resumes
-  try {
-    const { data: resumes } = await supabase
-      .from("documents")
-      .select("id, match_data")
-      .eq("user_id", userId)
-      .eq("type", "resume")
-      .not("match_data", "is", null);
-
-    if (resumes && resumes.length > 0) {
-      let bestScore = 0;
-      let bestReasoning = "";
-      let bestResumeId = "";
-
-      for (const resume of resumes) {
-        const result = await calculateMatchScore(
-          title,
-          description,
-          resume.match_data as unknown as ResumeMatchData,
-          userId
-        );
-
-        if (result.score > bestScore) {
-          bestScore = result.score;
-          bestReasoning = result.reasoning;
-          bestResumeId = resume.id;
-        }
-      }
-
-      if (bestResumeId) {
-        await supabase
-          .from("jobs")
-          .update({
-            match_score: bestScore,
-            matched_resume_id: bestResumeId,
-            match_reasoning: bestReasoning,
-          })
-          .eq("id", job.id)
-          .eq("user_id", userId);
-      }
-    }
-  } catch (e) {
-    console.error("[MatchScore] Match scoring failed:", e);
-  }
+  // Match scoring is delay-tolerant: save returns instantly, the score lands
+  // via the background queue and the board shows "—" until it does.
+  scheduleJobScore(userId, job.id);
 
   // AI-detected recruiter/hiring-manager (Import with AI) — find-or-create under
   // this job's company and link it, so the CRM grows from job imports without
@@ -261,7 +251,8 @@ export async function updateJob(formData: FormData) {
   const notesRaw = formData.has("notes") ? (formData.get("notes") as string | null) : undefined;
   const notes = notesRaw ? JSON.parse(notesRaw) : undefined;
 
-  if (!deadline?.trim() && !sectionDeadline?.trim()) {
+  const hasDeadlineField = formData.has("deadline") || formData.has("section_deadline");
+  if (hasDeadlineField && !deadline?.trim() && !sectionDeadline?.trim()) {
     throw new Error("A deadline is required. Please provide an Application Deadline or a Section Deadline.");
   }
 
@@ -301,12 +292,59 @@ export async function updateJob(formData: FormData) {
     description: description || null,
     employment_type: employmentType || null,
     work_location: workLocation || null,
-    deadline: deadline || null,
-    section_deadline: sectionDeadline || null,
-    section_deadline_list_id: sectionDeadlineListId || null,
     source: source || null,
-    status,
   };
+
+  if (formData.has("status")) {
+    updateData.status = status;
+  }
+  if (formData.has("deadline")) {
+    updateData.deadline = deadline || null;
+  }
+  if (formData.has("section_deadline")) {
+    updateData.section_deadline = sectionDeadline || null;
+  }
+  if (formData.has("section_deadline_list_id")) {
+    updateData.section_deadline_list_id = sectionDeadlineListId || null;
+  }
+  if (formData.has("skills")) {
+    const skillsRaw = formData.get("skills") as string | null;
+    updateData.skills = skillsRaw ? JSON.parse(skillsRaw) : null;
+  }
+  if (formData.has("educational_requirements")) {
+    updateData.educational_requirements = (formData.get("educational_requirements") as string | null) || null;
+  }
+  if (formData.has("benefits")) {
+    const benefitsRaw = formData.get("benefits") as string | null;
+    updateData.benefits = benefitsRaw ? JSON.parse(benefitsRaw) : null;
+  }
+  if (formData.has("work_schedule")) {
+    updateData.work_schedule = (formData.get("work_schedule") as string | null) || null;
+  }
+  if (formData.has("holiday_policy")) {
+    updateData.holiday_policy = (formData.get("holiday_policy") as string | null) || null;
+  }
+  if (formData.has("map_url")) {
+    updateData.map_url = (formData.get("map_url") as string | null) || null;
+  }
+  if (formData.has("is_unpaid")) {
+    const isUnpaidRaw = formData.get("is_unpaid");
+    updateData.is_unpaid = isUnpaidRaw === "true" || isUnpaidRaw === "on" || isUnpaidRaw === "1" ? 1 : 0;
+  }
+  if (formData.has("salary_min")) {
+    const v = formData.get("salary_min") as string | null;
+    updateData.salary_min = v ? parseFloat(v) : null;
+  }
+  if (formData.has("salary_max")) {
+    const v = formData.get("salary_max") as string | null;
+    updateData.salary_max = v ? parseFloat(v) : null;
+  }
+  if (formData.has("salary_currency")) {
+    updateData.salary_currency = (formData.get("salary_currency") as string | null) || null;
+  }
+  if (formData.has("salary_period")) {
+    updateData.salary_period = (formData.get("salary_period") as string | null) || null;
+  }
 
   if (notes !== undefined) {
     updateData.notes = notes.length > 0 ? notes : null;
@@ -320,6 +358,26 @@ export async function updateJob(formData: FormData) {
 
   if (jobError) {
     throw new Error("Failed to update job.");
+  }
+
+  // Check if description changed → match scores are now stale
+  try {
+    const { data: oldJob } = await supabase
+      .from("jobs")
+      .select("description")
+      .eq("id", jobId)
+      .eq("user_id", userId)
+      .single();
+    if (oldJob && (oldJob.description ?? "") !== (description ?? "")) {
+      await supabase
+        .from("jobs")
+        .update({ match_score: null, matched_resume_id: null, match_reasoning: null })
+        .eq("id", jobId)
+        .eq("user_id", userId);
+      scheduleJobScore(userId, jobId);
+    }
+  } catch {
+    // best-effort staleness detection
   }
 
   revalidatePath("/jobs");
@@ -437,23 +495,11 @@ export async function setJobResume(jobId: string, resumeId: string | null) {
       .single();
     if (!resume) throw new Error("Resume not found.");
 
-    const update: Record<string, unknown> = { resume_id: resumeId };
-    if (resume.match_data) {
-      try {
-        const result = await calculateMatchScore(
-          job.title,
-          job.description,
-          resume.match_data as unknown as ResumeMatchData,
-          userId
-        );
-        update.match_score = result.score;
-        update.match_reasoning = result.reasoning;
-        update.matched_resume_id = resumeId;
-      } catch (e) {
-        console.error("[setJobResume] scoring failed:", e);
-      }
-    }
-    await supabase.from("jobs").update(update).eq("id", jobId).eq("user_id", userId);
+    await supabase.from("jobs").update({ resume_id: resumeId }).eq("id", jobId).eq("user_id", userId);
+
+    // Scoring is delay-tolerant: persist the pick now, let the background
+    // queue re-score this job and refresh the pill on the board.
+    scheduleJobScore(userId, jobId, resumeId);
   }
 
   revalidatePath("/board");
@@ -563,9 +609,15 @@ IMPORTANT: Each keyword must be concise (1-3 words). No extra markdown commentar
       throw new Error("Failed to extract JSON from AI response.");
     }
     const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-    const keywords: string[] = Array.isArray(parsed.keywords)
-      ? parsed.keywords.map((k: unknown) => String(k).trim()).filter(Boolean)
-      : [];
+    const keywordsSchema = z.object({
+      keywords: z.array(z.string()).min(1),
+    });
+    const validated = keywordsSchema.safeParse(parsed);
+    const keywords: string[] = validated.success
+      ? validated.data.keywords.map((k) => k.trim()).filter(Boolean)
+      : Array.isArray(parsed.keywords)
+        ? parsed.keywords.map((k: unknown) => String(k).trim()).filter(Boolean)
+        : [];
 
     if (keywords.length === 0) {
       throw new Error("No keywords were generated.");
@@ -592,5 +644,97 @@ IMPORTANT: Each keyword must be concise (1-3 words). No extra markdown commentar
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { keywords: [], error: msg };
+  }
+}
+
+/**
+ * Triggers an immediate, on-demand AI match score check for a job against a specific resume
+ * or the job's currently attached resume, using total job information.
+ */
+export async function checkJobResumeScore(
+  jobId: string,
+  targetResumeId?: string | null
+): Promise<{ score: number; reasoning: string; error?: string }> {
+  const { supabase, userId } = await getUser();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, title, description, location, employment_type, work_location, salary_range, notes, resume_id, company:companies(name), position:positions(name)")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .single();
+
+  if (!job) return { score: 0, reasoning: "", error: "Job not found." };
+
+  const resumeIdToUse = targetResumeId ?? job.resume_id;
+  if (!resumeIdToUse) {
+    return { score: 0, reasoning: "", error: "No resume selected for this job." };
+  }
+
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("id, content, match_data")
+    .eq("id", resumeIdToUse)
+    .eq("user_id", userId)
+    .eq("type", "resume")
+    .single();
+
+  if (!doc) {
+    return { score: 0, reasoning: "", error: "Resume document not found." };
+  }
+
+  let matchData = doc.match_data as ResumeMatchData | null;
+  if (!matchData && doc.content) {
+    try {
+      matchData = await extractResumeContent(doc.content, userId);
+      await supabase
+        .from("documents")
+        .update({ match_data: matchData })
+        .eq("id", doc.id)
+        .eq("user_id", userId);
+    } catch {
+      return { score: 0, reasoning: "", error: "Failed to parse resume content for scoring." };
+    }
+  }
+
+  if (!matchData) {
+    return { score: 0, reasoning: "", error: "Resume has no content to compare." };
+  }
+
+  const company = Array.isArray(job.company) ? job.company[0] : job.company;
+  const position = Array.isArray(job.position) ? job.position[0] : job.position;
+  const totalJobInfo: TotalJobInfo = {
+    companyName: company?.name ?? null,
+    positionName: position?.name ?? null,
+    location: job.location ?? null,
+    workLocation: job.work_location ?? null,
+    employmentType: job.employment_type ?? null,
+    salaryRange: job.salary_range ?? null,
+    notes: Array.isArray(job.notes) ? (job.notes as Array<{ title: string; bullets: string[] }>) : null,
+  };
+
+  try {
+    const result = await calculateMatchScore(job.title, job.description, matchData, userId, totalJobInfo);
+
+    await supabase
+      .from("jobs")
+      .update({
+        resume_id: resumeIdToUse,
+        match_score: result.score,
+        matched_resume_id: doc.id,
+        match_reasoning: result.reasoning,
+      })
+      .eq("id", jobId)
+      .eq("user_id", userId);
+
+    revalidatePath("/board");
+    revalidatePath("/jobs");
+    revalidatePath("/jobs/" + jobId);
+    await logResourceActivity(userId, "score", "job", jobId, { resume_id: doc.id, score: result.score });
+
+    return { score: result.score, reasoning: result.reasoning };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { score: 0, reasoning: "", error: msg };
   }
 }

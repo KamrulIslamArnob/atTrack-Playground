@@ -5,11 +5,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import {
   PipelineChart,
-  MatchScoreChart,
   ApplicationTrendChart,
-  SourceChart,
-  LocationChart,
-  EmploymentTypeChart,
   McqScoreChart,
 } from "@/components/overview-charts";
 import {
@@ -20,17 +16,13 @@ import {
   ArrowRight,
   Plus,
   Camera,
-  Building2,
-  Sparkles,
   TrendingUp,
   Activity,
   Timer,
   Zap,
-  Award,
   Send,
   CheckCircle2,
-  BarChart3,
-  FileText,
+  Award,
 } from "lucide-react";
 
 const statusLabels: Record<string, string> = {
@@ -112,7 +104,7 @@ export default async function OverviewPage() {
 
   const allJobs = jobs ?? [];
 
-  // Pipeline — only include stages that have data
+  // Pipeline
   const pipelineCounts: Record<string, number> = {};
   for (const job of allJobs) {
     const s = job.status as string;
@@ -122,26 +114,14 @@ export default async function OverviewPage() {
     Object.entries(pipelineCounts).filter(([, count]) => count > 0)
   );
 
-  // Match score distribution
+  // Average match score
   let totalScore = 0;
   let scoredCount = 0;
-  const matchScoreDistribution = [
-    { range: "90-100%", count: 0, fill: "#84cc16" },
-    { range: "70-89%", count: 0, fill: "#a3e635" },
-    { range: "50-69%", count: 0, fill: "#F59E0B" },
-    { range: "30-49%", count: 0, fill: "#F97316" },
-    { range: "0-29%", count: 0, fill: "#EF4444" },
-  ];
   for (const job of allJobs) {
     if (job.match_score != null) {
       const score = Number(job.match_score);
       totalScore += score;
       scoredCount++;
-      if (score >= 90) matchScoreDistribution[0].count++;
-      else if (score >= 70) matchScoreDistribution[1].count++;
-      else if (score >= 50) matchScoreDistribution[2].count++;
-      else if (score >= 30) matchScoreDistribution[3].count++;
-      else matchScoreDistribution[4].count++;
     }
   }
   const averageMatchScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
@@ -180,21 +160,7 @@ export default async function OverviewPage() {
     .map(([location, count]) => ({ location, count, fill: workLocationColors[location] || "#6B7280" }))
     .sort((a, b) => b.count - a.count);
 
-  // Top companies
-  const companyMap: Record<string, { applications: number; interviews: number }> = {};
-  for (const job of allJobs) {
-    const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
-    const name = co?.name ?? "Unknown";
-    if (!companyMap[name]) companyMap[name] = { applications: 0, interviews: 0 };
-    companyMap[name].applications += (Array.isArray(job.applications) ? job.applications : []).length;
-    companyMap[name].interviews += (Array.isArray(job.interviews) ? job.interviews : []).length;
-  }
-  const topCompanies = Object.entries(companyMap)
-    .map(([name, data]) => ({ name, ...data }))
-    .sort((a, b) => b.applications - a.applications)
-    .slice(0, 3);
-
-  // Application trend (last 30 days)
+  // Application trend
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const trendMap: Record<string, { applications: number; interviews: number }> = {};
@@ -226,39 +192,15 @@ export default async function OverviewPage() {
       const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
       return (Array.isArray(job.interviews) ? job.interviews : [])
         .filter((i: { scheduled_at: string | null }) => i.scheduled_at && new Date(i.scheduled_at) >= new Date())
-        .map((i: { id: string; scheduled_at: string; type: string; status: string }) => ({
+        .map((i: { id: string; scheduled_at: string; type: string }) => ({
           id: i.id,
           scheduled_at: i.scheduled_at,
           type: i.type,
-          status: i.status,
           job: { title: job.title as string, company: co?.name ?? "Unknown" },
         }));
     })
     .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
     .slice(0, 3);
-
-  // Recent activity
-  const recentActivity: { id: string; type: string; title: string; timestamp: string; status?: string }[] = [];
-  for (const job of allJobs.slice(0, 10)) {
-    const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
-    recentActivity.push({
-      id: job.id as string,
-      type: "job_added",
-      title: `Added ${(job.title as string) ?? "Untitled"} at ${co?.name ?? "Unknown"}`,
-      timestamp: job.created_at as string,
-      status: job.status as string,
-    });
-    for (const app of Array.isArray(job.applications) ? job.applications : []) {
-      recentActivity.push({
-        id: `${job.id}-app`,
-        type: "application",
-        title: `Applied to ${(job.title as string) ?? "Untitled"}`,
-        timestamp: (app as { created_at: string }).created_at,
-        status: "applied",
-      });
-    }
-  }
-  recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   // Interview stats
   const allInterviews = allJobs.flatMap((job) => (Array.isArray(job.interviews) ? job.interviews : []));
@@ -280,10 +222,6 @@ export default async function OverviewPage() {
     totalTests > 0
       ? Math.round((mcqResults ?? []).reduce((sum, r) => sum + (r.score / r.total), 0) / totalTests * 100)
       : null;
-  const bestScore =
-    totalTests > 0
-      ? Math.round(Math.max(...(mcqResults ?? []).map((r) => r.score / r.total)) * 100)
-      : null;
   const recentScores = (mcqResults ?? [])
     .slice(0, 7)
     .reverse()
@@ -297,8 +235,6 @@ export default async function OverviewPage() {
   let applyCount = 0;
   let totalDaysToInterview = 0;
   let interviewCount = 0;
-  let longestPendingDays = 0;
-  let longestPendingJob = null;
 
   for (const job of allJobs) {
     const created = new Date(job.created_at as string);
@@ -309,13 +245,6 @@ export default async function OverviewPage() {
       );
       totalDaysToApply += Math.round((appDate.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
       applyCount++;
-    } else {
-      const daysSinceCreated = Math.round((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysSinceCreated > longestPendingDays) {
-        longestPendingDays = daysSinceCreated;
-        const co = (Array.isArray(job.company) ? job.company[0] : job.company) as { name: string } | null;
-        longestPendingJob = { title: job.title as string, company: co?.name ?? "Unknown", days: daysSinceCreated };
-      }
     }
     const ints = Array.isArray(job.interviews) ? job.interviews : [];
     if (ints.length > 0 && apps.length > 0) {
@@ -333,7 +262,6 @@ export default async function OverviewPage() {
   const timeAnalytics = {
     averageTimeToApply: applyCount > 0 ? Math.round(totalDaysToApply / applyCount) : null,
     averageTimeToInterview: interviewCount > 0 ? Math.round(totalDaysToInterview / interviewCount) : null,
-    longestPending: longestPendingJob,
   };
 
   const offerRate =
@@ -348,6 +276,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 size-64 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-primary/5 blur-2xl" />
@@ -378,149 +307,104 @@ export default async function OverviewPage() {
             </div>
           </div>
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <QuickStat icon={Briefcase} label="Total Jobs" value={totalJobs ?? 0} color="text-blue-500" bgColor="bg-blue-500/10" />
-            <QuickStat icon={Send} label="Applications Sent" value={totalApplications ?? 0} color="text-violet-500" bgColor="bg-violet-500/10" />
+            <QuickStat icon={Briefcase} label="Jobs" value={totalJobs ?? 0} color="text-blue-500" bgColor="bg-blue-500/10" />
+            <QuickStat icon={Send} label="Applied" value={totalApplications ?? 0} color="text-violet-500" bgColor="bg-violet-500/10" />
             <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} color="text-emerald-500" bgColor="bg-emerald-500/10" />
-            <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "\u2014"} color="text-amber-500" bgColor="bg-amber-500/10" />
-            <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "\u2014"} color="text-emerald-600" bgColor="bg-emerald-500/10" />
-            <QuickStat icon={Activity} label="Response" value={responseRate != null ? `${responseRate}%` : "\u2014"} color="text-rose-500" bgColor="bg-rose-500/10" />
+            <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} color="text-amber-500" bgColor="bg-amber-500/10" />
+            <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} color="text-emerald-600" bgColor="bg-emerald-500/10" />
+            <QuickStat icon={Activity} label="Response" value={responseRate != null ? `${responseRate}%` : "—"} color="text-rose-500" bgColor="bg-rose-500/10" />
           </div>
         </div>
       </div>
 
       <Breadcrumbs />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-               <h2 className="font-heading text-lg font-semibold">Pipeline</h2>
-               <p className="text-xs text-muted-foreground mt-1">Where your jobs are right now</p>
-            </div>
-            <Link href="/jobs" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
+      {/* Row 1: Pipeline */}
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-heading text-lg font-semibold">Pipeline</h2>
+            <p className="text-xs text-muted-foreground">Where your jobs are now</p>
           </div>
-          {Object.keys(pipeline).length > 0 ? (
-            <>
-              <PipelineChart pipeline={pipeline} />
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
-                {Object.entries(pipeline).map(([key, count]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <div className="size-2.5 rounded-full" style={{ backgroundColor: pipelineColors[key] || "#6B7280" }} />
-                    <span className="text-muted-foreground">{statusLabels[key] ?? key}</span>
-                    <span className="font-medium">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
-              <p className="text-xs text-muted-foreground">No jobs yet</p>
-            </div>
-          )}
+          <Link href="/jobs" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
         </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Match Scores</h2>
-               <p className="text-xs text-muted-foreground mt-1">How your resume fits each job</p>
+        {Object.keys(pipeline).length > 0 ? (
+          <>
+            <PipelineChart pipeline={pipeline} />
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              {Object.entries(pipeline).map(([key, count]) => (
+                <div key={key} className="flex items-center gap-1.5">
+                  <div className="size-2 rounded-full" style={{ backgroundColor: pipelineColors[key] || "#6B7280" }} />
+                  <span className="text-muted-foreground">{statusLabels[key] ?? key}</span>
+                  <span className="font-medium">{count}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
+            <p className="text-xs text-muted-foreground">No jobs yet</p>
           </div>
-          <MatchScoreChart data={matchScoreDistribution} />
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {matchScoreDistribution.filter((d) => d.count > 0).map((item) => (
-              <div key={item.range} className="flex items-center gap-2 text-xs">
-                <div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
-                <span className="text-muted-foreground">{item.range}</span>
-                <span className="ml-auto font-medium">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
 
+      {/* Row 2: Trend + Timing */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Applications & Interviews</h2>
-               <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
+          <div className="mb-4">
+            <h2 className="font-heading text-lg font-semibold">Applications & Interviews</h2>
+            <p className="text-xs text-muted-foreground">Last 30 days</p>
           </div>
           <ApplicationTrendChart data={applicationTrend} />
-          <div className="mt-4 flex items-center justify-center gap-6 text-xs">
-            <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-violet-500" /><span className="text-muted-foreground">Applications</span></div>
-            <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
+          <div className="mt-3 flex items-center justify-center gap-5 text-xs">
+            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-violet-500" /><span className="text-muted-foreground">Applications</span></div>
+            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
           </div>
         </div>
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Timing</h2>
-               <p className="text-xs text-muted-foreground mt-1">How long things take</p>
+          <div className="mb-4">
+            <h2 className="font-heading text-lg font-semibold">Timing</h2>
+            <p className="text-xs text-muted-foreground">How long things take</p>
           </div>
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-500/10"><Timer className="size-6 text-violet-500" /></div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10"><Timer className="size-5 text-violet-500" /></div>
               <div>
-                <p className="text-2xl font-bold">{timeAnalytics.averageTimeToApply != null ? `${timeAnalytics.averageTimeToApply}d` : "\u2014"}</p>
-                <p className="text-xs text-muted-foreground">Avg. time to apply</p>
+                <p className="text-xl font-bold">{timeAnalytics.averageTimeToApply != null ? `${timeAnalytics.averageTimeToApply}d` : "—"}</p>
+                <p className="text-[11px] text-muted-foreground">Time to apply</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10"><Zap className="size-6 text-emerald-500" /></div>
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10"><Zap className="size-5 text-emerald-500" /></div>
               <div>
-                <p className="text-2xl font-bold">{timeAnalytics.averageTimeToInterview != null ? `${timeAnalytics.averageTimeToInterview}d` : "\u2014"}</p>
-                <p className="text-xs text-muted-foreground">Avg. time to interview</p>
+                <p className="text-xl font-bold">{timeAnalytics.averageTimeToInterview != null ? `${timeAnalytics.averageTimeToInterview}d` : "—"}</p>
+                <p className="text-[11px] text-muted-foreground">Time to interview</p>
               </div>
             </div>
-            {timeAnalytics.longestPending && (
-              <div className="rounded-2xl bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground mb-2">Longest pending</p>
-                <p className="text-sm font-medium truncate">{timeAnalytics.longestPending.title}</p>
-                <p className="text-xs text-muted-foreground">{timeAnalytics.longestPending.company} &bull; {timeAnalytics.longestPending.days} days</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Sources</h2>
-               <p className="text-xs text-muted-foreground mt-1">Where you&apos;re finding jobs</p>
-          </div>
-          <SourceChart data={sourceBreakdown} />
-          <div className="mt-2 space-y-2">
-            {sourceBreakdown.slice(0, 4).map((item) => (
-              <div key={item.source} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.source}</span></div>
-                <span className="font-medium">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Work Location</h2>
-               <p className="text-xs text-muted-foreground mt-1">Remote, hybrid, on-site</p>
-          </div>
-          <LocationChart data={workLocationBreakdown} />
-          <div className="mt-2 space-y-2">
+      {/* Row 3: Breakdowns */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h3 className="font-heading text-sm font-semibold mb-3">Work Location</h3>
+          <div className="space-y-2">
             {workLocationBreakdown.map((item) => (
               <div key={item.location} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.location}</span></div>
+                <div className="flex items-center gap-2"><div className="size-2 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.location}</span></div>
                 <span className="font-medium">{item.count}</span>
               </div>
             ))}
           </div>
         </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Employment Type</h2>
-               <p className="text-xs text-muted-foreground mt-1">Full-time, contract, freelance</p>
-          </div>
-          <EmploymentTypeChart data={employmentTypeBreakdown} />
-          <div className="mt-2 space-y-2">
-            {employmentTypeBreakdown.slice(0, 4).map((item) => (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h3 className="font-heading text-sm font-semibold mb-3">Employment Type</h3>
+          <div className="space-y-2">
+            {employmentTypeBreakdown.slice(0, 5).map((item) => (
               <div key={item.type} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.type}</span></div>
+                <div className="flex items-center gap-2"><div className="size-2 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.type}</span></div>
                 <span className="font-medium">{item.count}</span>
               </div>
             ))}
@@ -528,177 +412,97 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Top Companies</h2>
-               <p className="text-xs text-muted-foreground mt-1">Where you&apos;ve applied most</p>
-          </div>
-          <div className="space-y-4">
-            {topCompanies.length > 0 ? topCompanies.map((company, index) => (
-              <div key={company.name} className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-2xl bg-muted text-xs font-bold text-muted-foreground">{index + 1}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{company.name}</p>
-                  <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <span>{company.applications} apps</span>
-                    <span>{company.interviews} interviews</span>
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Building2 className="size-8 text-muted-foreground/30 mb-2" />
-                <p className="text-xs text-muted-foreground">Add jobs to see this</p>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Interviews</h2>
-               <p className="text-xs text-muted-foreground mt-1">How many, how they went</p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-2xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
-                <span className="text-sm">Total interviews</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.total}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-2xl bg-blue-500/10"><Clock className="size-4 text-blue-500" /></div>
-                <span className="text-sm">Upcoming</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.upcoming}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-2xl bg-violet-500/10"><CheckCircle2 className="size-4 text-violet-500" /></div>
-                <span className="text-sm">Completed</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.completed}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-2xl bg-amber-500/10"><Award className="size-4 text-amber-500" /></div>
-                <span className="text-sm">Pass rate</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.passRate != null ? `${interviewStats.passRate}%` : "\u2014"}</span>
-            </div>
-          </div>
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-               <h2 className="font-heading text-lg font-semibold">Practice Tests</h2>
-               <p className="text-xs text-muted-foreground mt-1">How you&apos;re scoring</p>
-            </div>
-            <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
-          </div>
-          {totalTests > 0 ? (
-            <>
-              <div className="flex items-center gap-6 mb-6">
-                <div><p className="text-3xl font-bold">{avgScore ?? 0}%</p><p className="text-[10px] text-muted-foreground">Average</p></div>
-                <div className="h-12 w-px bg-border" />
-                <div><p className="text-3xl font-bold">{bestScore ?? 0}%</p><p className="text-[10px] text-muted-foreground">Best</p></div>
-              </div>
-              {recentScores.length > 0 && <McqScoreChart data={recentScores} />}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3"><Sparkles className="size-6 text-muted-foreground/30" /></div>
-              <p className="text-xs text-muted-foreground mb-3">Take a practice test to see your scores here</p>
-              <Link href="/interviews" className={buttonVariants({ size: "sm", variant: "outline", className: "gap-1.5" })}>Start practicing <ArrowRight className="size-3" /></Link>
-            </div>
-          )}
-        </div>
-      </div>
-
+      {/* Row 4: Upcoming Interviews + Interview Stats */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-               <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
-               <p className="text-xs text-muted-foreground mt-1">What&apos;s on the calendar</p>
+              <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
+              <p className="text-xs text-muted-foreground">What&apos;s on the calendar</p>
             </div>
             <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
           </div>
           {upcomingInterviews.length > 0 ? (
             <div className="space-y-3">
               {upcomingInterviews.map((interview) => (
-                <div key={interview.id} className="flex items-center gap-4 rounded-2xl border border-border p-4 transition-all hover:shadow-md hover:border-primary/20">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
+                <div key={interview.id} className="flex items-center gap-3 rounded-xl border border-border p-3 transition-all hover:shadow-sm hover:border-primary/20">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{interview.job.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="rounded-2xl bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{interview.type}</span>
+                  <div className="flex shrink-0 flex-col items-end gap-0.5">
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{interview.type}</span>
                     <span className="text-[10px] text-muted-foreground">{new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3"><Calendar className="size-6 text-muted-foreground/30" /></div>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-muted/50 mb-2"><Calendar className="size-6 text-muted-foreground/30" /></div>
               <p className="text-sm text-muted-foreground">No interviews scheduled</p>
             </div>
           )}
         </div>
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-6">
-               <h2 className="font-heading text-lg font-semibold">Recent Activity</h2>
-               <p className="text-xs text-muted-foreground mt-1">What you&apos;ve done lately</p>
+          <div className="mb-4">
+            <h2 className="font-heading text-lg font-semibold">Interview Stats</h2>
+            <p className="text-xs text-muted-foreground">How they went</p>
           </div>
-          {recentActivity.length > 0 ? (
-            <div className="space-y-4">
-              {recentActivity.slice(0, 3).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="relative mt-1"><div className="size-2 rounded-full bg-primary" /><div className="absolute left-1/2 top-2 -translate-x-1/2 h-6 w-px bg-border" /></div>
-                  <div className="min-w-0 flex-1 pb-4">
-                    <p className="text-sm">{activity.title}</p>
-                    <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span>{new Date(activity.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      {activity.status && <><span>&bull;</span><span className="capitalize">{statusLabels[activity.status] ?? activity.status}</span></>}
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
+                <span className="text-sm">Total</span>
+              </div>
+              <span className="text-lg font-bold">{interviewStats.total}</span>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 mb-3"><Activity className="size-6 text-muted-foreground/30" /></div>
-              <p className="text-sm text-muted-foreground">Nothing here yet — add a job to get started</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-blue-500/10"><Clock className="size-4 text-blue-500" /></div>
+                <span className="text-sm">Upcoming</span>
+              </div>
+              <span className="text-lg font-bold">{interviewStats.upcoming}</span>
             </div>
-          )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-violet-500/10"><CheckCircle2 className="size-4 text-violet-500" /></div>
+                <span className="text-sm">Completed</span>
+              </div>
+              <span className="text-lg font-bold">{interviewStats.completed}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10"><Award className="size-4 text-amber-500" /></div>
+                <span className="text-sm">Pass rate</span>
+              </div>
+              <span className="text-lg font-bold">{interviewStats.passRate != null ? `${interviewStats.passRate}%` : "—"}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-heading text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Link href="/jobs" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-500/10"><Briefcase className="size-5 text-blue-500" /></div>
-            All Jobs
-          </Link>
-          <Link href="/interviews" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/10"><Calendar className="size-5 text-emerald-500" /></div>
-            Interviews
-          </Link>
-          <Link href="/documents" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-violet-500/10"><FileText className="size-5 text-violet-500" /></div>
-            Documents
-          </Link>
-          <Link href="/insights" className="flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-sm font-medium transition-all hover:shadow-md hover:border-primary/20 hover:bg-muted/30">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-amber-500/10"><BarChart3 className="size-5 text-amber-500" /></div>
-            Insights
-          </Link>
+      {/* MCQ Practice (compact, only shown when there's data) */}
+      {totalTests > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-heading text-sm font-semibold">Practice Tests</h3>
+              <p className="text-[11px] text-muted-foreground">Your recent scores</p>
+            </div>
+            <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
+          </div>
+          <div className="flex items-center gap-6 mb-4">
+            <div><p className="text-2xl font-bold">{avgScore ?? 0}%</p><p className="text-[10px] text-muted-foreground">Average</p></div>
+            <div className="h-10 w-px bg-border" />
+            <div><p className="text-2xl font-bold">
+              {Math.round(Math.max(...(mcqResults ?? []).map((r) => r.score / r.total)) * 100)}%
+            </p><p className="text-[10px] text-muted-foreground">Best</p></div>
+          </div>
+          <McqScoreChart data={recentScores} />
         </div>
-      </div>
+      )}
     </div>
   );
 }

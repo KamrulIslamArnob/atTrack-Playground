@@ -60,9 +60,13 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
   const [workLocation, setWorkLocation] = useState(initialData?.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(initialData?.employment_type ?? "Full-time");
   const [status, setStatus] = useState("saved");
-  // A recruiter/hiring-manager the AI found in the posting — CRM feed, not a
-  // form field. Dismissible so the user can opt out of adding it.
   const [contact, setContact] = useState(initialData?.contact ?? null);
+  const [skills, setSkills] = useState<string[]>(initialData?.skills ?? []);
+  const [benefits, setBenefits] = useState<string[]>(initialData?.benefits ?? []);
+  const [isUnpaid, setIsUnpaid] = useState<boolean>(Boolean(initialData?.is_unpaid));
+  const [salaryCurrency, setSalaryCurrency] = useState<string>(initialData?.salary_currency ?? "USD");
+  const [salaryPeriod, setSalaryPeriod] = useState<string>(initialData?.salary_period ?? "yearly");
+  const [mapUrl, setMapUrl] = useState<string>(initialData?.map_url ?? "");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -74,6 +78,13 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     formData.append("work_location", workLocation);
     formData.append("employment_type", employmentType);
     formData.append("status", status);
+    formData.append("skills", JSON.stringify(skills));
+    formData.append("benefits", JSON.stringify(benefits));
+    formData.append("is_unpaid", isUnpaid ? "true" : "false");
+    formData.append("salary_currency", salaryCurrency);
+    formData.append("salary_period", salaryPeriod);
+    formData.append("map_url", mapUrl);
+
     if (listId) formData.append("list_id", listId);
     if (contact?.name || contact?.email) {
       if (contact.name) formData.append("contact_name", contact.name);
@@ -84,6 +95,10 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     setOpen(false);
     setPending(false);
     setNotes([]);
+    setSkills([]);
+    setBenefits([]);
+    setIsUnpaid(false);
+    setMapUrl("");
     setWorkLocation("");
     setEmploymentType("Full-time");
     setStatus("saved");

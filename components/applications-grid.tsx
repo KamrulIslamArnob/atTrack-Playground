@@ -287,7 +287,7 @@ export function ApplicationsGrid({
             <Link
               key={app.id}
               href={`/jobs/${app.job?.id}`}
-              className="group rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
+              className="group rounded-2xl border border-border bg-card p-5 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

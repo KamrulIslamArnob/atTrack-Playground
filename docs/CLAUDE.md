@@ -8,6 +8,7 @@ This file is the navigation map for Claude Code and other coding agents working 
 |---|---|---|
 | Documentation index | [`docs/README.md`](README.md) | Before changing docs or adding new docs. |
 | Development and architecture | [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) | Before changing data, actions, Electron, build scripts, or app architecture. |
+| Release checklist | [`docs/RELEASE.md`](RELEASE.md) | Before shipping a new version, building installers, or publishing update artifacts. |
 | Design and UI rules | [`docs/Design.md`](Design.md) | Before touching colors, gradients, spacing, radius, board UI, sidebar, sheets, CRM, or copy affected by the no-auth product model. |
 | Latest audit | [`docs/AuditReport.md`](AuditReport.md) | Before cleanup work, lint/build fixes, or when checking known issues. Replace with the latest dated audit when a new audit happens. |
 | Roadmap / future features | [`docs/ROADMAP.md`](ROADMAP.md) | Before starting feature work. Verify backlog items against code before rebuilding anything. |
@@ -43,7 +44,7 @@ Aven / AtTrack is a local-first, single-user job application workspace:
 ## Commands
 
 ```bash
-npm run dev             # Next.js development server
+npm run dev             # Next.js development server (port 3308)
 npm run build           # Production Next.js build
 npm run start           # Run production build
 npm run lint            # ESLint

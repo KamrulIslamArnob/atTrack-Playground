@@ -46,6 +46,8 @@ import {
   ChevronRight,
   Building2,
   User,
+  Database,
+  Gauge,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,6 +68,8 @@ const resourceNavigation = [
 const secondaryNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "AI Prompts", href: "/preferences/ai-prompts", icon: Sparkles },
+  { name: "Database", href: "/preferences/database", icon: Database },
+  { name: "Performance", href: "/preferences/performance", icon: Gauge },
 ];
 
 const adminOverviewNavigation = [
@@ -88,6 +92,7 @@ const NAV_ITEMS = [
   { name: "Resume/CV", href: "/documents", keywords: "resume cv cover letter" },
   { name: "CRM", href: "/crm", keywords: "contacts companies network" },
   { name: "Settings", href: "/settings", keywords: "profile preferences email" },
+  { name: "Performance", href: "/preferences/performance", keywords: "performance ram cpu memory port system root path version" },
 ];
 
 const ADMIN_NAV_ITEMS = [
@@ -187,6 +192,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [results, setResults] = useState<(SearchResult | AdminSearchResult)[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -226,6 +232,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
     if (prevSearchOpen.current && !searchOpen) {
       setQuery("");
       setResults([]);
+      setActiveTab("all");
       setLoading(false);
     }
     prevSearchOpen.current = searchOpen;
@@ -255,8 +262,10 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
     }, 300);
   }, [isAdmin]);
 
+  const filteredResults = activeTab === "all" ? results : results.filter((r) => r.type === activeTab);
+
   // Group results by type
-  const grouped = results.reduce<Record<string, (SearchResult | AdminSearchResult)[]>>((acc, r) => {
+  const grouped = filteredResults.reduce<Record<string, (SearchResult | AdminSearchResult)[]>>((acc, r) => {
     (acc[r.type] ??= []).push(r);
     return acc;
   }, {});
@@ -741,18 +750,54 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
             if (e.target === e.currentTarget) setSearchOpen(false);
           }}
         >
-          <Command value={query} onValueChange={handleSearch} className="w-full max-w-lg">
-            <CommandInput placeholder={isAdmin ? "Search users, AI usage..." : "Search jobs, companies, contacts, documents..."} />
-            <CommandList>
+          <Command value={query} onValueChange={handleSearch} className="w-full max-w-[600px] border border-border shadow-2xl rounded-2xl">
+            <CommandInput placeholder={isAdmin ? "Search users, AI usage..." : "Omni-Search: Search jobs, contacts, documents, interviews..."} />
+            {!loading && hasQuery && results.length > 0 && (
+              <div className="flex items-center gap-1 overflow-x-auto border-b border-border/60 bg-muted/30 px-3 py-1.5 text-xs">
+                {[
+                  { id: "all", label: `All (${results.length})` },
+                  { id: "job", label: "Jobs" },
+                  { id: "contact", label: "Contacts" },
+                  { id: "company", label: "Companies" },
+                  { id: "application", label: "Applications" },
+                  { id: "interview", label: "Interviews" },
+                  { id: "document", label: "Documents" },
+                  { id: "deadline", label: "Deadlines" },
+                  { id: "position", label: "Positions" },
+                  { id: "page", label: "Pages" },
+                ].map((tab) => {
+                  const count = tab.id === "all" ? results.length : results.filter((r) => r.type === tab.id).length;
+                  if (tab.id !== "all" && count === 0) return null;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "rounded-lg px-2 py-1 font-medium transition-colors shrink-0",
+                        activeTab === tab.id
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <CommandList className="max-h-[60vh] overflow-y-auto p-2">
               {loading && (
-                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  Searching...
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-primary" />
+                  Searching everything...
                 </div>
               )}
 
-              {!loading && hasQuery && results.length === 0 && (
-                <CommandEmpty>No results found for &ldquo;{query}&rdquo;</CommandEmpty>
+              {!loading && hasQuery && filteredResults.length === 0 && (
+                <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                  No results found for &ldquo;{query}&rdquo;
+                </CommandEmpty>
               )}
 
               {!loading && !hasQuery && (
@@ -822,6 +867,9 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                        {"contentSnippet" in r && r.contentSnippet && (
+                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
+                        )}
                       </div>
                     </CommandItem>
                   ))}
@@ -864,6 +912,9 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                        {"contentSnippet" in r && r.contentSnippet && (
+                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
+                        )}
                       </div>
                     </CommandItem>
                   ))}
@@ -885,6 +936,9 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                        {"contentSnippet" in r && r.contentSnippet && (
+                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
+                        )}
                       </div>
                     </CommandItem>
                   ))}
@@ -906,6 +960,9 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                        {"contentSnippet" in r && r.contentSnippet && (
+                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
+                        )}
                       </div>
                     </CommandItem>
                   ))}
@@ -924,6 +981,51 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       }}
                     >
                       {TYPE_ICONS.document}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                        {"contentSnippet" in r && r.contentSnippet && (
+                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.deadline && (
+                <CommandGroup heading="Deadlines">
+                  {grouped.deadline.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`deadline-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setSearchOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.deadline}
+                      <div className="ml-2 min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {!loading && hasQuery && grouped.position && (
+                <CommandGroup heading="Positions">
+                  {grouped.position.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={`pos-${r.id}`}
+                      onItemSelect={() => {
+                        window.location.href = r.href;
+                        setSearchOpen(false);
+                      }}
+                    >
+                      {TYPE_ICONS.position}
                       <div className="ml-2 min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>

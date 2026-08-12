@@ -14,11 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DocumentsUpload } from "@/components/documents-upload";
-import { setJobResume, setJobProjectLinks } from "@/lib/actions/jobs";
+import { setJobResume, setJobProjectLinks, checkJobResumeScore } from "@/lib/actions/jobs";
 import { getDocuments, linkDocument, unlinkDocument, type Document } from "@/lib/actions/documents";
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
-import { FileText, Link2, Plus, Trash2, Upload, X } from "lucide-react";
+import { FileText, Link2, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+
+import { matchScoreBand } from "@/lib/types/board";
+import { cn } from "@/lib/utils";
 
 interface DocumentsTabProps {
   data: JobDetailData;
@@ -28,6 +31,7 @@ interface DocumentsTabProps {
 export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
   const { job, documents, resumeOptions } = data;
   const [resumePending, setResumePending] = useState(false);
+  const [isScoring, setIsScoring] = useState(false);
   const [links, setLinks] = useState<ProjectLink[]>(job.project_links ?? []);
   const [linksPending, setLinksPending] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -44,6 +48,27 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
       toast.error("Could not update resume");
     } finally {
       setResumePending(false);
+    }
+  };
+
+  const handleCheckScore = async () => {
+    if (!job.resume_id) {
+      toast.error("Please attach a resume first.");
+      return;
+    }
+    setIsScoring(true);
+    try {
+      const res = await checkJobResumeScore(job.id, job.resume_id);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success(`Resume scored: ${Math.round(res.score)}% match score!`);
+        onRefresh();
+      }
+    } catch {
+      toast.error("Failed to check resume score.");
+    } finally {
+      setIsScoring(false);
     }
   };
 
@@ -90,24 +115,112 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Resume picker */}
-      <div>
-        <Label>Resume</Label>
-        <Select value={job.resume_id ?? "__none__"} onValueChange={(v) => handleResumeChange(v ?? "__none__")}>
-          <SelectTrigger className="mt-2 h-10 w-full" disabled={resumePending}>
-            <SelectValue placeholder="No resume attached">{job.resume_name ?? undefined}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">No resume attached</SelectItem>
-            {resumeOptions.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Picking a resume re-scores this job&apos;s match against it.
+      {/* Resume Section */}
+      <div className="space-y-3.5 rounded-2xl border border-border/80 bg-card/60 p-4 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="size-4 text-primary shrink-0" />
+            <Label className="text-sm font-semibold">Resume</Label>
+          </div>
+          {job.resume_id && job.match_score != null && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-2xs border",
+                matchScoreBand(job.match_score)?.className
+              )}
+            >
+              <Sparkles className="size-3" />
+              <span>{Math.round(job.match_score)}% Match</span>
+              <span className="font-medium text-[10px] uppercase opacity-80">• {matchScoreBand(job.match_score)?.label} Fit</span>
+            </span>
+          )}
+        </div>
+
+        {/* Dropdown & Check Button */}
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <Select value={job.resume_id ?? "__none__"} onValueChange={(v) => handleResumeChange(v ?? "__none__")}>
+            <SelectTrigger className="h-10 flex-1 bg-background" disabled={resumePending || isScoring}>
+              <SelectValue placeholder="No resume attached">{job.resume_name ?? undefined}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">No resume attached</SelectItem>
+              {resumeOptions.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {job.resume_id && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-10 shrink-0 gap-1.5 font-medium border-border/80 hover:bg-muted"
+              onClick={handleCheckScore}
+              disabled={isScoring || resumePending}
+            >
+              {isScoring ? (
+                <>
+                  <Spinner className="size-3.5" />
+                  <span>Scoring...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-3.5 text-lime-500" />
+                  <span>{job.match_score != null ? "Re-check Score" : "Check Match Score"}</span>
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* Score & Reasoning Card */}
+        {job.resume_id && job.match_score != null ? (
+          <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/30 p-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-lime-500 shrink-0" />
+                <span className="text-xs font-semibold text-foreground">
+                  AI Fit Score: <span className="text-lime-600 dark:text-lime-400 font-bold">{Math.round(job.match_score)}%</span>
+                </span>
+                <span className="text-[11px] font-medium text-muted-foreground">({matchScoreBand(job.match_score)?.label} Fit)</span>
+              </div>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="w-full overflow-hidden rounded-full bg-muted/70 h-2">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500 ease-out",
+                  job.match_score >= 80
+                    ? "bg-lime-500"
+                    : job.match_score >= 50
+                      ? "bg-amber-500"
+                      : "bg-rose-500"
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, job.match_score))}%` }}
+              />
+            </div>
+
+            {/* Reasoning Box */}
+            {job.match_reasoning && (
+              <p className="text-xs leading-relaxed text-foreground/90 pt-1 border-t border-border/30">
+                {job.match_reasoning}
+              </p>
+            )}
+          </div>
+        ) : job.resume_id ? (
+          <div className="rounded-xl border border-dashed border-border/70 p-3 text-center">
+            <p className="text-xs text-muted-foreground">
+              Not scored yet. Click <span className="font-semibold text-foreground">"Check Match Score"</span> above for instant analysis, or background AI will score it automatically when idle.
+            </p>
+          </div>
+        ) : null}
+
+        <p className="text-[11px] text-muted-foreground">
+          Click button to score immediately against full job info. If not clicked, background AI will score it once when idle.
         </p>
       </div>
 

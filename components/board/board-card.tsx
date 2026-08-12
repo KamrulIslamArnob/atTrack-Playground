@@ -66,7 +66,7 @@ export function BoardCardItem({
       }}
       style={{ borderLeftColor: accent }}
       className={cn(
-        "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-shadow duration-200 overflow-hidden",
+        "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-[border-color,box-shadow,transform] duration-160 ease-out active:scale-[0.98] active:cursor-grabbing [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-md overflow-hidden",
         "hover:border-primary/60 focus-within:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         isDragging && "opacity-40"
       )}
@@ -97,7 +97,7 @@ export function BoardCardItem({
       )}
 
       <div className="flex items-start justify-between gap-1.5">
-        <p className="flex-1 text-sm font-semibold leading-tight">{card.title}</p>
+        <p className="flex-1 min-w-0 text-sm font-semibold leading-tight break-words">{card.title}</p>
 
         {/* The whole card opens the sheet — stop this menu's click from bubbling
             up to that onClick before it navigates the dropdown. */}
@@ -143,27 +143,27 @@ export function BoardCardItem({
         )}
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-[10px] tabular-nums text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+        <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
           {formatDistanceToNow(new Date(card.created_at), { addSuffix: true })}
         </span>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           {linkCount > 0 && (
             <span
-              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
+              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0"
               title={`${linkCount} project link${linkCount === 1 ? "" : "s"}`}
             >
-              <Link2 className="size-3" aria-hidden="true" />
+              <Link2 className="size-3 shrink-0" aria-hidden="true" />
               {linkCount}
             </span>
           )}
           {card.deadline && (
             <span
-              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
+              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0"
               title={`Deadline ${new Date(card.deadline).toLocaleDateString()}`}
             >
-              <CalendarClock className="size-3" aria-hidden="true" />
+              <CalendarClock className="size-3 shrink-0" aria-hidden="true" />
               {new Date(card.deadline).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
@@ -173,7 +173,7 @@ export function BoardCardItem({
           {band && (
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums",
+                "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums whitespace-nowrap shrink-0",
                 band.className
               )}
             >

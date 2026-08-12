@@ -30,8 +30,8 @@ export type InlineNode =
   | { type: "sep" }
   | { type: "badge"; kind: BadgeKind | ChipKind; label: string; url?: string };
 
-const BADGE_RE = /^\[(live|repo|api|cred|port|cat|type)\]\(([^)]*)\)/;
-// The linked form's inner content is `url "label"` -- url is the run of
+const BADGE_STICKY_RE = /\[(live|repo|api|cred|port|cat|type)\]\(([^)]*)\)/y;
+// The linked form'inner content is `url "label"` -- url is the run of
 // non-whitespace before the quote, label is whatever's inside the quotes
 // (may be empty, which is the "label omitted" case).
 const LINKED_RE = /^(\S+)\s+"([^"]*)"$/;
@@ -44,12 +44,12 @@ function hostOf(url: string): string {
   }
 }
 
-/** Tries to match a badge token starting at `pos`. Returns null (never
- *  throws) when `s[pos] === "["` isn't actually a recognized badge, e.g. an
- *  unknown kind or a missing closing paren -- callers fall back to treating
- *  the "[" as a literal character. */
+/** Tries to match a badge token starting at `pos` without string allocation.
+ *  Returns null (never throws) when `s[pos] === "["` isn't actually a recognized
+ *  badge, e.g. an unknown kind or a missing closing paren. */
 function matchBadge(s: string, pos: number): { node: InlineNode; next: number } | null {
-  const m = BADGE_RE.exec(s.slice(pos));
+  BADGE_STICKY_RE.lastIndex = pos;
+  const m = BADGE_STICKY_RE.exec(s);
   if (!m) return null;
   const kind = m[1] as BadgeKind | ChipKind;
   const inner = m[2].trim();
@@ -57,7 +57,7 @@ function matchBadge(s: string, pos: number): { node: InlineNode; next: number } 
   const node: InlineNode = linked
     ? { type: "badge", kind, label: linked[2] || hostOf(linked[1]), url: linked[1] }
     : { type: "badge", kind, label: inner };
-  return { node, next: pos + m[0].length };
+  return { node, next: BADGE_STICKY_RE.lastIndex };
 }
 
 /**

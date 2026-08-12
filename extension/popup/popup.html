@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>atTrack Job Capture</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-card">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            <rect width="20" height="14" x="2" y="6" rx="2"/>
+          </svg>
+        </div>
+        <span class="brand-name">atTrack</span>
+      </div>
+
+      <div class="header-right">
+        <div id="statusBadge" class="status-pill checking">
+          <span class="status-dot"></span>
+          <span id="statusText" class="status-label">Connecting</span>
+        </div>
+        <button type="button" id="btnToggleSettings" class="icon-button" title="Settings">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Settings Drawer (Collapsible) -->
+    <div id="settingsPanel" class="settings-drawer hidden">
+      <div class="drawer-header">
+        <span class="drawer-title">Local Server Configuration</span>
+      </div>
+      <div class="input-group">
+        <input type="text" id="serverUrlInput" value="http://127.0.0.1:3308" placeholder="http://127.0.0.1:3308" />
+        <button type="button" id="btnSaveServerUrl" class="button button-secondary">Save</button>
+      </div>
+      <p class="drawer-hint">Ensure atTrack desktop app is running on your machine.</p>
+    </div>
+
+    <!-- Offline Alert Banner -->
+    <div id="offlineNotice" class="banner banner-warning hidden">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>atTrack app offline. Launch desktop app to save.</span>
+    </div>
+
+    <!-- Main Content -->
+    <form id="jobForm" class="form-content">
+      <!-- Section 1: Save Job Group -->
+      <div class="section-group">
+        <div class="section-header">Save Job</div>
+        
+        <div class="field-card primary-card">
+          <div class="field-row">
+            <div class="field-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="20" height="14" x="2" y="6" rx="2"/>
+                <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+            </div>
+            <div class="field-body">
+              <input type="text" id="inputTitle" class="input-title" required placeholder="Job Title" />
+              <input type="text" id="inputCompany" class="input-subtitle" required placeholder="Company Name" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Details Group -->
+      <div class="section-group">
+        <div class="section-header">Job Details</div>
+
+        <div class="details-grid">
+          <div class="input-wrapper">
+            <label for="inputLocation" class="field-label">Location</label>
+            <input type="text" id="inputLocation" class="field-input" placeholder="City, Country" />
+          </div>
+
+          <div class="input-wrapper">
+            <label for="inputSalary" class="field-label">Salary</label>
+            <input type="text" id="inputSalary" class="field-input" placeholder="e.g. $120k - $150k" />
+          </div>
+
+          <div class="input-wrapper">
+            <label for="selectWorkLocation" class="field-label">Work Mode</label>
+            <div class="select-container">
+              <select id="selectWorkLocation" class="field-select">
+                <option value="Remote">Remote</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="On-site">On-site</option>
+              </select>
+              <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="selectEmploymentType" class="field-label">Type</label>
+            <div class="select-container">
+              <select id="selectEmploymentType" class="field-select">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Internship">Internship</option>
+              </select>
+              <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-wrapper mt-8">
+          <label for="inputUrl" class="field-label">Job Link</label>
+          <input type="url" id="inputUrl" class="field-input font-mono" placeholder="https://..." />
+        </div>
+      </div>
+
+      <!-- Section 3: Skills & Description (Expandable) -->
+      <div class="section-group">
+        <div class="section-header flex-between">
+          <span>Skills & Description</span>
+          <button type="button" id="btnToggleMore" class="text-button">Show Details</button>
+        </div>
+
+        <div id="moreDetailsSection" class="more-details hidden">
+          <div class="input-wrapper">
+            <label for="inputSkills" class="field-label">Detected Skills</label>
+            <div id="skillsTags" class="tags-list"></div>
+            <input type="text" id="inputSkills" class="field-input mt-4" placeholder="Type skill & press Enter..." />
+          </div>
+
+          <div class="input-wrapper mt-8">
+            <label for="textareaDescription" class="field-label">Description</label>
+            <textarea id="textareaDescription" rows="3" class="field-textarea" placeholder="Job description snippet..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="footer-bar">
+        <button type="button" id="btnReextract" class="button button-ghost" title="Re-scrape current page">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Re-scrape</span>
+        </button>
+
+        <button type="submit" id="btnSubmit" class="button button-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span id="btnSubmitText">Save to Board</span>
+        </button>
+      </div>
+
+      <!-- Success State -->
+      <div id="successBanner" class="success-card hidden">
+        <div class="success-header">
+          <div class="success-check font-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </div>
+          <div>
+            <div class="success-title">Saved to Wishlist!</div>
+            <div class="success-subtitle">Job added to atTrack board</div>
+          </div>
+        </div>
+        <button type="button" id="btnOpenBoard" class="button button-success-outline">
+          Open Wishlist Board
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

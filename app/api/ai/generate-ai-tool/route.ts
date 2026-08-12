@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { AiToolKind } from "@/lib/types/ai-tools";
 import { resolveProviderChain, generateTextStream } from "@/lib/ai/providers";
+import { getCachedOutput, setCachedOutput } from "@/lib/actions/ai-cache";
 
 // Shared across all 8 kinds — only the purpose paragraph below changes.
 const SPAM_RULES = `STRICT RULES FOR SPAM AVOIDANCE:
@@ -91,8 +92,11 @@ export async function POST(req: NextRequest) {
     .eq("kind", kind)
     .single();
 
+  // Custom prompts replace only the purpose paragraph; the spam-avoidance
+  // rules and JSON output contract are always re-appended so user edits
+  // can never break the output format.
   if (customPromptRow?.system_prompt?.trim()) {
-    systemPrompt = customPromptRow.system_prompt.trim();
+    systemPrompt = `${customPromptRow.system_prompt.trim()}\n\n${SPAM_RULES}`;
   }
 
   const userPrompt = `POSITION: ${jobTitle}
@@ -101,7 +105,7 @@ ${jobDescription ? `JOB DESCRIPTION:\n${jobDescription}` : "No description provi
 ${context ? `\nADDITIONAL CONTEXT:\n${context}` : ""}
 
 APPLICANT: ${applicantName}${applicantHeadline ? `, ${applicantHeadline}` : ""}
-${resumeContent ? `\nAPPLICANT'S RESUME/EXPERIENCE:\n${resumeContent}` : ""}
+${resumeContent ? `\nAPPLICANT'S RESUME/EXPERIENCE:\n${resumeContent.slice(0, 4000)}` : ""}
 
 Return ONLY the JSON object with "subject" and "body" fields.`;
 
@@ -113,17 +117,87 @@ Return ONLY the JSON object with "subject" and "body" fields.`;
     );
   }
 
+  const cacheParams = { kind, jobTitle, companyName, jobDescription, applicantName, applicantHeadline, resumeContent, context };
+
+  const cached = await getCachedOutput(kind, cacheParams);
+  if (cached) {
+    const encoder = new TextEncoder();
+    const sse = `data: ${JSON.stringify({ choices: [{ delta: { content: JSON.stringify(cached) } }] })}\n\ndata: [DONE]\n\n`;
+    return new Response(encoder.encode(sse), {
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
+    });
+  }
+
   const stream = await generateTextStream(
     chain,
     { systemPrompt, userPrompt },
     { userId: user.id, action: "generate_ai_tool", metadata: { kind, job_title: jobTitle, company_name: companyName } }
   );
 
-  return new Response(stream, {
+  const [clientStream, cacheStream] = stream.tee();
+  captureToolCache(cacheStream, kind, cacheParams).catch(() => {});
+
+  return new Response(clientStream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
     },
   });
+}
+
+async function captureToolCache(
+  cacheStream: ReadableStream<Uint8Array>,
+  kind: string,
+  params: Record<string, unknown>
+): Promise<void> {
+  try {
+    const reader = cacheStream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let raw = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") break;
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) raw += content;
+        } catch {}
+      }
+    }
+    const jsonMatch = raw.match(/\{[\s\S]*"subject"[\s\S]*"body"[\s\S]*\}/i) || raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const rawJsonStr = jsonMatch[0];
+      let output: any = null;
+      try {
+        output = JSON.parse(rawJsonStr);
+      } catch {
+        try {
+          const sanitized = rawJsonStr.replace(/(?<=:\s*"[\s\S]*?)\n(?=[\s\S]*?")/g, "\\n");
+          output = JSON.parse(sanitized);
+        } catch {
+          const subMatch = rawJsonStr.match(/"subject"\s*:\s*"((?:[^"\\]|\\.)*)"/i);
+          const bodyMatch = rawJsonStr.match(/"body"\s*:\s*"([\s\S]*?)"(?:\s*\}|\s*$)/i);
+          if (subMatch && bodyMatch) {
+            output = {
+              subject: subMatch[1].replace(/\\"/g, '"').replace(/\\n/g, "\n"),
+              body: bodyMatch[1].replace(/\\"/g, '"').replace(/\\n/g, "\n"),
+            };
+          }
+        }
+      }
+      if (output && typeof output.subject === "string" && typeof output.body === "string") {
+        await setCachedOutput(kind, params, { subject: output.subject.trim(), body: output.body.trim() });
+      }
+    }
+  } catch {}
 }

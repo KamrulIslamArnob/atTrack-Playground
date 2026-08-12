@@ -19,12 +19,14 @@ export interface AiToolGenerationParams {
 }
 
 export async function* streamGenerateAiTool(
-  params: AiToolGenerationParams
+  params: AiToolGenerationParams,
+  signal?: AbortSignal
 ): AsyncGenerator<string, void, unknown> {
   const response = await fetch("/api/ai/generate-ai-tool", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
+    signal,
   });
 
   if (!response.ok) {

@@ -1,6 +1,16 @@
 import type { MCQQuestion } from "@/lib/types/mcq";
+import { z } from "zod";
 import { logAiUsage } from "@/lib/actions/ai-usage";
 import { resolveProviderChain, generateText } from "./providers";
+
+const mcqQuestionSchema = z.object({
+  question: z.string().min(5).max(500),
+  options: z.array(z.string()).min(2).max(6),
+  correctIndex: z.number().int().min(0).max(5),
+  explanation: z.string().min(1).max(1000),
+});
+
+const mcqArraySchema = z.array(mcqQuestionSchema).min(1).max(20);
 
 const MCQ_PROMPT = `You are an interview preparation assistant. Generate multiple-choice questions (MCQs) to help a candidate prepare for a job interview.
 
@@ -84,22 +94,23 @@ export async function generateMCQQuestions(params: {
   }
 
   const parsed = JSON.parse(jsonMatch[0]);
+  const validated = mcqArraySchema.safeParse(parsed);
 
-  if (!Array.isArray(parsed) || parsed.length === 0) {
+  if (!validated.success) {
     if (params.userId) {
       await logAiUsage({
         userId: params.userId,
         action: "generate_mcq",
         durationMs: Date.now() - startedAt,
         status: "error",
-        error: "Invalid response format",
+        error: `Invalid MCQ format: ${validated.error.message}`,
         metadata: { job_title: params.jobTitle },
       });
     }
-    throw new Error("Invalid response format");
+    throw new Error(`Invalid MCQ format: ${validated.error.message}`);
   }
 
-  return parsed.map((q: MCQQuestion, i: number) => ({
+  return validated.data.map((q, i) => ({
     id: `q-${i}`,
     question: q.question,
     options: q.options,

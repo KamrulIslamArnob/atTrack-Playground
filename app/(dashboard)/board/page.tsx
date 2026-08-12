@@ -12,6 +12,7 @@ export default async function BoardPage() {
       <PageHeader
         title="Board"
         subtitle="Every job you're tracking, laid out in columns. Drag a card to move it to the next stage."
+        hideBreadcrumbRow
       />
 
       {/* Breadcrumb + toolbar + Add Job live inside BoardView, sharing one bordered

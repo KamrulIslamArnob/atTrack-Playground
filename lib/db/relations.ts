@@ -45,12 +45,10 @@ const RELATIONS: Record<string, Record<string, Relation>> = {
   },
   applications: {
     job: { target: "jobs", kind: "one", column: "job_id" },
-    company: { target: "companies", kind: "one", column: "company_id" },
     resume: { target: "documents", kind: "one", column: "resume_id" },
   },
   interviews: {
     job: { target: "jobs", kind: "one", column: "job_id" },
-    company: { target: "companies", kind: "one", column: "company_id" },
   },
   positions: {
     resume: { target: "documents", kind: "one", column: "resume_id" },

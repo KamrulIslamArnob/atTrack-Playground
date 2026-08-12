@@ -2,7 +2,8 @@
 
 import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { extractResumeContent, calculateMatchScore, type ResumeMatchData } from "@/lib/ai/resume";
+import { scheduleResumeExtract, scheduleRescoreAll } from "@/lib/ai/background";
+import { type ResumeMatchData } from "@/lib/ai/resume";
 import { logResourceActivity } from "@/lib/actions/activity-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -19,6 +20,7 @@ export interface Document {
   // rather than relaxing the column.
   file_path: string;
   content: string | null;
+  generated_kind?: string | null;
   is_default: boolean;
   match_data: ResumeMatchData | null;
   builder_data: ResumeDoc | null;
@@ -30,7 +32,7 @@ export async function getDocuments(): Promise<Document[]> {
 
   const { data, error } = await supabase
     .from("documents")
-    .select("id, name, type, file_path, content, is_default, match_data, builder_data, created_at")
+    .select("id, name, type, file_path, content, generated_kind, is_default, match_data, builder_data, created_at")
     .eq("user_id", userId)
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
@@ -110,39 +112,15 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
     throw new Error(`Failed to save document: ${insertError.message}`);
   }
 
-  // Fire AI extraction & match score recalculation in the background asynchronously
-  processResumeBackground(doc.id, pdfText, userId, type, supabase).catch((err) => {
-    console.error("Background resume processing error:", err);
-  });
+  // AI extraction & match-score recalculation run on the background queue:
+  // upload returns instantly, extraction lands first, rescore follows.
+  scheduleResumeExtract(doc.id, pdfText, userId, type);
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
 
   await logResourceActivity(userId, "create", "document", doc.id, { name, type });
   return { documentId: doc.id };
-}
-
-async function processResumeBackground(
-  docId: string,
-  pdfText: string,
-  userId: string,
-  type: string,
-  supabase: Awaited<ReturnType<typeof getUser>>["supabase"]
-): Promise<void> {
-  try {
-    const matchData = await extractResumeContent(pdfText, userId);
-    await supabase
-      .from("documents")
-      .update({ match_data: matchData })
-      .eq("id", docId)
-      .eq("user_id", userId);
-
-    if (type === "resume") {
-      await recalculateAllMatchScores(supabase, userId);
-    }
-  } catch (e) {
-    console.error(`Background processing for document ${docId} failed:`, e);
-  }
 }
 
 export async function deleteDocument(id: string): Promise<void> {
@@ -183,9 +161,7 @@ export async function deleteDocument(id: string): Promise<void> {
 
   // If deleted resume was matched to jobs, recalculate in background
   if (doc.type === "resume") {
-    recalculateAllMatchScores(supabase, userId).catch((err) => {
-      console.error("Background recalculateAllMatchScores failed:", err);
-    });
+    scheduleRescoreAll(userId);
   }
 
   revalidatePath("/documents");
@@ -215,9 +191,7 @@ export async function setDefaultDocument(id: string): Promise<void> {
   }
 
   // Recalculate all match scores with new default in background
-  recalculateAllMatchScores(supabase, userId).catch((err) => {
-    console.error("Background recalculateAllMatchScores failed:", err);
-  });
+  scheduleRescoreAll(userId);
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
@@ -252,82 +226,6 @@ export async function getSignedUrl(filePath: string): Promise<string> {
   }
 
   return data.signedUrl;
-}
-
-async function recalculateAllMatchScores(
-  supabase: Awaited<ReturnType<typeof getUser>>["supabase"],
-  userId: string
-): Promise<void> {
-  // Get all resumes with match_data (prioritize default resume)
-  const { data: resumes } = await supabase
-    .from("documents")
-    .select("id, match_data, is_default")
-    .eq("user_id", userId)
-    .eq("type", "resume")
-    .not("match_data", "is", null)
-    .order("is_default", { ascending: false });
-
-  if (!resumes || resumes.length === 0) {
-    await supabase
-      .from("jobs")
-      .update({ match_score: null, matched_resume_id: null, match_reasoning: null })
-      .eq("user_id", userId)
-      .is("resume_id", null);
-    return;
-  }
-
-  // Get all jobs without explicit resume pick
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, title, description")
-    .eq("user_id", userId)
-    .is("resume_id", null);
-
-  if (!jobs || jobs.length === 0) return;
-
-  // Score each job against resumes (prioritize default resume)
-  for (const job of jobs) {
-    let bestScore = 0;
-    let bestReasoning = "";
-    let bestResumeId = "";
-
-    for (const resume of resumes) {
-      try {
-        const result = await calculateMatchScore(
-          job.title,
-          job.description,
-          resume.match_data as unknown as ResumeMatchData,
-          userId
-        );
-
-        if (result.score > bestScore) {
-          bestScore = result.score;
-          bestReasoning = result.reasoning;
-          bestResumeId = resume.id;
-        }
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes("429") || msg.includes("Rate limit") || msg.includes("limit reached")) {
-          console.warn(`Rate limit reached during match score calculation for job "${job.title}". Pausing score recalculation.`);
-          return; // Stop hammering API when rate limited
-        } else {
-          console.error(`Failed to score job ${job.id} against resume ${resume.id}:`, msg);
-        }
-      }
-    }
-
-    if (bestResumeId) {
-      await supabase
-        .from("jobs")
-        .update({
-          match_score: bestScore,
-          matched_resume_id: bestResumeId,
-          match_reasoning: bestReasoning,
-        })
-        .eq("id", job.id)
-        .eq("user_id", userId);
-    }
-  }
 }
 
 // --- job_documents (job-detail-sheet Documents tab) ---------------------
@@ -452,5 +350,83 @@ export async function openDocumentFolder(id: string): Promise<void> {
       }
     });
   });
+}
+
+export interface LinkedJobInfo {
+  id: string;
+  title: string;
+  company_name: string | null;
+}
+
+export async function getDocumentDetails(
+  id: string
+): Promise<{ document: Document; job: LinkedJobInfo | null } | null> {
+  const { supabase, userId } = await getUser();
+
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("id, name, type, file_path, content, generated_kind, is_default, match_data, builder_data, created_at")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+
+  if (!doc) return null;
+
+  // Find associated job if linked via job_documents
+  let job: LinkedJobInfo | null = null;
+  const { data: link } = await supabase
+    .from("job_documents")
+    .select("job_id")
+    .eq("document_id", id)
+    .maybeSingle();
+
+  if (link?.job_id) {
+    const { data: jobData } = await supabase
+      .from("jobs")
+      .select("id, title, company_id")
+      .eq("id", link.job_id)
+      .maybeSingle();
+
+    if (jobData) {
+      let companyName: string | null = null;
+      if (jobData.company_id) {
+        const { data: comp } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", jobData.company_id)
+          .maybeSingle();
+        companyName = comp?.name ?? null;
+      }
+      job = {
+        id: jobData.id,
+        title: jobData.title,
+        company_name: companyName,
+      };
+    }
+  }
+
+  return { document: doc as unknown as Document, job };
+}
+
+export async function updateDocumentContent(
+  id: string,
+  name: string,
+  content: string
+): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase
+    .from("documents")
+    .update({ name, content })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(`Failed to update document: ${error.message}`);
+  }
+
+  revalidatePath("/documents");
+  revalidatePath("/documents/" + id);
+  await logResourceActivity(userId, "update", "document", id, { name });
 }
 
