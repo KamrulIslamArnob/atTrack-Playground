@@ -71,6 +71,8 @@ export function BoardCardItem({
     }
   };
 
+  const isInactive = card.state === "archived" || card.state === "on_hold";
+
   return (
     <div
       draggable
@@ -93,7 +95,9 @@ export function BoardCardItem({
       className={cn(
         "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-[border-color,box-shadow,transform] duration-160 ease-out active:scale-[0.98] active:cursor-grabbing [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-md overflow-hidden",
         "hover:border-primary/60 focus-within:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-        isDragging && "opacity-40"
+        isDragging && "opacity-40",
+        isInactive &&
+          "grayscale contrast-90 opacity-75 [@media(hover:hover)]:hover:grayscale-0 [@media(hover:hover)]:hover:opacity-100 transition-all duration-300"
       )}
     >
       {/* Top Section Deadline / Job Deadline Banner */}

@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import {
+  Archive,
   Briefcase,
   Check,
+  ChevronDown,
+  ChevronRight,
+  Clock,
   GripVertical,
   Heart,
   MoreHorizontal,
@@ -159,6 +163,13 @@ export function BoardColumn({
 }: BoardColumnProps) {
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState(list.name);
+  const [onHoldOpen, setOnHoldOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
+
+  const activeCards = cards.filter((c) => !c.state || c.state === "active");
+  const onHoldCards = cards.filter((c) => c.state === "on_hold");
+  const archivedCards = cards.filter((c) => c.state === "archived");
+  const hasInactiveCards = onHoldCards.length > 0 || archivedCards.length > 0;
 
   const Icon = LIST_KIND_ICONS[list.kind] ?? Briefcase;
   const accent = DEFAULT_LIST_COLORS[list.kind] ?? list.color ?? "#84cc16";
@@ -170,6 +181,48 @@ export function BoardColumn({
     const trimmed = draftName.trim();
     if (trimmed && trimmed !== list.name) onRename(list.id, trimmed);
     setRenaming(false);
+  };
+
+  const renderCardItems = (items: BoardCard[]) => {
+    if (groupBy === "none") {
+      return items.map((card) => (
+        <BoardCardItem
+          key={card.id}
+          card={card}
+          lists={lists}
+          accent={accent}
+          isDragging={draggingId === card.id}
+          onDragStart={() => onDragStartCard(card.id)}
+          onDragEnd={onDragEndCard}
+          onMoveTo={(listId) => onMoveCard(card.id, listId)}
+          onOpen={() => onOpenCard(card.id)}
+        />
+      ));
+    }
+
+    return groupCards(items, groupBy).map(([label, groupedCards]) => (
+      <div key={label}>
+        <div className="flex items-center gap-1.5 px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="truncate">{label}</span>
+          <span className="tabular-nums">{groupedCards.length}</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {groupedCards.map((card) => (
+            <BoardCardItem
+              key={card.id}
+              card={card}
+              lists={lists}
+              accent={accent}
+              isDragging={draggingId === card.id}
+              onDragStart={() => onDragStartCard(card.id)}
+              onDragEnd={onDragEndCard}
+              onMoveTo={(listId) => onMoveCard(card.id, listId)}
+              onOpen={() => onOpenCard(card.id)}
+            />
+          ))}
+        </div>
+      </div>
+    ));
   };
 
   return (
@@ -329,50 +382,69 @@ export function BoardColumn({
       </header>
 
       <div className="flex flex-1 flex-col gap-1.5 px-1.5 pb-1.5">
-        {groupBy === "none"
-          ? cards.map((card) => (
-              <BoardCardItem
-                key={card.id}
-                card={card}
-                lists={lists}
-                accent={accent}
-                isDragging={draggingId === card.id}
-                onDragStart={() => onDragStartCard(card.id)}
-                onDragEnd={onDragEndCard}
-                onMoveTo={(listId) => onMoveCard(card.id, listId)}
-                onOpen={() => onOpenCard(card.id)}
-              />
-            ))
-          : groupCards(cards, groupBy).map(([label, groupedCards]) => (
-              <div key={label}>
-                <div className="flex items-center gap-1.5 px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <span className="truncate">{label}</span>
-                  <span className="tabular-nums">{groupedCards.length}</span>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {groupedCards.map((card) => (
-                    <BoardCardItem
-                      key={card.id}
-                      card={card}
-                      lists={lists}
-                      accent={accent}
-                      isDragging={draggingId === card.id}
-                      onDragStart={() => onDragStartCard(card.id)}
-                      onDragEnd={onDragEndCard}
-                      onMoveTo={(listId) => onMoveCard(card.id, listId)}
-                      onOpen={() => onOpenCard(card.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+        {renderCardItems(activeCards)}
 
-        {cards.length === 0 && (
+        {activeCards.length === 0 && (
           <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">
             {list.kind === "wishlist" ? "Save a job here" : "Drag a card here"}
           </p>
+        )}
+
+        {hasInactiveCards && (
+          <div className="my-2.5 border-t border-dashed border-border/50" />
+        )}
+
+        {onHoldCards.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => setOnHoldOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            >
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5" />
+                <span>On Hold ({onHoldCards.length})</span>
+              </div>
+              {onHoldOpen ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+            </button>
+            {onHoldOpen && (
+              <div className="flex flex-col gap-1.5">
+                {renderCardItems(onHoldCards)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {archivedCards.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => setArchivedOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            >
+              <div className="flex items-center gap-1.5">
+                <Archive className="size-3.5" />
+                <span>Archived Jobs ({archivedCards.length})</span>
+              </div>
+              {archivedOpen ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+            </button>
+            {archivedOpen && (
+              <div className="flex flex-col gap-1.5">
+                {renderCardItems(archivedCards)}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </section>
   );
 }
+
