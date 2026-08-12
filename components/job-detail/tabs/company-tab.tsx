@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Building2 } from "lucide-react";
+import { Building2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { updateCompany } from "@/lib/actions/companies";
+import { deleteJobWithSmartCascade } from "@/lib/actions/jobs";
 import type { JobDetailData } from "@/lib/types/job-detail";
 
 interface CompanyTabProps {
@@ -19,10 +21,28 @@ export function CompanyTab({ data, onRefresh }: CompanyTabProps) {
   const { company } = data;
   const [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false);
+  const { confirm, dialog } = useConfirm();
 
   if (!company) {
     return <p className="text-sm text-muted-foreground">No company on this job.</p>;
   }
+
+  const handleDeleteJob = async () => {
+    const confirmed = await confirm({
+      title: "Delete Job",
+      message: `Are you sure you want to delete "${data.job.title}"? If this is the only job for ${company.name}, the company record and unshared contacts/documents will also be deleted.`,
+      confirmText: "Delete",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+    try {
+      const res = await deleteJobWithSmartCascade(data.job.id);
+      toast.success(res.companyDeleted ? "Job and company deleted." : "Job deleted.");
+      onRefresh();
+    } catch {
+      toast.error("Could not delete job.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -110,9 +130,16 @@ export function CompanyTab({ data, onRefresh }: CompanyTabProps) {
         </div>
       </div>
 
-      <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-        Edit company
-      </Button>
+      <div className="flex items-center gap-2 pt-2">
+        <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+          Edit company
+        </Button>
+        <Button variant="destructive" size="sm" onClick={handleDeleteJob}>
+          <Trash2 className="mr-1.5 size-3.5" />
+          Delete job
+        </Button>
+      </div>
+      {dialog}
     </div>
   );
 }
