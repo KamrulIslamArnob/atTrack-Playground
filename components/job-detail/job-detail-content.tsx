@@ -28,7 +28,14 @@ import { NotesTab } from "@/components/job-detail/tabs/notes-tab";
 import { ContactsTab } from "@/components/job-detail/tabs/contacts-tab";
 import { DocumentsTab } from "@/components/job-detail/tabs/documents-tab";
 import { CompanyTab } from "@/components/job-detail/tabs/company-tab";
-import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/types/job";
+import { JOB_STATUS_LABELS, type JobStatus, type JobState } from "@/lib/types/job";
+import { updateJobState } from "@/lib/actions/jobs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { matchScoreBand, type BoardList } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
@@ -72,6 +79,23 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
     } catch (err) {
       console.error("Failed to copy job details:", err);
       toast.error("Failed to copy job details.");
+    }
+  };
+
+  const handleStateChange = async (newState: JobState) => {
+    if (job.state === newState) return;
+    try {
+      await updateJobState(job.id, newState);
+      const labelMap: Record<JobState, string> = {
+        active: "Active",
+        on_hold: "On Hold",
+        archived: "Archived",
+      };
+      toast.success(`Job state changed to ${labelMap[newState]}`);
+      onRefresh();
+    } catch (err) {
+      console.error("Failed to update job state:", err);
+      toast.error("Failed to update job state.");
     }
   };
 
@@ -143,6 +167,41 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 </span>
               </a>
             )}
+
+            {/* State Change Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border bg-secondary/80 px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary active:scale-95">
+                <span>
+                  State:{" "}
+                  {job.state
+                    ? job.state === "on_hold"
+                      ? "On Hold"
+                      : job.state.charAt(0).toUpperCase() + job.state.slice(1)
+                    : "Active"}
+                </span>
+                <ChevronDown className="size-3 opacity-70" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={!job.state || job.state === "active"}
+                  onClick={() => handleStateChange("active")}
+                >
+                  🟢 Active
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={job.state === "on_hold"}
+                  onClick={() => handleStateChange("on_hold")}
+                >
+                  ⏸️ On Hold
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={job.state === "archived"}
+                  onClick={() => handleStateChange("archived")}
+                >
+                  📦 Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Move Dropdown Trigger - Pushable 3D Purple Button (Uiverse.io by PriyanshuGupta28) */}
             {lists && onMoveTo && (

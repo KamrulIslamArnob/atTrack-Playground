@@ -10,8 +10,17 @@ import {
   MoveRight,
   Tag,
 } from "lucide-react";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import {
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoveToMenu } from "@/components/board/move-to-menu";
+import { updateJobState } from "@/lib/actions/jobs";
+import type { JobState } from "@/lib/types/job";
 import {
   matchScoreBand,
   getEffectiveDeadlineInfo,
@@ -45,6 +54,22 @@ export function BoardCardItem({
   const band = matchScoreBand(card.match_score);
   const linkCount = card.project_links?.length ?? 0;
   const deadlineInfo = getEffectiveDeadlineInfo(card, lists);
+
+  const handleStateChange = async (newState: JobState) => {
+    if (card.state === newState) return;
+    try {
+      await updateJobState(card.id, newState);
+      const labelMap: Record<JobState, string> = {
+        active: "Active",
+        on_hold: "On Hold",
+        archived: "Archived",
+      };
+      toast.success(`Job state changed to ${labelMap[newState]}`);
+    } catch (err) {
+      console.error("Failed to update job state:", err);
+      toast.error("Failed to update job state.");
+    }
+  };
 
   return (
     <div
@@ -113,9 +138,35 @@ export function BoardCardItem({
               />
             }
             extraItems={
-              <DropdownMenuItem onClick={() => router.push(`/jobs/${card.id}`)}>
-                Open job details
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => router.push(`/jobs/${card.id}`)}>
+                  Open job details
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Change state</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem
+                      disabled={!card.state || card.state === "active"}
+                      onClick={() => handleStateChange("active")}
+                    >
+                      🟢 Active
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={card.state === "on_hold"}
+                      onClick={() => handleStateChange("on_hold")}
+                    >
+                      ⏸️ On Hold
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={card.state === "archived"}
+                      onClick={() => handleStateChange("archived")}
+                    >
+                      📦 Archive
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </>
             }
           >
             <MoveRight className="size-3.5" />

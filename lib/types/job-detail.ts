@@ -41,9 +41,12 @@ export interface JobDetailResumeOption {
   name: string;
 }
 
+import type { JobState } from "@/lib/types/job";
+
 export interface JobDetailJob {
   id: string;
   title: string;
+  state?: JobState;
   description: string | null;
   application_url: string | null;
   application_email: string | null;
