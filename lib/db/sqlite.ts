@@ -278,7 +278,7 @@ function addMissingColumns(db: DatabaseSync) {
       db.exec(ddl);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (!/duplicate column name/i.test(message)) throw err;
+      if (!/duplicate column name|no such table/i.test(message)) throw err;
     }
   }
 
@@ -304,6 +304,8 @@ function addMissingColumns(db: DatabaseSync) {
 export function getDb(): DatabaseSync {
   if (!globalThis.__attrackDb) {
     globalThis.__attrackDb = open();
+  } else {
+    addMissingColumns(globalThis.__attrackDb);
   }
   return globalThis.__attrackDb;
 }
