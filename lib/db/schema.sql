@@ -247,6 +247,53 @@ CREATE INDEX IF NOT EXISTS idx_interviews_user_scheduled ON interviews(user_id, 
 CREATE INDEX IF NOT EXISTS idx_interviews_job ON interviews(job_id);
 
 -- =============================================
+-- link_categories & links (/links directory)
+-- =============================================
+CREATE TABLE IF NOT EXISTS link_categories (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  sort_order REAL NOT NULL DEFAULT 0,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_link_categories_user ON link_categories(user_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS links (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  category_id TEXT NOT NULL REFERENCES link_categories(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  notes TEXT,
+  icon_url TEXT,
+  tags TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_links_user ON links(user_id);
+CREATE INDEX IF NOT EXISTS idx_links_category ON links(user_id, category_id);
+
+-- =============================================
+-- quick_shortcuts (/links page quick copy buttons)
+-- =============================================
+CREATE TABLE IF NOT EXISTS quick_shortcuts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  value TEXT NOT NULL DEFAULT '',
+  icon TEXT NOT NULL DEFAULT 'link',
+  sort_order REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_quick_shortcuts_user ON quick_shortcuts(user_id, sort_order);
+
+-- =============================================
 -- contacts, job_contacts, job_documents (job-detail-sheet)
 -- contacts are user-owned and reusable across jobs (Huntr's "+Link Contact"),
 -- not job-scoped — job_contacts is the many-to-many. job_documents is the

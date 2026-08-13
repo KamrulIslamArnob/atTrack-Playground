@@ -36,10 +36,14 @@ import {
   Tag,
   Calendar,
   Sparkles,
+  Link2,
+  Code2,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface DocumentsListProps {
   documents: Document[];
@@ -358,7 +362,23 @@ export function DocumentsList({ documents }: DocumentsListProps) {
 
   const handleDownload = async (doc: Document) => {
     try {
-      if (doc.content || doc.file_path.startsWith("generated/") || doc.generated_kind) {
+      if (doc.generated_kind === "external_link") {
+        window.open(doc.file_path, "_blank");
+        toast.success("Opened external link");
+        return;
+      }
+      if (doc.generated_kind === "latex_raw") {
+        const blob = new Blob([doc.content ?? ""], { type: "text/x-tex;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = doc.name.endsWith(".tex") ? doc.name : `${doc.name.replace(/[^a-zA-Z0-9.-]/g, "_")}.tex`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Downloaded .TEX code file");
+        return;
+      }
+      if (doc.content || doc.file_path.startsWith("generated/")) {
         const blob = new Blob([doc.content ?? ""], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -379,7 +399,11 @@ export function DocumentsList({ documents }: DocumentsListProps) {
     }
   };
 
-  const handleOpenFolder = async (id: string) => {
+  const handleOpenFolder = async (id: string, doc?: Document) => {
+    if (doc?.generated_kind === "external_link") {
+      window.open(doc.file_path, "_blank");
+      return;
+    }
     setPendingId(id);
     try {
       await openDocumentFolder(id);
@@ -598,17 +622,36 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       case "name":
         return (
           <div className="flex items-center gap-2">
-            {doc.generated_kind ? (
+            {doc.generated_kind === "external_link" ? (
+              <Link2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : doc.generated_kind === "latex_raw" ? (
+              <Code2 className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            ) : doc.generated_kind ? (
               <Sparkles className="size-4 text-purple-500 shrink-0" />
             ) : (
               <FileText className="size-4 text-muted-foreground shrink-0" />
             )}
-            <Link
-              href={doc.builder_data ? `/documents/builder/${doc.id}` : `/documents/${doc.id}`}
-              className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block truncate"
-            >
-              {doc.name}
-            </Link>
+
+            {doc.generated_kind === "external_link" ? (
+              <a
+                href={doc.file_path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-flex items-center gap-1 truncate"
+                title={`Open external link: ${doc.file_path}`}
+              >
+                <span className="truncate">{doc.name}</span>
+                <ExternalLink className="size-3 text-muted-foreground shrink-0 opacity-70" />
+              </a>
+            ) : (
+              <Link
+                href={doc.builder_data ? `/documents/builder/${doc.id}` : `/documents/${doc.id}`}
+                className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block truncate"
+              >
+                {doc.name}
+              </Link>
+            )}
+
             {doc.is_default && (
               <span className="inline-flex items-center gap-1 rounded-2xl bg-lime-100 dark:bg-lime-950/50 px-2 py-0.5 text-[10px] font-semibold text-lime-900 dark:text-lime-300 shrink-0 border border-lime-300/60 dark:border-lime-700/40">
                 <Star className="size-2.5 fill-lime-600 dark:fill-lime-400 text-lime-600 dark:text-lime-400" />
@@ -854,40 +897,66 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                         )}
                          {!doc.builder_data && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1"
-                              title="Open local folder location"
-                              onClick={() => handleOpenFolder(doc.id)}
-                              disabled={pendingId === doc.id}
-                            >
-                              {pendingId === doc.id ? <Spinner className="size-3" /> : <Folder className="size-3.5" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1"
-                              title="Download document"
-                              onClick={() => handleDownload(doc)}
-                            >
-                              <Download className="size-3.5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger render={<span className="inline-flex" />}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1"
+                                  onClick={() => handleOpenFolder(doc.id, doc)}
+                                  disabled={pendingId === doc.id}
+                                >
+                                  {pendingId === doc.id ? (
+                                    <Spinner className="size-3" />
+                                  ) : doc.generated_kind === "external_link" ? (
+                                    <ExternalLink className="size-3.5" />
+                                  ) : (
+                                    <Folder className="size-3.5" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                                {doc.generated_kind === "external_link" ? "Open external link" : "Open local folder location"}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger render={<span className="inline-flex" />}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1"
+                                  onClick={() => handleDownload(doc)}
+                                >
+                                  <Download className="size-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                                Download document
+                              </TooltipContent>
+                            </Tooltip>
                           </>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(doc.id, doc.name)}
-                          disabled={pendingId === doc.id}
-                        >
-                          {pendingId === doc.id ? (
-                            <Spinner className="size-3" />
-                          ) : (
-                            <Trash2 className="size-3.5" />
-                          )}
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger render={<span className="inline-flex" />}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(doc.id, doc.name)}
+                              disabled={pendingId === doc.id}
+                            >
+                              {pendingId === doc.id ? (
+                                <Spinner className="size-3" />
+                              ) : (
+                                <Trash2 className="size-3.5" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                            Delete document
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>

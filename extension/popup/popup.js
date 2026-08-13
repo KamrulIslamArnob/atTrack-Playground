@@ -1,4 +1,4 @@
-// atTrack Job Capture Extension - Minimal Apple/Hunter Style Popup Logic
+// atTrack Job Capture Extension - Multi-Layer Scraper & Hybrid Synthesis Logic
 
 document.addEventListener("DOMContentLoaded", () => {
   const statusBadge = document.getElementById("statusBadge");
@@ -8,6 +8,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const serverUrlInput = document.getElementById("serverUrlInput");
   const btnSaveServerUrl = document.getElementById("btnSaveServerUrl");
   const offlineNotice = document.getElementById("offlineNotice");
+  const extractionBadge = document.getElementById("extractionBadge");
+  const extractionText = document.getElementById("extractionText");
+  const skillCounterBadge = document.getElementById("skillCounterBadge");
+  const extraMetaPills = document.getElementById("extraMetaPills");
+  const toastContainer = document.getElementById("toastContainer");
 
   const jobForm = document.getElementById("jobForm");
   const inputTitle = document.getElementById("inputTitle");
@@ -29,19 +34,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const successBanner = document.getElementById("successBanner");
   const btnOpenBoard = document.getElementById("btnOpenBoard");
 
+  const firecrawlKeyInput = document.getElementById("firecrawlKeyInput");
+
   let currentServerUrl = "http://127.0.0.1:3308";
+  let currentFirecrawlKey = "";
   let activeSkills = [];
+  let activeContact = null;
+  let isServerOnline = false;
 
   init();
 
   async function init() {
-    // Load saved server URL
+    // Load saved server URL & Firecrawl API Key
     chrome.runtime.sendMessage({ type: "GET_SERVER_URL" }, (response) => {
       if (response && response.serverUrl) {
         currentServerUrl = response.serverUrl;
         serverUrlInput.value = currentServerUrl;
       }
       checkStatus();
+    });
+
+    chrome.storage.local.get("firecrawlApiKey", (res) => {
+      if (res && res.firecrawlApiKey && firecrawlKeyInput) {
+        currentFirecrawlKey = res.firecrawlApiKey;
+        firecrawlKeyInput.value = currentFirecrawlKey;
+      }
     });
 
     // Auto-extract job details from current active tab
@@ -54,10 +71,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     btnSaveServerUrl.addEventListener("click", () => {
       const newUrl = serverUrlInput.value.trim();
+      const newFcKey = firecrawlKeyInput ? firecrawlKeyInput.value.trim() : "";
       if (newUrl) {
         currentServerUrl = newUrl;
+        currentFirecrawlKey = newFcKey;
+        chrome.storage.local.set({ firecrawlApiKey: newFcKey });
         chrome.runtime.sendMessage({ type: "SET_SERVER_URL", serverUrl: newUrl }, () => {
           settingsPanel.classList.add("hidden");
+          showToast("Settings updated successfully", "success");
           checkStatus();
         });
       }
@@ -103,11 +124,13 @@ document.addEventListener("DOMContentLoaded", () => {
       { type: "CHECK_SERVER_STATUS", serverUrl: currentServerUrl },
       (response) => {
         if (response && response.online) {
+          isServerOnline = true;
           statusBadge.className = "status-pill connected";
           statusText.textContent = "Connected";
           offlineNotice.classList.add("hidden");
           btnSubmit.disabled = false;
         } else {
+          isServerOnline = false;
           statusBadge.className = "status-pill disconnected";
           statusText.textContent = "Offline";
           offlineNotice.classList.remove("hidden");
@@ -126,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnReextract.disabled = true;
       btnReextract.innerHTML = `Scraping...`;
 
-      // Execute content-script on-demand and receive result directly
+      // Step 1: Execute Layer 1 Content Script on-demand
       chrome.scripting.executeScript(
         {
           target: { tabId: tab.id },
@@ -136,20 +159,22 @@ document.addEventListener("DOMContentLoaded", () => {
           btnReextract.disabled = false;
           btnReextract.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span>Re-scrape</span>`;
 
-          if (chrome.runtime.lastError) {
-            console.warn("Script execution warning:", chrome.runtime.lastError.message);
-            // Fallback to runtime message
+          let layer1Data = null;
+
+          if (results && results[0] && results[0].result) {
+            layer1Data = results[0].result;
+          }
+
+          if (!layer1Data) {
             chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_JOB_DETAILS" }, (response) => {
               if (response && response.success && response.data) {
-                handleExtractionResponse(response);
+                processExtractionPipeline(tab, response.data);
               }
             });
             return;
           }
 
-          if (results && results[0] && results[0].result) {
-            handleExtractionResponse({ success: true, data: results[0].result });
-          }
+          processExtractionPipeline(tab, layer1Data);
         }
       );
     } catch (err) {
@@ -159,21 +184,143 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function handleExtractionResponse(response) {
-    if (response && response.success && response.data) {
-      const data = response.data;
-      if (data.title) inputTitle.value = data.title;
-      if (data.company) inputCompany.value = data.company;
-      if (data.location) inputLocation.value = data.location;
-      if (data.salary_range) inputSalary.value = data.salary_range;
-      if (data.employment_type) selectEmploymentType.value = data.employment_type;
-      if (data.work_location) selectWorkLocation.value = data.work_location;
-      if (data.application_url) inputUrl.value = data.application_url;
-      if (data.description) textareaDescription.value = data.description;
-      if (Array.isArray(data.skills) && data.skills.length > 0) {
-        activeSkills = data.skills;
-        renderSkills();
+  function processExtractionPipeline(tab, layer1Data) {
+    // --- LAYER 1: Instant Pre-fill (0ms wait) ---
+    applyJobDataToForm(layer1Data);
+    showExtractionBadge(`⚡ Layer 1: ${layer1Data.extraction_method || "DOM Extracted"}`, false);
+
+    // --- LAYER 2 & 3: Background AI Parsing & Synthesis ---
+    if (isServerOnline && layer1Data.clean_page_text) {
+      showExtractionBadge("✨ Layer 2: AI Parsing...", false);
+
+      chrome.runtime.sendMessage(
+        {
+          type: "PARSE_JOB_AI",
+          payload: {
+            url: tab.url,
+            pageText: layer1Data.clean_page_text,
+            layer1Data,
+            firecrawlApiKey: currentFirecrawlKey,
+          },
+          serverUrl: currentServerUrl,
+        },
+        (aiResponse) => {
+          if (aiResponse && aiResponse.success && aiResponse.aiParsedData) {
+            const merged = synthesizeLayer3(layer1Data, aiResponse.aiParsedData);
+            applyJobDataToForm(merged);
+            showExtractionBadge(`✨ Layer 3 Synthesized (${aiResponse.provider || "AI"} + DOM)`, true);
+            showToast("✨ AI enhanced job details!", "success");
+          } else {
+            showExtractionBadge(`⚡ Layer 1: ${layer1Data.extraction_method || "DOM Extracted"}`, false);
+          }
+        }
+      );
+    }
+  }
+
+  function synthesizeLayer3(layer1, layer2) {
+    const title = (layer1.extraction_method?.includes("JSON-LD") || layer1.extraction_method?.includes("Platform"))
+      ? (layer1.title || layer2.title)
+      : (layer2.title || layer1.title);
+
+    const company = (layer1.extraction_method?.includes("JSON-LD") || layer1.extraction_method?.includes("Platform"))
+      ? (layer1.company || layer2.company)
+      : (layer2.company || layer1.company);
+
+    const location = layer2.location || layer1.location;
+    const salary_range = layer1.salary_range || layer2.salary_range;
+    const employment_type = layer2.employment_type || layer1.employment_type;
+    const work_location = layer2.work_location || layer1.work_location;
+    const description = (layer2.description && layer2.description.length > 50) ? layer2.description : layer1.description;
+
+    const combinedSkills = Array.from(
+      new Set([...(layer1.skills || []), ...(layer2.skills || [])])
+    ).slice(0, 15);
+
+    if (layer2.contact_name || layer2.contact_email) {
+      activeContact = {
+        contact_name: layer2.contact_name,
+        contact_email: layer2.contact_email,
+        contact_role: layer2.contact_role || "Recruiter",
+      };
+    }
+
+    return {
+      title,
+      company,
+      location,
+      salary_range,
+      employment_type,
+      work_location,
+      application_url: layer1.application_url,
+      description,
+      experience: layer1.experience,
+      department: layer1.department,
+      vacancy: layer1.vacancy,
+      skills: combinedSkills,
+    };
+  }
+
+  function applyJobDataToForm(data) {
+    if (data.title && data.title !== "Job Position") inputTitle.value = data.title;
+    if (data.company && data.company !== "Company Name") inputCompany.value = data.company;
+    if (data.location) inputLocation.value = data.location;
+    if (data.salary_range) inputSalary.value = data.salary_range;
+
+    // Robust Normalized Select Matching
+    setSelectValueNormalized(selectEmploymentType, data.employment_type);
+    setSelectValueNormalized(selectWorkLocation, data.work_location);
+
+    if (data.application_url) inputUrl.value = data.application_url;
+    if (data.description) textareaDescription.value = data.description;
+    if (Array.isArray(data.skills) && data.skills.length > 0) {
+      activeSkills = data.skills;
+      renderSkills();
+    }
+
+    renderExtraMetaChips(data);
+  }
+
+  function setSelectValueNormalized(selectEl, rawVal) {
+    if (!rawVal || !selectEl) return;
+    const rawClean = String(rawVal).toUpperCase().replace(/[^A-Z]/g, "");
+    for (const opt of selectEl.options) {
+      const optClean = opt.value.toUpperCase().replace(/[^A-Z]/g, "");
+      if (rawClean === optClean || rawClean.includes(optClean) || optClean.includes(rawClean)) {
+        selectEl.value = opt.value;
+        return;
       }
+    }
+  }
+
+  function renderExtraMetaChips(data) {
+    extraMetaPills.innerHTML = "";
+    const metaItems = [];
+    if (data.experience) metaItems.push(`Exp: ${data.experience}`);
+    if (data.department) metaItems.push(`Dept: ${data.department}`);
+    if (data.vacancy) metaItems.push(`Vacancy: ${data.vacancy}`);
+    if (activeContact?.contact_name) metaItems.push(`Recruiter: ${activeContact.contact_name}`);
+
+    if (metaItems.length > 0) {
+      metaItems.forEach((text) => {
+        const chip = document.createElement("span");
+        chip.className = "meta-chip";
+        chip.textContent = text;
+        extraMetaPills.appendChild(chip);
+      });
+      extraMetaPills.classList.remove("hidden");
+    } else {
+      extraMetaPills.classList.add("hidden");
+    }
+  }
+
+  function showExtractionBadge(text, isAISynthesized) {
+    extractionBadge.classList.remove("hidden");
+    extractionText.textContent = text;
+    if (isAISynthesized) {
+      extractionBadge.className = "extraction-pill ai-synthesized";
+    } else {
+      extractionBadge.className = "extraction-pill";
     }
   }
 
@@ -186,6 +333,13 @@ document.addEventListener("DOMContentLoaded", () => {
       skillsTags.appendChild(tag);
     });
 
+    if (activeSkills.length > 0) {
+      skillCounterBadge.textContent = activeSkills.length;
+      skillCounterBadge.classList.remove("hidden");
+    } else {
+      skillCounterBadge.classList.add("hidden");
+    }
+
     skillsTags.querySelectorAll(".tag-remove").forEach((el) => {
       el.addEventListener("click", (e) => {
         const idx = parseInt(e.target.getAttribute("data-index"), 10);
@@ -195,13 +349,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function showToast(message, type = "info") {
+    const toast = document.createElement("div");
+    toast.className = `toast-item toast-${type}`;
+    toast.innerHTML = `<span>${message}</span>`;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(8px)";
+      setTimeout(() => toast.remove(), 200);
+    }, 2400);
+  }
+
   async function handleFormSubmit(e) {
     e.preventDefault();
 
     const title = inputTitle.value.trim();
     const company = inputCompany.value.trim();
     if (!title || !company) {
-      alert("Job Title and Company Name are required.");
+      showToast("Job Title and Company are required", "error");
       return;
     }
 
@@ -219,6 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
       description: textareaDescription.value.trim() || null,
       skills: activeSkills,
       source: "Chrome Extension",
+      ...(activeContact || {}),
     };
 
     chrome.runtime.sendMessage(
@@ -234,12 +402,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (response && response.success) {
           jobForm.classList.add("hidden");
           successBanner.classList.remove("hidden");
+          showToast("Saved to atTrack Wishlist! 🎉", "success");
 
           btnOpenBoard.addEventListener("click", () => {
             chrome.tabs.create({ url: `${currentServerUrl}/board` });
           });
         } else {
-          alert(`Failed to save job: ${response?.error || "Unknown error"}`);
+          showToast(`Failed to save: ${response?.error || "Unknown error"}`, "error");
         }
       }
     );

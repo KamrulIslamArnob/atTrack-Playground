@@ -17,7 +17,11 @@ export interface SystemPerformanceData {
   osRelease: string;
   arch: string;
   cpus: { model: string; speed: number; count: number };
-  cpuUsage: { percentCPUUsage: number; idleWakeupsPerSecond?: number };
+  cpuUsage: {
+    percentCPUUsage: number;
+    systemCpuPercent?: number;
+    idleWakeupsPerSecond?: number;
+  };
   memory: {
     totalSystemRamMB: number;
     freeSystemRamMB: number;
@@ -26,6 +30,7 @@ export interface SystemPerformanceData {
     processRssMB: number;
     processHeapTotalMB: number;
     processHeapUsedMB: number;
+    appRamPercent?: number;
     electronPrivateMB?: number;
     electronSharedMB?: number;
   };

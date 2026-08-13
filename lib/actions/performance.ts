@@ -5,22 +5,76 @@ import path from "node:path";
 import packageJson from "@/package.json";
 import type { SystemPerformanceData } from "@/lib/types/electron";
 
+let lastCpuUsage: { user: number; system: number; timestamp: number } | null = null;
+let lastCpus: os.CpuInfo[] | null = null;
+
+function getSystemCpuUsage(): number {
+  const currentCpus = os.cpus();
+  if (!lastCpus || lastCpus.length !== currentCpus.length) {
+    lastCpus = currentCpus;
+    return 0;
+  }
+  let totalIdle = 0;
+  let totalTick = 0;
+
+  for (let i = 0; i < currentCpus.length; i++) {
+    const cpu = currentCpus[i];
+    const prevCpu = lastCpus[i];
+    const idle = cpu.times.idle - prevCpu.times.idle;
+    let tick = 0;
+    for (const type in cpu.times) {
+      tick += (cpu.times as Record<string, number>)[type] - (prevCpu.times as Record<string, number>)[type];
+    }
+    totalIdle += idle;
+    totalTick += tick;
+  }
+
+  lastCpus = currentCpus;
+  if (totalTick === 0) return 0;
+  const systemUsage = (1 - totalIdle / totalTick) * 100;
+  return Math.min(100, Math.max(0, Math.round(systemUsage * 10) / 10));
+}
+
+function getAppCpuUsage(cpuCount: number): number {
+  const now = Date.now();
+  const current = process.cpuUsage();
+  let percent = 0;
+
+  if (lastCpuUsage) {
+    const userDiff = current.user - lastCpuUsage.user;
+    const sysDiff = current.system - lastCpuUsage.system;
+    const timeDiffSec = (now - lastCpuUsage.timestamp) / 1000;
+    if (timeDiffSec > 0) {
+      const cpuSec = (userDiff + sysDiff) / 1_000_000;
+      percent = Math.min(100, Math.max(0, Math.round((cpuSec / (timeDiffSec * (cpuCount || 1))) * 100 * 100) / 100));
+    }
+  } else {
+    const uptimeSec = process.uptime() || 1;
+    const totalCpuSec = (current.user + current.system) / 1_000_000;
+    percent = Math.min(100, Math.max(0, Math.round((totalCpuSec / (uptimeSec * (cpuCount || 1))) * 100 * 100) / 100));
+  }
+
+  lastCpuUsage = { user: current.user, system: current.system, timestamp: now };
+  return percent;
+}
+
 export async function getSystemPerformanceAction(): Promise<SystemPerformanceData> {
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
   const usedMem = totalMem - freeMem;
   const memUsage = process.memoryUsage();
-  const cpuUsage = process.cpuUsage ? process.cpuUsage() : { user: 0, system: 0 };
   const cpus = os.cpus();
+  const cpuCount = cpus ? cpus.length : 1;
   const cpuModel = cpus && cpus.length > 0 ? cpus[0].model : "Unknown CPU";
 
   const dataDir = process.env.SQLITE_DIR || path.join(process.cwd(), ".data");
   const storageDir = process.env.STORAGE_DIR || path.join(dataDir, "storage");
   const port = Number(process.env.PORT || 3308);
 
-  const uptimeSec = process.uptime() || 1;
-  const totalCpuMicroSec = cpuUsage.user + cpuUsage.system;
-  const cpuPercent = Math.min(100, Math.round((totalCpuMicroSec / (uptimeSec * 1000000 * (cpus.length || 1))) * 100 * 100) / 100);
+  const appCpuPercent = getAppCpuUsage(cpuCount);
+  const systemCpuPercent = getSystemCpuUsage();
+  const processRssMB = Math.round(memUsage.rss / (1024 * 1024));
+  const appRamPercent = Math.round((memUsage.rss / totalMem) * 1000) / 10;
 
   return {
     appVersion: packageJson.version || "1.5.0",
@@ -35,19 +89,21 @@ export async function getSystemPerformanceAction(): Promise<SystemPerformanceDat
     cpus: {
       model: cpuModel,
       speed: cpus && cpus.length > 0 ? cpus[0].speed : 0,
-      count: cpus ? cpus.length : 0,
+      count: cpuCount,
     },
     cpuUsage: {
-      percentCPUUsage: cpuPercent,
+      percentCPUUsage: appCpuPercent,
+      systemCpuPercent: systemCpuPercent,
     },
     memory: {
       totalSystemRamMB: Math.round(totalMem / (1024 * 1024)),
       freeSystemRamMB: Math.round(freeMem / (1024 * 1024)),
       usedSystemRamMB: Math.round(usedMem / (1024 * 1024)),
       ramUsagePercent: Math.round((usedMem / totalMem) * 100),
-      processRssMB: Math.round(memUsage.rss / (1024 * 1024)),
+      processRssMB: processRssMB,
       processHeapTotalMB: Math.round(memUsage.heapTotal / (1024 * 1024)),
       processHeapUsedMB: Math.round(memUsage.heapUsed / (1024 * 1024)),
+      appRamPercent: appRamPercent,
     },
     paths: {
       rootFolder: process.cwd(),

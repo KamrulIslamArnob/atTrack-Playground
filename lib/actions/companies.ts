@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 
 /** job-detail-sheet Company tab — manual enrichment, no AI. */
 export async function updateCompany(companyId: string, formData: FormData): Promise<void> {
@@ -30,7 +29,6 @@ export async function updateCompany(companyId: string, formData: FormData): Prom
   if (error) throw new Error("Failed to update company.");
 
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "update", "company", companyId);
 }
 
 export interface CrmCompany {
@@ -146,7 +144,6 @@ export async function createCompany(formData: FormData): Promise<{ id: string }>
   if (error) throw new Error("Failed to create company.");
 
   revalidatePath("/crm");
-  await logResourceActivity(userId, "create", "company", company.id, { name });
   return { id: company.id };
 }
 
@@ -174,7 +171,6 @@ export async function updateCompanyDetails(
   if (error) throw new Error("Failed to update company.");
 
   revalidatePath("/crm");
-  await logResourceActivity(userId, "update", "company", companyId, { name });
 
   const [{ count: jobCount }, { count: contactCount }] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("company_id", companyId),
@@ -219,5 +215,4 @@ export async function deleteCompany(companyId: string): Promise<void> {
   if (error) throw new Error("Failed to delete company.");
 
   revalidatePath("/crm");
-  await logResourceActivity(userId, "delete", "company", companyId);
 }

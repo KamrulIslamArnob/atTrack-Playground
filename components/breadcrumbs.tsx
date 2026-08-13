@@ -21,6 +21,7 @@ const routeLabels: Record<string, string> = {
   documents: "Resume/CV",
   crm: "CRM",
   settings: "Settings",
+  preferences: "Preferences",
   insights: "Insights",
   admin: "Admin",
 };

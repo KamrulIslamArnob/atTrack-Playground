@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/encryption";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import {
   PROVIDER_TYPES,
   TASK_TYPES,
@@ -87,10 +86,6 @@ export async function createProvider(params: {
   }
 
   const id = (data as unknown as { id: string }).id;
-  await logResourceActivity(userId, "create", "ai_provider", id, {
-    name: params.name,
-    provider_type: params.provider_type,
-  });
   revalidatePath("/settings");
   return { id };
 }
@@ -132,7 +127,6 @@ export async function updateProvider(
     return { error: "Failed to update provider." };
   }
 
-  await logResourceActivity(userId, "update", "ai_provider", id, { name: params.name });
   revalidatePath("/settings");
   return {};
 }
@@ -162,7 +156,6 @@ export async function deleteProvider(id: string): Promise<{ error?: string }> {
     }
   }
 
-  await logResourceActivity(userId, "delete", "ai_provider", id);
   revalidatePath("/settings");
   return {};
 }
@@ -213,10 +206,6 @@ export async function saveTaskRoute(taskType: TaskType, providerIds: string[]): 
     return { error: "Failed to save task routing." };
   }
 
-  await logResourceActivity(userId, "update", "ai_task_route", undefined, {
-    task_type: taskType,
-    provider_ids: providerIds,
-  });
   revalidatePath("/settings");
   return {};
 }
@@ -664,7 +653,6 @@ export async function importAiProviders(jsonString: string): Promise<{ error?: s
       count++;
     }
 
-    await logResourceActivity(userId, "import", "ai_providers", "", { imported_count: count });
     revalidatePath("/settings");
     return { count };
   } catch (err: unknown) {

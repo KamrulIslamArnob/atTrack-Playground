@@ -2,12 +2,24 @@
 
 import type { ChatPersona, ContextSource } from "./types";
 
+export interface WorkspaceJobDeadline {
+  id?: string;
+  title: string;
+  dueDate: string;
+  stageKind?: string | null;
+  isCompleted?: boolean;
+  notes?: string | null;
+}
+
 export interface WorkspaceJob {
   id: string;
   title: string;
   company: string | null;
   stage: string | null;
   state: string | null;
+  deadline?: string | null;
+  sectionDeadline?: string | null;
+  deadlines?: WorkspaceJobDeadline[];
   matchScore: number | null;
   resumeName: string | null;
   applicationStatus: string | null;
@@ -32,7 +44,9 @@ export interface WorkspaceSnapshot {
   jobs: WorkspaceJob[];
   resumes: WorkspaceResume[];
   contacts: WorkspaceContact[];
-  counts: { jobs: number; resumes: number; contacts: number };
+  links?: { id: string; title: string; url: string; category: string }[];
+  aiToolPrompts?: number;
+  counts: { jobs: number; resumes: number; contacts: number; links?: number; aiToolPrompts?: number };
   generatedAt?: string;
 }
 
@@ -68,85 +82,106 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot | null> {
   }
 }
 
-export function deriveWorkspaceSources(snapshot: WorkspaceSnapshot | null): ContextSource[] {
-  const resumeCount = snapshot?.counts?.resumes ?? snapshot?.resumes?.length ?? 3;
-  const jobCount = snapshot?.counts?.jobs ?? snapshot?.jobs?.length ?? 12;
-  const contactCount = snapshot?.counts?.contacts ?? snapshot?.contacts?.length ?? 8;
+export function deriveWorkspaceSources(
+  snapshot: WorkspaceSnapshot | null,
+  customSources: ContextSource[] = []
+): ContextSource[] {
+  const resumeCount = snapshot?.counts?.resumes ?? snapshot?.resumes?.length ?? 0;
+  const jobCount = snapshot?.counts?.jobs ?? snapshot?.jobs?.length ?? 0;
+  const contactCount = snapshot?.counts?.contacts ?? snapshot?.contacts?.length ?? 0;
+  const linkCount = snapshot?.links?.length ?? 0;
+  const promptCount = snapshot?.aiToolPrompts ?? snapshot?.counts?.aiToolPrompts ?? 0;
 
-  return [
-    {
-      id: "resume",
-      type: "resume",
-      name: "Resumes & CVs",
-      recordCount: resumeCount,
-      lastSync: "Just now",
-      enabled: true,
-    },
+  const now = "Just now";
+
+  const seeded: ContextSource[] = [
     {
       id: "jobs",
       type: "jobs",
       name: "Job Applications",
+      kind: "native",
       recordCount: jobCount,
-      lastSync: "Just now",
+      lastSync: jobCount > 0 ? now : null,
       enabled: true,
+      toolName: "search_jobs",
+    },
+    {
+      id: "resume",
+      type: "resume",
+      name: "Resumes & CVs",
+      kind: "native",
+      recordCount: resumeCount,
+      lastSync: resumeCount > 0 ? now : null,
+      enabled: true,
+      toolName: "get_resume",
     },
     {
       id: "contacts",
       type: "contacts",
       name: "Contacts CRM",
+      kind: "native",
       recordCount: contactCount,
-      lastSync: "Just now",
+      lastSync: contactCount > 0 ? now : null,
       enabled: true,
+      toolName: "search_contacts",
+    },
+    {
+      id: "links",
+      type: "links",
+      name: "Social Links",
+      kind: "native",
+      recordCount: linkCount,
+      lastSync: linkCount > 0 ? now : null,
+      enabled: true,
+      toolName: "search_links",
+    },
+    {
+      id: "ai_prompts",
+      type: "ai_prompts",
+      name: "AI Prompts",
+      kind: "native",
+      recordCount: promptCount,
+      lastSync: promptCount > 0 ? now : null,
+      enabled: true,
+      toolName: "search_ai_prompts",
+    },
+    {
+      id: "obsidian",
+      type: "obsidian",
+      name: "Obsidian Vault",
+      kind: "fs",
+      recordCount: 0,
+      lastSync: null,
+      enabled: false,
+      toolName: "read_obsidian",
+      auth: { status: "needed", method: "fs-path" },
     },
     {
       id: "github",
       type: "github",
       name: "GitHub Repositories",
-      recordCount: 5,
-      lastSync: "1 hour ago",
-      enabled: true,
-    },
-    {
-      id: "gdrive",
-      type: "gdrive",
-      name: "Google Drive Docs",
-      recordCount: 14,
-      lastSync: "2 hours ago",
+      kind: "pat",
+      recordCount: 0,
+      lastSync: null,
       enabled: false,
+      toolName: "search_github",
+      auth: { status: "needed", method: "pat" },
     },
     {
-      id: "notion",
-      type: "notion",
-      name: "Notion Workspace",
-      recordCount: 9,
-      lastSync: "3 hours ago",
+      id: "db_query",
+      type: "db_query",
+      name: "Database Query",
+      kind: "native",
+      recordCount: 0,
+      lastSync: null,
       enabled: false,
-    },
-    {
-      id: "linkedin",
-      type: "linkedin",
-      name: "LinkedIn Profile Data",
-      recordCount: 1,
-      lastSync: "Yesterday",
-      enabled: true,
-    },
-    {
-      id: "email",
-      type: "email",
-      name: "Email Threads",
-      recordCount: 27,
-      lastSync: "4 hours ago",
-      enabled: false,
-    },
-    {
-      id: "projects",
-      type: "projects",
-      name: "Projects & Tasks",
-      recordCount: 4,
-      lastSync: "Just now",
-      enabled: true,
+      toolName: "query_database",
+      auth: { status: "none" },
     },
   ];
+
+  // Merge in user-defined custom sources (added via the Connect modal).
+  return [...seeded, ...customSources];
 }
 
 export async function fetchWorkspaceSources(): Promise<ContextSource[]> {
@@ -172,7 +207,7 @@ export function deriveContext(snapshot: WorkspaceSnapshot | null): WorkspaceCont
 
   const defaultResume = snapshot.resumes.find((r) => r.isDefault) ?? snapshot.resumes[0];
   const recent = snapshot.jobs[0];
-  const interview = snapshot.jobs.find((j) => j.stage === "interview");
+  const interview = snapshot.jobs.find((j) => j.stage === "interview" || j.stage === "Interviewing");
 
   return {
     hasData: snapshot.counts.jobs > 0 || snapshot.counts.resumes > 0 || snapshot.counts.contacts > 0,
@@ -188,33 +223,55 @@ export function deriveContext(snapshot: WorkspaceSnapshot | null): WorkspaceCont
   };
 }
 
-/** Builds a compact, token-bounded context block from the workspace snapshot. */
-export function buildWorkspaceContextBlock(snapshot: WorkspaceSnapshot | null): string | null {
+/** Builds a compact, token-bounded context block from the workspace snapshot and active sources. */
+export function buildWorkspaceContextBlock(
+  snapshot: WorkspaceSnapshot | null,
+  sources?: ContextSource[]
+): string | null {
   if (!snapshot || snapshot.counts.jobs === 0) return null;
+
+  const isEnabled = (type: string) => {
+    if (!sources || sources.length === 0) return true;
+    const match = sources.find((s) => s.id === type || s.type === type);
+    return match ? match.enabled : true;
+  };
 
   const lines: string[] = [];
   lines.push("The user is working inside AtTrack, a personal career workspace. Relevant local data:");
 
-  if (snapshot.jobs.length > 0) {
-    const top = snapshot.jobs.slice(0, 8);
-    lines.push(`- Active job applications (${snapshot.counts.jobs} total):`);
+  if (isEnabled("jobs") && snapshot.jobs.length > 0) {
+    const top = snapshot.jobs.slice(0, 15);
+    lines.push(`- Tracked job applications (${snapshot.counts.jobs} total):`);
     for (const job of top) {
+      const deadlineParts: string[] = [];
+      if (job.deadline) deadlineParts.push(`Overall Deadline: ${job.deadline}`);
+      if (job.sectionDeadline) deadlineParts.push(`Section Deadline: ${job.sectionDeadline}`);
+      if (job.deadlines && job.deadlines.length > 0) {
+        const active = job.deadlines
+          .filter((d) => !d.isCompleted)
+          .map((d) => `${d.title}: ${d.dueDate}${d.notes ? ` (${d.notes})` : ""}`);
+        if (active.length > 0) deadlineParts.push(`Milestones: ${active.join("; ")}`);
+      }
+
+      const deadlineStr = deadlineParts.length > 0 ? `[${deadlineParts.join(" | ")}]` : "[No explicit deadline set]";
+
       const parts = [
         job.title,
         job.company ? `@ ${job.company}` : null,
-        job.stage ? `[stage: ${job.stage}]` : null,
-        job.matchScore != null ? `(fit: ${job.matchScore})` : null,
+        `[Stage: ${job.stage || "Saved"}]`,
+        deadlineStr,
+        job.matchScore != null ? `(Fit match: ${job.matchScore}%)` : null,
       ].filter(Boolean);
       lines.push(`  · ${parts.join(" ")}`);
     }
   }
 
-  if (snapshot.resumes.length > 0) {
+  if (isEnabled("resume") && snapshot.resumes.length > 0) {
     const names = snapshot.resumes.map((r) => (r.isDefault ? `${r.name} (default)` : r.name));
     lines.push(`- Resume documents: ${names.join(", ")}`);
   }
 
-  if (snapshot.contacts.length > 0) {
+  if (isEnabled("contacts") && snapshot.contacts.length > 0) {
     lines.push(
       `- Professional network: ${snapshot.counts.contacts} contacts (e.g. ${snapshot.contacts
         .slice(0, 3)
@@ -222,6 +279,8 @@ export function buildWorkspaceContextBlock(snapshot: WorkspaceSnapshot | null): 
         .join(", ")})`
     );
   }
+
+  if (lines.length === 1) return null;
 
   lines.push(
     "When the user references 'my resume', 'my application', 'my jobs', or 'my contacts', use the data above. Do not invent details that contradict it."

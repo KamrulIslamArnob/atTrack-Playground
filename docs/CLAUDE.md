@@ -6,6 +6,7 @@ This file is the navigation map for Claude Code and other coding agents working 
 
 | Topic | File | When to read it |
 |---|---|---|
+| Complete Project Context & Directives | [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) | Universal reference for AI apps/agents detailing features, architecture, database schema, design rules, and conventions. |
 | Documentation index | [`docs/README.md`](README.md) | Before changing docs or adding new docs. |
 | Development and architecture | [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) | Before changing data, actions, Electron, build scripts, or app architecture. |
 | Release checklist | [`docs/RELEASE.md`](RELEASE.md) | Before shipping a new version, building installers, or publishing update artifacts. |

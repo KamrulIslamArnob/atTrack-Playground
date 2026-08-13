@@ -108,6 +108,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
                 alt="Avatar"
                 width={96}
                 height={96}
+                unoptimized
                 className="size-24 rounded-full object-cover ring-4 ring-background"
               />
             ) : (

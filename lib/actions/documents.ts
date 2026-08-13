@@ -4,7 +4,6 @@ import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { scheduleResumeExtract, scheduleRescoreAll } from "@/lib/ai/background";
 import { type ResumeMatchData } from "@/lib/ai/resume";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import fs from "node:fs";
@@ -119,7 +118,6 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
   revalidatePath("/documents");
   revalidatePath("/jobs");
 
-  await logResourceActivity(userId, "create", "document", doc.id, { name, type });
   return { documentId: doc.id };
 }
 
@@ -166,7 +164,6 @@ export async function deleteDocument(id: string): Promise<void> {
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "delete", "document", id);
 }
 
 export async function setDefaultDocument(id: string): Promise<void> {
@@ -195,7 +192,6 @@ export async function setDefaultDocument(id: string): Promise<void> {
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "update", "document", id, { is_default: true });
 }
 
 export async function getSignedUrl(filePath: string): Promise<string> {
@@ -274,7 +270,6 @@ export async function linkDocument(jobId: string, documentId: string): Promise<v
   await supabase.from("job_documents").insert({ job_id: jobId, document_id: documentId });
 
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "link", "job_document", documentId, { job_id: jobId });
 }
 
 export async function unlinkDocument(jobId: string, documentId: string): Promise<void> {
@@ -286,7 +281,6 @@ export async function unlinkDocument(jobId: string, documentId: string): Promise
   await supabase.from("job_documents").delete().eq("job_id", jobId).eq("document_id", documentId);
 
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "unlink", "job_document", documentId, { job_id: jobId });
 }
 
 export async function openDocumentFolder(id: string): Promise<void> {
@@ -427,6 +421,109 @@ export async function updateDocumentContent(
 
   revalidatePath("/documents");
   revalidatePath("/documents/" + id);
-  await logResourceActivity(userId, "update", "document", id, { name });
+}
+
+export async function createLinkDocument(data: {
+  name: string;
+  url: string;
+  type?: string;
+  isDefault?: boolean;
+}): Promise<{ documentId: string }> {
+  const { supabase, userId } = await getUser();
+
+  const name = data.name.trim();
+  let url = data.url.trim();
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = "https://" + url;
+  }
+  const type = data.type || "resume";
+  const setDefault = Boolean(data.isDefault);
+
+  if (!name) throw new Error("Document name is required");
+  if (!data.url.trim()) throw new Error("Link URL is required");
+
+  if (setDefault) {
+    await supabase
+      .from("documents")
+      .update({ is_default: false })
+      .eq("user_id", userId)
+      .eq("is_default", true);
+  }
+
+  const { data: doc, error: insertError } = await supabase
+    .from("documents")
+    .insert({
+      user_id: userId,
+      name,
+      type,
+      file_path: url,
+      content: `External Link: ${url}`,
+      generated_kind: "external_link",
+      is_default: setDefault,
+      match_data: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to save link document: ${insertError.message}`);
+  }
+
+  revalidatePath("/documents");
+  revalidatePath("/jobs");
+
+  return { documentId: doc.id };
+}
+
+export async function createRawTexDocument(data: {
+  name: string;
+  texCode: string;
+  type?: string;
+  isDefault?: boolean;
+}): Promise<{ documentId: string }> {
+  const { supabase, userId } = await getUser();
+
+  const name = data.name.trim();
+  const texCode = data.texCode;
+  const type = data.type || "resume";
+  const setDefault = Boolean(data.isDefault);
+
+  if (!name) throw new Error("Document name is required");
+  if (!texCode || !texCode.trim()) throw new Error(".TEX code content is required");
+
+  if (setDefault) {
+    await supabase
+      .from("documents")
+      .update({ is_default: false })
+      .eq("user_id", userId)
+      .eq("is_default", true);
+  }
+
+  const { data: doc, error: insertError } = await supabase
+    .from("documents")
+    .insert({
+      user_id: userId,
+      name,
+      type,
+      file_path: "",
+      content: texCode,
+      generated_kind: "latex_raw",
+      is_default: setDefault,
+      match_data: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to save .TEX document: ${insertError.message}`);
+  }
+
+  // Schedule AI extraction on text content for skills/roles matching
+  scheduleResumeExtract(doc.id, texCode, userId, type);
+
+  revalidatePath("/documents");
+  revalidatePath("/jobs");
+
+  return { documentId: doc.id };
 }
 

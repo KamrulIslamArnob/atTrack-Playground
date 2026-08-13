@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
+import { InfoTooltip } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -575,9 +576,15 @@ export function ContactFormDialog({
 
           {/* Notion-style Colorful Tag System */}
           <div className="space-y-2 rounded-2xl border border-border bg-muted/10 p-3">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Tags (Notion-style)
-            </Label>
+            <div className="flex items-center gap-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Tags (Notion-style)
+              </Label>
+              <InfoTooltip
+                content="Notion-Style Tag System: Type custom tags separated by commas or Enter (e.g., #alumni, #recruiter), or click quick preset pills below to categorize contacts."
+                side="top"
+              />
+            </div>
             <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background p-2 focus-within:ring-2 focus-within:ring-primary/20">
               {tags.map((tag) => (
                 <Badge

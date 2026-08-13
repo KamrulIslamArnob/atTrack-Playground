@@ -17,6 +17,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === "CHECK_SERVER_STATUS") {
         const result = await checkServerStatus(message.serverUrl);
         sendResponse(result);
+      } else if (message.type === "PARSE_JOB_AI") {
+        const result = await parseJobAI(message.payload, message.serverUrl);
+        sendResponse(result);
       } else if (message.type === "ADD_JOB_TO_ATTRACK") {
         const result = await addJobToAtTrack(message.jobData, message.serverUrl);
         sendResponse(result);
@@ -59,6 +62,32 @@ async function checkServerStatus(customUrl) {
     return { online: false, error: `HTTP ${response.status}`, serverUrl: targetUrl };
   } catch (err) {
     return { online: false, error: err.message || "Failed to reach local atTrack server", serverUrl: targetUrl };
+  }
+}
+
+async function parseJobAI(payload, customUrl) {
+  const { serverUrl = DEFAULT_SERVER_URL } = await chrome.storage.local.get("serverUrl");
+  const targetUrl = (customUrl || serverUrl).replace(/\/$/, "");
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(`${targetUrl}/api/extension/parse-job-ai`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    return { success: false, error: err.message || "AI parse request failed" };
   }
 }
 

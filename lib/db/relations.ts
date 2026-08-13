@@ -70,6 +70,12 @@ const RELATIONS: Record<string, Record<string, Relation>> = {
     job: { target: "jobs", kind: "one", column: "job_id" },
     document: { target: "documents", kind: "one", column: "document_id" },
   },
+  link_categories: {
+    links: { target: "links", kind: "many", column: "category_id" },
+  },
+  links: {
+    category: { target: "link_categories", kind: "one", column: "category_id" },
+  },
 };
 
 /**

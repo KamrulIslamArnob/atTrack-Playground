@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { scheduleJobScore } from "@/lib/ai/background";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -138,12 +137,6 @@ export async function POST(req: Request) {
     // Revalidate paths
     revalidatePath("/jobs");
     revalidatePath("/board");
-
-    await logResourceActivity(userId, "create", "job", job.id, {
-      title,
-      company: companyName,
-      source: "Chrome Extension",
-    });
 
     return NextResponse.json(
       {

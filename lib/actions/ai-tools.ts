@@ -2,8 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { logResourceActivity } from "@/lib/actions/activity-log";
-import { sendApplicationEmail } from "@/lib/actions/email";
 import { aiToolLabel, type AiToolKind } from "@/lib/types/ai-tools";
 
 /** AI Tools tab "Save as Document" — no physical file, content lives in documents.content. */
@@ -38,19 +36,6 @@ export async function saveAiToolAsDocument(
 
   revalidatePath("/jobs/" + jobId);
   revalidatePath("/documents");
-  await logResourceActivity(userId, "create", "document", doc.id, { name: `${aiToolLabel(kind)} — ${job.title}`, generated_kind: kind });
   return { id: doc.id };
 }
 
-/**
- * AI Tools tab "Send" — reuses the same SMTP-send action as the job header's
- * EmailApplyButton flow (it already logs its own "send"/"email" activity).
- */
-export async function sendAiToolEmail(
-  jobId: string,
-  to: string,
-  subject: string,
-  body: string
-): Promise<{ error?: string; success?: boolean }> {
-  return sendApplicationEmail({ jobId, to, subject, body, resumeId: null });
-}

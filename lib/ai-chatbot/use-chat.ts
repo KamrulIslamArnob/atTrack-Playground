@@ -15,6 +15,10 @@ interface UseAtTrackChatOptions {
   /** Builds the extra request body (model, persona, workspaceContext, ...). */
   buildBody: () => Record<string, unknown>;
   onError?: (error: Error) => void;
+  /** Receives real "Sources used" labels from the server (retrieval workflow). */
+  onSources?: (sources: string[]) => void;
+  /** Receives real tool-call records from the server (tool-calling workflow). */
+  onToolSteps?: (steps: unknown[]) => void;
 }
 
 function uid(): string {
@@ -29,7 +33,7 @@ function uid(): string {
  * terminated by `data: [DONE]`. We re-use the project's own provider layer
  * on the server, so this client stays transport-agnostic.
  */
-export function useAtTrackChat({ api, buildBody, onError }: UseAtTrackChatOptions) {
+export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps }: UseAtTrackChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -45,12 +49,19 @@ export function useAtTrackChat({ api, buildBody, onError }: UseAtTrackChatOption
   }, []);
 
   const runStream = useCallback(
-    async (history: ChatMessage[], userContent: string) => {
+    async (
+      history: ChatMessage[],
+      userContent: string,
+      attachments?: { url: string; contentType?: string }[]
+    ) => {
       const assistantId = uid();
-      const baseHistory = [
-        ...history,
-        { id: uid(), role: "user" as const, content: userContent },
-      ];
+      const userMsg: ChatMessage = {
+        id: uid(),
+        role: "user" as const,
+        content: userContent,
+        experimental_attachments: attachments,
+      };
+      const baseHistory = [...history, userMsg];
 
       setMessages(baseHistory);
       setMessages((prev) => [
@@ -67,7 +78,11 @@ export function useAtTrackChat({ api, buildBody, onError }: UseAtTrackChatOption
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: baseHistory.map((m) => ({ role: m.role, content: m.content })),
+            messages: baseHistory.map((m) => ({
+              role: m.role,
+              content: m.content,
+              experimental_attachments: m.experimental_attachments,
+            })),
             ...buildBody(),
           }),
           signal: controller.signal,
@@ -117,6 +132,14 @@ export function useAtTrackChat({ api, buildBody, onError }: UseAtTrackChatOption
                   prev.map((m) => (m.id === assistantId ? { ...m, content: visible } : m))
                 );
               }
+              // Real "Sources used" from the retrieval workflow.
+              if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                onSources?.(parsed.sources as string[]);
+              }
+              // Real tool calls from the tool-calling workflow.
+              if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
+                onToolSteps?.(parsed.tool_calls as unknown[]);
+              }
             } catch {
               /* partial frame; ignore until complete */
             }
@@ -145,10 +168,11 @@ export function useAtTrackChat({ api, buildBody, onError }: UseAtTrackChatOption
   );
 
   const sendMessage = useCallback(
-    (text: string) => {
+    (text: string, attachments?: { url: string; contentType?: string }[]) => {
       const value = text.trim();
-      if (!value || isLoading) return;
-      void runStream(messagesRef.current, value);
+      const hasAttachments = Boolean(attachments && attachments.length > 0);
+      if ((!value && !hasAttachments) || isLoading) return;
+      void runStream(messagesRef.current, value, attachments);
     },
     [isLoading, runStream]
   );

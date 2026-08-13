@@ -13,6 +13,7 @@ export const JSON_COLUMNS: Record<string, readonly string[]> = {
   ai_extraction_logs: ["extracted_fields"],
   users: ["raw_user_meta_data"],
   ai_task_routes: ["provider_ids"],
+  links: ["tags"],
 };
 
 export const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {
@@ -21,6 +22,7 @@ export const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {
   positions: ["is_primary"],
   job_deadlines: ["is_pinned", "is_completed"],
   jobs: ["is_unpaid"],
+  link_categories: ["is_default"],
 };
 
 /** Columns that get an auto-generated UUID on insert when absent. */

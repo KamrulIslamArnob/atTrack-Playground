@@ -357,7 +357,7 @@ export function ContactCard({
             href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
             target="_blank"
             rel="noreferrer"
-            className="flex size-7 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary font-medium text-[11px] transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-xs"
+            className="flex size-7 items-center justify-center rounded-lg border border-lime-500/30 bg-lime-500/15 text-lime-950 dark:text-lime-200 font-medium text-[11px] transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-xs"
             title={`${link.platform}: ${link.url}`}
           >
             <SocialIcon platform={link.platform} />

@@ -33,13 +33,42 @@ export interface MiniScenario {
   requiredSources: string[];
 }
 
+export type SourceKind =
+  | "native"
+  | "oauth"
+  | "pat"
+  | "fs"
+  | "api"
+  | "custom";
+
 export interface ContextSource {
-  id: string;
-  type: "resume" | "jobs" | "contacts" | "github" | "gdrive" | "notion" | "linkedin" | "email" | "projects" | string;
+  id: string; // stable: "jobs" | "github" | "obsidian" | "db_query" | "custom:<uuid>"
+  type:
+    | "resume"
+    | "jobs"
+    | "contacts"
+    | "links"
+    | "ai_prompts"
+    | "obsidian"
+    | "github"
+    | "db_query"
+    | "custom"
+    | string;
   name: string;
-  recordCount: number;
-  lastSync: string;
-  enabled: boolean;
+  kind: SourceKind;
+  enabled: boolean; // REAL permission — gates the linked tool
+  recordCount: number; // 0 if not yet synced / not applicable
+  lastSync: string | null; // real ISO timestamp or null
+  toolName?: string; // links to a ToolDefinition.name (e.g. "search_jobs")
+  // Auth/config for kinds that need credentials. Secrets NEVER live here —
+  // only status + a reference; the secret itself is stored encrypted elsewhere
+  // (localStorage for MVP, never logged, redacted in code).
+  auth?: {
+    status: "none" | "needed" | "connected";
+    method?: "oauth" | "pat" | "fs-path" | "api-key";
+  };
+  config?: Record<string, unknown>; // e.g. { vaultPath } / { allowTables }
+  isCustom?: boolean;
 }
 
 export interface ToolExecutionStep {

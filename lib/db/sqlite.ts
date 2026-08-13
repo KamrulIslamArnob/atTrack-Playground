@@ -270,9 +270,50 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "jobs", column: "salary_currency", ddl: "ALTER TABLE jobs ADD COLUMN salary_currency TEXT" },
   { table: "jobs", column: "salary_period", ddl: "ALTER TABLE jobs ADD COLUMN salary_period TEXT" },
   { table: "jobs", column: "state", ddl: "ALTER TABLE jobs ADD COLUMN state TEXT NOT NULL DEFAULT 'active'" },
+  { table: "links", column: "tags", ddl: "ALTER TABLE links ADD COLUMN tags TEXT" },
 ];
 
 function addMissingColumns(db: DatabaseSync) {
+  // Ensure link_categories and links tables exist
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS link_categories (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      sort_order REAL NOT NULL DEFAULT 0,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_link_categories_user ON link_categories(user_id, sort_order);
+
+    CREATE TABLE IF NOT EXISTS links (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      category_id TEXT NOT NULL REFERENCES link_categories(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      notes TEXT,
+      icon_url TEXT,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_links_user ON links(user_id);
+    CREATE INDEX IF NOT EXISTS idx_links_category ON links(user_id, category_id);
+
+    CREATE TABLE IF NOT EXISTS quick_shortcuts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      value TEXT NOT NULL DEFAULT '',
+      icon TEXT NOT NULL DEFAULT 'link',
+      sort_order REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_quick_shortcuts_user ON quick_shortcuts(user_id, sort_order);
+  `);
+
   for (const { ddl } of COLUMN_MIGRATIONS) {
     try {
       db.exec(ddl);

@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink, Mail } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink, Mail, Sparkles } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { APPLICATION_STATUS_LABELS } from "@/lib/types/job";
 
 interface Application {
@@ -301,18 +302,32 @@ export function ApplicationsGrid({
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {app.job?.match_score != null && (
-                    <span
-                      className={`rounded-2xl border px-2.5 py-1 text-[10px] font-semibold ${
-                        app.job.match_score >= 80
-                          ? "bg-lime-400/25 border-lime-500/50 text-lime-950 dark:bg-lime-500/20 dark:border-lime-400/40 dark:text-lime-200"
-                          : app.job.match_score >= 50
-                            ? "bg-amber-400/25 border-amber-500/50 text-amber-950 dark:bg-amber-500/20 dark:border-amber-400/40 dark:text-amber-200"
-                            : "bg-rose-400/25 border-rose-500/50 text-rose-950 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-200"
-                      }`}
-                      title={app.job.match_reasoning ?? undefined}
-                    >
-                      {app.job.match_score}% match
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span
+                          className={`rounded-2xl border px-2.5 py-1 text-[10px] font-semibold cursor-help transition-all ${
+                            app.job.match_score >= 80
+                              ? "bg-lime-400/25 border-lime-500/50 text-lime-950 dark:bg-lime-500/20 dark:border-lime-400/40 dark:text-lime-200"
+                              : app.job.match_score >= 50
+                                ? "bg-amber-400/25 border-amber-500/50 text-amber-950 dark:bg-amber-500/20 dark:border-amber-400/40 dark:text-amber-200"
+                                : "bg-rose-400/25 border-rose-500/50 text-rose-950 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-200"
+                          }`}
+                        >
+                          {app.job.match_score}% match
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs p-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
+                            <Sparkles className="size-3.5 text-amber-500" />
+                            <span>AI Match Analysis ({app.job.match_score}%)</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            {app.job.match_reasoning || "Match score computed based on required skills & experience fit."}
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                   <span className={`shrink-0 rounded-2xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.status ?? "draft"] ?? "bg-muted text-muted-foreground"}`}>
                     {statusLabels[app.status ?? "draft"] ?? "Draft"}

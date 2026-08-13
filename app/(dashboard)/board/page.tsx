@@ -1,5 +1,6 @@
 import { BoardView } from "@/components/board/board-view";
 import { PageHeader } from "@/components/page-header";
+import { InfoTooltip, StageTooltipContent } from "@/components/ui/tooltip";
 import { getBoard } from "@/lib/actions/board";
 
 export const metadata = { title: "Board" };
@@ -11,6 +12,12 @@ export default async function BoardPage() {
     <div className="space-y-4">
       <PageHeader
         title="Board"
+        titleExtra={
+          <InfoTooltip
+            content={<StageTooltipContent />}
+            side="right"
+          />
+        }
         subtitle="Every job you're tracking, laid out in columns. Drag a card to move it to the next stage."
         hideBreadcrumbRow
       />

@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { streamGenerateAiTool, parseEmailFromStream, type GeneratedEmail } from "@/lib/ai/ai-tools";
-import { saveAiToolAsDocument, sendAiToolEmail } from "@/lib/actions/ai-tools";
+import { saveAiToolAsDocument } from "@/lib/actions/ai-tools";
+import { sendApplicationEmail } from "@/lib/actions/email";
 import { AI_TOOL_KINDS, type AiToolKind } from "@/lib/types/ai-tools";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
@@ -95,7 +96,13 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
     }
     setSendPending(true);
     try {
-      const res = await sendAiToolEmail(data.job.id, to.trim(), result.subject, result.body);
+      const res = await sendApplicationEmail({
+        jobId: data.job.id,
+        to: to.trim(),
+        subject: result.subject,
+        body: result.body,
+        resumeId: null,
+      });
       if (res.error) throw new Error(res.error);
       onRefresh();
       toast.success("Email sent");

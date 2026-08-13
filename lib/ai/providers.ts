@@ -1,4 +1,8 @@
 import { GoogleGenAI, type Part } from "@google/genai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import type { LanguageModel } from "ai";
 import type { ProviderType, TaskType } from "@/lib/types/ai-providers";
 
 // ponytail: createAdminClient/decrypt/logAiUsage are imported lazily (dynamic
@@ -87,7 +91,7 @@ function defaultGeminiProvider(): ResolvedProvider | null {
  *  A key that fails to decrypt, or a route pointing at a deleted provider, is
  *  skipped like any other unusable hop rather than failing the whole chain. */
 export async function resolveProviderChain(userId: string, taskType: TaskType): Promise<ResolvedProvider[]> {
-  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { createDbClient: createAdminClient } = await import("@/lib/db/client");
   const admin = createAdminClient();
 
   const { data: route } = await admin
@@ -371,9 +375,15 @@ export async function generateTextStream(
           if (provider.provider_type === "gemini") {
             const ai = new GoogleGenAI({ apiKey: provider.api_key });
             const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
+            
+            const parts: Part[] = (input.images ?? []).map((img) => ({
+              inlineData: { mimeType: img.mimeType, data: img.data },
+            }));
+            parts.push({ text: prompt });
+
             const response = await ai.models.generateContentStream({
               model: provider.model,
-              contents: prompt,
+              contents: [{ role: "user", parts }],
               config: {
                 ...(input.temperature != null ? { temperature: input.temperature } : {}),
                 ...(input.maxOutputTokens != null ? { maxOutputTokens: input.maxOutputTokens } : {}),
@@ -490,6 +500,333 @@ export function stripHtml(html: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 20000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tool-calling (function calling). ADDITIVE: the existing generateText /
+// generateTextStream single-turn functions are NOT modified. This path is used
+// only when a route explicitly opts in (chatbot CHAT_TOOLS=on). Tool rounds are
+// non-streaming by nature; the final answer is streamed separately by the graph.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FunctionCall {
+  name: string;
+  args: Record<string, unknown>;
+  id?: string; // OpenAI/Anthropic need an id to pair the tool result message
+}
+
+export interface ProviderToolRoundResult {
+  text?: string;
+  functionCalls?: FunctionCall[];
+}
+
+export interface ToolCallRecord {
+  name: string;
+  args: Record<string, unknown>;
+  result?: { content: string; citations: string[] };
+  status: "called" | "done" | "error";
+  error?: string;
+}
+
+export interface ToolExecutionContext {
+  userId: string;
+  personaId?: string;
+  /** Per-source config (Obsidian path, GitHub token). NEVER logged. */
+  sourceConfig?: Record<string, Record<string, unknown>>;
+}
+
+type ToolExecutor = (
+  name: string,
+  args: Record<string, unknown>,
+  ctx: ToolExecutionContext
+) => Promise<{ content: string; citations: string[] }>;
+
+const MAX_TOOL_ROUNDS = 4;
+
+/** Gemini function-calling round. `contents` carries the running conversation. */
+async function callGeminiToolRound(
+  provider: ResolvedProvider,
+  systemPrompt: string | undefined,
+  contents: { role: string; parts: { text?: string; functionResponse?: unknown }[] }[],
+  toolDeclarations: Record<string, unknown>[]
+): Promise<ProviderToolRoundResult> {
+  const ai = new GoogleGenAI({ apiKey: provider.api_key });
+  const response = await ai.models.generateContent({
+    model: provider.model,
+    contents: contents as unknown as Part[],
+    config: {
+      systemInstruction: systemPrompt,
+      tools: [{ functionDeclarations: toolDeclarations }],
+      ...(input_temperature != null ? { temperature: input_temperature } : {}),
+    },
+  });
+
+  // @google/genai exposes functionCalls on the response; type as any-safe.
+  const fcs = (response as unknown as { functionCalls?: { name: string; args?: Record<string, unknown> }[] })
+    .functionCalls;
+  if (fcs && fcs.length > 0) {
+    return {
+      functionCalls: fcs.map((f) => ({ name: f.name, args: (f.args as Record<string, unknown>) ?? {} })),
+    };
+  }
+  const text = response.text;
+  return { text: text || undefined };
+}
+
+// input_temperature is threaded through via a module-scoped var set in generateTextWithTools,
+// kept minimal to avoid changing callGemini's signature.
+let input_temperature: number | undefined = undefined;
+
+async function callOpenAICompatibleToolRound(
+  provider: ResolvedProvider,
+  systemPrompt: string | undefined,
+  messages: { role: string; content?: string; tool_calls?: unknown[]; name?: string }[],
+  toolDeclarations: Record<string, unknown>[]
+): Promise<ProviderToolRoundResult> {
+  const baseUrl = (provider.base_url || "").replace(/\/+$/, "");
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${provider.api_key}`,
+    },
+    body: JSON.stringify({
+      model: provider.model,
+      messages,
+      tools: toolDeclarations.map((d) => ({ type: "function", function: d })),
+      tool_choice: "auto",
+      ...(input_temperature != null ? { temperature: input_temperature } : {}),
+    }),
+    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`${provider.name}: ${res.status} ${await res.text()}`);
+  const json = await res.json();
+  const msg = json.choices?.[0]?.message;
+  const toolCalls = msg?.tool_calls;
+  if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+    return {
+      functionCalls: toolCalls.map((tc: { function?: { name: string; arguments?: string } }) => ({
+        name: tc.function?.name ?? "",
+        args: safeParseArgs(tc.function?.arguments),
+        id: (tc as { id?: string }).id,
+      })),
+    };
+  }
+  return { text: typeof msg?.content === "string" ? msg.content : undefined };
+}
+
+async function callAnthropicToolRound(
+  provider: ResolvedProvider,
+  systemPrompt: string | undefined,
+  messages: { role: string; content: unknown }[],
+  toolDeclarations: Record<string, unknown>[]
+): Promise<ProviderToolRoundResult> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": provider.api_key,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: provider.model,
+      max_tokens: 8192,
+      ...(input_temperature != null ? { temperature: input_temperature } : {}),
+      ...(systemPrompt ? { system: systemPrompt } : {}),
+      tools: toolDeclarations,
+      messages,
+    }),
+    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`${provider.name}: ${res.status} ${await res.text()}`);
+  const json = await res.json();
+  const blocks = json.content ?? [];
+  const toolUses = blocks.filter((b: { type: string }) => b.type === "tool_use");
+  if (toolUses.length > 0) {
+    return {
+      functionCalls: toolUses.map((b: { name: string; id: string; input?: Record<string, unknown> }) => ({
+        name: b.name,
+        args: (b.input as Record<string, unknown>) ?? {},
+        id: b.id,
+      })),
+    };
+  }
+  const text = blocks
+    .filter((b: { type: string }) => b.type === "text")
+    .map((b: { text: string }) => b.text)
+    .join("");
+  return { text: text || undefined };
+}
+
+function safeParseArgs(raw: string | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Runs the model with the given tools, executing any function calls it emits and
+ * feeding results back, up to MAX_TOOL_ROUNDS. Returns the final answer text and
+ * the recorded tool calls. Falls back to plain generateText if no provider in the
+ * chain supports tools (resilience parity with runChain).
+ */
+export async function generateTextWithTools(
+  chain: ResolvedProvider[],
+  input: GenerateTextInput,
+  toolDeclarations: Record<string, unknown>[],
+  executor: ToolExecutor,
+  ctx: ToolExecutionContext,
+  onStep?: (record: ToolCallRecord) => void,
+  logContext?: { userId?: string; action: string; metadata?: Record<string, unknown> }
+): Promise<{ text: string; toolCalls: ToolCallRecord[] }> {
+  input_temperature = input.temperature;
+  const hasTools = toolDeclarations.length > 0;
+  const toolCalls: ToolCallRecord[] = [];
+
+  if (chain.length === 0) {
+    throw new Error("No AI provider configured for this task and no GEMINI_API_KEY fallback available.");
+  }
+  if (!hasTools) {
+    const r = await generateText(chain, input, logContext ?? { action: "ai_chatbot" });
+    return { text: r.text, toolCalls };
+  }
+
+  const startedAt = Date.now();
+  let lastError = "";
+
+  for (const provider of chain) {
+    try {
+      const records: ToolCallRecord[] = [];
+      // Conversation accumulators per provider shape.
+      const geminiParts: { role: string; parts: { text?: string; functionResponse?: unknown }[] }[] = [
+        { role: "user", parts: [{ text: input.userPrompt }] },
+      ];
+      const oaMessages: { role: string; content?: string; tool_calls?: unknown[]; name?: string }[] = [
+        ...(input.systemPrompt ? [{ role: "system", content: input.systemPrompt }] : []),
+        { role: "user", content: input.userPrompt },
+      ];
+      const antMessages: { role: string; content: unknown }[] = [
+        { role: "user", content: [{ type: "text", text: input.userPrompt }] },
+      ];
+
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        let roundResult: ProviderToolRoundResult;
+        if (provider.provider_type === "gemini") {
+          roundResult = await callGeminiToolRound(provider, input.systemPrompt, geminiParts, toolDeclarations);
+        } else if (provider.provider_type === "anthropic") {
+          roundResult = await callAnthropicToolRound(provider, input.systemPrompt, antMessages, toolDeclarations);
+        } else {
+          roundResult = await callOpenAICompatibleToolRound(provider, input.systemPrompt, oaMessages, toolDeclarations);
+        }
+
+        if (!roundResult.functionCalls || roundResult.functionCalls.length === 0) {
+          const text = roundResult.text ?? "";
+          if (logContext?.userId) {
+            await logUsage({
+              userId: logContext.userId,
+              action: logContext.action,
+              model: `${provider.name}/${provider.model}`,
+              outputTokens: 0,
+              durationMs: Date.now() - startedAt,
+              metadata: logContext.metadata,
+            });
+          }
+          return { text, toolCalls: records };
+        }
+
+        // Execute each tool call and feed results back.
+        for (const fc of roundResult.functionCalls) {
+          const record: ToolCallRecord = { name: fc.name, args: fc.args, status: "called" };
+          onStep?.(record);
+          try {
+            const res = await executor(fc.name, fc.args, ctx);
+            record.result = res;
+            record.status = "done";
+            if (res.citations.length) {
+              // store citations on the record so the caller can build source chips
+              (record as ToolCallRecord & { citations?: string[] }).citations = res.citations;
+            }
+          } catch (err) {
+            record.status = "error";
+            record.error = err instanceof Error ? err.message : String(err);
+            record.result = { content: `Tool error: ${record.error}`, citations: [] };
+          }
+          records.push(record);
+          onStep?.(record);
+
+          // Feed result back into each provider's conversation shape.
+          if (provider.provider_type === "gemini") {
+            geminiParts.push({
+              role: "tool",
+              parts: [{ functionResponse: { name: fc.name, response: { result: record.result?.content ?? "" } } }],
+            });
+          } else if (provider.provider_type === "anthropic") {
+            antMessages.push({
+              role: "user",
+              content: [
+                {
+                  type: "tool_result",
+                  tool_use_id: fc.id ?? fc.name,
+                  content: record.result?.content ?? "",
+                },
+              ],
+            });
+          } else {
+            oaMessages.push({
+              role: "tool",
+              name: fc.name,
+              content: record.result?.content ?? "",
+              // @ts-expect-error tool_call_id is valid for OpenAI tool messages
+              tool_call_id: fc.id,
+            });
+          }
+        }
+      }
+
+      // Exhausted rounds without a final text — return whatever we have.
+      const text = records.length ? "I gathered workspace data but could not finalize a response." : "";
+      return { text, toolCalls: records };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      lastError = `${provider.name}: ${message}`;
+      if (logContext?.userId) {
+        await logUsage({
+          userId: logContext.userId,
+          action: logContext.action,
+          model: `${provider.name}/${provider.model}`,
+          durationMs: Date.now() - startedAt,
+          status: "error",
+          error: message,
+          metadata: logContext.metadata,
+        });
+      }
+    }
+  }
+
+  throw new Error(`All providers failed (tool loop): ${lastError}`);
+}
+
+/**
+ * Returns a Vercel AI SDK LanguageModelV1 instance for the resolved provider.
+ */
+export function resolveVercelAIModel(provider: ResolvedProvider): LanguageModel {
+  if (provider.provider_type === "gemini") {
+    const google = createGoogleGenerativeAI({ apiKey: provider.api_key });
+    return google(provider.model);
+  } else if (provider.provider_type === "anthropic") {
+    const anthropic = createAnthropic({ apiKey: provider.api_key });
+    return anthropic(provider.model);
+  } else if (provider.provider_type === "openai_compatible") {
+    const openai = createOpenAI({ 
+      apiKey: provider.api_key,
+      baseURL: provider.base_url || undefined,
+    });
+    return openai(provider.model);
+  }
+  throw new Error(`Unsupported Vercel AI provider type: ${provider.provider_type}`);
 }
 
 export type { HopCaller };

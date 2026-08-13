@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/encryption";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 
 export interface SmtpConfig {
   id: string;
@@ -86,7 +85,6 @@ export async function saveSmtpConfig(params: {
     return { error: "Failed to save SMTP configuration." };
   }
 
-  await logResourceActivity(userId, "save", "smtp", undefined, { host: params.host, user_email: params.user_email });
 
   revalidatePath("/settings");
   return {};
@@ -104,7 +102,6 @@ export async function deleteSmtpConfig(): Promise<{ error?: string }> {
     return { error: "Failed to delete SMTP configuration." };
   }
 
-  await logResourceActivity(userId, "delete", "smtp");
 
   revalidatePath("/settings");
   return {};

@@ -1,11 +1,10 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createDbClient as createAdminClient } from "@/lib/db/client";
 import { extractJob } from "@/lib/ai/ai";
 import { createExtractionLogger } from "@/lib/ai/logger";
 import type { ExtractionResult } from "@/lib/ai/schema";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 
 const BUCKET = "job-imports";
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -40,7 +39,6 @@ export async function uploadScreenshot(
 
   if (signedUrlError) throw new Error(`Failed to get URL: ${signedUrlError.message}`);
 
-  await logResourceActivity(userId, "upload", "screenshot", screenshotId);
   return { screenshotId, screenshotUrl: signedUrlData.signedUrl };
 }
 
@@ -110,11 +108,6 @@ export async function extractJobImport(
 
     const { duration } = extractionLog.success(extractedFields);
     await saveLog(supabase, userId, sourceId, "success", duration, extractedFields);
-    await logResourceActivity(userId, "extract", "job_import", undefined, {
-      screenshots: screenshotIds.length,
-      hasText: !!trimmedText,
-      hasUrl: !!trimmedUrl,
-    });
 
     return result;
   } catch (err) {
@@ -142,7 +135,6 @@ export async function deleteScreenshots(screenshotIds: string[]): Promise<void> 
       console.error("Failed to delete screenshots:", error.message);
     }
 
-    await logResourceActivity(userId, "delete", "screenshot", undefined, { screenshots: ownedIds.length });
   }
 }
 

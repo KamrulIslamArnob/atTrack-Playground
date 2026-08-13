@@ -8,7 +8,10 @@ export function DashboardMainContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isFullBleed = pathname.startsWith("/preferences/database");
+  const isFullBleed =
+    pathname.startsWith("/preferences/database") ||
+    pathname.startsWith("/chatbot") ||
+    pathname.startsWith("/ai-builder");
 
   if (isFullBleed) {
     return (

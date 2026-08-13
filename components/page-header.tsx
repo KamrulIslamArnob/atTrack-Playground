@@ -5,6 +5,8 @@ interface PageHeaderProps {
   subtitle: string;
   /** Toolbar items rendered to the right of the breadcrumbs in Layer 2. */
   children?: React.ReactNode;
+  /** Optional element rendered beside the title (e.g. InfoTooltip) */
+  titleExtra?: React.ReactNode;
   /** Optional breadcrumb label overrides. */
   breadcrumbLabels?: Record<string, string>;
   /** Hide the breadcrumb + toolbar row (Layer 2) when the page handles it elsewhere. */
@@ -21,6 +23,7 @@ export function PageHeader({
   title,
   subtitle,
   children,
+  titleExtra,
   breadcrumbLabels,
   hideBreadcrumbRow,
 }: PageHeaderProps) {
@@ -29,9 +32,12 @@ export function PageHeader({
       {/* Layer 1 — Title + Subtitle */}
       <div className="-mx-6 border-b border-border pb-4">
         <div className="px-6">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            {title}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">
+              {title}
+            </h1>
+            {titleExtra}
+          </div>
           <p className="text-sm text-muted-foreground sm:text-base">
             {subtitle}
           </p>

@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { logAuthActivity, logResourceActivity } from "@/lib/actions/activity-log";
 
 // AtTrack is a native single-user app: no sign-in, sign-up, or sign-out.
 // What remains here is profile and avatar editing, plus a destructive reset.
@@ -38,7 +37,6 @@ export async function updateProfile(formData: FormData) {
     redirect("/settings?error=" + encodeURIComponent("Failed to update profile."));
   }
 
-  await logResourceActivity(userId, "update", "profile", userId, { full_name: fullName });
 
   revalidatePath("/settings");
   revalidatePath("/overview");
@@ -79,8 +77,8 @@ export async function uploadAvatar(formData: FormData) {
     redirect("/settings?error=" + encodeURIComponent("Failed to update profile with avatar."));
   }
 
-  await logResourceActivity(userId, "upload", "avatar");
 
+  revalidatePath("/", "layout");
   revalidatePath("/settings");
   revalidatePath("/overview");
   redirect("/settings?message=" + encodeURIComponent("Avatar uploaded successfully."));
@@ -108,7 +106,6 @@ export async function resetAllData(formData: FormData) {
   }
 
   // Log before deletion — this is the last chance to record it.
-  await logAuthActivity(userId, "account_deletion", { scope: "all_data" });
 
   const storage = supabase.storage;
   for (const bucket of ["avatar", "documents", "job-imports"] as const) {

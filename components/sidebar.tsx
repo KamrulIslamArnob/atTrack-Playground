@@ -48,11 +48,17 @@ import {
   User,
   Database,
   Gauge,
+  Link2,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const navigation = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
+];
+
+const aiBuilderNavigation = [
+  { name: "Chatbot", href: "/ai-builder/chatbot", icon: Bot },
 ];
 
 const pipelineNavigation = [
@@ -63,13 +69,14 @@ const pipelineNavigation = [
 const resourceNavigation = [
   { name: "Resume/CV", href: "/documents", icon: FileText },
   { name: "CRM", href: "/crm", icon: Users },
+  { name: "Social Links", href: "/links", icon: Link2 },
 ];
 
 const secondaryNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "AI Prompts", href: "/preferences/ai-prompts", icon: Sparkles },
   { name: "Database", href: "/preferences/database", icon: Database },
-  { name: "Performance", href: "/preferences/performance", icon: Gauge },
+  { name: "Performance", href: "/preferences", icon: Gauge },
 ];
 
 const adminOverviewNavigation = [
@@ -87,12 +94,14 @@ const adminMonitoringNavigation = [
 
 const NAV_ITEMS = [
   { name: "Overview", href: "/overview", keywords: "home summary stats" },
+  { name: "Chatbot", href: "/ai-builder/chatbot", keywords: "ai builder chatbot gpt gemini claude assistant prompt chat" },
   { name: "Board", href: "/board", keywords: "kanban pipeline stages drag" },
   { name: "Jobs", href: "/jobs", keywords: "job listings saved interested" },
   { name: "Resume/CV", href: "/documents", keywords: "resume cv cover letter" },
   { name: "CRM", href: "/crm", keywords: "contacts companies network" },
+  { name: "Social Links", href: "/links", keywords: "social links resources portals bookmarks directory" },
   { name: "Settings", href: "/settings", keywords: "profile preferences email" },
-  { name: "Performance", href: "/preferences/performance", keywords: "performance ram cpu memory port system root path version" },
+  { name: "Performance", href: "/preferences", keywords: "performance ram cpu memory port system root path version" },
 ];
 
 const ADMIN_NAV_ITEMS = [
@@ -333,6 +342,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                   alt={fullName}
                   width={36}
                   height={36}
+                  unoptimized
                   className="size-9 shrink-0 rounded-full object-cover"
                 />
               ) : (
@@ -351,6 +361,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                     alt={fullName}
                     width={36}
                     height={36}
+                    unoptimized
                     className="size-9 shrink-0 rounded-full object-cover"
                   />
                 ) : (
@@ -414,14 +425,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -447,14 +458,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -480,14 +491,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -508,14 +519,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -541,14 +552,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -574,14 +585,47 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
+                      {!isCollapsed && <span>{item.name}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
+
+              {!isCollapsed && (
+                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
+                  AI Builder
+                </div>
+              )}
+              <div className="space-y-1">
+                {aiBuilderNavigation.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={onNavigate}
+                      title={isCollapsed ? item.name : undefined}
+                      className={cn(
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        isActive
+                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5 text-emerald-600 dark:text-emerald-400" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -605,14 +649,14 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "flex items-center rounded-lg text-sm font-medium transition-colors",
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
                           ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <item.icon className="size-4 shrink-0" />
+                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );

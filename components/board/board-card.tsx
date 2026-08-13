@@ -9,7 +9,9 @@ import {
   Link2,
   MoveRight,
   Tag,
+  Sparkles,
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   DropdownMenuItem,
@@ -203,37 +205,60 @@ export function BoardCardItem({
           {formatDistanceToNow(new Date(card.created_at), { addSuffix: true })}
         </span>
 
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0" onClick={(e) => e.stopPropagation()}>
           {linkCount > 0 && (
-            <span
-              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0"
-              title={`${linkCount} project link${linkCount === 1 ? "" : "s"}`}
-            >
-              <Link2 className="size-3 shrink-0" aria-hidden="true" />
-              {linkCount}
-            </span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0 cursor-help">
+                  <Link2 className="size-3 shrink-0" aria-hidden="true" />
+                  {linkCount}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                {linkCount} attached project link{linkCount === 1 ? "" : "s"}
+              </TooltipContent>
+            </Tooltip>
           )}
+
           {card.deadline && (
-            <span
-              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0"
-              title={`Deadline ${new Date(card.deadline).toLocaleDateString()}`}
-            >
-              <CalendarClock className="size-3 shrink-0" aria-hidden="true" />
-              {new Date(card.deadline).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0 cursor-help">
+                  <CalendarClock className="size-3 shrink-0" aria-hidden="true" />
+                  {new Date(card.deadline).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                Deadline: {new Date(card.deadline).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </TooltipContent>
+            </Tooltip>
           )}
+
           {band && (
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums whitespace-nowrap shrink-0",
-                band.className
-              )}
-            >
-              {band.label} {Math.round(card.match_score!)}
-            </span>
+            <Tooltip>
+              <TooltipTrigger>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums whitespace-nowrap shrink-0 cursor-help",
+                    band.className
+                  )}
+                >
+                  {band.label} {Math.round(card.match_score!)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-2.5 text-left">
+                <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
+                  <Sparkles className="size-3 text-amber-500" />
+                  <span>Match Score: {Math.round(card.match_score!)}%</span>
+                </div>
+                <p className="text-[10.5px] text-muted-foreground mt-0.5 leading-snug">
+                  Evaluated resume relevance for {card.company_name ?? "this position"}.
+                </p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>

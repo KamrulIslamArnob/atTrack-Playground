@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import sharp from "sharp";
 
 export interface Contact {
@@ -230,7 +229,6 @@ export async function createContact(
   await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contact.id });
 
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "create", "contact", contact.id, { job_id: jobId, name });
   return { id: contact.id };
 }
 
@@ -246,7 +244,6 @@ export async function linkContact(jobId: string, contactId: string): Promise<voi
   await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contactId });
 
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "link", "job_contact", contactId, { job_id: jobId });
 }
 
 export async function unlinkContact(jobId: string, contactId: string): Promise<void> {
@@ -258,7 +255,6 @@ export async function unlinkContact(jobId: string, contactId: string): Promise<v
   await supabase.from("job_contacts").delete().eq("job_id", jobId).eq("contact_id", contactId);
 
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "unlink", "job_contact", contactId, { job_id: jobId });
 }
 
 export async function updateContact(id: string, formData: FormData): Promise<void> {
@@ -293,7 +289,6 @@ export async function updateContact(id: string, formData: FormData): Promise<voi
     .eq("user_id", userId);
 
   if (error) throw new Error("Failed to update contact.");
-  await logResourceActivity(userId, "update", "contact", id, { name });
 }
 
 export async function updateContactNotes(id: string, notes: string | null): Promise<void> {
@@ -317,7 +312,6 @@ export async function deleteContact(id: string): Promise<void> {
 
   const { error } = await supabase.from("contacts").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error("Failed to delete contact.");
-  await logResourceActivity(userId, "delete", "contact", id);
 }
 
 // --- CRM (/crm) — contacts organized by company, independent of any one job ---
@@ -399,7 +393,6 @@ export async function createCompanyContact(
   if (error) throw new Error("Failed to create contact.");
 
   revalidatePath("/crm");
-  await logResourceActivity(userId, "create", "contact", contact.id, { company_id: companyId, name });
   return { id: contact.id };
 }
 
@@ -423,7 +416,6 @@ export async function setContactCompany(contactId: string, companyId: string | n
   if (error) throw new Error("Failed to link contact.");
 
   revalidatePath("/crm");
-  await logResourceActivity(userId, companyId ? "link" : "unlink", "contact", contactId, { company_id: companyId });
 }
 
 /** CRM "+ Add contact" from the flat, person-first Contacts view — company is an optional tag, not a container. */
@@ -461,7 +453,6 @@ export async function createPersonContact(formData: FormData): Promise<{ id: str
   if (error) throw new Error("Failed to create contact.");
 
   revalidatePath("/crm");
-  await logResourceActivity(userId, "create", "contact", contact.id, { company_id: companyId, name });
   return { id: contact.id };
 }
 

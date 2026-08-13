@@ -72,6 +72,17 @@ export const CHAT_PERSONAS: ChatPersona[] = [
 
 export const AI_MODELS: AIModel[] = [
   {
+    id: "auto",
+    name: "Auto Hybrid Agent",
+    provider: "auto",
+    description: "Smart Hybrid: Automatically routes turn to Vision, Code, or Reasoning models per context",
+    supportsImages: true,
+    isReasoning: true,
+    isFast: true,
+    isPopular: true,
+    badge: "Smart Hybrid",
+  },
+  {
     id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
     provider: "gemini",

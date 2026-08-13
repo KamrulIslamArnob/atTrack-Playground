@@ -2,8 +2,7 @@
 
 import { getAdminUser } from "@/lib/auth";
 import type { ActivityLog } from "@/lib/actions/activity-log";
-import { logResourceActivity } from "@/lib/actions/activity-log";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createDbClient as createAdminClient } from "@/lib/db/client";
 
 interface AdminDashboardStats {
   totalUsers: number;
@@ -244,7 +243,6 @@ export async function banUser(userId: string): Promise<{ error?: string }> {
   if (error) return { error: error.message };
 
   const target = await getTargetInfo(userId);
-  await logResourceActivity(adminId, "ban", "user", userId, target);
   return {};
 }
 
@@ -259,7 +257,6 @@ export async function unbanUser(userId: string): Promise<{ error?: string }> {
   if (error) return { error: error.message };
 
   const target = await getTargetInfo(userId);
-  await logResourceActivity(adminId, "unban", "user", userId, target);
   return {};
 }
 
@@ -278,7 +275,6 @@ export async function promoteToAdmin(userId: string): Promise<{ error?: string }
   if (error) return { error: error.message };
 
   const target = await getTargetInfo(userId);
-  await logResourceActivity(adminId, "promote", "user", userId, target);
   return {};
 }
 
@@ -297,7 +293,6 @@ export async function demoteToUser(userId: string): Promise<{ error?: string }> 
   if (error) return { error: error.message };
 
   const target = await getTargetInfo(userId);
-  await logResourceActivity(adminId, "demote", "user", userId, target);
   return {};
 }
 

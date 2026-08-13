@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createDbClient as createAdminClient } from "@/lib/db/client";
 
 interface AiUsageLogParams {
   userId: string;

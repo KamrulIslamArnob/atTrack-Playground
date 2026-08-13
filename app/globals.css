@@ -36,6 +36,12 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-assistant-border: var(--assistant-border);
+  --color-user-bubble: var(--user-bubble);
+  --color-user-bubble-foreground: var(--user-bubble-foreground);
+  --color-status-online: var(--status-online);
+  --color-urgency: var(--urgency);
+  --color-urgency-overdue: var(--urgency-overdue);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -61,38 +67,44 @@
   --card-foreground: #09090b;
   --popover: #ffffff;
   --popover-foreground: #09090b;
-  --primary: #bef264;
-  --primary-foreground: #09090b;
-  --secondary: #f7fee7;
-  --secondary-foreground: #365314;
+  --primary: #0ea5e9;
+  --primary-foreground: #ffffff;
+  --assistant-border: #0284c7;
+  --user-bubble: #eff6fb;
+  --user-bubble-foreground: #1f2937;
+  --status-online: #0ea5e9;
+  --urgency: #f59e0b;
+  --urgency-overdue: #ef4444;
+  --secondary: #f0f9ff;
+  --secondary-foreground: #0369a1;
   --muted: #f4f4f5;
   --muted-foreground: #64748b;
-  --accent: #ecfccb;
-  --accent-foreground: #1a2e05;
+  --accent: #e0f2fe;
+  --accent-foreground: #0369a1;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #e4e4e7;
   --input: #e4e4e7;
-  --ring: #84cc16;
-  --chart-1: #bef264;
-  --chart-2: #a3e635;
-  --chart-3: #84cc16;
-  --chart-4: #65a30d;
-  --chart-5: #365314;
+  --ring: #0ea5e9;
+  --chart-1: #0ea5e9;
+  --chart-2: #38bdf8;
+  --chart-3: #7dd3fc;
+  --chart-4: #0284c7;
+  --chart-5: #0369a1;
   --radius: 0.5rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #09090b;
-  --sidebar-primary: #bef264;
-  --sidebar-primary-foreground: #09090b;
+  --sidebar-primary: #0ea5e9;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #09090b;
   --sidebar-border: #e4e4e7;
-  --sidebar-ring: #84cc16;
+  --sidebar-ring: #0ea5e9;
 
-  --gradient-brand-from: #bef264;
-  --gradient-brand-via: #a3e635;
-  --gradient-brand-to: #84cc16;
-  --gradient-brand-tint: #f7fee7;
-  --gradient-brand-tint-strong: #ecfccb;
+  --gradient-brand-from: #0ea5e9;
+  --gradient-brand-via: #38bdf8;
+  --gradient-brand-to: #0284c7;
+  --gradient-brand-tint: #f0f9ff;
+  --gradient-brand-tint-strong: #e0f2fe;
 
   /* Design Engineering Easing Curves */
   --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
@@ -107,34 +119,40 @@
   --card-foreground: #f8fafc;
   --popover: #121215;
   --popover-foreground: #f8fafc;
-  --primary: #a3e635;
-  --primary-foreground: #09090b;
-  --secondary: #1a2e05;
-  --secondary-foreground: #d9f99d;
+  --primary: #38bdf8;
+  --primary-foreground: #082f49;
+  --assistant-border: #38bdf8;
+  --user-bubble: #1e293b;
+  --user-bubble-foreground: #f8fafc;
+  --status-online: #38bdf8;
+  --urgency: #f59e0b;
+  --urgency-overdue: #ef4444;
+  --secondary: #0c4a6e;
+  --secondary-foreground: #e0f2fe;
   --muted: #18181b;
   --muted-foreground: #94a3b8;
-  --accent: #365314;
-  --accent-foreground: #f7fee7;
+  --accent: #0c4a6e;
+  --accent-foreground: #f0f9ff;
   --destructive: oklch(0.704 0.191 22.216);
   --border: #27272a;
   --input: #27272a;
-  --ring: #a3e635;
-  --chart-1: #a3e635;
-  --chart-2: #bef264;
-  --chart-3: #84cc16;
-  --chart-4: #65a30d;
-  --chart-5: #ecfccb;
+  --ring: #38bdf8;
+  --chart-1: #38bdf8;
+  --chart-2: #0ea5e9;
+  --chart-3: #7dd3fc;
+  --chart-4: #0284c7;
+  --chart-5: #e0f2fe;
   --sidebar: #09090b;
   --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #a3e635;
-  --sidebar-primary-foreground: #09090b;
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #082f49;
   --sidebar-accent: #18181b;
   --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: #27272a;
-  --sidebar-ring: #a3e635;
+  --sidebar-ring: #38bdf8;
 
-  --gradient-brand-tint: #36531433;
-  --gradient-brand-tint-strong: #4d7c0f44;
+  --gradient-brand-tint: #0c4a6e33;
+  --gradient-brand-tint-strong: #0ea5e944;
 }
 
 @layer base {
@@ -181,6 +199,31 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
   opacity: 0.8;
+}
+
+/* Custom thin scrollbar for chat interfaces */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
 }
 
 /* Hide scrollbars globally across all browsers/Electron while keeping scroll functionality */
@@ -872,4 +915,63 @@
 .pushable-apply:focus:not(:focus-visible) {
   outline: none;
 }
-
+
+/* ==========================================
+   Apple-Inspired Micro-Interaction System
+   ========================================== */
+
+/* 1. Tactile Press Feedback (Instant response on pointer down) */
+.micro-press {
+  transition: transform 140ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1)),
+              background-color 140ms ease-out,
+              border-color 140ms ease-out,
+              box-shadow 140ms ease-out;
+}
+.micro-press:active {
+  transform: scale(0.97);
+}
+
+/* 2. Hover Lift & Elevation */
+@media (hover: hover) and (pointer: fine) {
+  .micro-hover-lift {
+    transition: transform 200ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1)),
+                box-shadow 200ms ease-out,
+                border-color 200ms ease-out;
+  }
+  .micro-hover-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* 3. Icon Spring Lift / Shift */
+@media (hover: hover) and (pointer: fine) {
+  .micro-icon-spring svg,
+  .micro-icon-spring [aria-hidden="true"] {
+    transition: transform 180ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1));
+  }
+  .micro-icon-spring:hover svg,
+  .micro-icon-spring:hover [aria-hidden="true"] {
+    transform: scale(1.1) translateY(-0.5px);
+  }
+}
+
+/* 4. Origin-Aware Popovers */
+.micro-popover-origin {
+  transform-origin: var(--transform-origin, center top);
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .micro-press,
+  .micro-press:active,
+  .micro-hover-lift,
+  .micro-hover-lift:hover,
+  .micro-icon-spring svg,
+  .micro-icon-spring:hover svg {
+    transform: none !important;
+    transition: opacity 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out !important;
+  }
+}
+
+

@@ -8,7 +8,6 @@ import { scheduleJobScore } from "@/lib/ai/background";
 import { calculateMatchScore, extractResumeContent, type ResumeMatchData, type TotalJobInfo } from "@/lib/ai/resume";
 import { unlink } from "fs/promises";
 import path from "path";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobState } from "@/lib/types/job";
 
@@ -228,7 +227,6 @@ export async function createJob(formData: FormData) {
   revalidatePath("/jobs");
   revalidatePath("/board");
   revalidatePath("/crm");
-  await logResourceActivity(userId, "create", "job", job.id, { title, company: companyName });
   return { jobId: job.id };
 }
 
@@ -386,7 +384,6 @@ export async function updateJob(formData: FormData) {
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
   revalidatePath("/interviews");
-  await logResourceActivity(userId, "update", "job", jobId, { title, company: companyName });
 }
 
 export async function createApplication(formData: FormData) {
@@ -429,7 +426,6 @@ export async function createApplication(formData: FormData) {
 
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "create", "application", application.id, { job_id: jobId });
   return { applicationId: application.id };
 }
 
@@ -450,7 +446,6 @@ export async function updateApplicationStatus(formData: FormData) {
   }
 
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "update", "application", applicationId, { status });
 }
 
 export async function deleteApplication(applicationId: string) {
@@ -467,7 +462,6 @@ export async function deleteApplication(applicationId: string) {
   }
 
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "delete", "application", applicationId);
 }
 
 /**
@@ -508,7 +502,6 @@ export async function setJobResume(jobId: string, resumeId: string | null) {
   revalidatePath("/board");
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "update", "job", jobId, { resume_id: resumeId });
 }
 
 /** Notes tab: writes jobs.notes directly instead of routing through updateJob's full form. */
@@ -523,7 +516,6 @@ export async function setJobNotes(jobId: string, notes: Array<{ title: string; b
   if (error) throw new Error("Failed to save notes.");
 
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "update", "job", jobId, { notes_count: notes.length });
 }
 
 export async function setJobProjectLinks(jobId: string, links: ProjectLink[]) {
@@ -538,7 +530,6 @@ export async function setJobProjectLinks(jobId: string, links: ProjectLink[]) {
 
   revalidatePath("/board");
   revalidatePath("/jobs/" + jobId);
-  await logResourceActivity(userId, "update", "job", jobId, { project_links_count: links.length });
 }
 
 
@@ -554,7 +545,6 @@ export async function logJobActivity(jobId: string, title: string, description?:
     .single();
   if (!job) throw new Error("Job not found.");
 
-  await logResourceActivity(userId, "log", "job", jobId, { title, description: description || undefined });
   revalidatePath("/jobs/" + jobId);
 }
 
@@ -641,7 +631,6 @@ IMPORTANT: Each keyword must be concise (1-3 words). No extra markdown commentar
     }
 
     revalidatePath("/jobs/" + jobId);
-    await logResourceActivity(userId, "extract", "keywords", jobId, { count: keywords.length });
 
     return { keywords };
   } catch (err) {
@@ -733,7 +722,6 @@ export async function checkJobResumeScore(
     revalidatePath("/board");
     revalidatePath("/jobs");
     revalidatePath("/jobs/" + jobId);
-    await logResourceActivity(userId, "score", "job", jobId, { resume_id: doc.id, score: result.score });
 
     return { score: result.score, reasoning: result.reasoning };
   } catch (err) {
@@ -869,7 +857,6 @@ export async function deleteJobWithSmartCascade(
   revalidatePath("/board");
   revalidatePath("/jobs");
   revalidatePath("/crm");
-  await logResourceActivity(userId, "delete", "job", jobId, { companyDeleted });
 
   return { success: true, companyDeleted };
 }
@@ -890,6 +877,5 @@ export async function updateJobState(
 
   revalidatePath("/board");
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "update", "job", jobId, { state });
   return { success: true };
 }

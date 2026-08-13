@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createDbClient as createClient } from "@/lib/db/client";
 import { resolveProviderChain, generateTextStream } from "@/lib/ai/providers";
 import { getCachedOutput, setCachedOutput } from "@/lib/actions/ai-cache";
 
@@ -153,7 +153,7 @@ async function captureEmailCache(
     const jsonMatch = raw.match(/\{[\s\S]*"subject"[\s\S]*"body"[\s\S]*\}/i) || raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const rawJsonStr = jsonMatch[0];
-      let output: any = null;
+      let output: Record<string, unknown> | null = null;
       try {
         output = JSON.parse(rawJsonStr);
       } catch {

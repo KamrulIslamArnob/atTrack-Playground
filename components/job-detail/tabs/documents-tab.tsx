@@ -214,7 +214,7 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
         ) : job.resume_id ? (
           <div className="rounded-xl border border-dashed border-border/70 p-3 text-center">
             <p className="text-xs text-muted-foreground">
-              Not scored yet. Click <span className="font-semibold text-foreground">"Check Match Score"</span> above for instant analysis, or background AI will score it automatically when idle.
+              Not scored yet. Click <span className="font-semibold text-foreground">&quot;Check Match Score&quot;</span> above for instant analysis, or background AI will score it automatically when idle.
             </p>
           </div>
         ) : null}

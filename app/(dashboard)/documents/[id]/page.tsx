@@ -25,6 +25,10 @@ export default async function DocumentPage(props: PageProps) {
     redirect(`/documents/builder/${id}`);
   }
 
+  if (doc.generated_kind === "external_link") {
+    redirect(doc.file_path);
+  }
+
   // Check if this document has text content (AI generated, cover letter, text notes)
   const isTextDocument =
     (doc.content && doc.content.trim().length > 0) ||

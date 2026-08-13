@@ -33,7 +33,7 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Settings", href: "/settings", keywords: "account profile smtp email preferences" },
   { title: "AI Prompts", href: "/preferences/ai-prompts", keywords: "custom ai system prompts cover letter templates preferences" },
   { title: "Database", href: "/preferences/database", keywords: "database sqlite tables schema viewer data preferences" },
-  { title: "Performance", href: "/preferences/performance", keywords: "performance ram memory cpu system ports root path connection process status details preferences" },
+  { title: "Performance", href: "/preferences", keywords: "performance ram memory cpu system ports root path connection process status details preferences" },
 ];
 
 export async function globalSearch(query: string): Promise<SearchResult[]> {

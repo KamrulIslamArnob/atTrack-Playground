@@ -97,15 +97,16 @@ function extractTokens(text: string): Set<string> {
   return new Set(words);
 }
 
-function computeSimilarityScore(jobTitle: string, jobDesc: string | null, matchData: any): number {
+function computeSimilarityScore(jobTitle: string, jobDesc: string | null, rawMatchData: unknown): number {
+  const matchData = rawMatchData as Record<string, unknown> | null | undefined;
   const jobTokens = extractTokens(`${jobTitle} ${jobDesc ?? ""}`);
   if (jobTokens.size === 0) return 0;
 
   const resumeText = [
     matchData?.summary,
     matchData?.title,
-    ...(matchData?.skills ?? []),
-    ...(matchData?.experience?.map((e: any) => `${e.title ?? ""} ${e.company ?? ""} ${e.description ?? ""}`) ?? []),
+    ...((matchData?.skills as string[]) ?? []),
+    ...((matchData?.experience as Array<Record<string, unknown>>)?.map((e) => `${e.title ?? ""} ${e.company ?? ""} ${e.description ?? ""}`) ?? []),
   ]
     .filter(Boolean)
     .join(" ");

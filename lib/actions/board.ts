@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import type { BoardCard, BoardList, ListKind, ProjectLink } from "@/lib/types/board";
 import type { JobState } from "@/lib/types/job";
 
@@ -273,12 +272,6 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
   revalidatePath("/board");
   revalidatePath("/jobs");
   revalidatePath("/applications");
-  await logResourceActivity(userId, "move_card", "job", jobId, {
-    title: job.title,
-    list_id: listId,
-    list_name: list.name,
-    list_kind: list.kind,
-  });
 }
 
 /**
@@ -367,7 +360,6 @@ export async function createList(name: string): Promise<{ id: string }> {
   }
 
   revalidatePath("/board");
-  await logResourceActivity(userId, "create", "board_list", data.id, { name: trimmed });
   return { id: data.id };
 }
 
@@ -390,7 +382,6 @@ export async function renameList(id: string, name: string) {
   }
 
   revalidatePath("/board");
-  await logResourceActivity(userId, "update", "board_list", id, { name: trimmed });
 }
 
 /**
@@ -443,7 +434,6 @@ export async function deleteList(id: string) {
 
   revalidatePath("/board");
   revalidatePath("/jobs");
-  await logResourceActivity(userId, "delete", "board_list", id, { name: list.name });
 }
 
 export async function reorderLists(orderedIds: string[]) {

@@ -847,18 +847,18 @@ export function JobsGrid({
                           target="_blank"
                           rel="noreferrer"
                           aria-label="Open application link"
-                          className="inline-flex text-muted-foreground/40 transition-colors hover:text-green-800 dark:hover:text-lime-400"
+                          className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-green-800 dark:hover:text-lime-400 hover:bg-muted active:scale-95"
                         >
-                          <ExternalLink className="size-3.5" />
+                          <ExternalLink className="size-3.5 transition-transform duration-150 ease-out group-hover/ext:translate-x-0.5 group-hover/ext:-translate-y-0.5" />
                         </a>
                       )}
                       {!job.application_url && job.application_email && (
                         <a
                           href={`mailto:${job.application_email}`}
                           aria-label="Email application contact"
-                          className="inline-flex text-muted-foreground/40 transition-colors hover:text-green-800 dark:hover:text-lime-400"
+                          className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-green-800 dark:hover:text-lime-400 hover:bg-muted active:scale-95"
                         >
-                          <Mail className="size-3.5" />
+                          <Mail className="size-3.5 transition-transform duration-150 ease-out group-hover/ext:scale-110" />
                         </a>
                       )}
                     </td>

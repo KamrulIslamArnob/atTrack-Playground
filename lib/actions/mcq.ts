@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { getUser } from "@/lib/auth";
 import { generateMCQQuestions } from "@/lib/ai/mcq";
 import type { MCQTest, MCQQuestion } from "@/lib/types/mcq";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 
 export interface MCQResult {
   id: string;
@@ -138,7 +137,6 @@ export async function saveMCQResult(
     console.error("Failed to save MCQ result:", error);
   }
 
-  await logResourceActivity(userId, "create", "mcq_result", undefined, { job_id: jobId, score, total });
 }
 
 export async function getMCQResults(jobId: string): Promise<MCQResult[]> {

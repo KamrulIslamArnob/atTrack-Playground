@@ -157,6 +157,8 @@ async function main() {
     const cpuUsage = process.getCPUUsage();
     const cpus = os.cpus();
     const cpuModel = cpus && cpus.length > 0 ? cpus[0].model : "Unknown CPU";
+    const processRssMB = Math.round(memUsage.rss / (1024 * 1024));
+    const appRamPercent = Math.round((memUsage.rss / totalMem) * 1000) / 10;
 
     return {
       appVersion: app.getVersion(),
@@ -182,9 +184,10 @@ async function main() {
         freeSystemRamMB: Math.round(freeMem / (1024 * 1024)),
         usedSystemRamMB: Math.round(usedMem / (1024 * 1024)),
         ramUsagePercent: Math.round((usedMem / totalMem) * 100),
-        processRssMB: Math.round(memUsage.rss / (1024 * 1024)),
+        processRssMB: processRssMB,
         processHeapTotalMB: Math.round(memUsage.heapTotal / (1024 * 1024)),
         processHeapUsedMB: Math.round(memUsage.heapUsed / (1024 * 1024)),
+        appRamPercent: appRamPercent,
         electronPrivateMB: procMem ? Math.round(procMem.private / 1024) : undefined,
         electronSharedMB: procMem ? Math.round(procMem.shared / 1024) : undefined,
       },

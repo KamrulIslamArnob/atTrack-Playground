@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import { resumeToPlainText } from "@/lib/resume/plain-text";
 import { seedResumeDoc } from "@/lib/resume/seed";
 import { renderResumeTex } from "@/lib/resume/render-tex";
@@ -44,7 +43,6 @@ export async function createResumeBuilderDocument(): Promise<{ id: string }> {
 
   if (error || !data) throw new Error(error?.message || "Unable to create resume template.");
 
-  await logResourceActivity(userId, "create", "resume_builder", data.id, { name });
   revalidatePath("/documents");
   return { id: data.id };
 }
@@ -85,7 +83,6 @@ export async function saveResumeBuilderDocument(
 
   if (error) throw new Error(`Unable to save resume: ${error.message}`);
 
-  await logResourceActivity(userId, "update", "resume_builder", id, { name: safeName });
   revalidatePath("/documents");
   revalidatePath(`/documents/builder/${id}`);
   revalidatePath(`/print/resume/${id}`);

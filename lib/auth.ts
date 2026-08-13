@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createDbClient as createClient } from "@/lib/db/client";
 
 export interface UserProfile {
   id: string;

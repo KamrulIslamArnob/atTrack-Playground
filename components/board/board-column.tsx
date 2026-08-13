@@ -332,17 +332,19 @@ export function BoardColumn({
               onPointerCancel={(e) => onPanEnd(e.pointerId)}
               className="touch-none cursor-grab select-none active:cursor-grabbing"
             >
-              <h2
-                className={cn(
-                  "flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider",
-                  LIST_KIND_TEXT_COLORS[list.kind] ?? "text-foreground"
-                )}
-              >
-                <span className="truncate">{list.name}</span>
-                <span className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90">
-                  {cards.length}
-                </span>
-              </h2>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h2
+                  className={cn(
+                    "flex items-baseline gap-1.5 truncate text-xs font-bold uppercase tracking-wider",
+                    LIST_KIND_TEXT_COLORS[list.kind] ?? "text-foreground"
+                  )}
+                >
+                  <span className="truncate">{list.name}</span>
+                  <span className="shrink-0 text-[10px] font-bold normal-case tabular-nums opacity-90">
+                    {cards.length}
+                  </span>
+                </h2>
+              </div>
             </div>
           )}
         </div>

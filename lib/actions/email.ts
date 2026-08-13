@@ -3,7 +3,6 @@
 import nodemailer from "nodemailer";
 import { getUser } from "@/lib/auth";
 import { decrypt } from "@/lib/encryption";
-import { logResourceActivity } from "@/lib/actions/activity-log";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -191,7 +190,6 @@ export async function sendApplicationEmail(params: SendEmailParams): Promise<{ e
       console.error("Failed to store email record:", insertError);
     }
 
-    await logResourceActivity(userId, "send", "email", emailRecord?.id, { job_id: params.jobId, to: params.to });
     return { success: true, emailId: emailRecord?.id };
   } catch (err) {
     console.error("Failed to send email:", err);

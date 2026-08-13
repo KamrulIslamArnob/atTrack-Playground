@@ -132,3 +132,34 @@ In `.dark`, `-from`/`-via`/`-to` stay the same (brand color shouldn't shift), on
 - `--primary` and the gradient coexist rather than compete now that both are green: `--primary` is still the everyday interactive color (buttons, links, focus rings, checked states); the gradient/tint marks a specific highlighted place (e.g. an AI-related CTA, a featured card, the board's Interview lane) when a place actually calls for it — it doesn't replace `--primary` anywhere.
 - Prefer the tint utilities over the full gradient when in doubt — the light wash is the "safe default" for this feature, the saturated gradient is the exception.
 - One live usage so far: the board's Interview lane (`.bg-gradient-brand-tint`, see "Board" above). Apply the rest only when a specific place is asked for, not preemptively across existing components.
+
+## Micro-Interactions & Motion System
+
+Grounded in **Apple's fluid interface principles** (WWDC *Designing Fluid Interfaces*) and **Emil Kowalski's animation standards** (`emi` design engineering skills), AtTrack uses a standardized, tactile micro-interaction system across all interactive surfaces.
+
+### Core Principles
+
+1. **Instant Pointer-Down Response (`.micro-press`)**: Zero artificial input delay. Every interactive surface (buttons, cards, social links, shortcut badges, sidebar items) yields slightly under pressure on `:active` (`scale(0.97)` / `scale(0.96)`) using a fast 140ms ease-out (`--ease-out-quint`).
+2. **Origin-Aware Popovers (`.micro-popover-origin`)**: Floating surfaces (dropdown menus, select popovers) expand directly from their trigger (`origin-(--transform-origin)`) with asymmetric enter/exit timing (160ms enter, 110ms exit).
+3. **Subtle Elevation & Icon Spring (`.micro-hover-lift`, `.micro-icon-spring`)**: Interactive cards lift 0.5px on hover (`-translate-y-0.5`), while embedded Lucide/social icons spring slightly (`scale(1.1)` or `translate-x-0.5`), signaling affordance before click.
+4. **Delight & Action Feedback**: High-value actions (such as copying a link or shortcut) trigger immediate visual confirmation (green checkmark pop-in + glowing ring pulse) without interrupting layout flow.
+5. **Restraint & Accessibility**: High-frequency actions (command palette ⌘K, keyboard shortcuts) carry zero entrance animation to preserve productivity speed. All hover and scale transforms are gated behind `@media (hover: hover) and (pointer: fine)` and safely disabled for users who prefer reduced motion (`@media (prefers-reduced-motion: reduce)`).
+
+### Shared Utility Tokens (`app/globals.css`)
+
+| Class / Token | Behavior | Purpose |
+|---|---|---|
+| `.micro-press` | `active:scale-[0.97] transition-transform duration-140 ease-out` | Buttons, badges, list items, card triggers |
+| `.micro-hover-lift` | `hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200` | Interactive cards, social link rows, shortcut pills |
+| `.micro-icon-spring` | `[&_svg]:transition-transform [&_svg]:duration-180 group-hover:[&_svg]:scale-110` | Embedded icons inside interactive containers |
+| `.micro-popover-origin` | `origin-(--transform-origin) data-open:animate-in data-open:zoom-in-95` | Dropdown menus, selects, popovers |
+| `--ease-out-quint` | `cubic-bezier(0.23, 1, 0.32, 1)` | Standard fast-settling UI spring response |
+
+### Tooltip Architecture (`components/ui/tooltip.tsx`)
+
+- **Primitive Foundation**: Built on `@base-ui/react/tooltip`. Replaces native `title="..."` attributes for consistent, rich guidance.
+- **Glassmorphic Aesthetics**: Translucent backdrop blur (`backdrop-blur-md`), `rounded-2xl` corners, dark/light contrast typography, and subtle gradient borders.
+- **Color-Coded Badges & Icons**: Contextual badges with Lucide icons (`Wishlist` rose/sky, `Preparing` amber, `Applied` purple, `MCQ/Screening` blue, `Interview` lime, `Offer` teal, `Rejected` red).
+- **3-Column Grid Layouts**: Multi-option workflow guides formatted in compact 3x3 grids (`grid grid-cols-3 gap-2`).
+
+

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/landing/footer";
-import { LandingHeaderWrapper } from "@/components/landing-header-wrapper";
+import { LandingHeader } from "@/components/landing-header";
 import {
   LegalShell,
   LegalSection,
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <>
-      <LandingHeaderWrapper />
+      <LandingHeader />
       <LegalShell
         badge="Terms & Conditions"
         title="Terms of service"
