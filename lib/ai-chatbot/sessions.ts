@@ -10,6 +10,7 @@ export interface Message {
   experimental_attachments?: { url: string; contentType?: string }[];
   thinking?: string;
   personaId?: string;
+  feedback?: "up" | "down" | null;
 }
 
 export const CHAT_PERSONAS: ChatPersona[] = [
@@ -19,7 +20,7 @@ export const CHAT_PERSONAS: ChatPersona[] = [
     badge: "Versatile",
     iconName: "Sparkles",
     description: "All-purpose career, coding, and productivity assistant",
-    systemPrompt: "You are AtTrack AI, a helpful, precise, and professional career & software engineering assistant.",
+    systemPrompt: "You are atTrack AI, a helpful, precise, and professional career & software engineering assistant.",
     heading: "What would you like to accomplish today?",
     subheading: "Ask questions, generate content, or explore career strategies.",
     preferredSources: ["jobs", "resumes", "contacts"],
@@ -141,32 +142,75 @@ export interface ChatSession {
   messages: Message[];
   isPinned?: boolean;
   category?: "notebooks" | "recent";
+  /** Sources connected for THIS chat (per-chat workspace selection). */
+  connectedSourceIds?: string[];
 }
 
 const STORAGE_KEY = "attrack_ai_chat_sessions";
 const ACTIVE_SESSION_KEY = "attrack_ai_chat_active_id";
 const LAST_MODEL_KEY = "attrack_ai_chat_selected_model";
 
-export function loadSessions(): ChatSession[] {
+// --- Mirror tier: localStorage -------------------------------------------
+// SQLite owns chat history. localStorage exists only so the sidebar paints
+// without waiting for a round trip; it is written FROM the database and is
+// never merged back into it. That asymmetry is the entire design. Because
+// load never writes to the database, a deleted chat cannot come back — the
+// previous two-authority merge had no way to express "deleted", so a delete
+// always lost to a row that still existed.
+
+export function readCache(): ChatSession[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
+    return raw ? (JSON.parse(raw) as ChatSession[]) : [];
   } catch (err) {
-    console.error("Failed to load chat sessions:", err);
+    console.error("Couldn't read cached chat sessions:", err);
     return [];
   }
 }
 
-export function saveSessions(sessions: ChatSession[]): void {
+export function writeCache(sessions: ChatSession[]): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
   } catch (err) {
-    console.error("Failed to save chat sessions:", err);
+    console.error("Couldn't cache chat sessions:", err);
   }
 }
+
+// --- Authority tier: SQLite via /api/chat/sessions ------------------------
+// Each of these awaits and throws. A caller that swallows the error recreates
+// the bug this replaced: the UI showing a delete the database never performed.
+
+export async function fetchSessions(): Promise<ChatSession[]> {
+  const res = await fetch("/api/chat/sessions");
+  if (!res.ok) throw new Error(`Couldn't load chat sessions (${res.status})`);
+  const payload = await res.json();
+  return (payload?.sessions ?? []) as ChatSession[];
+}
+
+export async function persistSession(session: ChatSession): Promise<void> {
+  const res = await fetch("/api/chat/sessions", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session, messages: session.messages }),
+  });
+  if (!res.ok) throw new Error(`Couldn't save chat session (${res.status})`);
+}
+
+export async function deleteSessionRemote(id: string): Promise<void> {
+  const res = await fetch(`/api/chat/sessions?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(`Couldn't delete chat session (${res.status})`);
+}
+
+export async function clearAllSessionsRemote(): Promise<void> {
+  const res = await fetch("/api/chat/sessions?all=true", { method: "DELETE" });
+  if (!res.ok) throw new Error(`Couldn't clear chat sessions (${res.status})`);
+}
+
+// ponytail: re-upserts the whole conversation per turn; send only new message ids if a chat ever grows past a few hundred messages.
 
 export function loadActiveSessionId(): string | null {
   if (typeof window === "undefined") return null;
@@ -214,9 +258,9 @@ export function generateSessionTitle(firstMessage: string): string {
 
 export function exportSessionToMarkdown(session: ChatSession): string {
   let md = `# ${session.title}\n\n`;
-  md += `*Exported from AtTrack AI Chatbot on ${new Date().toLocaleDateString()}*\n\n---\n\n`;
+  md += `*Exported from atTrack AI Chatbot on ${new Date().toLocaleDateString()}*\n\n---\n\n`;
   session.messages.forEach((msg) => {
-    const roleName = msg.role === "user" ? "User" : "AtTrack AI";
+    const roleName = msg.role === "user" ? "User" : "atTrack AI";
     md += `### ${roleName}\n${msg.content}\n\n`;
   });
   return md;
