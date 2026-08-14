@@ -331,11 +331,21 @@ export default function AIChatbotPage() {
           return s;
         });
 
-        saveSessions(updated);
+        writeCache(updated);
+
+        // A chat earns its database row on its first message, which is what
+        // keeps empty "New Chat" clicks out of SQLite.
+        const active = updated.find((s) => s.id === activeSessionId);
+        if (active && active.messages.length > 0) {
+          void persistSession(active).catch((err) => {
+            console.error("Couldn't save chat session:", err);
+          });
+        }
         return updated;
       });
     }
   }, [messages, isLoading, activeSessionId, mounted]);
+  // ponytail: side effect inside a state updater matches the file's existing shape; React StrictMode double-invokes it in dev, which costs one redundant idempotent PUT. Lift to a ref-driven effect only if that ever shows up in a profile.
 
   const handleSelectSession = useCallback(
     (id: string) => {
@@ -371,30 +381,40 @@ export default function AIChatbotPage() {
     };
     const next = [newSession, ...sessions];
     setSessions(next);
-    saveSessions(next);
+    writeCache(next);
     setActiveSessionId(newSession.id);
     setActiveConnectedIds(seedConnected);
     setMessages([]);
     saveActiveSessionId(newSession.id);
+    // Deliberately not persisted. An empty chat is not history yet; it reaches
+    // SQLite when its first message lands. Persisting here left a "New Chat"
+    // row behind for every click, and those rows came back on every load.
   }, [selectedModel.id, setMessages, sessions, sources]);
 
   const handleDeleteSession = useCallback(
-    (id: string) => {
-      // 1. Trigger background durable deletion in SQLite and vectors
-      deleteSessionDb(id);
+    async (id: string) => {
+      // The database goes first. If it refuses, nothing is removed anywhere —
+      // the previous fire-and-forget delete let the UI drop a chat the database
+      // still held, and the next load brought it back for good.
+      try {
+        await deleteSessionRemote(id);
+      } catch (err) {
+        console.error(err);
+        toast.error("Couldn't delete chat session");
+        return;
+      }
 
-      // 2. Instant client-side state update
       const remaining = sessions.filter((s) => s.id !== id);
       if (remaining.length === 0) {
         const newSession = createNewSession(selectedModel.id);
         setSessions([newSession]);
         setActiveSessionId(newSession.id);
         setMessages([]);
-        saveSessions([newSession]);
+        writeCache([newSession]);
         saveActiveSessionId(newSession.id);
       } else {
         setSessions(remaining);
-        saveSessions(remaining);
+        writeCache(remaining);
         if (activeSessionId === id) {
           const nextActive = remaining[0].id;
           setActiveSessionId(nextActive);
@@ -407,25 +427,47 @@ export default function AIChatbotPage() {
     [activeSessionId, selectedModel.id, sessions, setMessages]
   );
 
-  const handleRenameSession = useCallback((id: string, newTitle: string) => {
-    const updated = sessions.map((s) => (s.id === id ? { ...s, title: newTitle } : s));
-    setSessions(updated);
-    saveSessions(updated);
-  }, [sessions]);
-
-  const handleTogglePinSession = useCallback((id: string) => {
-    let nextPinned = false;
-    const updated = sessions.map((s) => {
-      if (s.id === id) {
-        nextPinned = !s.isPinned;
-        return { ...s, isPinned: nextPinned };
+  const handleRenameSession = useCallback(
+    async (id: string, newTitle: string) => {
+      const updated = sessions.map((s) =>
+        s.id === id ? { ...s, title: newTitle, updatedAt: new Date().toISOString() } : s
+      );
+      setSessions(updated);
+      writeCache(updated);
+      const target = updated.find((s) => s.id === id);
+      if (!target) return;
+      try {
+        await persistSession(target);
+      } catch (err) {
+        console.error(err);
+        toast.error("Couldn't rename chat session");
       }
-      return s;
-    });
-    setSessions(updated);
-    saveSessions(updated);
-    toast.info(nextPinned ? `Pinned "${updated.find((s) => s.id === id)?.title}"` : `Unpinned`);
-  }, [sessions]);
+    },
+    [sessions]
+  );
+
+  const handleTogglePinSession = useCallback(
+    async (id: string) => {
+      let nextPinned = false;
+      const updated = sessions.map((s) => {
+        if (s.id !== id) return s;
+        nextPinned = !s.isPinned;
+        return { ...s, isPinned: nextPinned, updatedAt: new Date().toISOString() };
+      });
+      setSessions(updated);
+      writeCache(updated);
+      toast.info(nextPinned ? `Pinned "${updated.find((s) => s.id === id)?.title}"` : "Unpinned");
+      const target = updated.find((s) => s.id === id);
+      if (!target) return;
+      try {
+        await persistSession(target);
+      } catch (err) {
+        console.error(err);
+        toast.error("Couldn't pin chat session");
+      }
+    },
+    [sessions]
+  );
 
   const handleSelectModel = useCallback(
     (model: AIModel) => {
@@ -434,14 +476,22 @@ export default function AIChatbotPage() {
 
       if (activeSessionId) {
         const updated = sessions.map((s) =>
-          s.id === activeSessionId ? { ...s, model: model.id } : s
+          s.id === activeSessionId
+            ? { ...s, model: model.id, updatedAt: new Date().toISOString() }
+            : s
         );
         setSessions(updated);
-        saveSessions(updated);
+        writeCache(updated);
+        const target = updated.find((s) => s.id === activeSessionId);
+        if (target && target.messages.length > 0) {
+          void persistSession(target).catch((err) => {
+            console.error("Couldn't save chat session:", err);
+          });
+        }
       }
       // No toast: the model selector already shows the active model.
     },
-    [activeSessionId]
+    [activeSessionId, sessions]
   );
 
   const handleStarterPrompt = useCallback(
@@ -469,7 +519,13 @@ export default function AIChatbotPage() {
               ? { ...s, connectedSourceIds: nextSet, updatedAt: new Date().toISOString() }
               : s
           );
-          saveSessions(nextSessions); // instant tier; schedules background SQLite flush
+          writeCache(nextSessions);
+          const target = nextSessions.find((s) => s.id === activeSessionId);
+          if (target && target.messages.length > 0) {
+            void persistSession(target).catch((err) => {
+              console.error("Couldn't save chat session:", err);
+            });
+          }
           return nextSessions;
         });
       }
@@ -582,16 +638,19 @@ export default function AIChatbotPage() {
     [sessions]
   );
 
-  const handleClearAllSessions = useCallback(() => {
-    // 1. Trigger background purge in SQLite and vectors
-    clearAllSessionsDb();
-
-    // 2. Instant client-side state reset
+  const handleClearAllSessions = useCallback(async () => {
+    try {
+      await clearAllSessionsRemote();
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't clear chat sessions");
+      return;
+    }
     const newSession = createNewSession(selectedModel.id);
     setSessions([newSession]);
     setActiveSessionId(newSession.id);
     setMessages([]);
-    saveSessions([newSession]);
+    writeCache([newSession]);
     saveActiveSessionId(newSession.id);
     toast.success("Cleared all chat sessions");
   }, [selectedModel.id, setMessages]);
@@ -653,10 +712,15 @@ export default function AIChatbotPage() {
               m.id === messageId ? { ...m, feedback: rating } : m
             );
             const nextSession = { ...s, messages: updatedMessages, updatedAt: new Date().toISOString() };
-            scheduleDbFlush(nextSession);
             return nextSession;
           });
-          saveSessions(updated);
+          writeCache(updated);
+          const active = updated.find((s) => s.id === activeSessionId);
+          if (active) {
+            void persistSession(active).catch((err) => {
+              console.error("Couldn't save chat session:", err);
+            });
+          }
           return updated;
         });
 
