@@ -34,16 +34,22 @@ export async function PUT(req: Request) {
   }
 }
 
-// GET /api/chat/sessions -> load durable sessions from SQLite (source of truth
-// on app open, reconciled against localStorage by the client).
+// GET /api/chat/sessions -> load durable sessions from SQLite, the authority
+// for chat history on app open.
 export async function GET() {
   try {
     const { userId } = await getUser();
     const sessions = await loadSessionsFromDb();
     return NextResponse.json({ userId, sessions });
   } catch (err) {
+    // Reported as a real failure, for the same reason PUT is. Returning 200
+    // with an empty list made a failed read indistinguishable from "no chats
+    // yet": the client concluded it was a first run, built a fresh session and
+    // wrote it over the localStorage mirror, blanking a sidebar whose history
+    // was still sitting in the database. A 5xx makes `fetchSessions()` throw,
+    // and the load path already falls back to the mirror on a throw.
     console.error("[chat/sessions] load failed:", err);
-    return NextResponse.json({ userId: null, sessions: [] }, { status: 200 });
+    return NextResponse.json({ error: "load_failed" }, { status: 500 });
   }
 }
 
