@@ -324,6 +324,12 @@ export default function AIChatbotPage() {
                 content: m.content || "",
                 createdAt: typeof m.createdAt === "string" ? m.createdAt : new Date().toISOString(),
                 experimental_attachments: m.experimental_attachments,
+                // Carried deliberately. This rebuild runs on every turn, so
+                // dropping the rating here let the next turn's save write NULL
+                // over a thumbs-up the user had already given. It was harmless
+                // while chat_messages was never written; now that SQLite is the
+                // authority it would silently erase feedback.
+                feedback: m.feedback ?? null,
               })),
               updatedAt: new Date().toISOString(),
             };
