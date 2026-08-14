@@ -8,10 +8,10 @@ import {
 } from "@/lib/ai-chatbot/persistence";
 import type { ChatSession, Message } from "@/lib/ai-chatbot/sessions";
 
-// PUT /api/chat/sessions  -> background durable write to SQLite.
-// Called (debounced, fire-and-forget) by the client after every local save.
-// Never blocks the chat UI; errors are swallowed (localStorage remains the
-// instant source of truth).
+// PUT /api/chat/sessions  -> durable write to SQLite.
+// Awaited by the client on every session mutation. SQLite is the authority for
+// chat history, so a failure here has to reach the caller: it reports 500 and
+// the client surfaces it rather than showing a save that never happened.
 export async function PUT(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
