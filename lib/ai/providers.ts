@@ -912,6 +912,9 @@ export interface ToolExecutionContext {
   personaId?: string;
   /** Per-source config (Obsidian path, GitHub token). NEVER logged. */
   sourceConfig?: Record<string, Record<string, unknown>>;
+  /** Per-turn id, threaded through so tools can tell "this turn" apart from
+   *  "a later turn" (see delete_database's confirm gate). */
+  traceId?: string;
 }
 
 type ToolExecutor = (

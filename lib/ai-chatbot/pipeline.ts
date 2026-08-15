@@ -483,6 +483,7 @@ export async function executeAgent(
       userId: ctx.input.userId,
       personaId: ctx.input.personaId,
       sourceConfig: ctx.input.sourceConfig,
+      traceId,
     };
 
     const executor = async (name: string, args: Record<string, unknown>, ectx: ToolExecutionContext) => {

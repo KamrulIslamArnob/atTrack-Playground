@@ -7,6 +7,10 @@ export interface ToolContext {
   personaId?: string;
   /** Per-source config (Obsidian vaultPath, GitHub token, etc.). NEVER logged. */
   sourceConfig?: Record<string, Record<string, unknown>>;
+  /** The current turn's trace id (see lib/ai-chatbot/pipeline.ts). Used by
+   *  delete_database to prove a confirming call happened in a LATER turn
+   *  than the one that proposed the delete, not the same tool round. */
+  traceId?: string;
 }
 
 export interface ToolResult {
