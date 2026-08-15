@@ -32,19 +32,17 @@ import {
 
 const tooltipStyle = {
   borderRadius: "12px",
-  border: "1px solid #E5E7EB",
-  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+  border: "1px solid var(--border)",
+  background: "var(--popover)",
+  color: "var(--popover-foreground)",
+  boxShadow: "var(--elevation-3)",
   fontSize: "12px",
 };
 
-interface ChartDataItem {
-  range?: string;
-  count: number;
-  fill: string;
-  source?: string;
-  location?: string;
-  type?: string;
-}
+/** Recharts axis/grid ink — same job as text-muted-foreground and border, just
+    read as CSS var strings since these props take plain color values, not classes. */
+const axisTick = { fontSize: 11, fill: "var(--muted-foreground)" };
+const gridStroke = "var(--border)";
 
 interface TrendData {
   date: string;
@@ -227,29 +225,63 @@ export function BreakdownBar({ items, total }: { items: BreakdownItem[]; total: 
   );
 }
 
-export function MatchScoreChart({ data }: { data: ChartDataItem[] }) {
+export interface MatchScoreBand {
+  /** "Strong" | "Fair" | "Weak" — same thresholds as matchScoreBand() in lib/types/board.ts. */
+  label: string;
+  count: number;
+}
+
+/**
+ * Score bands are a status signal (good/fair/weak fit), not a category, so
+ * they get the reserved status tokens — same mapping job-detail's overview
+ * tab uses for its ring (components/job-detail/tabs/overview-tab.tsx
+ * scoreTone()), not a chart-* categorical color.
+ */
+const scoreBandColor: Record<string, string> = {
+  Strong: "var(--success)",
+  Fair: "var(--warning)",
+  Weak: "var(--destructive)",
+};
+
+export function MatchScoreDistributionChart({ data }: { data: MatchScoreBand[] }) {
   const filtered = data.filter((d) => d.count > 0);
+  const total = filtered.reduce((sum, d) => sum + d.count, 0);
+
+  if (total === 0) {
+    return <p className="py-4 text-center text-xs text-muted-foreground">No scored jobs yet</p>;
+  }
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <PieChart>
-        <Pie
-          data={filtered}
-          cx="50%"
-          cy="50%"
-          innerRadius={50}
-          outerRadius={80}
-          paddingAngle={3}
-          dataKey="count"
-          nameKey="range"
-        >
-          {filtered.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={160}>
+        <PieChart>
+          <Pie
+            data={filtered}
+            cx="50%"
+            cy="50%"
+            innerRadius={48}
+            outerRadius={70}
+            paddingAngle={3}
+            dataKey="count"
+            nameKey="label"
+          >
+            {filtered.map((entry) => (
+              <Cell key={entry.label} fill={scoreBandColor[entry.label]} stroke="var(--card)" strokeWidth={2} />
+            ))}
+          </Pie>
+          <Tooltip contentStyle={tooltipStyle} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="mt-2 flex items-center justify-center gap-4 text-xs">
+        {filtered.map((entry) => (
+          <div key={entry.label} className="flex items-center gap-1.5">
+            <div className="size-2 rounded-full" style={{ backgroundColor: scoreBandColor[entry.label] }} />
+            <span className="text-muted-foreground">{entry.label}</span>
+            <span className="font-medium tabular-nums">{entry.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -259,93 +291,21 @@ export function ApplicationTrendChart({ data }: { data: TrendData[] }) {
       <AreaChart data={data} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>
         <defs>
           <linearGradient id="colorApplications" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="colorInterviews" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#84cc16" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#84cc16" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+        <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
+        <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Area type="monotone" dataKey="applications" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorApplications)" strokeWidth={2} />
-        <Area type="monotone" dataKey="interviews" stroke="#84cc16" fillOpacity={1} fill="url(#colorInterviews)" strokeWidth={2} />
+        <Area type="monotone" dataKey="applications" stroke="var(--chart-1)" fillOpacity={1} fill="url(#colorApplications)" strokeWidth={2} />
+        <Area type="monotone" dataKey="interviews" stroke="var(--chart-2)" fillOpacity={1} fill="url(#colorInterviews)" strokeWidth={2} />
       </AreaChart>
-    </ResponsiveContainer>
-  );
-}
-
-export function SourceChart({ data }: { data: ChartDataItem[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={180}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={45}
-          outerRadius={70}
-          paddingAngle={3}
-          dataKey="count"
-          nameKey="source"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-}
-
-export function LocationChart({ data }: { data: ChartDataItem[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={180}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={45}
-          outerRadius={70}
-          paddingAngle={3}
-          dataKey="count"
-          nameKey="location"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-}
-
-export function EmploymentTypeChart({ data }: { data: ChartDataItem[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={180}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={45}
-          outerRadius={70}
-          paddingAngle={3}
-          dataKey="count"
-          nameKey="type"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-      </PieChart>
     </ResponsiveContainer>
   );
 }
@@ -354,10 +314,10 @@ export function McqScoreChart({ data }: { data: McqScoreData[] }) {
   return (
     <ResponsiveContainer width="100%" height={100}>
       <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-        <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Line type="monotone" dataKey="score" stroke="#F59E0B" strokeWidth={2} dot={{ fill: "#F59E0B", strokeWidth: 0, r: 3 }} />
+        <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={{ fill: "var(--primary)", strokeWidth: 0, r: 3 }} />
       </LineChart>
     </ResponsiveContainer>
   );

@@ -8,11 +8,13 @@ import {
   PipelineStages,
   BreakdownBar,
   ApplicationTrendChart,
+  MatchScoreDistributionChart,
   McqScoreChart,
   type PipelineStage,
   type BreakdownItem,
+  type MatchScoreBand,
 } from "@/components/overview-charts";
-import { DEFAULT_LIST_COLORS } from "@/lib/types/board";
+import { DEFAULT_LIST_COLORS, matchScoreBand } from "@/lib/types/board";
 import {
   Briefcase,
   Calendar,
@@ -122,6 +124,20 @@ export default async function OverviewPage() {
     }
   }
   const averageMatchScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
+
+  // Match score distribution — same Strong/Fair/Weak bands as matchScoreBand()
+  // (lib/types/board.ts), so this never disagrees with the board card or
+  // /insights, which share the same 80/50 thresholds.
+  const scoreBandCounts: Record<string, number> = { Strong: 0, Fair: 0, Weak: 0 };
+  for (const job of allJobs) {
+    if (job.match_score == null) continue;
+    const band = matchScoreBand(Number(job.match_score));
+    if (band) scoreBandCounts[band.label] = (scoreBandCounts[band.label] ?? 0) + 1;
+  }
+  const matchScoreDistribution: MatchScoreBand[] = ["Strong", "Fair", "Weak"].map((label) => ({
+    label,
+    count: scoreBandCounts[label] ?? 0,
+  }));
 
   // Employment type breakdown
   const employmentTypeMap: Record<string, number> = {};
@@ -241,12 +257,12 @@ export default async function OverviewPage() {
             </div>
           </div>
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <QuickStat icon={Briefcase} label="Jobs" value={totalJobs ?? 0} color="text-blue-500" bgColor="bg-blue-500/10" />
-            <QuickStat icon={Send} label="Applied" value={totalApplications ?? 0} color="text-violet-500" bgColor="bg-violet-500/10" />
-            <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} color="text-emerald-500" bgColor="bg-emerald-500/10" />
-            <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} color="text-amber-500" bgColor="bg-amber-500/10" />
-            <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} color="text-emerald-600" bgColor="bg-emerald-500/10" />
-            <QuickStat icon={Activity} label="Response" value={responseRate != null ? `${responseRate}%` : "—"} color="text-rose-500" bgColor="bg-rose-500/10" />
+            <QuickStat icon={Briefcase} label="Jobs" value={totalJobs ?? 0} tone="primary" hero />
+            <QuickStat icon={Send} label="Applied" value={totalApplications ?? 0} tone="chart-2" />
+            <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} tone="chart-3" />
+            <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} tone="chart-4" />
+            <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
+            <QuickStat icon={Activity} label="Response" value={responseRate != null ? `${responseRate}%` : "—"} tone="chart-5" />
           </div>
         </div>
       </div>
@@ -284,50 +300,59 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      {/* Row 3: Trend + upcoming interviews */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
+      {/* Row 3: Trend (primary, wider) + match score distribution (supporting) */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
           <div className="mb-4">
             <h2 className="font-heading text-lg font-semibold">Applications & Interviews</h2>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </div>
           <ApplicationTrendChart data={applicationTrend} />
           <div className="mt-3 flex items-center justify-center gap-5 text-xs">
-            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-violet-500" /><span className="text-muted-foreground">Applications</span></div>
-            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
+            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-1)" }} /><span className="text-muted-foreground">Applications</span></div>
+            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-2)" }} /><span className="text-muted-foreground">Interviews</span></div>
           </div>
         </div>
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
-              <p className="text-xs text-muted-foreground">What&apos;s on the calendar</p>
-            </div>
-            <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
+          <div className="mb-2">
+            <h2 className="font-heading text-lg font-semibold">Match quality</h2>
+            <p className="text-xs text-muted-foreground">Where scored jobs land</p>
           </div>
-          {upcomingInterviews.length > 0 ? (
-            <div className="space-y-3">
-              {upcomingInterviews.map((interview) => (
-                <div key={interview.id} className="flex items-center gap-3 rounded-xl border border-border p-3 transition-all hover:shadow-sm hover:border-primary/20">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{interview.job.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-0.5">
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{interview.type}</span>
-                    <span className="text-[10px] text-muted-foreground">{new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="flex size-12 items-center justify-center rounded-xl bg-muted/50 mb-2"><Calendar className="size-6 text-muted-foreground/30" /></div>
-              <p className="text-sm text-muted-foreground">No interviews scheduled</p>
-            </div>
-          )}
+          <MatchScoreDistributionChart data={matchScoreDistribution} />
         </div>
+      </div>
+
+      {/* Row 4: Upcoming interviews */}
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
+            <p className="text-xs text-muted-foreground">What&apos;s on the calendar</p>
+          </div>
+          <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
+        </div>
+        {upcomingInterviews.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {upcomingInterviews.map((interview) => (
+              <div key={interview.id} className="flex items-center gap-3 rounded-xl border border-border p-3 transition-all hover:shadow-sm hover:border-primary/20">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success-surface"><Calendar className="size-4 text-success" /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{interview.job.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                  <span className="rounded-full bg-success-surface border border-success-border px-2 py-0.5 text-[10px] font-medium text-success">{interview.type}</span>
+                  <span className="text-[10px] text-muted-foreground">{new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-muted/50 mb-2"><Calendar className="size-6 text-muted-foreground/30" /></div>
+            <p className="text-sm text-muted-foreground">No interviews scheduled</p>
+          </div>
+        )}
       </div>
 
       {/* MCQ Practice (compact, only shown when there's data) */}
@@ -354,26 +379,49 @@ export default async function OverviewPage() {
   );
 }
 
+/**
+ * One fixed, ordered token per stat instead of a cherry-picked Tailwind
+ * rainbow (docs/Design.md "never a raw palette class in a component") — the
+ * same --chart-* ramp BreakdownBar already cycles through, plus --primary
+ * for the one headline number and --success for the one genuinely positive
+ * outcome metric (Offer rate).
+ */
+const quickStatTone = {
+  primary: "var(--primary)",
+  success: "var(--success)",
+  "chart-2": "var(--chart-2)",
+  "chart-3": "var(--chart-3)",
+  "chart-4": "var(--chart-4)",
+  "chart-5": "var(--chart-5)",
+} as const;
+
 function QuickStat({
   icon: Icon,
   label,
   value,
-  color,
-  bgColor,
+  tone,
+  hero = false,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
   value: number | string;
-  color: string;
-  bgColor: string;
+  tone: keyof typeof quickStatTone;
+  /** The one headline number in the row — sized up so it reads first. */
+  hero?: boolean;
 }) {
+  const c = quickStatTone[tone];
   return (
     <div className="flex items-center gap-3">
-      <div className={`flex size-10 items-center justify-center rounded-2xl ${bgColor}`}>
-        <Icon className={`size-5 ${color}`} />
+      <div
+        className="flex size-10 shrink-0 items-center justify-center rounded-2xl"
+        style={{ backgroundColor: `color-mix(in oklch, ${c}, transparent 88%)` }}
+      >
+        <Icon className="size-5" style={{ color: c }} />
       </div>
       <div>
-        <p className="text-xl font-bold tracking-tight">{value}</p>
+        <p className={hero ? "text-2xl font-bold tracking-tight" : "text-xl font-bold tracking-tight"}>
+          {value}
+        </p>
         <p className="text-[11px] text-muted-foreground">{label}</p>
       </div>
     </div>
