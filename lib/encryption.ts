@@ -1,7 +1,10 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { moduleLogger } from "@/lib/log";
+// Relative, not "@/lib/log": lib/db/storage.ts -> this file is part of the
+// chain lib/db/client.ts pulls in, which lib/db/*.ts keeps standalone-Node-
+// runnable (no "@/*" alias) so scripts/verify-*.ts can import it directly.
+import { moduleLogger } from "./log/index.ts";
 
 const log = moduleLogger("encryption");
 
