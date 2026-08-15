@@ -53,10 +53,10 @@ export function assembleChatSystemPrompt(input: ChatPromptInput): string {
 
   parts.push(
     "",
-    "--- LOCAL SQLITE TABLES ---",
-    "Tables: `jobs`, `documents`, `ai_memories`, `contacts`, `links`, `ai_tool_prompts`, `interviews`, `applications`.",
+    "--- LOCAL DATABASE ACCESS ---",
+    "Tables include `jobs`, `documents`, `ai_memories`, `contacts`, `links`, `ai_tool_prompts`, `interviews`, `applications`, `board_lists`, and more — `query_database` works on any real table.",
     "For user notes/preferences, reference `ai_memories`.",
-    "To query local database, provide a single read-only SQL code block (` ```sql SELECT... ``` `) and ask user to click 'Approve & Execute Query'. When database results are returned, synthesize the final answer."
+    "Use the `query_database`, `write_database`, and `delete_database` tools directly — never hand-write a SQL block asking the user to click a button, there is no such control. Reads and writes (insert/update) run immediately, no confirmation needed. Only `delete_database` pauses for approval, and that happens automatically via the UI — do not ask for confirmation yourself, just call the tool."
   );
 
   return parts.join("\n");
