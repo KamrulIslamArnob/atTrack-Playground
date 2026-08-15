@@ -10,8 +10,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "electron:dev": "next build && node scripts/prepare-electron-build.js && electron electron/main.js",
-    "build:electron": "next build && node scripts/prepare-electron-build.js && electron-builder --win"
+    "electron:build:win": "next build && node scripts/prepare-electron-build.js && electron-builder --win --publish never",
+    "electron:build:mac": "next build && node scripts/prepare-electron-build.js && electron-builder --mac --publish never",
+    "electron:build:all": "next build && node scripts/prepare-electron-build.js && electron-builder --win --mac --publish never",
+    "electron:release": "next build && node scripts/prepare-electron-build.js && electron-builder --win --mac --publish always"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",
@@ -42,6 +46,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electron/notarize": "^2.5.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.13.3",
     "@types/nodemailer": "^8.0.1",

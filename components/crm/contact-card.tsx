@@ -66,12 +66,10 @@ function SocialIcon({ platform }: { platform: string }) {
 export function ContactCard({
   contact,
   onEdit,
-  onDelete,
 }: {
   contact: Contact;
   index?: number;
   onEdit: (contact: Contact) => void;
-  onDelete: (contact: Contact) => void;
 }) {
   const [editingNote, setEditingNote] = useState(false);
   const [noteText, setNoteText] = useState(contact.notes ?? "");
@@ -115,7 +113,7 @@ export function ContactCard({
   const noteSegments = noteText ? parseNoteMentions(noteText) : [];
 
   return (
-    <div className="group relative flex min-h-[310px] flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-4 transition-all hover:bg-slate-50 dark:hover:bg-zinc-900/60 hover:border-slate-300 dark:hover:border-zinc-700 hover:shadow-md">
+    <div className="group micro-hover-lift relative flex min-h-[310px] flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-4 transition-all hover:bg-muted/40">
       <div className="space-y-3">
         {/* Header: Avatar + Name & Position (Clicking opens Edit mode) */}
         <button
@@ -140,7 +138,7 @@ export function ContactCard({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h4 className="truncate text-base font-semibold text-foreground group-hover/head:text-green-800 dark:group-hover/head:text-lime-400 transition-colors">
+            <h4 className="truncate text-base font-semibold text-foreground group-hover/head:text-primary transition-colors">
               {contact.name}
             </h4>
             {contact.position ? (
@@ -166,7 +164,7 @@ export function ContactCard({
                 <Badge
                   key={tag}
                   className={cn(
-                    "border font-medium text-[11px] px-2 py-0.5 rounded-md",
+                    "border font-medium text-[11px] px-2 py-0.5 rounded-full",
                     getTagColorClass(tag)
                   )}
                 >
@@ -177,8 +175,8 @@ export function ContactCard({
           )}
         </div>
 
-        {/* Very Light Yellowish Note Space (2-3 steps up from white, no quotes) */}
-        <div className="h-[76px] min-h-[76px] rounded-xl border border-amber-200/80 bg-[#fefcf3] dark:bg-amber-950/20 dark:border-amber-800/30 text-amber-950 dark:text-amber-100 p-2.5 text-xs relative group/note overflow-y-auto leading-relaxed transition-all hover:border-amber-300">
+        {/* Sticky-note affordance, reusing the Warning family's amber tint (§1.2) instead of one-off hexes. */}
+        <div className="h-[76px] min-h-[76px] rounded-xl border border-warning-border bg-warning-surface text-warning p-2.5 text-xs relative group/note overflow-y-auto leading-relaxed transition-all hover:border-warning/40">
           {editingNote ? (
             <div className="flex h-full flex-col justify-between">
               <textarea
@@ -193,13 +191,14 @@ export function ContactCard({
                 }}
                 autoFocus
                 placeholder="Write a note... (@ to mention a job)"
-                className="size-full bg-transparent outline-none resize-none text-xs text-amber-950 dark:text-amber-100 placeholder:text-amber-700/50 dark:placeholder:text-amber-300/50"
+                className="size-full bg-transparent outline-none resize-none text-xs text-warning placeholder:text-warning/50"
               />
               <div className="flex items-center justify-end gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={handleCancelNote}
-                  className="rounded p-0.5 text-amber-800 dark:text-amber-200 hover:bg-amber-500/20"
+                  aria-label="Cancel"
+                  className="rounded p-0.5 text-warning hover:bg-warning/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   title="Cancel"
                 >
                   <X className="size-3.5" />
@@ -208,7 +207,8 @@ export function ContactCard({
                   type="button"
                   onClick={handleSaveNote}
                   disabled={savingNote}
-                  className="rounded p-0.5 text-amber-900 dark:text-amber-100 font-bold hover:bg-amber-500/20"
+                  aria-label="Save note"
+                  className="rounded p-0.5 text-warning font-bold hover:bg-warning/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   title="Save note (Enter)"
                 >
                   <Check className="size-3.5" />
@@ -217,8 +217,16 @@ export function ContactCard({
             </div>
           ) : noteText.trim() ? (
             <div
+              role="button"
+              tabIndex={0}
               onClick={() => setEditingNote(true)}
-              className="size-full cursor-pointer pr-5"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setEditingNote(true);
+                }
+              }}
+              className="size-full cursor-pointer pr-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
               title="Click to edit note"
             >
               {noteSegments.map((seg, idx) =>
@@ -227,7 +235,7 @@ export function ContactCard({
                     key={idx}
                     href={`/jobs/${seg.jobId}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-semibold text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-950 dark:hover:text-amber-100 mx-0.5"
+                    className="font-semibold text-warning underline underline-offset-2 hover:text-warning/80 mx-0.5"
                   >
                     @{seg.text}
                   </Link>
@@ -241,7 +249,8 @@ export function ContactCard({
                   e.stopPropagation();
                   setEditingNote(true);
                 }}
-                className="absolute top-2 right-2 opacity-0 group-hover/note:opacity-100 transition-opacity rounded p-1 text-amber-800 dark:text-amber-200 hover:bg-amber-500/20"
+                aria-label="Edit note"
+                className="absolute top-2 right-2 opacity-0 group-hover/note:opacity-100 transition-opacity rounded p-1 text-warning hover:bg-warning/20 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 title="Edit note"
               >
                 <Pencil className="size-3" />
@@ -251,7 +260,7 @@ export function ContactCard({
             <button
               type="button"
               onClick={() => setEditingNote(true)}
-              className="flex size-full items-center gap-1.5 text-amber-800/60 dark:text-amber-300/60 font-medium hover:text-amber-950 dark:hover:text-amber-100 transition-colors"
+              className="flex size-full items-center gap-1.5 text-warning/60 font-medium hover:text-warning transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
             >
               <Plus className="size-3.5 shrink-0" />
               <span>Click to add note...</span>
@@ -275,7 +284,7 @@ export function ContactCard({
                 <button
                   type="button"
                   onClick={() => copy(contact.phone!, "Phone")}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground/60 hover:text-foreground"
+                  className="shrink-0 rounded p-0.5 text-muted-foreground/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   aria-label="Copy phone number"
                   title="Copy phone"
                 >
@@ -296,7 +305,7 @@ export function ContactCard({
                 <button
                   type="button"
                   onClick={() => copy(contact.email!, "Email")}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground/60 hover:text-foreground"
+                  className="shrink-0 rounded p-0.5 text-muted-foreground/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   aria-label="Copy email"
                   title="Copy email"
                 >
@@ -316,7 +325,8 @@ export function ContactCard({
             href={linkedinLink.startsWith("http") ? linkedinLink : `https://${linkedinLink}`}
             target="_blank"
             rel="noreferrer"
-            className="flex size-7 items-center justify-center rounded-lg border border-blue-500/40 bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold text-[11px] transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-xs"
+            aria-label={`LinkedIn: ${linkedinLink}`}
+            className="flex size-7 items-center justify-center rounded-lg border border-blue-500/40 bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold text-[11px] transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             title={`LinkedIn: ${linkedinLink}`}
           >
             in
@@ -336,7 +346,8 @@ export function ContactCard({
             href={githubLink.startsWith("http") ? githubLink : `https://${githubLink}`}
             target="_blank"
             rel="noreferrer"
-            className="flex size-7 items-center justify-center rounded-lg border border-zinc-700/40 dark:border-zinc-300/40 bg-zinc-900/10 dark:bg-zinc-100/10 text-zinc-900 dark:text-zinc-100 font-bold text-[11px] transition-all hover:bg-zinc-900 hover:text-white dark:hover:bg-zinc-100 dark:hover:text-zinc-900 hover:border-zinc-900 hover:shadow-xs"
+            aria-label={`GitHub: ${githubLink}`}
+            className="flex size-7 items-center justify-center rounded-lg border border-zinc-700/40 dark:border-zinc-300/40 bg-zinc-900/10 dark:bg-zinc-100/10 text-zinc-900 dark:text-zinc-100 font-bold text-[11px] transition-all hover:bg-zinc-900 hover:text-white dark:hover:bg-zinc-100 dark:hover:text-zinc-900 hover:border-zinc-900 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             title={`GitHub: ${githubLink}`}
           >
             gh
@@ -350,14 +361,15 @@ export function ContactCard({
           </span>
         )}
 
-        {/* Additional Custom Social Links */}
+        {/* Additional custom social links — no fixed brand hue, so this uses the primary token like any other interactive chip. */}
         {extraLinks.map((link, idx) => (
           <a
             key={idx}
             href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
             target="_blank"
             rel="noreferrer"
-            className="flex size-7 items-center justify-center rounded-lg border border-lime-500/30 bg-lime-500/15 text-lime-950 dark:text-lime-200 font-medium text-[11px] transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-xs"
+            aria-label={`${link.platform}: ${link.url}`}
+            className="flex size-7 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary font-medium text-[11px] transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             title={`${link.platform}: ${link.url}`}
           >
             <SocialIcon platform={link.platform} />

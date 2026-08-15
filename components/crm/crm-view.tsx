@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -78,13 +79,13 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
   const [companyName, setCompanyName] = useState("");
   const [pending, setPending] = useState(false);
 
-  // Edit / Delete Company dialog state
+  // Edit Company dialog state
   const [editingCompany, setEditingCompany] = useState<CrmCompany | null>(null);
-  const [deletingCompanyObj, setDeletingCompanyObj] = useState<CrmCompany | null>(null);
-  const [deletingCompanyPending, setDeletingCompanyPending] = useState(false);
 
   // Manage Tags dialog state
   const [manageTagsOpen, setManageTagsOpen] = useState(false);
+
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const handleCreateCompany = async () => {
     if (!companyName.trim()) return;
@@ -122,22 +123,25 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
     setCompanies((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
   };
 
-  const handleDeleteCompanyConfirm = async () => {
-    if (!deletingCompanyObj) return;
-    setDeletingCompanyPending(true);
+  const handleDeleteCompany = async (company: CrmCompany) => {
+    const confirmed = await confirm({
+      title: "Delete company?",
+      description: `"${company.name}" will be permanently deleted. Linked contacts and jobs will not be deleted, but will be unlinked from this company. This can't be undone.`,
+      confirmText: "Delete company",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
     try {
-      await deleteCompany(deletingCompanyObj.id);
-      setCompanies((prev) => prev.filter((c) => c.id !== deletingCompanyObj.id));
+      await deleteCompany(company.id);
+      setCompanies((prev) => prev.filter((c) => c.id !== company.id));
       // Unlink company from contacts in state
       setContacts((prev) =>
-        prev.map((c) => (c.company_id === deletingCompanyObj.id ? { ...c, company_id: null, company_name: null } : c))
+        prev.map((c) => (c.company_id === company.id ? { ...c, company_id: null, company_name: null } : c))
       );
-      toast.success(`Company "${deletingCompanyObj.name}" deleted`);
-      setDeletingCompanyObj(null);
+      toast.success(`Company "${company.name}" deleted`);
     } catch {
       toast.error("Couldn't delete company");
-    } finally {
-      setDeletingCompanyPending(false);
     }
   };
 
@@ -179,13 +183,19 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
   return (
     <>
       <Tabs value={view} onValueChange={(v) => setView((v as "contacts" | "companies") ?? "contacts")}>
-        <div className="flex items-center justify-between gap-2">
-          <TabsList className="radio-inputs-header h-auto shrink-0 max-w-xs">
-            <TabsTrigger value="contacts" className="radio-tab-trigger">
-              <span>Contacts</span>
+        <div className="flex items-center justify-between gap-2 border-b border-border pb-1">
+          <TabsList variant="line" className="h-auto shrink-0 gap-1 p-0">
+            <TabsTrigger
+              value="contacts"
+              className="px-3 py-2.5 text-sm font-semibold data-active:text-primary data-active:after:bg-primary"
+            >
+              Contacts
             </TabsTrigger>
-            <TabsTrigger value="companies" className="radio-tab-trigger">
-              <span>Companies</span>
+            <TabsTrigger
+              value="companies"
+              className="px-3 py-2.5 text-sm font-semibold data-active:text-primary data-active:after:bg-primary"
+            >
+              Companies
             </TabsTrigger>
           </TabsList>
 
@@ -222,43 +232,39 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
             ))}
         </div>
 
-        <div className="radio-tabs-content-box mt-0">
-          <div className="radio-tabs-content-inner">
-            <TabsContent value="contacts" className="radio-tab-content-panel mt-0">
-              <ContactsView
-                contacts={contacts}
-                setContacts={setContacts}
-                companies={companies}
-                onCompanyCountChange={bumpContactCount}
-                onCompanyCreated={handleCompanyCreated}
-                onOpenManageTags={() => setManageTagsOpen(true)}
-                onTagDeleted={handleTagDeleted}
-              />
-            </TabsContent>
+        <TabsContent value="contacts" className="mt-4">
+          <ContactsView
+            contacts={contacts}
+            setContacts={setContacts}
+            companies={companies}
+            onCompanyCountChange={bumpContactCount}
+            onCompanyCreated={handleCompanyCreated}
+            onOpenManageTags={() => setManageTagsOpen(true)}
+            onTagDeleted={handleTagDeleted}
+          />
+        </TabsContent>
 
-            <TabsContent value="companies" className="radio-tab-content-panel mt-0">
-              {companies.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
-                  <p className="text-sm text-muted-foreground">No companies yet.</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">
-                    Companies appear automatically as you save jobs, or add one directly.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {companies.map((company) => (
-                    <CompanyRow
-                      key={company.id}
-                      company={company}
-                      onEdit={(c) => setEditingCompany(c)}
-                      onDelete={(c) => setDeletingCompanyObj(c)}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </div>
-        </div>
+        <TabsContent value="companies" className="mt-4">
+          {companies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
+              <p className="text-sm text-muted-foreground">No companies yet.</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                Companies appear automatically as you save jobs, or add one directly.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {companies.map((company) => (
+                <CompanyRow
+                  key={company.id}
+                  company={company}
+                  onEdit={(c) => setEditingCompany(c)}
+                  onDelete={handleDeleteCompany}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Edit Company Dialog */}
@@ -269,31 +275,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
         onSaved={handleCompanyUpdated}
       />
 
-      {/* Delete Company Confirmation Dialog */}
-      <Dialog open={!!deletingCompanyObj} onOpenChange={(open) => !open && setDeletingCompanyObj(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Company</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <p className="text-sm text-foreground">
-              Are you sure you want to delete <strong className="font-semibold">{deletingCompanyObj?.name}</strong>?
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Linked contacts and jobs will not be deleted, but will be unlinked from this company.
-            </p>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setDeletingCompanyObj(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteCompanyConfirm} disabled={deletingCompanyPending}>
-              {deletingCompanyPending && <Spinner className="mr-1 size-4" />}
-              Delete Company
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {confirmDialog}
 
       {/* Manage Tags Dialog */}
       <ManageTagsDialog
@@ -378,16 +360,6 @@ function ContactsView({
     });
   };
 
-  const handleDelete = async (contact: Contact) => {
-    try {
-      await deleteContact(contact.id);
-      setContacts((prev) => prev.filter((c) => c.id !== contact.id));
-      onCompanyCountChange(contact.company_id, -1);
-    } catch {
-      toast.error("Couldn't remove contact");
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -419,7 +391,7 @@ function ContactsView({
 
         <Button variant="outline" size="sm" onClick={onOpenManageTags}>
           <Tag className="mr-1 size-4 text-muted-foreground" />
-          Manage Tags
+          Manage tags
         </Button>
 
         <Button
@@ -430,7 +402,7 @@ function ContactsView({
           }}
         >
           <Plus className="mr-1 size-4" />
-          Add Contact
+          Add contact
         </Button>
       </div>
 
@@ -454,7 +426,6 @@ function ContactsView({
                 setEditingContact(c);
                 setDialogOpen(true);
               }}
-              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -541,7 +512,8 @@ function CompanyRow({
         <button
           type="button"
           onClick={handleToggle}
-          className="flex flex-1 items-center gap-3 text-left"
+          aria-expanded={expanded}
+          className="flex flex-1 items-center gap-3 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           <div
             className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted"
@@ -561,9 +533,12 @@ function CompanyRow({
             <button
               type="button"
               onClick={() => setColorPickerOpen((v) => !v)}
-              className="flex size-5 items-center justify-center rounded-full border border-border/80 transition-transform hover:scale-110"
+              aria-label="Change company accent color"
+              aria-haspopup="true"
+              aria-expanded={colorPickerOpen}
+              className="flex size-5 items-center justify-center rounded-full border border-border/80 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               style={{ backgroundColor: color ?? "transparent" }}
-              title="Change column accent color"
+              title="Change company accent color"
             >
               {!color && <span className="size-2 rounded-full bg-muted-foreground/40" />}
             </button>
@@ -575,7 +550,8 @@ function CompanyRow({
                     key={c.value}
                     type="button"
                     onClick={() => handleSetColor(c.value)}
-                    className="size-5 rounded-full transition-transform hover:scale-110 focus:outline-none"
+                    aria-label={c.label}
+                    className="size-5 rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     style={{ backgroundColor: c.value }}
                     title={c.label}
                   />
@@ -584,7 +560,8 @@ function CompanyRow({
                   <button
                     type="button"
                     onClick={() => handleSetColor(null)}
-                    className="flex size-5 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground hover:bg-muted"
+                    aria-label="Clear color"
+                    className="flex size-5 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     title="Clear color"
                   >
                     <X className="size-3" />
@@ -603,27 +580,35 @@ function CompanyRow({
             {contactCount}
           </span>
 
-          {/* Edit Company */}
+          {/* Edit company */}
           <button
             type="button"
             onClick={() => onEdit?.(company)}
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Edit company details"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             title="Edit company details"
           >
             <Pencil className="size-3.5" />
           </button>
 
-          {/* Delete Company */}
+          {/* Delete company */}
           <button
             type="button"
             onClick={() => onDelete?.(company)}
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            aria-label="Delete company"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             title="Delete company"
           >
             <Trash2 className="size-3.5" />
           </button>
 
-          <button type="button" onClick={handleToggle} aria-label="Toggle section">
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-label="Toggle section"
+            aria-expanded={expanded}
+            className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
             <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
         </div>
@@ -688,6 +673,7 @@ function ContactsPanel({
   const [linking, setLinking] = useState(false);
   const [orphans, setOrphans] = useState<Contact[] | null>(null);
   const [pending, setPending] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -755,6 +741,14 @@ function ContactsPanel({
   };
 
   const handleDelete = async (contact: Contact) => {
+    const confirmed = await confirm({
+      title: "Remove this contact?",
+      description: `"${contact.name}" will be permanently deleted. This can't be undone.`,
+      confirmText: "Remove contact",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
     try {
       await deleteContact(contact.id);
       onContactsChange(
@@ -774,7 +768,7 @@ function ContactsPanel({
           <button
             type="button"
             onClick={() => setCreating((v) => !v)}
-            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             aria-label="Add contact"
           >
             <Plus className="size-3.5" />
@@ -782,7 +776,7 @@ function ContactsPanel({
           <button
             type="button"
             onClick={openLinkPicker}
-            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             aria-label="Link existing contact"
           >
             <Link2 className="size-3.5" />
@@ -825,7 +819,12 @@ function ContactsPanel({
         <div className="mb-2 rounded-lg border border-border p-2">
           <div className="mb-1 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Unassigned contacts</p>
-            <button onClick={() => setLinking(false)} className="text-muted-foreground hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => setLinking(false)}
+              aria-label="Close"
+              className="rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            >
               <X className="size-3.5" />
             </button>
           </div>
@@ -839,8 +838,9 @@ function ContactsPanel({
               .map((o) => (
                 <button
                   key={o.id}
+                  type="button"
                   onClick={() => handleLink(o)}
-                  className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm hover:bg-muted"
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   {o.name}
                   <span className="text-xs text-muted-foreground">{contactRoleLabel(o.role)}</span>
@@ -888,8 +888,10 @@ function ContactsPanel({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => handleDelete(contact)}
-                className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Remove ${contact.name}`}
+                className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -910,6 +912,7 @@ function ContactsPanel({
         ))}
         {contacts.length === 0 && <p className="text-xs text-muted-foreground">No contacts at this company yet.</p>}
       </div>
+      {confirmDialog}
     </div>
   );
 }
@@ -973,11 +976,11 @@ function CompanyEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Company</DialogTitle>
+          <DialogTitle>Edit company</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
-            <Label htmlFor="company-name">Company Name *</Label>
+            <Label htmlFor="company-name">Company name *</Label>
             <Input
               id="company-name"
               required
@@ -1010,7 +1013,7 @@ function CompanyEditDialog({
             </Button>
             <Button type="submit" disabled={pending}>
               {pending && <Spinner className="mr-1 size-4" />}
-              Save Changes
+              Save changes
             </Button>
           </DialogFooter>
         </form>
@@ -1075,7 +1078,7 @@ function ManageTagsDialog({
       toast.success(`Tag "${tag}" deleted`);
       setDeletingTag(null);
     } catch {
-      toast.error(`Failed to delete tag "${tag}"`);
+      toast.error(`Couldn't delete tag "${tag}"`);
     } finally {
       setPending(false);
     }
@@ -1106,7 +1109,7 @@ function ManageTagsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="size-5 text-primary" />
-            Manage Tags
+            Manage tags
           </DialogTitle>
         </DialogHeader>
 
@@ -1171,7 +1174,7 @@ function ManageTagsDialog({
                       <div className="flex items-center gap-2 min-w-0">
                         <Badge
                           className={cn(
-                            "border font-medium text-xs px-2.5 py-1 rounded-md shrink-0",
+                            "border font-medium text-xs px-2.5 py-1 rounded-full shrink-0",
                             getTagColorClass(tag)
                           )}
                         >

@@ -2,21 +2,67 @@
   "appId": "com.attrack.desktop",
   "productName": "AtTrack",
   "directories": {
-    "output": "C:/Users/Kamru/AtTrack-Release"
+    "output": "release",
+    "buildResources": "build"
   },
-  "files": ["electron/**/*", "package.json"],
+  "files": [
+    "electron/**/*",
+    "package.json",
+    "build/icons/**/*"
+  ],
   "publish": {
-    "provider": "github"
+    "provider": "github",
+    "releaseType": "release"
   },
   "afterPack": "scripts/electron-after-pack.js",
+  "afterSign": "scripts/notarize.js",
   "win": {
-    "target": ["nsis"]
+    "target": ["nsis"],
+    "icon": "build/icons/windows.ico",
+    "sign": "./scripts/sign.js",
+    "signingHashAlgorithms": ["sha256"]
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["universal"]
+      },
+      {
+        "target": "zip",
+        "arch": ["universal"]
+      }
+    ],
+    "category": "public.app-category.productivity",
+    "icon": "build/icons/mac.icns",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements/entitlements.plist",
+    "entitlementsInherit": "build/entitlements/entitlements.inherit.plist",
+    "minimumSystemVersion": "13.0"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Office",
+    "icon": "build/icons/linux.png"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "artifactName": "AtTrack-Setup-${version}.exe"
+    "artifactName": "AtTrack-Setup-${version}-win.exe"
+  },
+  "dmg": {
+    "sign": false,
+    "contents": [
+      { "x": 130, "y": 220, "type": "file" },
+      { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+    ],
+    "window": {
+      "width": 540,
+      "height": 380
+    },
+    "artifactName": "AtTrack-${version}-mac.dmg"
   }
 }

@@ -19,8 +19,10 @@
 /.next_*/
 /out/
 
-# production
-/build
+# production (ignore release installers, NOT build assets)
+/release/
+/build/installer/*.dmg
+/build/installer/*.exe
 
 # misc
 .DS_Store

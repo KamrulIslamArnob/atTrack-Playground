@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   createCompanyContact,
   createPersonContact,
@@ -93,10 +94,17 @@ export function ContactFormDialog({
   const mode = contact ? "edit" : "create";
   const [pending, setPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const handleDeleteContact = async () => {
     if (!contact) return;
-    if (!confirm(`Are you sure you want to delete "${contact.name}"?`)) return;
+    const confirmed = await confirm({
+      title: "Delete this contact?",
+      description: `"${contact.name}" will be permanently deleted. This can't be undone.`,
+      confirmText: "Delete contact",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     try {
       setDeleting(true);
@@ -397,7 +405,7 @@ export function ContactFormDialog({
       }
       onOpenChange(false);
     } catch {
-      toast.error(mode === "edit" ? "Could not update contact" : "Could not create contact");
+      toast.error(mode === "edit" ? "Couldn't update contact" : "Couldn't create contact");
     } finally {
       setPending(false);
     }
@@ -407,10 +415,11 @@ export function ContactFormDialog({
   const avatarColorClass = getContactAvatarColorClass(tags, contactName);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === "edit" ? "Edit Contact" : "Add Contact"}</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Edit contact" : "Add contact"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -590,7 +599,7 @@ export function ContactFormDialog({
                 <Badge
                   key={tag}
                   className={cn(
-                    "flex items-center gap-1 border font-medium text-xs px-2 py-0.5 rounded-md",
+                    "flex items-center gap-1 border font-medium text-xs px-2 py-0.5 rounded-full",
                     getTagColorClass(tag)
                   )}
                 >
@@ -598,7 +607,8 @@ export function ContactFormDialog({
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10"
+                    aria-label={`Remove ${tag}`}
+                    className="rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
                     <X className="size-3" />
                   </button>
@@ -628,7 +638,7 @@ export function ContactFormDialog({
                       key={suggestion}
                       onClick={() => (isSelected ? handleRemoveTag(suggestion) : handleAddTag(suggestion))}
                       className={cn(
-                        "rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors flex items-center gap-1",
+                        "rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                         isSelected
                           ? getTagColorClass(suggestion)
                           : "border-border bg-background text-muted-foreground hover:bg-muted"
@@ -763,5 +773,7 @@ export function ContactFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+    {confirmDialog}
+    </>
   );
 }

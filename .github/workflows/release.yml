@@ -1,0 +1,72 @@
+name: Build & Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: macos-latest
+            platform: mac
+            arch: universal
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── macOS: code signing + notarization ──────────────────────────────
+      - name: Import Apple Certificate (macOS)
+        if: matrix.platform == 'mac'
+        uses: apple-actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.MAC_CERTS }}
+          p12-password: ${{ secrets.MAC_CERTS_PASSWORD }}
+
+      - name: Set Apple Notarization Credentials (macOS)
+        if: matrix.platform == 'mac'
+        run: |
+          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> $GITHUB_ENV
+          echo "APPLE_APP_SPECIFIC_PASSWORD=${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" >> $GITHUB_ENV
+          echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}" >> $GITHUB_ENV
+
+      # ── Windows: code signing ───────────────────────────────────────────
+      - name: Set Windows Signing Certificate (Windows)
+        if: matrix.platform == 'win'
+        run: |
+          echo "CSC_LINK=${{ secrets.WIN_CSC_LINK }}" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=${{ secrets.WIN_CSC_KEY_PASSWORD }}" >> $GITHUB_ENV
+
+      # ── Build ───────────────────────────────────────────────────────────
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Electron App (${{ matrix.platform }})
+        run: npx electron-builder --${{ matrix.platform }} --publish always
+
+      # ── Upload artifacts (for debugging) ───────────────────────────────
+      - name: Upload Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: release/
