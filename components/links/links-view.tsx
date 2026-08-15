@@ -326,7 +326,7 @@ export function LinksView({
 
           <Button
             onClick={() => handleOpenAdd()}
-            className="rounded-lg gap-2 bg-gradient-brand text-foreground font-medium text-xs shadow-xs active:scale-[0.98] transition-transform"
+            className="rounded-lg gap-2 bg-gradient-brand text-primary-foreground font-medium text-xs shadow-xs active:scale-[0.98] transition-transform"
           >
             <Plus className="size-4" />
             Add Link
