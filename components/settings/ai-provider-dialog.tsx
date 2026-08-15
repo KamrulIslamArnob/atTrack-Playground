@@ -147,7 +147,15 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
       return;
     }
 
-    toast.success(provider ? "Provider updated." : "Provider added.");
+    // create always verifies; update only re-verifies when the key changed —
+    // `verified` is undefined there, so an unrelated edit (name, model) stays quiet.
+    if (result.verified === true) {
+      toast.success(`${provider ? "Provider updated" : "Provider added"} and verified.`);
+    } else if (result.verified === false) {
+      toast.warning(`${provider ? "Provider updated" : "Provider added"}, but the connection test failed: ${result.verifyError ?? "unknown error"}. AI features stay locked until it passes.`);
+    } else {
+      toast.success("Provider updated.");
+    }
     setPending(false);
     onSaved();
   };

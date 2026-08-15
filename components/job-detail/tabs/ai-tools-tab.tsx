@@ -14,6 +14,8 @@ import { sendApplicationEmail } from "@/lib/actions/email";
 import { AI_TOOL_KINDS, type AiToolKind } from "@/lib/types/ai-tools";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
+import { useAiUnlocked } from "@/lib/hooks/use-ai-unlocked";
+import { NoApiKeyOverlay } from "@/components/ai-chatbot/no-api-key-overlay";
 import { Mail, Save, Sparkles } from "lucide-react";
 
 interface AiToolsTabProps {
@@ -26,6 +28,7 @@ const STAGES = ["Application", "Interview", "Offer"] as const;
 
 export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   const router = useRouter();
+  const { unlocked, checked } = useAiUnlocked();
   const [kind, setKind] = useState<AiToolKind | null>(null);
   const [context, setContext] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -112,6 +115,14 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
       setSendPending(false);
     }
   };
+
+  if (checked && !unlocked) {
+    return (
+      <div className="relative min-h-[280px]">
+        <NoApiKeyOverlay message="Please connect your first API key from settings to enable AI tools for this job." />
+      </div>
+    );
+  }
 
   if (kind) {
     return (

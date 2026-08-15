@@ -47,6 +47,9 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       model: p.model,
     });
     setTestingId(null);
+    // testProviderConnection just stamped (or cleared) verified_at server-side —
+    // refetch so the Verified badge and any AI-feature lock screen agree with it.
+    await refreshProviders();
 
     if (res.success) {
       toast.success(`Connected to ${p.name} (${res.latencyMs ?? 0}ms)`);
@@ -177,6 +180,9 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
               >
                 <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
                   <Badge variant="outline">{PROVIDER_TYPE_LABELS[p.provider_type]}</Badge>
+                  <Badge variant="outline" className={p.verified ? "border-success/30 text-success" : "border-warning/30 text-warning"}>
+                    {p.verified ? "Verified" : "Not verified"}
+                  </Badge>
                   <span className="min-w-0 truncate font-medium">{p.name}</span>
                   <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{p.model}</span>
                 </div>

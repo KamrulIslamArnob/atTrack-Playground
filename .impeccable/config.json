@@ -1,0 +1,38 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-08-15T12:55:17.977Z",
+        "reason": "pre-existing utility, documented and sanctioned in docs/Design.md #1.4 (.text-gradient-brand), not introduced by this change"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "agent-eq-bounce",
+        "createdAt": "2026-08-15T13:27:28.069Z",
+        "reason": "literal equalizer-bar bounce for dictation-listening indicator, domain-appropriate motion, pre-existing"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.3, 0.7, 0.4, 1.5)",
+        "createdAt": "2026-08-15T13:27:28.170Z",
+        "reason": "pushable-button depress/release tactile overshoot, established pattern, pre-existing"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-08-15T13:53:47.956Z",
+        "reason": "pre-existing .auth-bg dot-grid (radial-gradient, --border token, 24px cell) used only on full-page error.tsx/not-found.tsx states, unrelated to this session's .btn-cta edit"
+      }
+    ]
+  }
+}

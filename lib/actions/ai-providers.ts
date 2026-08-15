@@ -20,6 +20,7 @@ interface ProviderRow {
   provider_type: ProviderType;
   base_url: string | null;
   model: string;
+  verified_at: string | null;
 }
 
 function toSummary(row: ProviderRow): AiProviderSummary {
@@ -29,7 +30,23 @@ function toSummary(row: ProviderRow): AiProviderSummary {
     provider_type: row.provider_type,
     base_url: row.base_url,
     model: row.model,
+    verified: !!row.verified_at,
   };
+}
+
+/** Stamps (or clears) verified_at after a real connection attempt against a
+ *  saved provider — the one place that turns a test result into unlock state. */
+async function persistVerification(
+  supabase: Awaited<ReturnType<typeof getUser>>["supabase"],
+  id: string,
+  userId: string,
+  success: boolean
+) {
+  await supabase
+    .from("ai_providers")
+    .update({ verified_at: success ? new Date().toISOString() : null })
+    .eq("id", id)
+    .eq("user_id", userId);
 }
 
 export async function listProviders(): Promise<AiProviderSummary[]> {
@@ -37,11 +54,23 @@ export async function listProviders(): Promise<AiProviderSummary[]> {
 
   const { data } = await supabase
     .from("ai_providers")
-    .select("id, name, provider_type, base_url, model")
+    .select("id, name, provider_type, base_url, model, verified_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
   return ((data ?? []) as unknown as ProviderRow[]).map(toSummary);
+}
+
+/** True when a chat request would actually have a model to call: either a
+ *  provider whose connection has actually tested successfully (Settings →
+ *  AI Providers — a saved-but-never-tested or since-broken key doesn't count)
+ *  or the zero-config GEMINI_API_KEY env fallback (see lib/ai/providers.ts).
+ *  Single source of truth for gating AI features so every lock screen and the
+ *  actual provider resolution agree on "is anything usable". */
+export async function hasAnyProviderConfigured(): Promise<boolean> {
+  if (process.env.GEMINI_API_KEY) return true;
+  const providers = await listProviders();
+  return providers.some((p) => p.verified);
 }
 
 export async function createProvider(params: {
@@ -50,7 +79,7 @@ export async function createProvider(params: {
   base_url?: string | null;
   model: string;
   api_key: string;
-}): Promise<{ error?: string; id?: string }> {
+}): Promise<{ error?: string; id?: string; verified?: boolean; verifyError?: string }> {
   const { supabase, userId } = await getUser();
 
   if (!PROVIDER_TYPES.includes(params.provider_type)) {
@@ -90,6 +119,18 @@ export async function createProvider(params: {
 
   const id = (data as unknown as { id: string }).id;
 
+  // Auto-verify with the key just entered, same check the manual "Test
+  // Connection" button runs — a provider must prove it actually works before
+  // it can unlock AI features, not just exist as a saved row.
+  const verifyResult = await attemptProviderConnection({
+    id,
+    provider_type: params.provider_type,
+    base_url: params.base_url,
+    model: params.model,
+    api_key: params.api_key,
+  });
+  await persistVerification(supabase, id, userId, verifyResult.success);
+
   // Automatically assign newly created provider to unconfigured task routes
   for (const taskType of ["text", "image", "scraping"] as const) {
     try {
@@ -116,7 +157,7 @@ export async function createProvider(params: {
 
   revalidatePath("/settings");
   revalidatePath("/preferences");
-  return { id };
+  return { id, verified: verifyResult.success, verifyError: verifyResult.error };
 }
 
 export async function updateProvider(
@@ -128,7 +169,7 @@ export async function updateProvider(
     model: string;
     api_key?: string;
   }
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; verified?: boolean; verifyError?: string }> {
   const { supabase, userId } = await getUser();
 
   if (!PROVIDER_TYPES.includes(params.provider_type)) {
@@ -145,8 +186,11 @@ export async function updateProvider(
     model: params.model.trim(),
     updated_at: new Date().toISOString(),
   };
-  if (params.api_key?.trim()) {
-    update.encrypted_api_key = encrypt(params.api_key.trim());
+  const keyChanged = Boolean(params.api_key?.trim());
+  if (keyChanged) {
+    update.encrypted_api_key = encrypt(params.api_key!.trim());
+    // A changed key invalidates whatever was verified before; re-verify below.
+    update.verified_at = null;
   }
 
   const { error } = await supabase.from("ai_providers").update(update).eq("id", id).eq("user_id", userId);
@@ -154,6 +198,19 @@ export async function updateProvider(
   if (error) {
     log.error({ err: error }, "Error updating AI provider:");
     return { error: "Failed to update provider." };
+  }
+
+  if (keyChanged) {
+    const verifyResult = await attemptProviderConnection({
+      id,
+      provider_type: params.provider_type,
+      base_url: params.base_url,
+      model: params.model,
+      api_key: params.api_key,
+    });
+    await persistVerification(supabase, id, userId, verifyResult.success);
+    revalidatePath("/settings");
+    return { verified: verifyResult.success, verifyError: verifyResult.error };
   }
 
   revalidatePath("/settings");
@@ -193,7 +250,7 @@ export async function getTaskRoutes(): Promise<Record<TaskType, AiProviderSummar
   const { supabase, userId } = await getUser();
 
   const [{ data: providers }, { data: routes }] = await Promise.all([
-    supabase.from("ai_providers").select("id, name, provider_type, base_url, model").eq("user_id", userId),
+    supabase.from("ai_providers").select("id, name, provider_type, base_url, model, verified_at").eq("user_id", userId),
     supabase.from("ai_task_routes").select("task_type, provider_ids").eq("user_id", userId),
   ]);
 
@@ -248,6 +305,24 @@ export interface FetchedModel {
 }
 
 export async function testProviderConnection(params: {
+  id?: string;
+  provider_type: ProviderType;
+  base_url?: string | null;
+  model: string;
+  api_key?: string;
+}): Promise<{ success: boolean; error?: string; latencyMs?: number }> {
+  const result = await attemptProviderConnection(params);
+  // A saved provider's verified state is only ever set by an actual attempt
+  // (this call, or the auto-verify that runs right after create/update below) —
+  // never by row existence alone. See hasAnyProviderConfigured.
+  if (params.id) {
+    const { supabase, userId } = await getUser();
+    await persistVerification(supabase, params.id, userId, result.success);
+  }
+  return result;
+}
+
+async function attemptProviderConnection(params: {
   id?: string;
   provider_type: ProviderType;
   base_url?: string | null;

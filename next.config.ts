@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // NOTE: `output: "standalone"` was removed. It generated
-  // `.next/standalone/release/win-unpacked/resources/app.asar` (an Electron
-  // packaging artifact from the project's early scaffold). Next's dev server
-  // (Turbopack) walks the whole project for CSS asset tracing and panics with
-  // "os error 1392 / file corrupted" when a previously-renamed `.next_trash`
-  // copy of that asar is present on disk. There is no Dockerfile or deployment
-  // consuming the standalone output, so disabling it removes the corrupt-file
-  // trigger entirely.
+  // `output: "standalone"` only turns on for the electron:*/build:electron scripts
+  // (which set ELECTRON_BUILD=1 before calling `next build`). Plain `next dev` and
+  // `next build` never set it, so Turbopack dev never walks a `.next/standalone`
+  // tree — that's what previously left a `release/win-unpacked/.../app.asar` copy
+  // on disk and made Turbopack panic with "os error 1392 / file corrupted".
+  // electron/main.js and scripts/prepare-electron-build.js require this output for
+  // the packaged app's server.
+  ...(process.env.ELECTRON_BUILD === "1" ? { output: "standalone" as const } : {}),
   // lib/db/sqlite.ts reads schema.sql via readFileSync(path.join(process.cwd(), ...)) —
   // process.cwd() is a runtime value, so Next's build-time file tracer can't see the
   // reference and won't copy it into .next by default. Force it in.

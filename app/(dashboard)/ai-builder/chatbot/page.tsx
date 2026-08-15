@@ -34,7 +34,7 @@ import {
 import type { ContextSource, MiniScenario } from "@/lib/ai-chatbot/types";
 import { getCustomSources, setSourceEnabled, setSourceConfig, buildSourcePayload, addCustomSource, removeCustomSource } from "@/lib/ai-chatbot/source-permissions";
 import { useAtTrackChat } from "@/lib/ai-chatbot/use-chat";
-import { listProviders } from "@/lib/actions/ai-providers";
+import { listProviders, hasAnyProviderConfigured } from "@/lib/actions/ai-providers";
 import { executeLocalSqlQuery, type SqlQueryResult } from "@/lib/actions/database-query";
 import { TopNavigation } from "@/components/ai-chatbot/top-navigation";
 import { WorkspaceConnectionDrawer } from "@/components/ai-chatbot/workspace-connection-drawer";
@@ -43,6 +43,7 @@ import { ChatMessages } from "@/components/ai-chatbot/chat-messages";
 import { MemoizedChatInput as ChatInput } from "@/components/ai-chatbot/chat-input";
 import { ChatCanvas } from "@/components/ai-chatbot/chat-canvas";
 import { EmptyChatState } from "@/components/ai-chatbot/empty-chat-state";
+import { NoApiKeyOverlay } from "@/components/ai-chatbot/no-api-key-overlay";
 import { toast } from "sonner";
 
 export default function AIChatbotPage() {
@@ -59,6 +60,7 @@ export default function AIChatbotPage() {
   );
   const [isWebSearchActive, setIsWebSearchActive] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [providerConfigured, setProviderConfigured] = useState(true);
   // Per-chat connected source ids, kept as its own state (seeded from the
   // active session) so `sessions` isn't read during render for the request body
   // — that avoids a React Compiler manual-memoization skip on this component.
@@ -159,7 +161,11 @@ export default function AIChatbotPage() {
   useEffect(() => {
     async function init() {
       try {
-        const configuredProviders = await listProviders();
+        const [configuredProviders, providerAvailable] = await Promise.all([
+          listProviders(),
+          hasAnyProviderConfigured(),
+        ]);
+        setProviderConfigured(providerAvailable);
         const autoModelObj: AIModel = {
           id: "auto",
           name: "Auto Hybrid Agent",
@@ -756,7 +762,7 @@ export default function AIChatbotPage() {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-white dark:bg-[#09090b] text-foreground">
+    <div className="relative flex h-full w-full overflow-hidden bg-white dark:bg-[#09090b] text-foreground">
       {isMobileSidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
@@ -799,48 +805,52 @@ export default function AIChatbotPage() {
           onSelectPersona={setSelectedPersona}
         />
 
-        {messages.length === 0 ? (
-          <EmptyChatState
-            onSelectPrompt={handleStarterPrompt}
-            selectedPersona={selectedPersona}
-            selectedPersonaId={selectedPersona.id}
-            onSelectPersona={setSelectedPersona}
-            workspace={workspaceCtx}
-            onOpenWorkspaceDrawer={() => setIsWorkspaceDrawerOpen(true)}
-            onSelectScenario={handleSelectScenario}
-          />
-        ) : (
-          <ChatMessages
-            messages={messages}
-            isLoading={isLoading}
-            onRetry={reload}
-            onOpenCanvas={handleOpenCanvas}
-            onEditMessage={handleEditMessage}
-            onReply={handleReplyMessage}
-            onApproveQuery={handleApproveQuery}
-            onFeedback={handleFeedback}
-            onAskAiSummary={handleAskAiSummary}
-            onSelectFollowUp={sendMessage}
-          />
-        )}
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          {!providerConfigured && <NoApiKeyOverlay />}
 
-        <ChatInput
-          input={input || ""}
-          onInputChange={handleInputChange}
-          onSubmit={handleCustomSubmit}
-          isLoading={isLoading}
-          onStop={stop}
-          model={selectedModel}
-          onSelectModel={handleSelectModel}
-          availableModels={availableModels}
-          selectedPersona={selectedPersona}
-          onSelectPersona={setSelectedPersona}
-          onMobileMenuToggle={() => setIsMobileSidebarOpen(true)}
-          webSearchActive={isWebSearchActive}
-          onToggleWebSearch={() => setIsWebSearchActive((v) => !v)}
-          replyTo={replyTo}
-          onClearReply={() => setReplyTo(null)}
-        />
+          {messages.length === 0 ? (
+            <EmptyChatState
+              onSelectPrompt={handleStarterPrompt}
+              selectedPersona={selectedPersona}
+              selectedPersonaId={selectedPersona.id}
+              onSelectPersona={setSelectedPersona}
+              workspace={workspaceCtx}
+              onOpenWorkspaceDrawer={() => setIsWorkspaceDrawerOpen(true)}
+              onSelectScenario={handleSelectScenario}
+            />
+          ) : (
+            <ChatMessages
+              messages={messages}
+              isLoading={isLoading}
+              onRetry={reload}
+              onOpenCanvas={handleOpenCanvas}
+              onEditMessage={handleEditMessage}
+              onReply={handleReplyMessage}
+              onApproveQuery={handleApproveQuery}
+              onFeedback={handleFeedback}
+              onAskAiSummary={handleAskAiSummary}
+              onSelectFollowUp={sendMessage}
+            />
+          )}
+
+          <ChatInput
+            input={input || ""}
+            onInputChange={handleInputChange}
+            onSubmit={handleCustomSubmit}
+            isLoading={isLoading}
+            onStop={stop}
+            model={selectedModel}
+            onSelectModel={handleSelectModel}
+            availableModels={availableModels}
+            selectedPersona={selectedPersona}
+            onSelectPersona={setSelectedPersona}
+            onMobileMenuToggle={() => setIsMobileSidebarOpen(true)}
+            webSearchActive={isWebSearchActive}
+            onToggleWebSearch={() => setIsWebSearchActive((v) => !v)}
+            replyTo={replyTo}
+            onClearReply={() => setReplyTo(null)}
+          />
+        </div>
       </div>
 
       <WorkspaceConnectionDrawer

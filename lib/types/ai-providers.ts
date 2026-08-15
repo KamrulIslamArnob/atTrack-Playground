@@ -41,4 +41,8 @@ export interface AiProviderSummary {
   provider_type: ProviderType;
   base_url: string | null;
   model: string;
+  /** Set the moment a Test Connection call (manual or post-save) last succeeded;
+   *  cleared the moment one fails. AI features gate on this, not just row existence —
+   *  a saved-but-never-verified or since-revoked key must not unlock them. */
+  verified: boolean;
 }
