@@ -8,6 +8,7 @@ import { moduleLogger } from "@/lib/log";
 import { AI_EVENTS, aiEvent, aiWarn, newTraceId } from "@/lib/log/ai-events";
 import { fetchWithLog } from "@/lib/log/fetch";
 import { estimateCost } from "@/lib/ai/pricing";
+import type { ToolApproval } from "./tools/types";
 
 // createAdminClient/decrypt/logAiUsage stay dynamic imports: they drag the DB
 // client and a "use server" module into the graph of every path that loads this
@@ -937,7 +938,7 @@ export interface ProviderToolRoundResult {
 export interface ToolCallRecord {
   name: string;
   args: Record<string, unknown>;
-  result?: { content: string; citations: string[] };
+  result?: { content: string; citations: string[]; approval?: ToolApproval };
   status: "called" | "done" | "error";
   error?: string;
 }

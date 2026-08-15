@@ -1,95 +1,104 @@
 import type { ToolDefinition } from "./types";
-import { createDbClient } from "@/lib/db/client";
+import { getDb } from "@/lib/db/sqlite";
+import {
+  isValidIdentifier,
+  tableExists,
+  getColumns,
+  getTextColumns,
+  resolveOwnerColumn,
+} from "./db-utils";
 
 /**
- * Read-only database query tool. SECURITY: this is intentionally NOT arbitrary
- * SQL. The model may only (a) pick from an ALLOWED table list, (b) optionally
- * filter by a free-text term against safe text columns, and (c) receive a
- * fixed projection of columns. Every query is forced to `user_id = $userId`
- * (or the table's equivalent owner column) so data can never cross user
- * boundaries. Writes / DDL / other tables are rejected.
+ * Read-only query tool with full access to the user's own workspace database.
+ * Unlike the original scoped version, this accepts ANY table and (optionally)
+ * any column list, so the agent can read whatever it needs. Every query is
+ * forced to the table's owner column when one exists, so data can never cross
+ * user boundaries. Writes/DDL are rejected — this tool is read-only by design.
  */
-
-const ALLOWED_TABLES: Record<string, { ownerCol: string; columns: string[]; label: string }> = {
-  // Columns must be real, flat columns on the named table — this tool has no
-  // join support, so a fabricated column (e.g. a company name that only
-  // exists via companies.id) makes the query 500 on every call.
-  jobs: { ownerCol: "user_id", columns: ["id", "title", "company_id", "status", "list_id", "deadline", "match_score"], label: "Job Applications" },
-  documents: { ownerCol: "user_id", columns: ["id", "name", "type", "content"], label: "Resumes & Documents" },
-  ai_memories: { ownerCol: "user_id", columns: ["id", "title", "description", "updated_at"], label: "AI Memories & Writing Rules" },
-  contacts: { ownerCol: "user_id", columns: ["id", "name", "role", "company_id", "email"], label: "Contacts CRM" },
-  link_categories: { ownerCol: "user_id", columns: ["id", "name", "sort_order"], label: "Link Categories" },
-  links: { ownerCol: "user_id", columns: ["id", "title", "url", "category_id"], label: "Links" },
-  ai_tool_prompts: { ownerCol: "user_id", columns: ["id", "kind", "system_prompt"], label: "AI Prompts" },
-};
 
 export const queryDatabaseTool: ToolDefinition = {
   name: "query_database",
   sourceId: "db_query",
   description:
-    "Run a read-only, scoped query against the user's own workspace database tables (jobs, contacts, links, prompts). Use when the user wants a count, aggregate, or filtered view that the other tools don't directly provide. You may only read the allowlisted tables; all results are automatically scoped to the user's own data. Never ask for or expect write/delete access.",
+    "Read any table in the user's own workspace database. Use when the user wants a count, aggregate, filtered view, or raw lookup that the other tools don't directly provide. Pass `table` (any table name) and optionally `columns` (subset to return), `filterText` (case-insensitive substring match across text columns), and `limit` (1-100, default 25). Results are always scoped to the user's own data. This tool is READ-ONLY — it never writes, updates, or deletes.",
   parameters: {
     type: "object",
     properties: {
       table: {
         type: "string",
-        enum: Object.keys(ALLOWED_TABLES),
-        description: "Which allowlisted table to read.",
+        description: "Any table name in the workspace database.",
+      },
+      columns: {
+        type: "array",
+        items: { type: "string" },
+        description: "Optional subset of columns to return. Omit to return all columns.",
       },
       filterText: {
         type: "string",
-        description: "Optional case-insensitive substring filter applied to the table's safe text columns.",
+        description: "Optional case-insensitive substring filter applied across the table's text columns (OR'd together).",
       },
       limit: {
         type: "number",
-        description: "Max rows to return (1-50). Default 20.",
+        description: "Max rows to return (1-100). Default 25.",
       },
     },
     required: ["table"],
   },
   execute: async (args, ctx) => {
-    const table = typeof args.table === "string" ? args.table : "";
-    const def = ALLOWED_TABLES[table];
-    if (!def) {
+    const table = typeof args.table === "string" ? args.table.trim() : "";
+    if (!tableExists(table)) {
       return {
-        content: `Table "${table}" is not allowlisted. Allowed: ${Object.keys(ALLOWED_TABLES).join(", ")}.`,
+        content: `Table "${table}" does not exist. Use a real table name from the workspace schema.`,
         citations: [],
       };
     }
-    const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 50);
-    const filterText = typeof args.filterText === "string" ? args.filterText : "";
+
+    const allCols = getColumns(table);
+    const requested = Array.isArray(args.columns)
+      ? args.columns.filter((c): c is string => typeof c === "string" && isValidIdentifier(c) && allCols.includes(c))
+      : [];
+    const cols = requested.length > 0 ? requested : allCols;
+    const colsSql = cols.map((c) => `"${c}"`).join(", ");
+
+    const limit = Math.min(Math.max(Number(args.limit) || 25, 1), 100);
+    const filterText = typeof args.filterText === "string" ? args.filterText.trim() : "";
+
+    const where: string[] = [];
+    const params: unknown[] = [];
+    const ownerCol = resolveOwnerColumn(table);
+    if (ownerCol) {
+      where.push(`"${ownerCol}" = ?`);
+      params.push(ctx.userId);
+    }
+    if (filterText) {
+      const textCols = getTextColumns(table);
+      if (textCols.length > 0) {
+        const like = `%${filterText}%`;
+        where.push("(" + textCols.map((c) => `"${c}" LIKE ?`).join(" OR ") + ")");
+        textCols.forEach(() => params.push(like));
+      }
+    }
+
+    const sql =
+      `SELECT ${colsSql} FROM "${table}"` +
+      (where.length ? ` WHERE ${where.join(" AND ")}` : "") +
+      ` LIMIT ?`;
+    params.push(limit);
 
     try {
-      const db = createDbClient();
-      let q = db
-        .from(table)
-        .select(def.columns.join(","))
-        .eq(def.ownerCol, ctx.userId)
-        .limit(limit);
-
-      if (filterText) {
-        // Apply ILIKE on the first text-ish column only (safe, single OR).
-        const textCol = def.columns.find((c) => c !== "id" && c !== def.ownerCol) ?? def.columns[0];
-        q = q.ilike(textCol, `%${filterText}%`);
-      }
-
-      const { data, error } = await q;
-      if (error) {
-        return { content: `Query failed: ${error.message}`, citations: [def.label] };
-      }
-      const rows = (data ?? []) as Record<string, unknown>[];
+      const db = getDb();
+      const rows = db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
+      const label = `"${table}"`;
       return {
         content:
           rows.length > 0
-            ? `${def.label} (${rows.length} row(s)):\n${rows
-                .map((r) => JSON.stringify(r))
-                .join("\n")}`
-            : `No rows found in ${def.label} for the current user.`,
-        citations: [def.label],
+            ? `${label} (${rows.length} row(s)):\n${rows.map((r) => JSON.stringify(r)).join("\n")}`
+            : `No rows found in ${label} for the current user.`,
+        citations: [label],
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { content: `Database query error: ${msg}`, citations: [def.label] };
+      return { content: `Database query error: ${msg}`, citations: [table] };
     }
   },
 };

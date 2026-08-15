@@ -177,7 +177,7 @@ export function deriveWorkspaceSources(
       kind: "native",
       recordCount: 0,
       lastSync: null,
-      enabled: false,
+      enabled: true,
       toolName: "query_database",
       auth: { status: "none" },
     },

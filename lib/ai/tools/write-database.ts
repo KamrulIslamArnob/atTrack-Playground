@@ -1,185 +1,161 @@
-// Creates or updates rows in the user's own workspace database. Executes
-// immediately — no confirmation (unlike delete-database.ts). See
-// docs/superpowers/specs/2026-08-15-chatbot-db-write-delete-design.md.
-//
-// Uses the @/* alias like the rest of lib/ai/tools/ (not relative-.ts, unlike
-// db-tables.ts/delete-database.ts) because ensureApplication pulls in
-// lib/actions/board.ts -> @/lib/auth, which is Next-only regardless — there's
-// no standalone-runnability to gain by relativizing just this file.
+// Creates or updates rows in ANY table of the user's own workspace database.
+// Executes immediately — no confirmation (deletes are the only gated op, see
+// delete-database.ts / lib/ai-chatbot/db-approval.ts). Ownership is always
+// forced to the current user; id/created_at/updated_at are never set by the
+// model, and neither is jobs.status — it's derived from list_id by a DB
+// trigger (trg_jobs_status_from_list_* in lib/db/schema.sql). Uses raw SQL so
+// any valid table/column works.
 import type { ToolDefinition } from "./types";
-import { createDbClient, type DbClient } from "@/lib/db/client";
+import { getDb } from "@/lib/db/sqlite";
+import { createDbClient } from "@/lib/db/client";
 import { ensureApplication } from "@/lib/actions/board";
-import { WRITABLE_TABLES, FK_NAME_FIELDS, findOrCreateByName } from "./db-tables";
+import { logResourceActivity } from "@/lib/actions/activity-log";
+import {
+  isValidIdentifier,
+  tableExists,
+  getColumns,
+  getColumnsWithTypes,
+  resolveOwnerColumn,
+  ALWAYS_BLOCKED_COLUMNS,
+} from "./db-utils";
 
-/** Never settable by the model, on any table. */
-const ALWAYS_BLOCKED = new Set(["id", "user_id", "status", "created_at", "updated_at"]);
+/** Columns that are technically real columns but derived, not model-writable,
+ *  on a specific table — the model must go through the domain path instead
+ *  (here: move list_id, and a DB trigger recomputes status). */
+const EXTRA_BLOCKED_COLUMNS: Record<string, Set<string>> = {
+  jobs: new Set(["status"]),
+};
 
-/** Board columns a job can be placed in by name (case-insensitive) or by kind
- *  (wishlist/preparing/applied/interview/offer/accepted/rejected/custom). */
-async function resolveBoardList(
-  db: DbClient,
-  userId: string,
-  identifier: string
-): Promise<{ id: string; kind: string } | null> {
-  const trimmed = identifier.trim();
-  if (!trimmed) return null;
-
-  const { data: byKind } = await db
-    .from("board_lists")
-    .select("id,kind")
-    .eq("user_id", userId)
-    .eq("kind", trimmed.toLowerCase())
-    .maybeSingle();
-  if (byKind) return { id: byKind.id as string, kind: byKind.kind as string };
-
-  const { data: byName } = await db
-    .from("board_lists")
-    .select("id,kind")
-    .eq("user_id", userId)
-    .ilike("name", trimmed)
-    .maybeSingle();
-  if (byName) return { id: byName.id as string, kind: byName.kind as string };
-
-  return null;
-}
-
-/** Appends a job to the end of `listId`'s column — no drag-precision reordering. */
-async function nextBoardPosition(db: DbClient, userId: string, listId: string): Promise<number> {
-  const { data: last } = await db
-    .from("jobs")
-    .select("board_position")
-    .eq("user_id", userId)
-    .eq("list_id", listId)
-    .order("board_position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (Number(last?.board_position) || 0) + 1000;
+/** True when `listId` names a board list owned by `userId` whose kind is
+ *  "applied" — the same check the drag-and-drop path uses before calling
+ *  ensureApplication (lib/actions/board.ts). */
+function isAppliedKindList(userId: string, listId: unknown): boolean {
+  if (typeof listId !== "string" || !listId) return false;
+  const row = getDb()
+    .prepare(`SELECT kind FROM board_lists WHERE id = ? AND user_id = ?`)
+    .get(listId, userId) as { kind: string } | undefined;
+  return row?.kind === "applied";
 }
 
 export const writeDatabaseTool: ToolDefinition = {
   name: "write_database",
   sourceId: "db_query",
   description:
-    'Creates or updates a row in the user\'s own workspace database (jobs, companies, documents, ai_memories, contacts, link_categories, links, ai_tool_prompts). Executes immediately, no confirmation needed. For jobs: pass `company` (a name) instead of company_id and it is found or created automatically; pass `list` (the board column\'s name or kind, e.g. "MCQ" or "applied") instead of list_id to place or move the job there — entering an Applied-kind column automatically creates the matching application record, same as dragging the card. Never pass `status` — it is derived automatically from the column the job is in. `action: "update"` requires the row\'s `id` (look it up with query_database first if you don\'t have it); `action: "insert"` creates a new row (documents and ai_tool_prompts don\'t support insert here — update only).',
+    "Create or update a row in ANY table of the user's own workspace database. Executes immediately, no confirmation needed. Pass `action` ('insert' | 'update'), `table` (any table), `id` (required for update, ignored for insert), and `values` (column -> value). `user_id`/ownership and `id`/`created_at`/`updated_at` are always server-managed. For jobs, never set `status` — it's derived automatically from `list_id`; set `list_id` to move a job between board columns (look the list's id up with query_database on board_lists first), and moving into an Applied-kind list automatically creates the matching application record.",
   parameters: {
     type: "object",
     properties: {
       action: { type: "string", enum: ["insert", "update"] },
-      table: { type: "string", enum: Object.keys(WRITABLE_TABLES) },
+      table: { type: "string", description: "Any existing table name." },
       id: { type: "string", description: "Row id. Required for update, ignored for insert." },
       values: {
         type: "object",
-        description: "Column name -> new value. Unknown or blocked columns are dropped and reported back in the result.",
+        description: "Column name -> new value. Unknown or blocked columns are dropped and reported back.",
       },
     },
     required: ["action", "table", "values"],
   },
   execute: async (args, ctx) => {
     const action = args.action === "insert" || args.action === "update" ? args.action : null;
-    const table = typeof args.table === "string" ? args.table : "";
-    const def = WRITABLE_TABLES[table];
-    if (!action || !def) {
+    const table = typeof args.table === "string" ? args.table.trim() : "";
+    if (!action || !tableExists(table)) {
       return {
-        content: `Invalid write: action must be "insert" or "update", table must be one of ${Object.keys(WRITABLE_TABLES).join(", ")}.`,
+        content: `Invalid write: action must be "insert" or "update" and table must be an existing table.`,
         citations: [],
       };
     }
-    if (action === "insert" && !def.allowInsert) {
-      return { content: `${def.label} does not support creating new rows through chat — update an existing one instead.`, citations: [def.label] };
-    }
-    if (action === "update" && !def.allowUpdate) {
-      return { content: `${def.label} does not support updates through chat.`, citations: [def.label] };
-    }
-    const rowId = typeof args.id === "string" ? args.id : "";
+
+    const ownerCol = resolveOwnerColumn(table);
+    const allCols = getColumns(table);
+    const rowId = typeof args.id === "string" ? args.id.trim() : "";
     if (action === "update" && !rowId) {
-      return { content: 'Update requires an "id" — look the row up first (e.g. with query_database).', citations: [def.label] };
+      return { content: 'Update requires an "id" — look the row up first (e.g. with query_database).', citations: [table] };
     }
+
     const rawValues = args.values && typeof args.values === "object" ? (args.values as Record<string, unknown>) : {};
-
-    const virtualFields = new Set<string>((FK_NAME_FIELDS[table] ?? []).map((fk) => fk.virtualField));
-    if (table === "jobs") virtualFields.add("list");
-
-    const allowedCols = new Set(action === "insert" ? def.insertColumns : def.updateColumns);
     const values: Record<string, unknown> = {};
     const dropped: string[] = [];
     for (const [key, val] of Object.entries(rawValues)) {
-      if (virtualFields.has(key)) continue;
-      if (ALWAYS_BLOCKED.has(key) || !allowedCols.has(key)) {
+      if (
+        !isValidIdentifier(key) ||
+        !allCols.includes(key) ||
+        ALWAYS_BLOCKED_COLUMNS.has(key) ||
+        EXTRA_BLOCKED_COLUMNS[table]?.has(key)
+      ) {
         dropped.push(key);
         continue;
       }
       values[key] = val;
     }
 
-    const db = createDbClient();
-    const notes: string[] = [];
-
-    for (const fk of FK_NAME_FIELDS[table] ?? []) {
-      const raw = rawValues[fk.virtualField];
-      if (typeof raw === "string" && raw.trim()) {
-        const resolved = await findOrCreateByName(db, fk.table, ctx.userId, raw);
-        if ("error" in resolved) notes.push(`Could not resolve "${fk.virtualField}": ${resolved.error}`);
-        else values[fk.column] = resolved.id;
-      }
-    }
-
-    let targetListKind: string | null = null;
-    if (table === "jobs") {
-      const rawList = typeof rawValues.list === "string" && rawValues.list.trim() ? rawValues.list : undefined;
-      // Every job must land in a column or it's invisible on /board — default
-      // new jobs to Wishlist when no column was given, matching
-      // app/api/extension/add-job/route.ts. Updates leave list_id untouched
-      // when `list` is omitted (a normal partial update).
-      const listIdent = rawList ?? (action === "insert" ? "wishlist" : undefined);
-      if (listIdent) {
-        const list = await resolveBoardList(db, ctx.userId, listIdent);
-        if (list) {
-          values.list_id = list.id;
-          targetListKind = list.kind;
-          values.board_position = await nextBoardPosition(db, ctx.userId, list.id);
-        } else {
-          notes.push(
-            `Board column "${listIdent}" not found — left where it was. Use the exact column name or kind (wishlist/preparing/applied/interview/offer/accepted/rejected).`
-          );
-        }
-      }
-    }
-
-    if (action === "update" && Object.keys(values).length === 0) {
-      return { content: "Nothing to update after dropping unknown/blocked fields.", citations: [def.label] };
-    }
-
-    const selectCols = ["id", ...Object.keys(values).filter((c) => c !== "user_id")].join(",");
+    const db = getDb();
 
     if (action === "insert") {
-      values.user_id = ctx.userId;
-      const { data, error } = await db.from(table).insert(values).select(selectCols).single();
-      if (error || !data) {
-        return { content: `Insert into ${def.label} failed: ${error?.message ?? "unknown error"}`, citations: [def.label] };
+      if (Object.keys(values).length === 0) {
+        return { content: "Nothing to insert — all provided columns were unknown or blocked.", citations: [table] };
       }
-      const newId = data.id as string;
-      if (table === "jobs" && targetListKind === "applied") await ensureApplication(db, ctx.userId, newId);
+      if (ownerCol) values[ownerCol] = ctx.userId;
+      // Mirror lib/db/query.ts's insert path: a TEXT primary key has no
+      // SQL-level default, so this tool must generate the same kind of id
+      // every other write path does — otherwise the row lands with a NULL
+      // id, invisible to the rest of the app. INTEGER PRIMARY KEY tables
+      // autoincrement on their own and must NOT get an explicit id.
+      const idType = getColumnsWithTypes(table).find((c) => c.name === "id")?.type;
+      const generatesId = idType !== undefined && idType !== "INTEGER";
+      if (generatesId) values.id = crypto.randomUUID();
+
+      const cols = Object.keys(values);
+      const sql = `INSERT INTO "${table}" (${cols.map((c) => `"${c}"`).join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
+      let newId: string | number;
+      try {
+        const info = db.prepare(sql).run(...(cols.map((c) => values[c]) as never[]));
+        newId = generatesId ? (values.id as string) : Number(info.lastInsertRowid);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { content: `Insert into ${table} failed: ${msg}`, citations: [table] };
+      }
+
+      if (table === "jobs" && isAppliedKindList(ctx.userId, values.list_id)) {
+        await ensureApplication(createDbClient(), ctx.userId, String(newId));
+      }
+      // Column names only, never their values — see lib/actions/activity-log.ts.
+      void logResourceActivity(ctx.userId, "chat_insert", table, String(newId), { columns: cols.join(",") });
+
       const droppedNote = dropped.length ? ` (ignored: ${dropped.join(", ")})` : "";
-      const extra = notes.length ? ` ${notes.join(" ")}` : "";
-      return { content: `Created ${def.label} row ${newId}: ${JSON.stringify(data)}.${droppedNote}${extra}`, citations: [def.label] };
+      return {
+        content: `Created ${table} row ${newId}: ${JSON.stringify(values)}.${droppedNote}`,
+        citations: [table],
+      };
     }
 
-    const { data, error } = await db
-      .from(table)
-      .update(values)
-      .eq("id", rowId)
-      .eq(def.ownerCol, ctx.userId)
-      .select(selectCols)
-      .maybeSingle();
-    if (error) {
-      return { content: `Update to ${def.label} failed: ${error.message}`, citations: [def.label] };
+    if (Object.keys(values).length === 0) {
+      return { content: "Nothing to update after dropping unknown/blocked fields.", citations: [table] };
     }
-    if (!data) {
-      return { content: `No ${def.label} row with id ${rowId} for this user — nothing updated.`, citations: [def.label] };
+    const setCols = Object.keys(values);
+    const sql =
+      `UPDATE "${table}" SET ${setCols.map((c) => `"${c}" = ?`).join(", ")} WHERE id = ?` +
+      (ownerCol ? ` AND "${ownerCol}" = ?` : "");
+    const params: unknown[] = [...setCols.map((c) => values[c]), rowId];
+    if (ownerCol) params.push(ctx.userId);
+
+    let changes: number;
+    try {
+      const info = db.prepare(sql).run(...(params as never[]));
+      changes = Number(info.changes);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: `Update to ${table} failed: ${msg}`, citations: [table] };
     }
-    if (table === "jobs" && targetListKind === "applied") await ensureApplication(db, ctx.userId, rowId);
+    if (changes === 0) {
+      return { content: `No ${table} row with id ${rowId} for this user — nothing updated.`, citations: [table] };
+    }
+
+    if (table === "jobs" && isAppliedKindList(ctx.userId, values.list_id)) {
+      await ensureApplication(createDbClient(), ctx.userId, rowId);
+    }
+    void logResourceActivity(ctx.userId, "chat_update", table, rowId, { columns: setCols.join(",") });
+
     const droppedNote = dropped.length ? ` (ignored: ${dropped.join(", ")})` : "";
-    const extra = notes.length ? ` ${notes.join(" ")}` : "";
-    return { content: `Updated ${def.label} row ${rowId}: ${JSON.stringify(data)}.${droppedNote}${extra}`, citations: [def.label] };
+    return { content: `Updated ${table} row ${rowId}.${droppedNote}`, citations: [table] };
   },
 };

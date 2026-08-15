@@ -13,11 +13,26 @@ export interface ToolContext {
   traceId?: string;
 }
 
+export interface ToolApproval {
+  /** Server-generated id the client sends back with its Allow/Deny decision. */
+  approvalId: string;
+  /** Human-readable table label (e.g. "Job Applications"). */
+  label: string;
+  /** Human-readable summary of the rows about to be deleted. */
+  preview: string;
+  /** The literal SQL that would run on approval. */
+  sql: string;
+}
+
 export interface ToolResult {
   /** Text fed back to the model as the tool result. */
   content: string;
   /** Human-readable labels shown in the "Sources used" chip (e.g. "Job Applications"). */
   citations: string[];
+  /** Present when this tool call needs the user's interactive sign-off before
+   *  any side effect runs (e.g. a DELETE). The pipeline emits an `approval`
+   *  SSE frame carrying this so the client can render an Allow/Deny card. */
+  approval?: ToolApproval;
 }
 
 export interface ToolDefinition {

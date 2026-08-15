@@ -14,6 +14,7 @@ import { retrieveContext } from "@/lib/ai-chatbot/retrieval";
 import { buildGroundedContext, assembleGroundedSystemPrompt } from "@/lib/ai-chatbot/grounded-context";
 import type { RetrievedDoc } from "@/lib/ai-chatbot/retrieval/types";
 import { getTool } from "@/lib/ai/tools/registry";
+import type { ToolApproval } from "@/lib/ai/tools/types";
 import { getAgent } from "@/lib/ai/agents/registry";
 import type { AgentDefinition, AgentContext } from "@/lib/ai/agents/types";
 import type { ProviderType } from "@/lib/types/ai-providers";
@@ -77,6 +78,9 @@ export interface AgentStreamExecutionResult {
   /** Tool calls already executed before the stream opened, emitted as a frame
    *  ahead of the tokens so the UI can render its tool chips immediately. */
   executedToolCalls?: ToolCallRecord[];
+  /** Pending operations that require the user's interactive sign-off (e.g. a
+   *  DELETE). Emitted as `approval` SSE frames so the UI can render Allow/Deny. */
+  approvals?: ToolApproval[];
 }
 
 export type AgentExecutionResult = AgentToolsExecutionResult | AgentStreamExecutionResult;
@@ -530,11 +534,16 @@ export async function executeAgent(
         { userId: ctx.input.userId, action: "ai_chatbot", traceId, metadata: { model: ctx.targetModel, persona: ctx.input.personaId } }
       );
 
+      const approvals = result.toolCalls
+        .map((t) => t.result?.approval)
+        .filter((a): a is ToolApproval => Boolean(a));
+
       return {
         mode: "stream",
         baseStream: result.stream,
         sources: ctx.sources,
         executedToolCalls: result.toolCalls,
+        approvals,
       };
     } catch (toolErr) {
       log.error({ err: toolErr, traceId }, "[executeAgent] generateTextWithToolsStream failed, falling back to direct stream:");
@@ -610,6 +619,13 @@ export function streamResponse(result: AgentExecutionResult): Response {
     preludeFrames.push(
       encoder.encode(`data: ${JSON.stringify({ tool_calls: result.executedToolCalls })}\n\n`)
     );
+  }
+  if (result.approvals && result.approvals.length > 0) {
+    for (const approval of result.approvals) {
+      preludeFrames.push(
+        encoder.encode(`data: ${JSON.stringify({ approval })}\n\n`)
+      );
+    }
   }
   if (result.sources.length > 0) {
     preludeFrames.push(encoder.encode(`data: ${JSON.stringify({ sources: result.sources })}\n\n`));

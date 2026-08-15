@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { executeChatPipeline } from "@/lib/ai-chatbot/pipeline";
+import { handleDbApprovalRequest } from "@/lib/ai-chatbot/db-approval-route";
 import { moduleLogger } from "@/lib/log";
 import { withRoute } from "@/lib/log/route";
 
@@ -58,6 +59,23 @@ export const POST = withRoute("/api/chat", async (req: Request) => {
     } = body;
 
     const { userId } = await getUser();
+
+    // A pending DELETE approval decision (Allow/Deny) arrives as its own
+    // request — handle it and return before the normal chat pipeline runs.
+    const dbApproval = body && typeof body === "object" ? (body as Record<string, unknown>).dbApproval : undefined;
+    if (
+      dbApproval &&
+      typeof dbApproval === "object" &&
+      typeof (dbApproval as { approvalId?: unknown }).approvalId === "string" &&
+      ((dbApproval as { decision?: unknown }).decision === "allow" ||
+        (dbApproval as { decision?: unknown }).decision === "deny")
+    ) {
+      return handleDbApprovalRequest(
+        (dbApproval as { approvalId: string }).approvalId,
+        (dbApproval as { decision: "allow" | "deny" }).decision,
+        userId
+      );
+    }
 
     // Source permissions gating: array of authorized workspace source IDs
     const hasEnabledKey = body && typeof body === "object" && "enabledSources" in body;

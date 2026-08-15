@@ -12,6 +12,13 @@ export interface ToolExecutionStep {
   approvalRequired?: boolean;
 }
 
+export interface DbApproval {
+  approvalId: string;
+  label: string;
+  preview: string;
+  sql: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -30,6 +37,8 @@ export interface ChatMessage {
   sources?: string[];
   /** Tool execution steps invoked by model */
   toolSteps?: ToolExecutionStep[];
+  /** A pending operation (e.g. DELETE) awaiting the user's Allow/Deny. */
+  approval?: DbApproval;
 }
 
 interface UseAtTrackChatOptions {
@@ -41,6 +50,8 @@ interface UseAtTrackChatOptions {
   onSources?: (sources: string[]) => void;
   /** Receives real tool-call records from the server (tool-calling workflow). */
   onToolSteps?: (steps: unknown[]) => void;
+  /** Receives a pending operation that needs the user's interactive sign-off. */
+  onApproval?: (approval: DbApproval) => void;
 }
 
 function uid(): string {
@@ -84,7 +95,7 @@ function extractThinkingAndContent(
  * terminated by `data: [DONE]`. We re-use the project's own provider layer
  * on the server, so this client stays transport-agnostic.
  */
-export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps }: UseAtTrackChatOptions) {
+export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps, onApproval }: UseAtTrackChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -220,6 +231,10 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
               // Real tool calls from the tool-calling workflow.
               if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
                 onToolSteps?.(parsed.tool_calls as unknown[]);
+              }
+              // A pending operation that needs the user's interactive sign-off.
+              if (parsed?.approval && typeof parsed.approval === "object") {
+                onApproval?.(parsed.approval as DbApproval);
               }
             } catch {
               /* partial frame; ignore until complete */
@@ -416,6 +431,140 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
     setInput("");
   }, [input, isLoading, sendMessage]);
 
+  const sendApproval = useCallback(
+    (approvalId: string, decision: "allow" | "deny") => {
+      if (isLoading) return;
+      const assistantId = uid();
+      const userContent = decision === "allow" ? "✅ Approved delete" : "⛔ Denied delete";
+      const userMsg: ChatMessage = {
+        id: uid(),
+        role: "user",
+        content: userContent,
+        createdAt: new Date().toISOString(),
+        status: "sent",
+      };
+      const history = [...messagesRef.current, userMsg];
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        { id: assistantId, role: "assistant", content: "", status: "sending", createdAt: new Date().toISOString() },
+      ]);
+      setIsLoading(true);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      (async () => {
+        try {
+          const res = await fetch(api, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: history.map((m) => ({
+                role: m.role,
+                content: m.content,
+                experimental_attachments: m.experimental_attachments,
+              })),
+              ...buildBody(),
+              dbApproval: { approvalId, decision },
+            }),
+            signal: controller.signal,
+          });
+
+          if (!res.ok || !res.body) {
+            let detail = `Request failed (${res.status})`;
+            try {
+              const j = await res.json();
+              if (j?.error) detail = j.error;
+            } catch {
+              /* ignore */
+            }
+            throw new Error(detail);
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let structuredThinkingAcc = "";
+          let rawContentAcc = "";
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const data = trimmed.slice(5).trim();
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                const reasoningDelta: string | undefined =
+                  parsed?.choices?.[0]?.delta?.reasoning_content ??
+                  parsed?.choices?.[0]?.delta?.reasoning ??
+                  parsed?.delta?.reasoning_content ??
+                  parsed?.thinking;
+
+                if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
+                const contentDelta: string | undefined =
+                  parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+                if (contentDelta) rawContentAcc += contentDelta;
+
+                if (reasoningDelta || contentDelta) {
+                  const { thinking, content } = extractThinkingAndContent(
+                    rawContentAcc,
+                    structuredThinkingAcc
+                  );
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, content, thinking, status: "sending" as const }
+                        : m
+                    )
+                  );
+                }
+                if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                  onSources?.(parsed.sources as string[]);
+                }
+                if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
+                  onToolSteps?.(parsed.tool_calls as unknown[]);
+                }
+                if (parsed?.approval && typeof parsed.approval === "object") {
+                  onApproval?.(parsed.approval as DbApproval);
+                }
+              } catch {
+                /* ignore partial chunks */
+              }
+            }
+          }
+        } catch (err) {
+          if ((err as Error).name !== "AbortError") {
+            const message = err instanceof Error ? err.message : String(err);
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}`, status: "error" as const };
+                return m;
+              })
+            );
+            onError?.(err instanceof Error ? err : new Error(message));
+          }
+        } finally {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId && m.status === "sending" ? { ...m, status: "delivered" as const } : m
+            )
+          );
+          setIsLoading(false);
+          abortRef.current = null;
+        }
+      })();
+    },
+    [api, buildBody, isLoading, onError, onSources, onToolSteps, onApproval]
+  );
+
   const stop = useCallback(() => {
     abortRef.current?.abort();
   }, []);
@@ -448,6 +597,7 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
     handleSubmit,
     sendMessage,
     sendBackgroundQuery,
+    sendApproval,
     stop,
     isLoading,
     setMessages: setMessagesExternal,

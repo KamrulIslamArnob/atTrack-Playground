@@ -32,8 +32,9 @@ import {
 } from "@/lib/ai-chatbot/workspace";
 import { MINI_SCENARIOS } from "@/lib/ai-chatbot/scenarios";
 import type { ContextSource, MiniScenario } from "@/lib/ai-chatbot/types";
-import { getCustomSources, setSourceConfig, buildSourcePayload, addCustomSource, removeCustomSource } from "@/lib/ai-chatbot/source-permissions";
-import { useAtTrackChat, type ChatMessage } from "@/lib/ai-chatbot/use-chat";
+import { getCustomSources, setSourceConfig, buildSourcePayload } from "@/lib/ai-chatbot/source-permissions";
+import { useAtTrackChat, type ChatMessage, type DbApproval } from "@/lib/ai-chatbot/use-chat";
+import DbDeleteApprovalCard from "@/components/ai-chatbot/db-delete-approval-card";
 import { listProviders, hasAnyProviderConfigured } from "@/lib/actions/ai-providers";
 import { executeLocalSqlQuery, type SqlQueryResult } from "@/lib/actions/database-query";
 import { TopNavigation } from "@/components/ai-chatbot/top-navigation";
@@ -64,6 +65,9 @@ export default function AIChatbotPage() {
   const [isWebSearchActive, setIsWebSearchActive] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [providerConfigured, setProviderConfigured] = useState(true);
+  // A pending DELETE awaiting the user's Allow/Deny. Set when the server emits
+  // an `approval` frame; cleared once the user decides.
+  const [activeApproval, setActiveApproval] = useState<DbApproval | null>(null);
   // Per-chat connected source ids, kept as its own state (seeded from the
   // active session) so `sessions` isn't read during render for the request body
   // — that avoids a React Compiler manual-memoization skip on this component.
@@ -87,6 +91,7 @@ export default function AIChatbotPage() {
     handleSubmit,
     sendMessage,
     sendBackgroundQuery,
+    sendApproval,
     isLoading,
     stop,
     setMessages,
@@ -115,6 +120,12 @@ export default function AIChatbotPage() {
     onError: (error) => {
       console.error("Chat error:", error);
       toast.error(error.message || "Failed to generate AI response.");
+    },
+
+    onApproval: (approval) => {
+      // A DELETE needs the user's sign-off before it can run. Surface it as a
+      // pending card in the UI; cleared once the user allows or denies.
+      setActiveApproval(approval);
     },
     onSources: (srcs) => {
       // Feed real retrieved sources into the latest assistant message so the
@@ -565,31 +576,8 @@ export default function AIChatbotPage() {
     []
   );
 
-  const handleAddCustomSource = useCallback(
-    (src: ContextSource) => {
-      addCustomSource(src);
-      setSources((prev) => deriveWorkspaceSources(null, getCustomSources()));
-    },
-    []
-  );
-
-  const handleRemoveCustomSource = useCallback((id: string) => {
-    removeCustomSource(id);
-    setSources((prev) => deriveWorkspaceSources(null, getCustomSources()));
-  }, []);
-
   const handleSelectScenario = useCallback(
     (scenario: MiniScenario) => {
-      if (scenario.requiredSources && scenario.requiredSources.length > 0) {
-        setSources((prev) =>
-          prev.map((s) =>
-            scenario.requiredSources.includes(s.id) || scenario.requiredSources.includes(s.type)
-              ? { ...s, enabled: true }
-              : s
-          )
-        );
-      }
-
       sendMessage(scenario.starterPrompt);
     },
     [sendMessage]
@@ -958,6 +946,22 @@ export default function AIChatbotPage() {
 
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
               {!providerConfigured && <NoApiKeyOverlay />}
+              {activeApproval && (
+                <div className="border-b border-border bg-muted/30 px-4 py-3">
+                  <DbDeleteApprovalCard
+                    approval={activeApproval}
+                    disabled={isLoading}
+                    onAllow={() => {
+                      sendApproval(activeApproval.approvalId, "allow");
+                      setActiveApproval(null);
+                    }}
+                    onDeny={() => {
+                      sendApproval(activeApproval.approvalId, "deny");
+                      setActiveApproval(null);
+                    }}
+                  />
+                </div>
+              )}
               <Thread
                 modelSelector={{
                   selectedModel,
@@ -976,8 +980,6 @@ export default function AIChatbotPage() {
             mode="chat"
             onToggleSource={handleToggleSource}
             onSaveConfig={handleSaveSourceConfig}
-            onAddCustomSource={handleAddCustomSource}
-            onRemoveCustomSource={handleRemoveCustomSource}
           />
 
           {canvasContent && (
