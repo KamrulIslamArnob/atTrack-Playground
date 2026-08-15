@@ -119,7 +119,8 @@ export const POST = withRoute("/api/extension/add-job", async (req: Request) => 
         employment_type: employmentType || null,
         work_location: workLocation || null,
         source: source || "Chrome Extension",
-        status: "saved",
+        // status is derived from list_id by trg_jobs_status_from_list_ins —
+        // do not set it directly (CLAUDE.md invariant).
         deadline,
         notes: notes.length > 0 ? notes : null,
         list_id: wishlistList?.id ?? null,

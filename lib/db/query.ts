@@ -447,7 +447,12 @@ class QueryBuilder implements PromiseLike<DbResult> {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return { data: this.emptyData(), error: { message, code: "SQLITE_ERROR" } };
+      // better-sqlite3's own error carries a real SQLITE_* code (constraint
+      // violation, etc) — keep it instead of relabeling everything the same,
+      // and log every DB error: this catch used to swallow them silently.
+      const code = err instanceof Error && "code" in err ? String((err as { code?: unknown }).code) : "SQLITE_ERROR";
+      dbLog.error({ table: this.table, op: this.action, err }, "[db] query failed:");
+      return { data: this.emptyData(), error: { message, code } };
     }
   }
 

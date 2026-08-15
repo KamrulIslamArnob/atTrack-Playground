@@ -8,12 +8,18 @@ const log = moduleLogger("encryption");
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
 const KEY_FILE_PATH = path.join(process.cwd(), ".data", "encryption.key");
+// Read-only compatibility key for data encrypted by builds that shipped with
+// this fallback baked in. Never used to encrypt new data — see the throw
+// below — only tried, and logged, as a last resort when decrypting.
 const LEGACY_DEV_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 /**
  * Resolves the AES encryption key:
  * 1. Explicit `ENCRYPTION_KEY` or `SMTP_ENCRYPTION_KEY` env var if set.
  * 2. Persistent installation-specific random 32-byte key stored securely in `.data/encryption.key`.
+ *
+ * Throws rather than falling back to a known key on failure: silently
+ * encrypting new secrets with a public key would be worse than crashing loud.
  */
 export function getResolvedEncryptionKey(): string {
   const envKey = process.env.ENCRYPTION_KEY || process.env.SMTP_ENCRYPTION_KEY;
@@ -35,7 +41,7 @@ export function getResolvedEncryptionKey(): string {
     return generated;
   } catch (err) {
     log.error({ err }, "[encryption] Failed to access local encryption key file:");
-    return LEGACY_DEV_KEY;
+    throw new Error("Unable to resolve an encryption key: local key file is inaccessible.");
   }
 }
 
@@ -92,17 +98,25 @@ export function decrypt(encryptedData: string): string {
     throw new Error("Invalid encrypted data format");
   }
 
-  // 1. Try primary resolved key
-  const primaryKey = getKey();
-  const primaryResult = tryDecryptWithBuffer(encryptedData, primaryKey);
-  if (primaryResult !== null) {
-    return primaryResult;
+  // 1. Try primary resolved key. Resolution itself can throw (key file
+  // inaccessible) — that must not block trying the legacy key below.
+  try {
+    const primaryKey = getKey();
+    const primaryResult = tryDecryptWithBuffer(encryptedData, primaryKey);
+    if (primaryResult !== null) {
+      return primaryResult;
+    }
+  } catch (err) {
+    log.error({ err }, "[encryption] Could not resolve the primary key while decrypting:");
   }
 
-  // 2. Try legacy dev key fallback
+  // 2. Legacy dev key fallback — read-only compatibility for data encrypted
+  // before per-install keys existed. Logged because it means live data is
+  // still resting on a publicly known key.
   const legacyKey = parseKeyToBuffer(LEGACY_DEV_KEY);
   const legacyResult = tryDecryptWithBuffer(encryptedData, legacyKey);
   if (legacyResult !== null) {
+    log.warn("[encryption] Decrypted using the legacy hardcoded key — re-save this credential to migrate it to the per-install key.");
     return legacyResult;
   }
 

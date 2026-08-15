@@ -25,17 +25,9 @@
   ],
   "host_permissions": [
     "http://127.0.0.1:*/*",
-    "http://localhost:*/*",
-    "<all_urls>"
+    "http://localhost:*/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content/content-script.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }

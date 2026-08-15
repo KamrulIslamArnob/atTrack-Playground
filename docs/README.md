@@ -2,8 +2,6 @@
 
 This folder is the public documentation home for **atTrack**, a local-first career workspace and job application tracker.
 
-The docs are intentionally kept small and category-based so contributors can find the right information quickly.
-
 ## Start here
 
 | Need | Read |
@@ -19,16 +17,6 @@ The docs are intentionally kept small and category-based so contributors can fin
 | Latest codebase audit status | [`AuditReport.md`](AuditReport.md) |
 | Historical task/plan summaries | [`PlanningSummary.md`](PlanningSummary.md) |
 | AI-agent/code-assistant navigation map | [`CLAUDE.md`](CLAUDE.md) |
-
-## Documentation rules
-
-When adding or changing docs:
-
-1. **Prefer updating an existing category** over creating a new top-level document.
-2. **Keep `CLAUDE.md` updated** with links to the current canonical files.
-3. **Keep audits in `AuditReport.md`** and replace it with the latest dated audit summary instead of creating many audit files.
-4. **Summarize historical implementation plans in `PlanningSummary.md`** instead of keeping many separate task documents.
-5. **Do not document secrets, private local data, or machine-specific paths** except as safe examples.
 
 ## Current docs structure
 
@@ -47,4 +35,12 @@ docs/
 └── AuditReport.md      # Latest dated audit only
 ```
 
-Historical planning artifacts are summarized in `PlanningSummary.md` so public docs stay focused on active contributor knowledge.
+## Documentation rules
+
+When adding or changing docs:
+
+1. **Prefer updating an existing category** over creating a new top-level document.
+2. **Keep `CLAUDE.md` updated** with links to the current canonical files.
+3. **Keep audits in `AuditReport.md`** and replace it with the latest dated audit summary instead of creating many audit files.
+4. **Summarize historical implementation plans in `PlanningSummary.md`** instead of keeping many separate task documents.
+5. **Do not document secrets, private local data, or machine-specific paths** except as safe examples.

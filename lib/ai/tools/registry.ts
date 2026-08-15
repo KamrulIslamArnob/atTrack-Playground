@@ -71,9 +71,15 @@ export function getEnabledTools(personaId?: string, enabledSourceIds?: string[])
   });
 }
 
-/** Register a custom (user-defined) tool at runtime (from stored sources). */
+/** Register a custom (user-defined) tool at runtime (from stored sources).
+ *  Replaces an existing entry with the same name in place, so re-registering
+ *  after the underlying source's config changes doesn't get stuck serving
+ *  the stale definition until the process restarts. */
 export function registerTool(tool: ToolDefinition): void {
-  if (!TOOL_REGISTRY.find((t) => t.name === tool.name)) {
+  const idx = TOOL_REGISTRY.findIndex((t) => t.name === tool.name);
+  if (idx === -1) {
     TOOL_REGISTRY.push(tool);
+  } else {
+    TOOL_REGISTRY[idx] = tool;
   }
 }

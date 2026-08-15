@@ -60,6 +60,9 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
+      - name: Prepare standalone output
+        run: node scripts/prepare-electron-build.js
+
       - name: Build Electron App (${{ matrix.platform }})
         run: npx electron-builder --${{ matrix.platform }} --publish always
 

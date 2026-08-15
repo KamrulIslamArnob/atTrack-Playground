@@ -336,9 +336,10 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
     if (history.length < 2) return;
     // Drop the last assistant message and re-run the last user turn.
     const lastUser = [...history].reverse().find((m) => m.role === "user");
-    const trimmed = history.slice(0, history.lastIndexOf(lastUser!) );
+    if (!lastUser) return;
+    const trimmed = history.slice(0, history.lastIndexOf(lastUser));
     setMessages(trimmed);
-    if (lastUser) void runStream(trimmed, lastUser.content);
+    void runStream(trimmed, lastUser.content);
   }, [runStream]);
 
   return {

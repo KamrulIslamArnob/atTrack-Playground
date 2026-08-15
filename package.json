@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "icons:build": "node scripts/generate-desktop-icons.js",
     "electron:dev": "next build && node scripts/prepare-electron-build.js && electron electron/main.js",
     "electron:build:win": "next build && node scripts/prepare-electron-build.js && electron-builder --win --publish never",
     "electron:build:mac": "next build && node scripts/prepare-electron-build.js && electron-builder --mac --publish never",

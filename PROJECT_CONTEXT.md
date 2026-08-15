@@ -288,4 +288,43 @@ npm run build:electron
 ```
 
 ---
+
+---
+
+## 10. Recently Implemented Features (2026-08-12 → 2026-08-15)
+
+### 10.1 Smart Job Delete & State Management
+- **Smart Cascade Deletion:** `deleteJobWithSmartCascade(jobId)` in `lib/actions/jobs.ts` safely removes jobs and cascades to orphaned companies/contacts/documents. Shared entities (linked to 2+ jobs) are preserved.
+- **Job State System:** `jobs.state` column supports `active`, `on_hold`, `archived`. Board columns render active cards on top with collapsible bottom drawers for inactive states.
+- **Visual Treatment:** On-hold/archived cards render `grayscale contrast-90 opacity-75` with full-color hover transition.
+
+### 10.2 AI Chatbot — Full Feature Set
+- **Intent Classification:** Two-tier classifier (`lib/ai-chatbot/intent.ts`) — cheap deterministic heuristic first, LLM fallback only when inconclusive. Routes to native data retrieval.
+- **Native Data Retrieval:** `lib/ai-chatbot/retrieval/` — intent-aware pulling from jobs, resumes, CRM, social links, AI prompts, memories. Read-only, user-scoped.
+- **Grounded Context:** `lib/ai-chatbot/grounded-context.ts` wraps retrieved facts in `[src:..]...[/src:..]` blocks with strict accuracy instructions.
+- **Real Tool-Calling:** `lib/ai/tools/registry.ts` + `lib/ai/providers.ts:generateTextWithTools` — 6 registered tools (search_jobs, get_resume, search_contacts, search_links, search_ai_prompts, web_search). LLM decides which to call; UI renders real steps only.
+- **Per-Chat Workspace Sources:** `ChatSession.connectedSourceIds` persists per-chat connected sources to SQLite. UI drawer supports chat-scoped toggles with global legacy fallback.
+- **Chat History Single Source of Truth:** SQLite owns chat history; localStorage is a mirror only. Mutations await the authority before updating state — deletes cannot resurrect.
+- **Latency Improvements:** Final answer streams on the tool path; real SSE for OpenAI-compatible + Anthropic; fire-and-forget usage logging; capped conversation history (8 turns / 6000 chars); parallelized provider resolution; deleted dead vector helpers.
+
+### 10.3 Social Links CSV Import
+- **CSV Import Dialog:** `components/links/csv-import-dialog.tsx` — upload + paste tabs, optional AI formatting, preview table, bulk create.
+- **Category Dropdown Fix:** Add Link dialog shows category names instead of UUIDs.
+- **Server Action:** `lib/actions/links-import.ts` — heuristic parser + AI normalization fallback.
+
+### 10.4 AI Memory Store & Feedback
+- **AI Memories:** `ai_memories` table stores extracted user facts/preferences/career background.
+- **AI Feedback:** `ai_feedback` table captures thumbs up/down ratings with context for tuning.
+
+### 10.5 Chatbot UI Overhaul
+- **Persona System:** 5 personas (General, ATS Coach, Interviewer, Outreach, Code Architect) with custom system prompts.
+- **Model Selector:** Brand-aligned dropdown with clean provider tags.
+- **Empty State Hero:** Gradient accents, persona cards, starter prompts.
+- **Session Sidebar:** Date-grouped (Today, Yesterday, Previous 7 Days, Older), search, pinned chats.
+- **Chat Input:** Floating card, slash commands, file attachments, send/stop controls.
+- **Message Stream:** Markdown rendering, syntax highlighting, copy/edit/regenerate actions.
+- **Export:** Sessions exportable to Markdown and JSON.
+
+---
+
 *End of Project Context Directive. Keep this file updated whenever architecture, data models, or core design rules evolve.*

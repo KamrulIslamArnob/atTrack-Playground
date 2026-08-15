@@ -300,11 +300,16 @@ export function selectProviderForModel(
   // specific vendor. Promote a provider that can actually serve it.
   const known = MODEL_CATALOG[targetModel];
   if (known) {
-    const byVendor = chain.findIndex((p) => p.provider_type === known.providerType);
+    // "openai_compatible" spans OpenAI, Groq, DeepSeek, OpenRouter, Longcat
+    // and local servers — the type alone doesn't say which model a given
+    // provider row serves. With more than one openai_compatible row
+    // configured, matching by type alone can promote the wrong one (e.g. a
+    // local Llama row) for a shorthand id like "deepseek-r1". Prefer a row
+    // whose own configured model is the catalog id; only fall back to "any
+    // row of this type" when none does.
+    const byExactModel = chain.findIndex((p) => p.provider_type === known.providerType && p.model === known.id);
+    const byVendor = byExactModel !== -1 ? byExactModel : chain.findIndex((p) => p.provider_type === known.providerType);
     if (byVendor !== -1) {
-      // "openai_compatible" spans OpenAI, Groq, DeepSeek, OpenRouter, Longcat
-      // and local servers — the type says nothing about which models are
-      // served, so keep whatever model the user configured for that provider.
       const stamped = known.providerType === "openai_compatible" ? undefined : known.id;
       promote(byVendor, stamped);
       emit("vendor-catalog", chain[0].name, stamped ?? null);

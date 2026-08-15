@@ -11,12 +11,15 @@ import { createDbClient } from "@/lib/db/client";
  */
 
 const ALLOWED_TABLES: Record<string, { ownerCol: string; columns: string[]; label: string }> = {
-  jobs: { ownerCol: "user_id", columns: ["id", "title", "company_name", "state", "list_id", "deadline", "match_score"], label: "Job Applications" },
+  // Columns must be real, flat columns on the named table — this tool has no
+  // join support, so a fabricated column (e.g. a company name that only
+  // exists via companies.id) makes the query 500 on every call.
+  jobs: { ownerCol: "user_id", columns: ["id", "title", "company_id", "status", "list_id", "deadline", "match_score"], label: "Job Applications" },
   documents: { ownerCol: "user_id", columns: ["id", "name", "type", "content"], label: "Resumes & Documents" },
   ai_memories: { ownerCol: "user_id", columns: ["id", "title", "description", "updated_at"], label: "AI Memories & Writing Rules" },
-  contacts: { ownerCol: "user_id", columns: ["id", "name", "role", "company_name", "email"], label: "Contacts CRM" },
+  contacts: { ownerCol: "user_id", columns: ["id", "name", "role", "company_id", "email"], label: "Contacts CRM" },
   link_categories: { ownerCol: "user_id", columns: ["id", "name", "sort_order"], label: "Link Categories" },
-  social_links: { ownerCol: "user_id", columns: ["id", "title", "url", "category_name"], label: "Social Links" },
+  links: { ownerCol: "user_id", columns: ["id", "title", "url", "category_id"], label: "Links" },
   ai_tool_prompts: { ownerCol: "user_id", columns: ["id", "kind", "system_prompt"], label: "AI Prompts" },
 };
 
