@@ -13,6 +13,35 @@ export const runtime = "nodejs";
  *  serverless ceiling to respect here. */
 export const maxDuration = 300;
 
+function normalizeMessageContent(content: unknown, parts?: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "text" in part && typeof (part as { text: unknown }).text === "string") {
+          return (part as { text: string }).text;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (Array.isArray(parts)) {
+    return parts
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "text" in part && typeof (part as { text: unknown }).text === "string") {
+          return (part as { text: string }).text;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+
 export const POST = withRoute("/api/chat", async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
@@ -43,7 +72,16 @@ export const POST = withRoute("/api/chat", async (req: Request) => {
     const validatedPersonaPrompt = typeof personaPrompt === "string" ? personaPrompt : undefined;
     const validatedWorkspaceContext = typeof workspaceContext === "string" ? workspaceContext : null;
     const isWebSearchActive = Boolean(webSearchActive);
-    const rawMessages = Array.isArray(messages) ? messages : [];
+    const rawMessages = Array.isArray(messages)
+      ? messages.map((m: unknown) => {
+          const item = m && typeof m === "object" ? (m as Record<string, unknown>) : {};
+          return {
+            role: typeof item.role === "string" ? item.role : "user",
+            content: normalizeMessageContent(item.content, item.parts),
+            experimental_attachments: item.experimental_attachments ?? item.attachments,
+          };
+        })
+      : [];
 
     return await executeChatPipeline({
       userId,

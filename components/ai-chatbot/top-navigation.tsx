@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { PanelLeft, ChevronRight, MessageSquare, ChevronLeft, Edit2, Check, X } from "lucide-react";
+import { PanelLeft, ChevronRight, MessageSquare, ChevronLeft, Edit2, Check, X, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { ContextSource, AIModel, ChatPersona } from "@/lib/ai-chatbot/types";
+import type { ContextSource } from "@/lib/ai-chatbot/types";
 
 interface TopNavigationProps {
   title?: string;
@@ -16,11 +16,6 @@ interface TopNavigationProps {
   sources?: ContextSource[];
   connectedSourceIds?: string[];
   onOpenDrawer?: () => void;
-  selectedModel?: AIModel;
-  onSelectModel?: (model: AIModel) => void;
-  availableModels?: AIModel[];
-  selectedPersona?: ChatPersona;
-  onSelectPersona?: (persona: ChatPersona) => void;
   className?: string;
 }
 
@@ -114,19 +109,18 @@ export function TopNavigation({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-[56px] w-full items-center justify-between border-b border-border/60 bg-white/95 dark:bg-[#09090b]/95 px-3 backdrop-blur-md md:px-4",
+        "sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border/70 bg-background/85 px-3 backdrop-blur-xl md:px-4",
         className
       )}
     >
-      {/* Left side: Back button (mobile) / Sidebar toggle (desktop), Editable Chat Title */}
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2.5">
         {showBackButton && onBack ? (
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={onBack}
-            className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer md:hidden"
+            className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors cursor-pointer md:hidden"
             title="Back to chats"
           >
             <ChevronLeft className="size-4" />
@@ -138,7 +132,7 @@ export function TopNavigation({
             variant="ghost"
             size="icon"
             onClick={onToggleSidebar}
-            className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors cursor-pointer"
             title="Toggle sidebar"
           >
             <PanelLeft className="size-4" />
@@ -146,8 +140,8 @@ export function TopNavigation({
           </Button>
         ) : null}
 
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/70 bg-muted/[0.35] px-2 py-1.5">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-foreground shadow-e1">
             <MessageSquare className="size-3.5" />
           </div>
 
@@ -163,13 +157,13 @@ export function TopNavigation({
                   if (e.key === "Escape") handleCancel();
                 }}
                 onBlur={handleSave}
-                className="h-7 w-[160px] sm:w-[220px] md:w-[280px] rounded-md border border-blue-500/60 bg-background px-2 py-0.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+                className="h-7 w-[160px] sm:w-[220px] md:w-[280px] rounded-md border border-border bg-background px-2 py-0.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
                 placeholder="Chat title..."
               />
               <button
                 type="button"
                 onClick={handleSave}
-                className="flex size-6 items-center justify-center rounded text-blue-600 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                className="flex size-6 items-center justify-center rounded text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
                 title="Save (Enter)"
               >
                 <Check className="size-3.5" />
@@ -189,7 +183,7 @@ export function TopNavigation({
                 setEditTitle(title);
                 setIsEditing(true);
               }}
-              className="group/title flex min-w-0 items-center gap-1.5 max-w-[180px] sm:max-w-[260px] md:max-w-[340px] cursor-pointer rounded-lg px-1.5 py-1 transition-colors hover:bg-muted/60"
+              className="group/title flex min-w-0 items-center gap-1.5 max-w-[180px] sm:max-w-[260px] md:max-w-[340px] cursor-pointer rounded-lg px-1.5 py-1 transition-colors hover:bg-muted/70"
               title="Double click to rename"
             >
               <h1 className="truncate text-sm font-semibold text-foreground tracking-tight select-none">
@@ -201,21 +195,19 @@ export function TopNavigation({
         </div>
       </div>
 
-      {/* Center: Connected workspace status pill with green active dot */}
       <div className="flex min-w-0 items-center justify-center px-2">
         <button
           type="button"
           onClick={onOpenDrawer}
-          className="flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-200 hover:border-border hover:bg-muted/70 hover:text-foreground active:scale-[0.98] cursor-pointer shadow-xs"
+          className="flex min-w-0 items-center gap-2 rounded-full border border-border/80 bg-gradient-brand-tint px-3 py-1.5 text-xs font-medium text-foreground shadow-e1 transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98] cursor-pointer"
           title="Manage workspace connections"
         >
-          <span className="relative flex size-2 shrink-0">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-success-border bg-success-surface text-success">
+            <Database className="size-3" />
           </span>
-          <span className="hidden min-w-0 max-w-[140px] truncate sm:inline md:max-w-[220px]">{summaryText}</span>
-          <span className="min-w-0 max-w-[110px] truncate sm:hidden">11 jobs, 5 resumes</span>
-          <ChevronRight className="size-3 shrink-0 text-muted-foreground/60" />
+          <span className="hidden min-w-0 max-w-[170px] truncate sm:inline md:max-w-[260px]">{summaryText}</span>
+          <span className="min-w-0 max-w-[120px] truncate sm:hidden">11 jobs, 5 resumes</span>
+          <ChevronRight className="size-3 shrink-0 text-muted-foreground" />
         </button>
       </div>
 

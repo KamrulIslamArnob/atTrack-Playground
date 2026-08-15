@@ -61,7 +61,7 @@ export function EmptyChatState({
     "Choose a persona and ask anything about your career development, coding, or job applications.";
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8 text-center bg-white dark:bg-[#09090b]">
+    <div className="flex flex-1 flex-col items-center justify-center bg-background p-4 text-center sm:p-8">
       <motion.div
         initial={{ opacity: 0, y: 8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -89,14 +89,15 @@ export function EmptyChatState({
             type="button"
             onClick={onOpenWorkspaceDrawer}
             className={cn(
-              "mt-3.5 flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3.5 py-1.5 text-xs text-muted-foreground shadow-2xs transition-all duration-200 hover:border-blue-500/40 hover:bg-blue-50/50 hover:text-foreground active:scale-[0.98]",
+              "mt-4 flex items-center gap-2.5 rounded-full border border-border/80 bg-gradient-brand-tint px-3.5 py-1.75 text-xs font-medium text-foreground shadow-e1 transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]",
               onOpenWorkspaceDrawer && "cursor-pointer"
             )}
           >
-            <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
-            <span>
-              Connected to workspace: {workspace.jobCount ?? 11} jobs,{" "}
-              {workspace.resumeCount ?? 5} resumes
+            <span className="flex size-5 items-center justify-center rounded-full border border-success-border bg-success-surface text-success">
+              <Database className="size-3" />
+            </span>
+            <span className="min-w-0 max-w-[380px] truncate">
+              Connected to workspace: {workspace.jobCount ?? 11} jobs, {workspace.resumeCount ?? 5} resumes
             </span>
           </button>
         )}

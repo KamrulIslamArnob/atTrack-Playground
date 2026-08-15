@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin, DollarSign, Sparkles, GraduationCap, Gift, Clock, Calendar, ExternalLink } from "lucide-react";
+import { MapPin, DollarSign, Sparkles, GraduationCap, Gift, Clock, Calendar, ExternalLink, Building2 } from "lucide-react";
 import type { JobDetailData } from "@/lib/types/job-detail";
 
 interface EditTabProps {
@@ -126,7 +126,66 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
           </div>
         </div>
 
+        {/* Company profile fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border/60 pt-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="company_website">Company website</Label>
+            <Input
+              id="company_website"
+              name="company_website"
+              type="url"
+              defaultValue={data.company?.website ?? ""}
+              className="h-9 text-xs"
+              placeholder="https://company.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company_location">Company location / HQ</Label>
+            <Input
+              id="company_location"
+              name="company_location"
+              defaultValue={data.company?.location ?? ""}
+              className="h-9 text-xs"
+              placeholder="e.g. San Francisco, CA"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="company_type">Company type</Label>
+            <Input
+              id="company_type"
+              name="company_type"
+              defaultValue={data.company?.company_type ?? ""}
+              className="h-9 text-xs"
+              placeholder="e.g. Private / Enterprise / Startup"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company_founded_year">Founded year</Label>
+            <Input
+              id="company_founded_year"
+              name="company_founded_year"
+              type="number"
+              defaultValue={data.company?.founded_year ?? ""}
+              className="h-9 text-xs"
+              placeholder="e.g. 2015"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company_country">Country</Label>
+            <Input
+              id="company_country"
+              name="company_country"
+              defaultValue={data.company?.country ?? ""}
+              className="h-9 text-xs"
+              placeholder="e.g. United States"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-border/60 pt-3">
           <div className="space-y-1.5">
             <Label htmlFor="application_url">Job URL</Label>
             <Input id="application_url" name="application_url" type="url" defaultValue={job.application_url ?? ""} className="h-9 text-xs" placeholder="https://..." />

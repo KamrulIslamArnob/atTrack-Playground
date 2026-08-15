@@ -25,7 +25,7 @@ export function assembleChatSystemPrompt(input: ChatPromptInput): string {
   const parts: string[] = [
     personaInstruction,
     "",
-    "Format responses using clean Markdown. Use code blocks for code/SQL. Do NOT include <think> blocks or reasoning preamble; respond directly.",
+    "Format responses using clean Markdown. Use code blocks for code/SQL.",
   ];
 
   if (input.webSearchActive) {

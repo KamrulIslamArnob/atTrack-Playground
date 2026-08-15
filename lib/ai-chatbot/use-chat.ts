@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export interface ToolExecutionStep {
+  id: string;
+  label: string;
+  status: "pending" | "running" | "completed" | "failed";
+  detail?: string;
+  result?: string;
+  error?: string;
+  approvalRequired?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -14,6 +24,12 @@ export interface ChatMessage {
   replyTo?: { id: string; preview: string; role: string };
   /** Feedback rating: up (liked) | down (disliked) | null */
   feedback?: "up" | "down" | null;
+  /** Chain of thought / model reasoning stream */
+  thinking?: string;
+  /** Retrieved workspace sources used */
+  sources?: string[];
+  /** Tool execution steps invoked by model */
+  toolSteps?: ToolExecutionStep[];
 }
 
 interface UseAtTrackChatOptions {
@@ -30,6 +46,35 @@ interface UseAtTrackChatOptions {
 function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function extractThinkingAndContent(
+  rawText: string,
+  structuredThinking: string
+): { thinking?: string; content: string } {
+  let thinking = structuredThinking;
+  let content = rawText;
+
+  if (/<think>/i.test(rawText)) {
+    const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/gi;
+    let match: RegExpExecArray | null;
+    let extractedThinking = "";
+
+    while ((match = thinkRegex.exec(rawText)) !== null) {
+      extractedThinking += (extractedThinking ? "\n" : "") + match[1];
+    }
+
+    if (extractedThinking) {
+      thinking = (thinking ? thinking + "\n" : "") + extractedThinking;
+    }
+
+    content = rawText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trimStart();
+  }
+
+  return {
+    thinking: thinking.trim().length > 0 ? thinking : undefined,
+    content,
+  };
 }
 
 /**
@@ -75,7 +120,7 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
       setMessages(baseHistory);
       setMessages((prev) => [
         ...prev,
-        { id: assistantId, role: "assistant", content: "" },
+        { id: assistantId, role: "assistant", content: "", status: "sending", createdAt: new Date().toISOString() },
       ]);
       setIsLoading(true);
 
@@ -115,13 +160,9 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let acc = "";
+        let structuredThinkingAcc = "";
+        let rawContentAcc = "";
         let buffer = "";
-
-        // Removes <think>…</think> blocks. An unterminated trailing block
-        // (still streaming) is hidden until its closing tag arrives.
-        const stripThink = (s: string): string =>
-          s.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "");
 
         while (true) {
           const { done, value } = await reader.read();
@@ -137,13 +178,39 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
             if (data === "[DONE]") continue;
             try {
               const parsed = JSON.parse(data);
-              const content: string | undefined =
+              const reasoningDelta: string | undefined =
+                parsed?.choices?.[0]?.delta?.reasoning_content ??
+                parsed?.choices?.[0]?.delta?.reasoning ??
+                parsed?.delta?.reasoning_content ??
+                parsed?.thinking;
+
+              if (reasoningDelta) {
+                structuredThinkingAcc += reasoningDelta;
+              }
+
+              const contentDelta: string | undefined =
                 parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
-              if (content) {
-                acc += content;
-                const visible = stripThink(acc);
+
+              if (contentDelta) {
+                rawContentAcc += contentDelta;
+              }
+
+              if (reasoningDelta || contentDelta) {
+                const { thinking, content } = extractThinkingAndContent(
+                  rawContentAcc,
+                  structuredThinkingAcc
+                );
                 setMessages((prev) =>
-                  prev.map((m) => (m.id === assistantId ? { ...m, content: visible } : m))
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? {
+                          ...m,
+                          content,
+                          thinking,
+                          status: "sending" as const,
+                        }
+                      : m
+                  )
                 );
               }
               // Real "Sources used" from the retrieval workflow.
@@ -169,7 +236,7 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
           const message = err instanceof Error ? err.message : String(err);
           setMessages((prev) =>
             prev.map((m) => {
-              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}` };
+              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}`, status: "error" as const };
               if (m.id === userMsg.id) return { ...m, status: "error" as const };
               return m;
             })
@@ -177,17 +244,19 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
           onError?.(err instanceof Error ? err : new Error(message));
         }
       } finally {
-        // Mark user message as delivered on successful completion.
+        // Mark user message and assistant message as delivered on completion.
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === userMsg.id && m.status !== "error" ? { ...m, status: "delivered" as const } : m
-          )
+          prev.map((m) => {
+            if (m.id === userMsg.id && m.status !== "error") return { ...m, status: "delivered" as const };
+            if (m.id === assistantId && m.status === "sending") return { ...m, status: "delivered" as const };
+            return m;
+          })
         );
         setIsLoading(false);
         abortRef.current = null;
       }
     },
-    [api, buildBody, onError]
+    [api, buildBody, onError, onSources, onToolSteps]
   );
 
   const sendBackgroundQuery = useCallback(
@@ -210,7 +279,7 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
       // Add only the streaming assistant message container to UI state (no user bubble with raw JSON)
       setMessages((prev) => [
         ...prev,
-        { id: assistantId, role: "assistant", content: "" },
+        { id: assistantId, role: "assistant", content: "", status: "sending", createdAt: new Date().toISOString() },
       ]);
       setIsLoading(true);
 
@@ -241,11 +310,9 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let acc = "";
+        let structuredThinkingAcc = "";
+        let rawContentAcc = "";
         let buffer = "";
-
-        const stripThink = (s: string): string =>
-          s.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "");
 
         while (true) {
           const { done, value } = await reader.read();
@@ -261,13 +328,39 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
             if (data === "[DONE]") continue;
             try {
               const parsed = JSON.parse(data);
-              const content: string | undefined =
+              const reasoningDelta: string | undefined =
+                parsed?.choices?.[0]?.delta?.reasoning_content ??
+                parsed?.choices?.[0]?.delta?.reasoning ??
+                parsed?.delta?.reasoning_content ??
+                parsed?.thinking;
+
+              if (reasoningDelta) {
+                structuredThinkingAcc += reasoningDelta;
+              }
+
+              const contentDelta: string | undefined =
                 parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
-              if (content) {
-                acc += content;
-                const visible = stripThink(acc);
+
+              if (contentDelta) {
+                rawContentAcc += contentDelta;
+              }
+
+              if (reasoningDelta || contentDelta) {
+                const { thinking, content } = extractThinkingAndContent(
+                  rawContentAcc,
+                  structuredThinkingAcc
+                );
                 setMessages((prev) =>
-                  prev.map((m) => (m.id === assistantId ? { ...m, content: visible } : m))
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? {
+                          ...m,
+                          content,
+                          thinking,
+                          status: "sending" as const,
+                        }
+                      : m
+                  )
                 );
               }
               if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
@@ -286,13 +379,18 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
           const message = err instanceof Error ? err.message : String(err);
           setMessages((prev) =>
             prev.map((m) => {
-              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}` };
+              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}`, status: "error" as const };
               return m;
             })
           );
           onError?.(err instanceof Error ? err : new Error(message));
         }
       } finally {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId && m.status === "sending" ? { ...m, status: "delivered" as const } : m
+          )
+        );
         setIsLoading(false);
         abortRef.current = null;
       }

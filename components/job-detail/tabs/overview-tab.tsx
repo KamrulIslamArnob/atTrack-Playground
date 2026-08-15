@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Sparkles,
   Tag,
@@ -11,7 +12,6 @@ import {
   Gift,
   Clock,
   CalendarDays,
-  ExternalLink,
   Code2,
   Building2,
   Mail,
@@ -22,6 +22,9 @@ import {
   ScanSearch,
   CircleCheck,
   Briefcase,
+  Bookmark,
+  Users,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +46,10 @@ interface OverviewTabProps {
   onRefresh: () => void;
   /** Opens the edit slide-over owned by job-detail-content. */
   onEditJob: () => void;
+  /** Opens the company edit dialog owned by job-detail-content. */
+  onEditCompany?: () => void;
+  /** Switches tab in job-detail-content. */
+  onSelectTab?: (tab: string) => void;
 }
 
 /** Circumference of the score ring at r=28 — precomputed so the arc math stays readable. */
@@ -72,11 +79,11 @@ function Stat({
   tint: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5 px-3">
+    <div className="flex min-w-[110px] items-center gap-2.5">
       <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", tint)}>
         <Icon className="size-4" />
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground first-letter:uppercase">{value}</p>
         <p className="truncate text-[11px] text-muted-foreground">{label}</p>
       </div>
@@ -98,9 +105,9 @@ function Section({
 }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
-      <header className="mb-3 flex items-center gap-1.5">
-        <Icon className="size-3.5 text-muted-foreground" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">{title}</h3>
+      <header className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5">
+        <Icon className="size-3.5 text-amber-700 dark:text-amber-300" />
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-950 dark:text-amber-100">{title}</h3>
         {action && <div className="ml-auto">{action}</div>}
       </header>
       {children}
@@ -238,25 +245,38 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
       {/* ---------- Right rail: what atTrack thinks (first on narrow screens) ---------- */}
       <aside className="order-1 space-y-4 lg:order-2">
         <div className="rounded-2xl border border-border bg-card p-4">
-          <header className="mb-3 flex items-center gap-1.5">
-            <span className="flex size-5 items-center justify-center rounded-full bg-primary/10">
-              <Sparkles className="size-3 text-primary" />
-            </span>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">AI fit analysis</h3>
-            <span className="ml-auto text-[11px] text-muted-foreground">AI analysis</span>
+          <header className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5">
+            <Sparkles className="size-3.5 text-amber-700 dark:text-amber-300" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-950 dark:text-amber-100">AI fit analysis</h3>
+            <span className="ml-auto text-[11px] font-medium text-amber-800 dark:text-amber-300">AI analysis</span>
           </header>
 
-          <Select value={job.resume_id ?? "__none__"} onValueChange={(v) => handleResumeChange(v ?? "__none__")}>
-            <SelectTrigger className="h-9 w-full bg-background text-xs" disabled={resumePending || isScoringMatch}>
-              <SelectValue placeholder="No resume attached">{job.resume_name ?? undefined}</SelectValue>
+          <Select
+            value={job.resume_id ?? ""}
+            onValueChange={(v) => handleResumeChange(!v || v === "__none__" ? null : v)}
+          >
+            <SelectTrigger
+              className="h-9 w-full rounded-xl border border-border/80 bg-muted/70 hover:bg-muted px-3 text-xs font-medium text-foreground transition-colors dark:bg-muted/50 dark:hover:bg-muted/80"
+              disabled={resumePending || isScoringMatch}
+            >
+              <SelectValue placeholder="Select a resume..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">No resume attached</SelectItem>
+              {job.resume_id && (
+                <SelectItem value="__none__" className="text-muted-foreground">
+                  Detach resume
+                </SelectItem>
+              )}
               {resumeOptions.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.name}
                 </SelectItem>
               ))}
+              {resumeOptions.length === 0 && !job.resume_id && (
+                <SelectItem value="__none__" disabled>
+                  No resumes uploaded yet
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 
@@ -349,24 +369,28 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
           )}
         </div>
 
-        <Section
-          icon={Tag}
-          title="Extracted keywords"
-          action={
-            keywords.length > 0 ? (
-              <Button
-                variant="ghost"
-                size="xs"
-                className="text-[11px] text-muted-foreground hover:text-foreground"
-                onClick={handleExtractKeywords}
-                disabled={isExtracting}
-              >
-                {isExtracting ? <Spinner className="size-3" /> : <RefreshCw className="size-3" />}
-                Re-analyse
-              </Button>
-            ) : undefined
-          }
-        >
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <header className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5">
+            <Tag className="size-3.5 text-amber-700 dark:text-amber-300" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-950 dark:text-amber-100">
+              Extracted keywords
+            </h3>
+            {keywords.length > 0 && (
+              <div className="ml-auto">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="h-6 gap-1 rounded-lg px-2 text-[11px] font-medium text-amber-900 hover:bg-amber-500/20 hover:text-amber-950 dark:text-amber-200 dark:hover:bg-amber-500/30 dark:hover:text-amber-50"
+                  onClick={handleExtractKeywords}
+                  disabled={isExtracting}
+                >
+                  {isExtracting ? <Spinner className="size-3" /> : <RefreshCw className="size-3" />}
+                  Re-analyse
+                </Button>
+              </div>
+            )}
+          </header>
+
           {keywords.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {keywords.map((kw, i) => (
@@ -398,14 +422,14 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
               }
             />
           )}
-        </Section>
+        </div>
       </aside>
 
       {/* ---------- Left column: what the posting says ---------- */}
       <div className="order-2 min-w-0 space-y-4 lg:order-1">
         {/* Meta bar — the four facts that decide whether this job is worth an hour. */}
-        <div className="flex flex-wrap items-center gap-y-3 rounded-2xl border border-border bg-card p-3.5">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center divide-x divide-border">
+        <div className="flex flex-col gap-3.5 rounded-2xl border border-border bg-card p-3.5 sm:p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 flex-wrap items-center gap-x-6 gap-y-3">
             {job.location && (
               <Stat
                 icon={MapPin}
@@ -432,15 +456,26 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
             )}
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 pl-3">
+          <div className="flex shrink-0 items-center gap-2 border-t border-border/60 pt-3 sm:border-t-0 sm:border-l sm:border-border/60 sm:pt-0 sm:pl-4">
             {(job.location || job.map_url) && (
-              <Button variant="outline" size="sm" onClick={handleOpenMap} className="text-xs">
-                <MapPin className="size-3.5" /> View map
-                <ExternalLink className="size-3 opacity-60" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenMap}
+                className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground"
+              >
+                <MapPin className="size-3.5" />
+                View map
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={onEditJob} className="text-xs">
-              <Pencil className="size-3.5" /> Edit job
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEditJob}
+              className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground"
+            >
+              <Pencil className="size-3.5" />
+              Edit job
             </Button>
           </div>
         </div>
@@ -529,42 +564,58 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
         </Section>
 
         {company && (
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-brand-tint text-sm font-semibold text-primary">
-                {company.name.charAt(0).toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                {company.website ? (
+          <Section icon={Building2} title="Company details">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand-tint text-xs font-bold text-primary">
+                    {company.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-foreground">{company.name}</p>
+                    {company.location && (
+                      <p className="truncate text-[11px] text-muted-foreground">{company.location}</p>
+                    )}
+                  </div>
+                </div>
+
+                {company.website && (
                   <a
                     href={company.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-semibold hover:underline"
+                    className="shrink-0 text-xs font-medium text-primary hover:underline"
                   >
-                    {company.name}
+                    Visit website ↗
                   </a>
-                ) : (
-                  <p className="text-sm font-semibold">{company.name}</p>
                 )}
-                {company.location && <p className="text-xs text-muted-foreground">{company.location}</p>}
               </div>
+
+              {[
+                company.company_type && { label: "Type", value: company.company_type },
+                company.founded_year && { label: "Founded", value: String(company.founded_year) },
+                company.country && { label: "Country", value: company.country },
+              ].filter(Boolean).length > 0 && (
+                <div className="flex flex-wrap gap-2 border-t border-border/60 pt-2.5">
+                  {[
+                    company.company_type && { label: "Type", value: company.company_type },
+                    company.founded_year && { label: "Founded", value: String(company.founded_year) },
+                    company.country && { label: "Country", value: company.country },
+                  ]
+                    .filter(Boolean)
+                    .map((item: any) => (
+                      <div
+                        key={item.label}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 px-2.5 py-1 text-xs"
+                      >
+                        <span className="text-[11px] text-muted-foreground">{item.label}:</span>
+                        <span className="font-medium text-foreground">{item.value}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
-            <dl className="mt-3 grid grid-cols-3 gap-3 text-xs">
-              <div>
-                <dt className="text-muted-foreground">Founded</dt>
-                <dd className="mt-0.5 font-medium">{company.founded_year ?? "Not specified"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Type</dt>
-                <dd className="mt-0.5 font-medium">{company.company_type ?? "Not specified"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Country</dt>
-                <dd className="mt-0.5 font-medium">{company.country ?? "Not specified"}</dd>
-              </div>
-            </dl>
-          </div>
+          </Section>
         )}
       </div>
     </div>

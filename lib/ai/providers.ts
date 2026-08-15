@@ -523,6 +523,7 @@ export async function generateText(
  *  or both. Vendor-specific stream readers normalize to this. */
 interface StreamDelta {
   text?: string;
+  reasoning?: string;
   inputTokens?: number;
   outputTokens?: number;
 }
@@ -598,7 +599,7 @@ async function* streamOpenAICompatible(
 
   for await (const payload of readSseData(res.body)) {
     let json: {
-      choices?: { delta?: { content?: string } }[];
+      choices?: { delta?: { content?: string; reasoning_content?: string; reasoning?: string } }[];
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     try {
@@ -606,6 +607,9 @@ async function* streamOpenAICompatible(
     } catch {
       continue; // keep-alive comment or vendor noise
     }
+
+    const reasoning = json.choices?.[0]?.delta?.reasoning_content ?? json.choices?.[0]?.delta?.reasoning;
+    if (reasoning) yield { reasoning };
 
     const text = json.choices?.[0]?.delta?.content;
     if (text) yield { text };
@@ -655,7 +659,7 @@ async function* streamAnthropic(
   for await (const payload of readSseData(res.body)) {
     let json: {
       type?: string;
-      delta?: { type?: string; text?: string };
+      delta?: { type?: string; text?: string; thinking?: string };
       message?: { usage?: { input_tokens?: number } };
       usage?: { output_tokens?: number };
       error?: { message?: string };
@@ -672,8 +676,12 @@ async function* streamAnthropic(
     if (json.type === "message_start") {
       inputTokens = json.message?.usage?.input_tokens;
     }
-    if (json.type === "content_block_delta" && json.delta?.type === "text_delta" && json.delta.text) {
-      yield { text: json.delta.text };
+    if (json.type === "content_block_delta") {
+      if (json.delta?.type === "thinking_delta" && json.delta.thinking) {
+        yield { reasoning: json.delta.thinking };
+      } else if (json.delta?.type === "text_delta" && json.delta.text) {
+        yield { text: json.delta.text };
+      }
     }
     if (json.type === "message_delta" && json.usage) {
       yield { inputTokens, outputTokens: json.usage.output_tokens };
@@ -732,13 +740,33 @@ export async function generateTextStream(
             const iterator = response[Symbol.asyncIterator]();
             let chunk = await withTimeout(iterator.next(), HOP_TIMEOUT_MS, `${provider.name} first token`);
             while (!chunk.done) {
-              const text = chunk.value.text;
-              if (text) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
-                );
-                if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
-                enqueuedChunk = true;
+              const parts = chunk.value.candidates?.[0]?.content?.parts;
+              if (parts && parts.length > 0) {
+                for (const part of parts) {
+                  const partObj = part as { thought?: boolean; text?: string };
+                  if (partObj.thought && partObj.text) {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: partObj.text } }] })}\n\n`)
+                    );
+                    if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
+                    enqueuedChunk = true;
+                  } else if (partObj.text) {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: partObj.text } }] })}\n\n`)
+                    );
+                    if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
+                    enqueuedChunk = true;
+                  }
+                }
+              } else {
+                const text = chunk.value.text;
+                if (text) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
+                  );
+                  if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
+                  enqueuedChunk = true;
+                }
               }
               const usage = chunk.value.usageMetadata;
               if (usage && !usageCaptured) {
@@ -770,7 +798,14 @@ export async function generateTextStream(
             // stall the UI, but a long legitimate answer must not be cut off.
             let step = await withTimeout(iterator.next(), HOP_TIMEOUT_MS, `${provider.name} first token`);
             while (!step.done) {
-              const { text, inputTokens, outputTokens } = step.value;
+              const { text, reasoning, inputTokens, outputTokens } = step.value;
+              if (reasoning) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: reasoning } }] })}\n\n`)
+                );
+                if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
+                enqueuedChunk = true;
+              }
               if (text) {
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)

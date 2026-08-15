@@ -305,6 +305,10 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "job_deadlines", column: "type", ddl: "ALTER TABLE job_deadlines ADD COLUMN type TEXT NOT NULL DEFAULT 'deadline'" },
   { table: "ai_providers", column: "verified_at", ddl: "ALTER TABLE ai_providers ADD COLUMN verified_at TEXT" },
   { table: "profiles", column: "show_raw_database", ddl: "ALTER TABLE profiles ADD COLUMN show_raw_database INTEGER NOT NULL DEFAULT 0" },
+  { table: "chat_messages", column: "seq", ddl: "ALTER TABLE chat_messages ADD COLUMN seq INTEGER" },
+  { table: "chat_messages", column: "thinking", ddl: "ALTER TABLE chat_messages ADD COLUMN thinking TEXT" },
+  { table: "chat_messages", column: "sources", ddl: "ALTER TABLE chat_messages ADD COLUMN sources TEXT" },
+  { table: "chat_messages", column: "tool_calls", ddl: "ALTER TABLE chat_messages ADD COLUMN tool_calls TEXT" },
 ];
 
 /** Returns how many COLUMN_MIGRATIONS actually landed — zero on an
@@ -483,6 +487,24 @@ function addMissingColumns(db: DatabaseSync): number {
       if (!/duplicate column name|no such column|no such table/i.test(message)) throw err;
     }
   }
+
+  // One-time repair of chat history written before `seq` existed. Ordered by
+  // rowid, not created_at: assistant rows were re-stamped with the save time on
+  // every upsert, so created_at no longer reflects turn order. Naturally
+  // idempotent — once every row has a seq, this matches nothing.
+  //
+  // ponytail: correlated subquery, O(n^2) per session. Chat sessions hold tens
+  // of messages, so this is milliseconds. Switch to a window function if a
+  // session ever holds thousands.
+  db.exec(`
+    UPDATE chat_messages
+    SET seq = (
+      SELECT COUNT(*) FROM chat_messages AS m2
+      WHERE m2.session_id = chat_messages.session_id
+        AND m2.rowid <= chat_messages.rowid
+    ) - 1
+    WHERE seq IS NULL
+  `);
 
   return applied;
 }

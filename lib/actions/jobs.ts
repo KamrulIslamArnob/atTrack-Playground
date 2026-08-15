@@ -330,6 +330,33 @@ export async function updateJob(formData: FormData) {
     companyId = newCompany.id;
   }
 
+  // Update company profile if company fields are present
+  const companyUpdates: Record<string, unknown> = {};
+  if (formData.has("company_website")) {
+    const val = (formData.get("company_website") as string | null)?.trim();
+    companyUpdates.website = val || null;
+  }
+  if (formData.has("company_location")) {
+    const val = (formData.get("company_location") as string | null)?.trim();
+    companyUpdates.location = val || null;
+  }
+  if (formData.has("company_founded_year")) {
+    const val = (formData.get("company_founded_year") as string | null)?.trim();
+    companyUpdates.founded_year = val ? parseInt(val, 10) || null : null;
+  }
+  if (formData.has("company_type")) {
+    const val = (formData.get("company_type") as string | null)?.trim();
+    companyUpdates.company_type = val || null;
+  }
+  if (formData.has("company_country")) {
+    const val = (formData.get("company_country") as string | null)?.trim();
+    companyUpdates.country = val || null;
+  }
+
+  if (Object.keys(companyUpdates).length > 0) {
+    await supabase.from("companies").update(companyUpdates).eq("id", companyId);
+  }
+
   const updateData: Record<string, unknown> = {
     company_id: companyId,
     title,

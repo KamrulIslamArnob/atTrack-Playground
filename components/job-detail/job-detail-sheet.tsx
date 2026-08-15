@@ -55,7 +55,7 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
     <Sheet open={jobId !== null} onOpenChange={onOpenChange}>
       <SheetContent
         style={isElectron ? { top: ELECTRON_TITLEBAR_HEIGHT } : undefined}
-        className="w-full max-w-full overflow-y-auto overflow-x-hidden p-0 data-[side=right]:sm:max-w-3xl data-[side=right]:md:max-w-4xl data-[side=right]:lg:max-w-6xl data-[side=right]:xl:max-w-7xl data-[side=right]:2xl:max-w-[1440px]"
+        className="data-[side=right]:w-full data-[side=right]:max-w-full overflow-y-auto overflow-x-hidden p-0 data-[side=right]:sm:max-w-3xl data-[side=right]:md:max-w-4xl data-[side=right]:lg:max-w-6xl data-[side=right]:xl:max-w-7xl data-[side=right]:2xl:max-w-[1440px]"
       >
         <SheetTitle className="sr-only">Job details</SheetTitle>
         <SheetDescription className="sr-only">

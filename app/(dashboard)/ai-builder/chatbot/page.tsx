@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   AI_MODELS,
   CHAT_PERSONAS,
   type AIModel,
-  type ChatPersona,
   type ChatSession,
   readCache,
   writeCache,
@@ -31,19 +30,24 @@ import {
   type WorkspaceContext,
   type WorkspaceSnapshot,
 } from "@/lib/ai-chatbot/workspace";
+import { MINI_SCENARIOS } from "@/lib/ai-chatbot/scenarios";
 import type { ContextSource, MiniScenario } from "@/lib/ai-chatbot/types";
-import { getCustomSources, setSourceEnabled, setSourceConfig, buildSourcePayload, addCustomSource, removeCustomSource } from "@/lib/ai-chatbot/source-permissions";
-import { useAtTrackChat } from "@/lib/ai-chatbot/use-chat";
+import { getCustomSources, setSourceConfig, buildSourcePayload, addCustomSource, removeCustomSource } from "@/lib/ai-chatbot/source-permissions";
+import { useAtTrackChat, type ChatMessage } from "@/lib/ai-chatbot/use-chat";
 import { listProviders, hasAnyProviderConfigured } from "@/lib/actions/ai-providers";
 import { executeLocalSqlQuery, type SqlQueryResult } from "@/lib/actions/database-query";
 import { TopNavigation } from "@/components/ai-chatbot/top-navigation";
 import { WorkspaceConnectionDrawer } from "@/components/ai-chatbot/workspace-connection-drawer";
 import { ChatSessionSidebar } from "@/components/ai-chatbot/chat-session-sidebar";
-import { ChatMessages } from "@/components/ai-chatbot/chat-messages";
-import { MemoizedChatInput as ChatInput } from "@/components/ai-chatbot/chat-input";
 import { ChatCanvas } from "@/components/ai-chatbot/chat-canvas";
-import { EmptyChatState } from "@/components/ai-chatbot/empty-chat-state";
 import { NoApiKeyOverlay } from "@/components/ai-chatbot/no-api-key-overlay";
+import { ChatCanvasContext } from "@/components/ai-chatbot/chat-canvas-context";
+import { Thread } from "@/components/assistant-ui/thread";
+import {
+  AssistantRuntimeProvider,
+  useExternalStoreRuntime,
+  type ThreadMessageLike,
+} from "@assistant-ui/react";
 import { toast } from "sonner";
 
 export default function AIChatbotPage() {
@@ -51,7 +55,6 @@ export default function AIChatbotPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<AIModel[]>(AI_MODELS);
   const [selectedModel, setSelectedModel] = useState<AIModel>(AI_MODELS[0]);
-  const [selectedPersona, setSelectedPersona] = useState<ChatPersona>(CHAT_PERSONAS[0]);
   const [sessionSidebarCollapsed, setSessionSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
@@ -71,8 +74,9 @@ export default function AIChatbotPage() {
   const [canvasContent, setCanvasContent] = useState<{ content: string; title: string } | null>(null);
   const [replyTo, setReplyTo] = useState<{ id: string; preview: string; role: string } | null>(null);
 
-  // Persona-aware system prompt fed to the API on every request.
-  const systemPersonaPrompt = workspaceAwarePrompt(selectedPersona.systemPrompt, selectedPersona, workspaceCtx);
+  // Default general persona for automated backend routing
+  const defaultPersona = CHAT_PERSONAS[0];
+  const systemPersonaPrompt = workspaceAwarePrompt(defaultPersona.systemPrompt, defaultPersona, workspaceCtx);
   const workspaceContextBlock = buildWorkspaceContextBlock(workspace, sources);
 
   const {
@@ -100,7 +104,7 @@ export default function AIChatbotPage() {
           : sources.filter((s) => s.enabled).map((s) => s.id);
       return {
         model: selectedModel.id,
-        persona: selectedPersona.id,
+        persona: defaultPersona.id,
         personaPrompt: systemPersonaPrompt,
         workspaceContext: workspaceContextBlock,
         webSearchActive: isWebSearchActive,
@@ -251,11 +255,7 @@ export default function AIChatbotPage() {
         setActiveSessionId(active.id);
         saveActiveSessionId(active.id);
 
-        // Carry every field the message model has. The previous load rebuilt
-        // messages as {id, role, content} only, so `createdAt` was lost and the
-        // save path then stamped every message with the current time — which
-        // re-ordered history on each reload, because messages are read back
-        // sorted by created_at.
+        // Carry every field the message model has.
         setMessages(
           (active.messages ?? []).map((m) => ({
             id: m.id,
@@ -264,6 +264,9 @@ export default function AIChatbotPage() {
             createdAt: m.createdAt,
             experimental_attachments: m.experimental_attachments,
             feedback: m.feedback ?? null,
+            thinking: m.thinking,
+            sources: m.sources,
+            toolSteps: m.toolSteps,
           }))
         );
 
@@ -274,9 +277,7 @@ export default function AIChatbotPage() {
         );
       } else {
         // First run. This session lives in memory and in the mirror only; it
-        // earns a database row when it gets its first message. Persisting an
-        // empty chat here is what filled SQLite with "New Chat" shells that
-        // reappeared in the sidebar on every open.
+        // earns a database row when it gets its first message.
         const first: ChatSession = {
           ...createNewSession(selectedModel.id),
           connectedSourceIds: defaultEnabledIds,
@@ -302,14 +303,6 @@ export default function AIChatbotPage() {
     if (messages !== prevMessagesRef.current) {
       prevMessagesRef.current = messages;
 
-      // While an answer streams, `messages` gets a new identity on every token —
-      // hundreds per turn. Persisting there rewrote the whole session list and
-      // re-serialized localStorage each time, and because the write happens
-      // inside a passive effect React counts it as a nested update and aborts
-      // the render at 50 ("Maximum update depth exceeded"). Only the message
-      // count matters mid-stream (it carries the new turn, so the sidebar title
-      // still appears at once); the growing text is persisted when the stream
-      // settles and `isLoading` flips false.
       const countChanged = messages.length !== prevCountRef.current;
       prevCountRef.current = messages.length;
       if (isLoading && !countChanged) return;
@@ -330,12 +323,10 @@ export default function AIChatbotPage() {
                 content: m.content || "",
                 createdAt: typeof m.createdAt === "string" ? m.createdAt : new Date().toISOString(),
                 experimental_attachments: m.experimental_attachments,
-                // Carried deliberately. This rebuild runs on every turn, so
-                // dropping the rating here let the next turn's save write NULL
-                // over a thumbs-up the user had already given. It was harmless
-                // while chat_messages was never written; now that SQLite is the
-                // authority it would silently erase feedback.
                 feedback: m.feedback ?? null,
+                thinking: m.thinking,
+                sources: m.sources,
+                toolSteps: m.toolSteps,
               })),
               updatedAt: new Date().toISOString(),
             };
@@ -345,8 +336,6 @@ export default function AIChatbotPage() {
 
         writeCache(updated);
 
-        // A chat earns its database row on its first message, which is what
-        // keeps empty "New Chat" clicks out of SQLite.
         const active = updated.find((s) => s.id === activeSessionId);
         if (active && active.messages.length > 0) {
           void persistSession(active).catch((err) => {
@@ -357,7 +346,6 @@ export default function AIChatbotPage() {
       });
     }
   }, [messages, isLoading, activeSessionId, mounted]);
-  // ponytail: side effect inside a state updater matches the file's existing shape; React StrictMode double-invokes it in dev, which costs one redundant idempotent PUT. Lift to a ref-driven effect only if that ever shows up in a profile.
 
   const handleSelectSession = useCallback(
     (id: string) => {
@@ -369,7 +357,19 @@ export default function AIChatbotPage() {
 
       const targetSession = sessions.find((s) => s.id === id);
       if (targetSession) {
-        setMessages(targetSession.messages || []);
+        setMessages(
+          (targetSession.messages || []).map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant" | "system",
+            content: m.content || "",
+            createdAt: m.createdAt,
+            experimental_attachments: m.experimental_attachments,
+            feedback: m.feedback ?? null,
+            thinking: m.thinking,
+            sources: m.sources,
+            toolSteps: m.toolSteps,
+          }))
+        );
         const modelObj = availableModels.find((m) => m.id === targetSession.model) || availableModels[0];
         setSelectedModel(modelObj);
         const defaultSources = sources.filter((s) => s.enabled).map((s) => s.id);
@@ -398,16 +398,10 @@ export default function AIChatbotPage() {
     setActiveConnectedIds(seedConnected);
     setMessages([]);
     saveActiveSessionId(newSession.id);
-    // Deliberately not persisted. An empty chat is not history yet; it reaches
-    // SQLite when its first message lands. Persisting here left a "New Chat"
-    // row behind for every click, and those rows came back on every load.
   }, [selectedModel.id, setMessages, sessions, sources]);
 
   const handleDeleteSession = useCallback(
     async (id: string) => {
-      // The database goes first. If it refuses, nothing is removed anywhere —
-      // the previous fire-and-forget delete let the UI drop a chat the database
-      // still held, and the next load brought it back for good.
       try {
         await deleteSessionRemote(id);
       } catch (err) {
@@ -431,7 +425,19 @@ export default function AIChatbotPage() {
           const nextActive = remaining[0].id;
           setActiveSessionId(nextActive);
           saveActiveSessionId(nextActive);
-          setMessages(remaining[0].messages || []);
+          setMessages(
+            (remaining[0].messages || []).map((m) => ({
+              id: m.id,
+              role: m.role as "user" | "assistant" | "system",
+              content: m.content || "",
+              createdAt: m.createdAt,
+              experimental_attachments: m.experimental_attachments,
+              feedback: m.feedback ?? null,
+              thinking: m.thinking,
+              sources: m.sources,
+              toolSteps: m.toolSteps,
+            }))
+          );
         }
       }
       toast.success("Chat session deleted");
@@ -501,7 +507,6 @@ export default function AIChatbotPage() {
           });
         }
       }
-      // No toast: the model selector already shows the active model.
     },
     [activeSessionId, sessions]
   );
@@ -513,9 +518,6 @@ export default function AIChatbotPage() {
     [sendMessage]
   );
 
-  // Toggle a source for the ACTIVE chat (per-chat workspace selection).
-  // Updates the session's connectedSourceIds, persists to localStorage (instant)
-  // + schedules a background SQLite flush.
   const handleToggleSource = useCallback(
     (id: string) => {
       const defaultSet = sources.filter((s) => s.enabled).map((s) => s.id);
@@ -545,10 +547,6 @@ export default function AIChatbotPage() {
     [activeSessionId, activeConnectedIds, sources]
   );
 
-  // Per-chat connected set that drives the request + drawer (seeded state).
-  // const activeConnectedIds = ... // now a useState, see above.
-
-  // Persist a source's config (e.g. Obsidian vault path, GitHub PAT) and update UI.
   const handleSaveSourceConfig = useCallback(
     (id: string, config: Record<string, unknown>, secretKeys: string[] = []) => {
       setSourceConfig(id, config, secretKeys);
@@ -558,7 +556,6 @@ export default function AIChatbotPage() {
             ? {
                 ...s,
                 auth: s.auth ? { ...s.auth, status: "connected" as const } : s.auth,
-                // reflect a non-zero recordCount hint once configured
                 lastSync: s.lastSync ?? new Date().toISOString(),
               }
             : s
@@ -568,7 +565,6 @@ export default function AIChatbotPage() {
     []
   );
 
-  // Add a user-defined connection from the Connect modal.
   const handleAddCustomSource = useCallback(
     (src: ContextSource) => {
       addCustomSource(src);
@@ -584,11 +580,6 @@ export default function AIChatbotPage() {
 
   const handleSelectScenario = useCallback(
     (scenario: MiniScenario) => {
-      const matchingPersona = CHAT_PERSONAS.find((p) => p.id === scenario.agentId);
-      if (matchingPersona) {
-        setSelectedPersona(matchingPersona);
-      }
-
       if (scenario.requiredSources && scenario.requiredSources.length > 0) {
         setSources((prev) =>
           prev.map((s) =>
@@ -625,9 +616,6 @@ export default function AIChatbotPage() {
       }
 
       sendMessage(userText, attachmentsPayload);
-      // Clear the draft here rather than inside sendMessage: sendMessage is
-      // also the entry point for follow-up chips and starter prompts, which
-      // must not wipe whatever the user has typed but not yet sent.
       setInput("");
     },
     [input, replyTo, sendMessage, setInput]
@@ -684,7 +672,6 @@ export default function AIChatbotPage() {
     async (queryText: string, result?: SqlQueryResult) => {
       let res = result;
       if (!res) {
-        // No toast: the query card shows its own "Executing in SQLite" state.
         res = await executeLocalSqlQuery(queryText);
       }
 
@@ -746,7 +733,7 @@ export default function AIChatbotPage() {
             messageId,
             rating,
             model: selectedModel.id,
-            personaId: selectedPersona.id,
+            personaId: defaultPersona.id,
             messageContent: msg?.content,
           }),
         }).catch((err) => {
@@ -754,7 +741,174 @@ export default function AIChatbotPage() {
         });
       }
     },
-    [activeSessionId, messages, selectedModel.id, selectedPersona.id, setMessages]
+    [activeSessionId, defaultPersona.id, messages, selectedModel.id, setMessages]
+  );
+
+  const convertMessage = useCallback((m: ChatMessage): ThreadMessageLike => {
+    const createdAt = m.createdAt ? new Date(m.createdAt) : undefined;
+    if (m.role === "assistant") {
+      const isSending = m.status === "sending";
+      type AssistantMessagePart = Extract<ThreadMessageLike["content"], readonly unknown[]>[number];
+
+      const parts: AssistantMessagePart[] = [];
+
+      // 1. Thinking / Reasoning part
+      if (m.thinking && m.thinking.trim().length > 0) {
+        parts.push({
+          type: "reasoning",
+          text: m.thinking,
+          status: isSending && (!m.content || m.content.trim().length === 0)
+            ? { type: "running" }
+            : { type: "complete" },
+        });
+      }
+
+      // 2. Tool steps (including gated database approvals)
+      if (m.toolSteps && m.toolSteps.length > 0) {
+        for (const step of m.toolSteps) {
+          let argsObj: Record<string, unknown> = {};
+          if (step.detail) {
+            try {
+              argsObj = JSON.parse(step.detail);
+            } catch {
+              argsObj = { query: step.detail };
+            }
+          }
+
+          const isGatedDatabaseOp =
+            step.approvalRequired ||
+            step.label === "query_database" ||
+            step.label === "write_database" ||
+            step.label === "delete_database";
+
+          parts.push({
+            type: "tool-call",
+            toolCallId: step.id,
+            toolName: step.label,
+            argsText: step.detail || (Object.keys(argsObj).length > 0 ? JSON.stringify(argsObj, null, 2) : ""),
+            result: step.result,
+            isError: step.status === "failed",
+            ...(isGatedDatabaseOp && {
+              approval: {
+                id: `approval-${step.id}`,
+                options: [
+                  { id: "allow-once", kind: "allow-once", label: "Approve & Run" },
+                  { id: "reject-once", kind: "reject-once", label: "Deny" },
+                ],
+              },
+              interrupt: {
+                type: "human",
+                payload: {
+                  toolName: step.label,
+                  args: argsObj,
+                },
+              },
+            }),
+          });
+        }
+      }
+
+      // 3. Grounded workspace source citations
+      if (m.sources && m.sources.length > 0) {
+        for (const [idx, src] of m.sources.entries()) {
+          parts.push({
+            type: "source",
+            sourceType: "document",
+            id: `source-${m.id}-${idx}`,
+            title: src,
+            mediaType: "text/plain",
+          });
+        }
+      }
+
+      // 4. Main content text part
+      if (m.content && m.content.length > 0) {
+        parts.push({
+          type: "text",
+          text: m.content,
+          status: isSending ? { type: "running" } : { type: "complete" },
+        });
+      }
+
+      return {
+        id: m.id,
+        role: "assistant",
+        content: parts.length > 0 ? parts : [{ type: "text", text: m.content || "" }],
+        createdAt,
+        status: isSending ? { type: "running" } : { type: "complete", reason: "stop" },
+      };
+    }
+
+    if (m.role === "system") {
+      return {
+        id: m.id,
+        role: "system",
+        content: m.content,
+        createdAt,
+      };
+    }
+
+    return {
+      id: m.id,
+      role: "user",
+      content: m.content,
+      createdAt,
+      attachments: m.experimental_attachments?.map((att, idx) => ({
+        id: `att-${idx}`,
+        type: "image",
+        name: `Attachment ${idx + 1}`,
+        content: [{ type: "image", image: att.url }],
+        status: { type: "complete" },
+      })),
+    };
+  }, []);
+
+  const suggestions = useMemo(() => {
+    return MINI_SCENARIOS.map((s) => ({
+      text: s.title,
+      prompt: s.starterPrompt,
+    }));
+  }, []);
+
+  const auiRuntime = useExternalStoreRuntime({
+    messages,
+    isRunning: isLoading,
+    convertMessage,
+    suggestions,
+    onNew: async (msg) => {
+      let text = "";
+      for (const part of msg.content) {
+        if (part.type === "text") text += part.text;
+      }
+      if (text.trim()) {
+        await sendMessage(text);
+      }
+    },
+    onReload: async () => {
+      await reload();
+    },
+    onCancel: async () => {
+      stop();
+    },
+    onEdit: async (msg) => {
+      let text = "";
+      for (const part of msg.content) {
+        if (part.type === "text") text += part.text;
+      }
+      const targetId = (msg as { id?: string; parentId?: string }).id ?? msg.parentId;
+      if (text.trim() && targetId) {
+        handleEditMessage(targetId, text);
+      }
+    },
+  });
+
+  const canvasContextValue = useMemo(
+    () => ({
+      openCanvas: handleOpenCanvas,
+      closeCanvas: handleCloseCanvas,
+      isOpen: Boolean(canvasContent),
+    }),
+    [handleOpenCanvas, handleCloseCanvas, canvasContent]
   );
 
   if (!mounted) return null;
@@ -762,112 +916,75 @@ export default function AIChatbotPage() {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden bg-white dark:bg-[#09090b] text-foreground">
-      {isMobileSidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
-      <ChatSessionSidebar
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSelectSession={handleSelectSession}
-        onNewChat={handleNewChat}
-        onDeleteSession={handleDeleteSession}
-        onRenameSession={handleRenameSession}
-        onTogglePinSession={handleTogglePinSession}
-        isCollapsed={sessionSidebarCollapsed}
-        onToggleCollapse={() => setSessionSidebarCollapsed((prev) => !prev)}
-        onExportSession={handleExportSession}
-        isMobileOpen={isMobileSidebarOpen}
-        onMobileClose={() => setIsMobileSidebarOpen(false)}
-      />
-
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[#09090b]">
-        <TopNavigation
-          title={activeSession?.title || "New Chat"}
-          onRenameTitle={(newTitle) => {
-            if (activeSessionId) {
-              handleRenameSession(activeSessionId, newTitle);
-            }
-          }}
-          onNewChat={handleNewChat}
-          onToggleSidebar={() => setSessionSidebarCollapsed((prev) => !prev)}
-          sources={sources}
-          connectedSourceIds={activeConnectedIds}
-          onOpenDrawer={() => setIsWorkspaceDrawerOpen(true)}
-          selectedModel={selectedModel}
-          onSelectModel={handleSelectModel}
-          availableModels={availableModels}
-          selectedPersona={selectedPersona}
-          onSelectPersona={setSelectedPersona}
-        />
-
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          {!providerConfigured && <NoApiKeyOverlay />}
-
-          {messages.length === 0 ? (
-            <EmptyChatState
-              onSelectPrompt={handleStarterPrompt}
-              selectedPersona={selectedPersona}
-              selectedPersonaId={selectedPersona.id}
-              onSelectPersona={setSelectedPersona}
-              workspace={workspaceCtx}
-              onOpenWorkspaceDrawer={() => setIsWorkspaceDrawerOpen(true)}
-              onSelectScenario={handleSelectScenario}
-            />
-          ) : (
-            <ChatMessages
-              messages={messages}
-              isLoading={isLoading}
-              onRetry={reload}
-              onOpenCanvas={handleOpenCanvas}
-              onEditMessage={handleEditMessage}
-              onReply={handleReplyMessage}
-              onApproveQuery={handleApproveQuery}
-              onFeedback={handleFeedback}
-              onAskAiSummary={handleAskAiSummary}
-              onSelectFollowUp={sendMessage}
+    <AssistantRuntimeProvider runtime={auiRuntime}>
+      <ChatCanvasContext.Provider value={canvasContextValue}>
+        <div className="relative flex h-full w-full overflow-hidden bg-white dark:bg-[#09090b] text-foreground">
+          {isMobileSidebarOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMobileSidebarOpen(false)}
             />
           )}
 
-          <ChatInput
-            input={input || ""}
-            onInputChange={handleInputChange}
-            onSubmit={handleCustomSubmit}
-            isLoading={isLoading}
-            onStop={stop}
-            model={selectedModel}
-            onSelectModel={handleSelectModel}
-            availableModels={availableModels}
-            selectedPersona={selectedPersona}
-            onSelectPersona={setSelectedPersona}
-            onMobileMenuToggle={() => setIsMobileSidebarOpen(true)}
-            webSearchActive={isWebSearchActive}
-            onToggleWebSearch={() => setIsWebSearchActive((v) => !v)}
-            replyTo={replyTo}
-            onClearReply={() => setReplyTo(null)}
+          <ChatSessionSidebar
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelectSession={handleSelectSession}
+            onNewChat={handleNewChat}
+            onDeleteSession={handleDeleteSession}
+            onRenameSession={handleRenameSession}
+            onTogglePinSession={handleTogglePinSession}
+            isCollapsed={sessionSidebarCollapsed}
+            onToggleCollapse={() => setSessionSidebarCollapsed((prev) => !prev)}
+            onExportSession={handleExportSession}
+            isMobileOpen={isMobileSidebarOpen}
+            onMobileClose={() => setIsMobileSidebarOpen(false)}
           />
+
+          <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[#09090b]">
+            <TopNavigation
+              title={activeSession?.title || "New Chat"}
+              onRenameTitle={(newTitle) => {
+                if (activeSessionId) {
+                  handleRenameSession(activeSessionId, newTitle);
+                }
+              }}
+              onNewChat={handleNewChat}
+              onToggleSidebar={() => setSessionSidebarCollapsed((prev) => !prev)}
+              sources={sources}
+              connectedSourceIds={activeConnectedIds}
+              onOpenDrawer={() => setIsWorkspaceDrawerOpen(true)}
+            />
+
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+              {!providerConfigured && <NoApiKeyOverlay />}
+              <Thread
+                modelSelector={{
+                  selectedModel,
+                  onSelectModel: handleSelectModel,
+                  availableModels,
+                }}
+              />
+            </div>
+          </div>
+
+          <WorkspaceConnectionDrawer
+            isOpen={isWorkspaceDrawerOpen}
+            onClose={() => setIsWorkspaceDrawerOpen(false)}
+            sources={sources}
+            connectedSourceIds={activeConnectedIds}
+            mode="chat"
+            onToggleSource={handleToggleSource}
+            onSaveConfig={handleSaveSourceConfig}
+            onAddCustomSource={handleAddCustomSource}
+            onRemoveCustomSource={handleRemoveCustomSource}
+          />
+
+          {canvasContent && (
+            <ChatCanvas content={canvasContent.content} title={canvasContent.title} isOpen={true} onClose={handleCloseCanvas} />
+          )}
         </div>
-      </div>
-
-      <WorkspaceConnectionDrawer
-        isOpen={isWorkspaceDrawerOpen}
-        onClose={() => setIsWorkspaceDrawerOpen(false)}
-        sources={sources}
-        connectedSourceIds={activeConnectedIds}
-        mode="chat"
-        onToggleSource={handleToggleSource}
-        onSaveConfig={handleSaveSourceConfig}
-        onAddCustomSource={handleAddCustomSource}
-        onRemoveCustomSource={handleRemoveCustomSource}
-      />
-
-      {canvasContent && (
-        <ChatCanvas content={canvasContent.content} title={canvasContent.title} isOpen={true} onClose={handleCloseCanvas} />
-      )}
-    </div>
+      </ChatCanvasContext.Provider>
+    </AssistantRuntimeProvider>
   );
 }

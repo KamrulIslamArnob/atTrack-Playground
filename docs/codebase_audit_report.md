@@ -4,6 +4,247 @@
 **Stack:** Next.js 16 App Router, TypeScript, Local SQLite, Base UI, Tailwind CSS, Gemini API  
 **Auditors:** Security & Auth, Frontend & State, API & AI Pipeline, Bloat & Architecture
 
+> **Audit update — 2026-08-16**
+>
+> This report originally described 51 findings. Most security, reliability, and dead-code findings are now fixed. Current source was re-reviewed for a local single-user runtime. The original findings remain below as historical detail; current status and newly verified findings are listed here.
+
+## Current Audit Status
+
+| Check | Result |
+|---|---|
+| TypeScript | Passed with `tsc --noEmit` |
+| ESLint | Passed with no reported diagnostics |
+| Scope | Local desktop/server process, one user |
+| Excluded | Network scaling, multi-user concurrency, load balancing, distributed systems |
+
+### Previously reported findings now verified fixed
+
+- CRIT-01 through CRIT-06: fixed and present in current source.
+- HIGH-01 through HIGH-07: fixed and present in current source.
+- MED-01 through MED-05: fixed or deliberately limited to new databases as documented below.
+- LOW-01 and LOW-02: fixed.
+- NEW-01: SQL table denylist now enforced in AI database-query path.
+
+### New findings
+
+#### NEW-02 — Malformed JSON is not handled in database cell update
+
+- **Severity:** Medium
+- **File:** `app/api/database/update/route.ts`
+- **Problem:** `await req.json()` runs outside validation. Malformed input produces an uncontrolled 500 response.
+- **Fix:** Wrap JSON parsing in `try/catch`; return HTTP 400 with a stable error message.
+
+#### NEW-03 — PDF document is loaded once per page
+
+- **Severity:** Medium
+- **File:** `components/pdf-viewer.tsx`
+- **Problem:** Every `PdfPage` calls `pdfjsLib.getDocument(url)`. Multi-page PDFs duplicate loading-task and document state, increasing memory and render time.
+- **Fix:** Load one `PDFDocumentProxy` in `PdfViewer`; pass it to each page.
+
+#### NEW-04 — PDF loading task and document are not destroyed
+
+- **Severity:** Medium
+- **Files:** `components/pdf-viewer.tsx`, `lib/utils/pdf-extract.ts`
+- **Problem:** Unmounting the viewer or finishing text extraction does not consistently destroy PDF.js worker/document resources.
+- **Fix:** Destroy loading tasks/documents in `finally` or effect cleanup. Keep existing `RenderTask.cancel()` cleanup.
+
+#### NEW-05 — File responses materialize entire files in memory
+
+- **Severity:** Medium
+- **Files:** `lib/db/storage.ts`, `app/api/files/[bucket]/[...key]/route.ts`
+- **Problem:** `readFile()` creates a full `Buffer`, then the response creates another `Uint8Array`. Large resumes/PDFs cause avoidable memory spikes.
+- **Fix:** Use `stat()` plus `createReadStream()` and pass a Web `ReadableStream` to `NextResponse`.
+
+#### NEW-06 — SQLite local memory profile is oversized
+
+- **Severity:** Low
+- **File:** `lib/db/sqlite.ts`
+- **Problem:** `cache_size = -64000`, `temp_store = MEMORY`, and `mmap_size = 268435456` permit a large local memory footprint before application data and Electron overhead.
+- **Fix:** Use a smaller cache, file-backed temp storage, and smaller mmap. Recommended baseline: 16 MB cache, 64 MB mmap, one SQLite worker thread.
+
+#### NEW-07 — Raw database viewer materializes full database twice
+
+- **Severity:** Medium
+- **File:** `app/api/database/route.ts`
+- **Problem:** Every table uses `SELECT *`; all rows are retained in `result`, then serialized into another large response string. Documents, chat messages, and embedding-adjacent data can create large transient allocations.
+- **Fix:** Return table metadata plus bounded rows, for example 1,000 rows per table, with `rowCount` and table-level pagination.
+
+#### NEW-08 — Setup IPC listener survives cancelled setup
+
+- **Severity:** Medium
+- **File:** `electron/main.js`
+- **Problem:** `ipcMain.once("setup:submit", ...)` remains registered when the setup window closes without submission. A later setup attempt can invoke stale listeners.
+- **Fix:** Register named listener and remove it from both submit and window-close paths.
+
+#### NEW-09 — Windows child server shutdown is not tree-safe
+
+- **Severity:** Medium
+- **File:** `electron/server.js`
+- **Problem:** `child.kill()` may leave the standalone server's descendants running on Windows.
+- **Fix:** Use `taskkill /pid <pid> /t /f` on Windows. Use timed SIGTERM/SIGKILL fallback on POSIX.
+
+### Current top risks
+
+1. **PDF/file memory pressure:** repeated PDF loading and whole-file buffering can make large local documents spike renderer/server memory.
+2. **Raw database response size:** database viewer returns every row and duplicates large allocations during serialization.
+3. **Lifecycle cleanup:** setup IPC and Windows child-process shutdown can retain listeners/processes after cancellation or close.
+
+### Current quick wins
+
+1. Load each PDF once and destroy PDF.js resources on cleanup.
+2. Stream private/public files instead of using `readFile()`.
+3. Reduce SQLite cache/mmap settings for desktop baseline.
+4. Bound raw database viewer rows and add table pagination.
+5. Fix malformed JSON handling and setup IPC listener cleanup.
+
+### Exact replacement snippets
+
+#### Database JSON parsing
+
+```ts
+let body: UpdateBody;
+try {
+  body = (await req.json()) as UpdateBody;
+} catch {
+  return NextResponse.json(
+    { error: "Request body must contain valid JSON." },
+    { status: 400 }
+  );
+}
+```
+
+#### SQLite desktop profile
+
+```ts
+db.exec("PRAGMA journal_mode = WAL");
+db.exec("PRAGMA synchronous = NORMAL");
+db.exec("PRAGMA foreign_keys = ON");
+db.exec("PRAGMA busy_timeout = 5000");
+db.exec("PRAGMA cache_size = -16000");
+db.exec("PRAGMA temp_store = FILE");
+db.exec("PRAGMA mmap_size = 67108864");
+db.exec("PRAGMA threads = 1");
+```
+
+#### Streamed storage response
+
+```ts
+// lib/db/storage.ts
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { Readable } from "node:stream";
+
+export async function streamObject(
+  bucket: string,
+  key: string
+): Promise<{ stream: ReadableStream; size: number }> {
+  const filename = objectPath(bucket, key);
+  const info = await stat(filename);
+
+  return {
+    stream: Readable.toWeb(createReadStream(filename)) as ReadableStream,
+    size: info.size,
+  };
+}
+```
+
+```ts
+// app/api/files/[bucket]/[...key]/route.ts
+const { stream, size } = await streamObject(bucket, key);
+
+return new NextResponse(stream, {
+  headers: {
+    "Content-Type": contentTypeFor(key),
+    "Content-Length": String(size),
+    "Cache-Control": isPublicBucket(bucket)
+      ? "public, max-age=3600"
+      : "private, no-store",
+  },
+});
+```
+
+#### PDF document reuse
+
+```tsx
+useEffect(() => {
+  let cancelled = false;
+  let document: pdfjsLib.PDFDocumentProxy | null = null;
+  const loadingTask = pdfjsLib.getDocument(url);
+
+  loadingTask.promise
+    .then((loaded) => {
+      if (cancelled) {
+        void loaded.destroy();
+        return;
+      }
+
+      document = loaded;
+      setPdf(loaded);
+    })
+    .catch(setError);
+
+  return () => {
+    cancelled = true;
+    void loadingTask.destroy();
+    if (document) void document.destroy();
+  };
+}, [url]);
+```
+
+Keep the `PDFDocumentProxy` alive while pages render; destroy it only from parent effect cleanup.
+
+#### Electron setup listener cleanup
+
+```js
+let resolved = false;
+
+const finish = (value) => {
+  if (resolved) return;
+  resolved = true;
+  ipcMain.removeListener("setup:submit", onSubmit);
+  if (!setupWindow.isDestroyed()) setupWindow.close();
+  resolve(value);
+};
+
+const onSubmit = (_event, value) => {
+  finish(typeof value === "string" ? value : "");
+};
+
+ipcMain.on("setup:submit", onSubmit);
+setupWindow.on("closed", () => finish(""));
+```
+
+#### Windows child-process cleanup
+
+```js
+function stopServer(child) {
+  if (!child || child.killed || child.exitCode !== null) return;
+
+  if (process.platform === "win32") {
+    spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
+    return;
+  }
+
+  child.kill("SIGTERM");
+  const forceKill = setTimeout(() => {
+    if (!child.killed && child.exitCode === null) child.kill("SIGKILL");
+  }, 3000);
+  forceKill.unref();
+  child.once("exit", () => clearTimeout(forceKill));
+}
+```
+
+---
+
+---
+
+## Historical Audit Snapshot
+
+The sections below preserve the original 51-finding audit and its implementation history. Use **Current Audit Status** above as source of truth for present code. Historical “Top 3 Immediate Risks” and “Top 3 Quick Wins” are retained for traceability only.
+
 ---
 
 ## Executive Summary

@@ -589,17 +589,17 @@ function ChatInput({
   );
 
   return (
-    <div className="sticky bottom-0 z-30 border-t border-border/50 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#09090b] dark:via-[#09090b]/95 dark:to-transparent px-3 py-3 backdrop-blur-md md:px-4 md:py-4">
+    <div className="sticky bottom-0 z-30 px-3 py-3 md:px-4 md:py-4">
       {/* Centered max-width 768px container */}
       <div className="mx-auto w-full max-w-[768px]">
         <form onSubmit={handleFormSubmit} className="group">
-          {/* Single unified input box with 12px rounded corners */}
+          {/* Single unified input box with transparent glass feel */}
           <div
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className="relative rounded-xl border border-border/70 dark:border-slate-800 bg-card shadow-sm transition-all duration-200 ease-out focus-within:border-blue-500/60 focus-within:shadow-md focus-within:ring-2 focus-within:ring-blue-500/20"
+            className="relative rounded-[22px] border border-border/80 bg-transparent transition-all duration-200 ease-out focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10 dark:border-border/60"
           >
             {/* Drag and Drop Overlay */}
             <AnimatePresence>
@@ -738,7 +738,7 @@ function ChatInput({
                   animate={reduceMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
                   exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
                   transition={{ duration: 0.2, ease: EASE }}
-                  className="overflow-hidden border-b border-border/50 bg-muted/20"
+                  className="overflow-hidden bg-transparent"
                 >
                   <div className="flex flex-wrap gap-2 p-3">
                     {attachments.map((att, i) => (
@@ -769,7 +769,7 @@ function ChatInput({
                   animate={reduceMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
                   exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
                   transition={{ duration: 0.2, ease: EASE }}
-                  className="overflow-hidden border-b border-border/50 bg-blue-500/5 px-3 py-2"
+                  className="overflow-hidden bg-transparent px-3 py-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -807,16 +807,16 @@ function ChatInput({
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={`Message ${model.name || "Auto Hybrid Agent"}...`}
+              placeholder="Message..."
               className={cn(
-                "w-full resize-none border-none bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
+                "w-full resize-none border-none bg-transparent px-4 py-3 pr-32 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
                 "min-h-[52px]"
               )}
               style={{ overflow: "hidden" }}
             />
 
             {/* Bottom controls row */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border/30">
+            <div className="flex items-center justify-between gap-2 px-3 py-2">
               <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                 {onMobileMenuToggle && (
                   <button
@@ -849,15 +849,12 @@ function ChatInput({
                   type="button"
                   onClick={toggleWebSearch}
                   className={cn(
-                    "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 active:scale-[0.96] cursor-pointer",
-                    isWebSearchActive
-                      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 shadow-2xs ring-1 ring-blue-500/30"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    "flex size-7 items-center justify-center rounded-lg border border-border/70 bg-muted/60 text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted hover:text-foreground active:scale-[0.96] cursor-pointer",
+                    isWebSearchActive && "border-primary/30 bg-primary/5 text-primary"
                   )}
                   title={isWebSearchActive ? "Web & tools search active" : "Enable Web & tools search"}
                 >
                   <Globe className="size-3.5" />
-                  <span className="hidden sm:inline">Search</span>
                 </button>
 
                 {/* Attach File Button */}
@@ -912,14 +909,6 @@ function ChatInput({
                   </button>
                 )}
 
-                {/* Slash & At Command Hints */}
-                <span className="ml-1 hidden items-center gap-1 text-[11px] text-muted-foreground/60 lg:flex select-none">
-                  <Slash className="size-3" />
-                  commands
-                  <span className="opacity-40">·</span>
-                  <span className="font-mono font-medium">@</span>
-                  memories
-                </span>
               </div>
 
               {/* Send / Stop button aligned to the right */}

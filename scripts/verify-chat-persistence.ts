@@ -111,6 +111,35 @@ async function main(): Promise<void> {
     assert(found?.title === "Renamed", `title came back as ${String(found?.title)}`);
   });
 
+  await runTest("Message order survives repeated saves", async () => {
+    const t0 = new Date().toISOString();
+    // Assistant messages carry no createdAt — exactly how use-chat.ts builds them.
+    const turn1 = [
+      { id: "verify_o1", role: "user", content: "first", createdAt: t0 },
+      { id: "verify_o2", role: "assistant", content: "reply one" },
+    ];
+    const s1 = session({ messages: turn1 });
+    assert((await put({ session: s1, messages: turn1 })).status === 200, "first PUT failed");
+
+    // Second turn, saved later. Under the bug this re-stamps verify_o2 to now,
+    // pushing it after verify_o3.
+    const turn2 = [
+      ...turn1,
+      { id: "verify_o3", role: "user", content: "second", createdAt: new Date().toISOString() },
+      { id: "verify_o4", role: "assistant", content: "reply two" },
+    ];
+    const s2 = session({ messages: turn2 });
+    assert((await put({ session: s2, messages: turn2 })).status === 200, "second PUT failed");
+
+    const all = await getSessions();
+    const found = all.find((x) => x.id === SID);
+    const ids = ((found?.messages ?? []) as { id: string }[]).map((m) => m.id);
+    assert(
+      JSON.stringify(ids) === JSON.stringify(["verify_o1", "verify_o2", "verify_o3", "verify_o4"]),
+      `message order came back as ${JSON.stringify(ids)}`
+    );
+  });
+
   await runTest("A deleted session stays deleted", async () => {
     const res = await fetch(`${BASE}/api/chat/sessions?id=${SID}`, { method: "DELETE" });
     assert(res.status === 200, `DELETE returned ${res.status}`);

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { getBoard } from "@/lib/actions/board";
 import { buttonVariants } from "@/components/ui/button";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import {
   PipelineStages,
@@ -225,167 +224,192 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8">
-        <div className="absolute -right-20 -top-20 size-64 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-primary/5 blur-2xl" />
-        <div className="relative">
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="font-heading text-3xl font-bold tracking-tight">{greeting}</h1>
-              <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-                Here&apos;s where you stand — every application, every interview, every number that matters.
-              </p>
-            </div>
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              <AddJobDialog
-                trigger={
-                  <button className={buttonVariants({ size: "sm", className: "w-full justify-center gap-1.5 sm:w-auto" })}>
-                    <Plus className="size-4" />
-                    Add job
-                  </button>
-                }
-                lists={boardLists}
-              />
-              <Link
-                href="/jobs?import=screenshot"
-                className={buttonVariants({ variant: "outline", size: "sm", className: "w-full justify-center gap-1.5 sm:w-auto" })}
-              >
-                <Camera className="size-4" />
-                Import
-              </Link>
-            </div>
-          </div>
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <QuickStat icon={Briefcase} label="Jobs" value={totalJobs ?? 0} tone="primary" hero />
-            <QuickStat icon={Send} label="Applied" value={totalApplications ?? 0} tone="chart-2" />
-            <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} tone="chart-3" />
-            <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} tone="chart-4" />
-            <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
-            <QuickStat icon={Activity} label="Response" value={responseRate != null ? `${responseRate}%` : "—"} tone="chart-5" />
-          </div>
+      {/* Header & Actions */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">{greeting}</h1>
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            Search overview, pipeline progress, and upcoming milestones.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <AddJobDialog
+            trigger={
+              <button className={buttonVariants({ size: "sm", className: "gap-1.5" })}>
+                <Plus className="size-4" />
+                Add job
+              </button>
+            }
+            lists={boardLists}
+          />
+          <Link
+            href="/jobs?import=screenshot"
+            className={buttonVariants({ variant: "outline", size: "sm", className: "gap-1.5" })}
+          >
+            <Camera className="size-4" />
+            Import
+          </Link>
         </div>
       </div>
 
-      <Breadcrumbs />
+      {/* Quick Metrics Strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <QuickStat icon={Briefcase} label="Total Jobs" value={totalJobs ?? 0} tone="primary" />
+        <QuickStat icon={Send} label="Applied" value={totalApplications ?? 0} tone="chart-2" />
+        <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} tone="chart-3" />
+        <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} tone="chart-4" />
+        <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
+        <QuickStat icon={Activity} label="Response Rate" value={responseRate != null ? `${responseRate}%` : "—"} tone="chart-5" />
+      </div>
 
-      {/* Row 1: Pipeline */}
-      <div className="rounded-2xl border border-border bg-card p-6">
+      {/* Primary Zone: Connected Pipeline Stepper */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-heading text-lg font-semibold">Pipeline</h2>
-            <p className="text-xs text-muted-foreground">Where your jobs are now</p>
+            <h2 className="font-heading text-base font-semibold sm:text-lg">Pipeline</h2>
+            <p className="text-xs text-muted-foreground">Current distribution across hiring stages</p>
           </div>
-          <Link href="/jobs" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
+          <Link href="/jobs" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+            View board <ArrowRight className="size-3" />
+          </Link>
         </div>
         {allJobs.length > 0 ? (
           <PipelineStages stages={pipelineStages} total={allJobs.length} />
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
-            <p className="text-xs text-muted-foreground">No jobs yet</p>
+            <p className="text-xs text-muted-foreground">No jobs in pipeline yet</p>
           </div>
         )}
       </div>
 
-      {/* Row 2: Breakdowns — two small splits sharing one card row */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-5">
-          <h3 className="font-heading text-sm font-semibold mb-3">Work location</h3>
-          <BreakdownBar items={workLocationBreakdown} total={allJobs.length} />
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-5">
-          <h3 className="font-heading text-sm font-semibold mb-3">Employment type</h3>
-          <BreakdownBar items={employmentTypeBreakdown} total={allJobs.length} />
-        </div>
-      </div>
+      {/* Operational Split Grid */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Left Column: Velocity & Schedule */}
+        <div className="space-y-6 lg:col-span-7">
+          {/* Trend Chart */}
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="font-heading text-base font-semibold sm:text-lg">Activity Trend</h2>
+              <p className="text-xs text-muted-foreground">Applications and interviews in last 30 days</p>
+            </div>
+            <ApplicationTrendChart data={applicationTrend} />
+            <div className="mt-3 flex items-center justify-center gap-5 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-1)" }} />
+                <span className="text-muted-foreground">Applications</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-2)" }} />
+                <span className="text-muted-foreground">Interviews</span>
+              </div>
+            </div>
+          </div>
 
-      {/* Row 3: Trend (primary, wider) + match score distribution (supporting) */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="mb-4">
-            <h2 className="font-heading text-lg font-semibold">Applications & Interviews</h2>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
-          </div>
-          <ApplicationTrendChart data={applicationTrend} />
-          <div className="mt-3 flex items-center justify-center gap-5 text-xs">
-            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-1)" }} /><span className="text-muted-foreground">Applications</span></div>
-            <div className="flex items-center gap-1.5"><div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-2)" }} /><span className="text-muted-foreground">Interviews</span></div>
-          </div>
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-2">
-            <h2 className="font-heading text-lg font-semibold">Match quality</h2>
-            <p className="text-xs text-muted-foreground">Where scored jobs land</p>
-          </div>
-          <MatchScoreDistributionChart data={matchScoreDistribution} />
-        </div>
-      </div>
-
-      {/* Row 4: Upcoming interviews */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-heading text-lg font-semibold">Upcoming Interviews</h2>
-            <p className="text-xs text-muted-foreground">What&apos;s on the calendar</p>
-          </div>
-          <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
-        </div>
-        {upcomingInterviews.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {upcomingInterviews.map((interview) => (
-              <div key={interview.id} className="flex items-center gap-3 rounded-xl border border-border p-3 transition-all hover:shadow-sm hover:border-primary/20">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success-surface"><Calendar className="size-4 text-success" /></div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{interview.job.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
+          {/* Upcoming Interviews */}
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-heading text-base font-semibold sm:text-lg">Upcoming Interviews</h2>
+                <p className="text-xs text-muted-foreground">Next scheduled meetings and technical rounds</p>
+              </div>
+              <Link href="/interviews" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+                Schedule <ArrowRight className="size-3" />
+              </Link>
+            </div>
+            {upcomingInterviews.length > 0 ? (
+              <div className="space-y-2.5">
+                {upcomingInterviews.map((interview) => (
+                  <div
+                    key={interview.id}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3 transition-colors hover:bg-muted/60 hover:border-primary/30"
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success-surface">
+                      <Calendar className="size-4 text-success" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{interview.job.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="rounded-full bg-success-surface border border-success-border px-2 py-0.5 text-[10px] font-medium text-success">
+                        {interview.type}
+                      </span>
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                        {new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-muted/50 mb-2">
+                  <Calendar className="size-5 text-muted-foreground/40" />
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-0.5">
-                  <span className="rounded-full bg-success-surface border border-success-border px-2 py-0.5 text-[10px] font-medium text-success">{interview.type}</span>
-                  <span className="text-[10px] text-muted-foreground">{new Date(interview.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                <p className="text-xs text-muted-foreground">No upcoming interviews scheduled</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Quality & Distributions */}
+        <div className="space-y-6 lg:col-span-5">
+          {/* Match Quality */}
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="mb-2">
+              <h2 className="font-heading text-base font-semibold sm:text-lg">Match Quality</h2>
+              <p className="text-xs text-muted-foreground">Distribution across scoring tiers</p>
+            </div>
+            <MatchScoreDistributionChart data={matchScoreDistribution} />
+          </div>
+
+          {/* Consolidated Demographic Breakdown */}
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-5">
+            <div>
+              <h3 className="font-heading text-sm font-semibold mb-2">Work location</h3>
+              <BreakdownBar items={workLocationBreakdown} total={allJobs.length} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <h3 className="font-heading text-sm font-semibold mb-2">Employment type</h3>
+              <BreakdownBar items={employmentTypeBreakdown} total={allJobs.length} />
+            </div>
+          </div>
+
+          {/* Practice Tests (conditional) */}
+          {totalTests > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-heading text-sm font-semibold">Practice Tests</h3>
+                  <p className="text-[11px] text-muted-foreground">Recent technical assessment scores</p>
+                </div>
+                <Link href="/interviews" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+                  Practice <ArrowRight className="size-3" />
+                </Link>
+              </div>
+              <div className="flex items-center gap-6 mb-3">
+                <div>
+                  <p className="text-xl font-bold tabular-nums">{avgScore ?? 0}%</p>
+                  <p className="text-[10px] text-muted-foreground">Average</p>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div>
+                  <p className="text-xl font-bold tabular-nums">
+                    {Math.round(Math.max(...(mcqResults ?? []).map((r) => r.score / r.total)) * 100)}%
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Best</p>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-muted/50 mb-2"><Calendar className="size-6 text-muted-foreground/30" /></div>
-            <p className="text-sm text-muted-foreground">No interviews scheduled</p>
-          </div>
-        )}
-      </div>
-
-      {/* MCQ Practice (compact, only shown when there's data) */}
-      {totalTests > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-heading text-sm font-semibold">Practice Tests</h3>
-              <p className="text-[11px] text-muted-foreground">Your recent scores</p>
+              <McqScoreChart data={recentScores} />
             </div>
-            <Link href="/interviews" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">Practice <ArrowRight className="size-3" /></Link>
-          </div>
-          <div className="flex items-center gap-6 mb-4">
-            <div><p className="text-2xl font-bold">{avgScore ?? 0}%</p><p className="text-[10px] text-muted-foreground">Average</p></div>
-            <div className="h-10 w-px bg-border" />
-            <div><p className="text-2xl font-bold">
-              {Math.round(Math.max(...(mcqResults ?? []).map((r) => r.score / r.total)) * 100)}%
-            </p><p className="text-[10px] text-muted-foreground">Best</p></div>
-          </div>
-          <McqScoreChart data={recentScores} />
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-/**
- * One fixed, ordered token per stat instead of a cherry-picked Tailwind
- * rainbow (docs/Design.md "never a raw palette class in a component") — the
- * same --chart-* ramp BreakdownBar already cycles through, plus --primary
- * for the one headline number and --success for the one genuinely positive
- * outcome metric (Offer rate).
- */
 const quickStatTone = {
   primary: "var(--primary)",
   success: "var(--success)",
@@ -400,29 +424,24 @@ function QuickStat({
   label,
   value,
   tone,
-  hero = false,
 }: {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
   value: number | string;
   tone: keyof typeof quickStatTone;
-  /** The one headline number in the row — sized up so it reads first. */
-  hero?: boolean;
 }) {
   const c = quickStatTone[tone];
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-primary/30">
       <div
-        className="flex size-10 shrink-0 items-center justify-center rounded-2xl"
-        style={{ backgroundColor: `color-mix(in oklch, ${c}, transparent 88%)` }}
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg"
+        style={{ backgroundColor: `color-mix(in oklch, ${c}, transparent 90%)` }}
       >
-        <Icon className="size-5" style={{ color: c }} />
+        <Icon className="size-4" style={{ color: c }} />
       </div>
-      <div>
-        <p className={hero ? "text-2xl font-bold tracking-tight" : "text-xl font-bold tracking-tight"}>
-          {value}
-        </p>
-        <p className="text-[11px] text-muted-foreground">{label}</p>
+      <div className="min-w-0">
+        <p className="text-lg font-bold tabular-nums tracking-tight leading-tight">{value}</p>
+        <p className="truncate text-[11px] text-muted-foreground">{label}</p>
       </div>
     </div>
   );

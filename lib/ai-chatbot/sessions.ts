@@ -5,8 +5,9 @@
 // blocks below run in the browser against localStorage and use console
 // deliberately — eslint.config.mjs exempts this file from no-console.
 import type { AIModel, ChatPersona } from "./types";
+import type { ToolExecutionStep } from "./use-chat";
 
-export type { AIModel, ChatPersona };
+export type { AIModel, ChatPersona, ToolExecutionStep };
 
 export interface Message {
   id: string;
@@ -17,6 +18,8 @@ export interface Message {
   thinking?: string;
   personaId?: string;
   feedback?: "up" | "down" | null;
+  sources?: string[];
+  toolSteps?: ToolExecutionStep[];
 }
 
 export const CHAT_PERSONAS: ChatPersona[] = [

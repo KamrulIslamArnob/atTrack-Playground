@@ -37,8 +37,11 @@ export async function upsertSessionToDb(input: PersistSessionInput): Promise<voi
     connected_source_ids: s.connectedSourceIds ?? [],
   });
 
-  // Upsert each message (idempotent by message id).
-  for (const m of input.messages) {
+  // Upsert each message (idempotent by message id). `seq` is the array index,
+  // not a timestamp: the two messages of a turn are constructed in the same
+  // tick and would share a millisecond, and assistant rows get re-stamped on
+  // every re-save. Position is the only tie-free ordering key here.
+  for (const [index, m] of input.messages.entries()) {
     await client.from("chat_messages").upsert({
       id: m.id,
       session_id: s.id,
@@ -46,7 +49,11 @@ export async function upsertSessionToDb(input: PersistSessionInput): Promise<voi
       role: m.role,
       content: m.content,
       feedback: m.feedback ?? null,
+      seq: index,
       created_at: m.createdAt ?? new Date().toISOString(),
+      thinking: m.thinking ?? null,
+      sources: m.sources ? JSON.stringify(m.sources) : null,
+      tool_calls: m.toolSteps ? JSON.stringify(m.toolSteps) : null,
     });
   }
 }
@@ -63,18 +70,46 @@ export async function loadSessionsFromDb(): Promise<ChatSession[]> {
 
   const { data: messages } = await client
     .from("chat_messages")
-    .select("id, session_id, role, content, feedback, created_at")
+    .select("id, session_id, role, content, feedback, seq, created_at, thinking, sources, tool_calls")
     .eq("user_id", userId);
 
+  // Ordered once, here — grouping below preserves it. `created_at` is only a
+  // fallback for rows written before the seq migration and never re-saved;
+  // the migration backfill means that set is normally empty.
+  const ordered = [...(messages ?? [])].sort((a, b) => {
+    if (a.seq != null && b.seq != null) return Number(a.seq) - Number(b.seq);
+    return String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""));
+  });
+
   const bySession = new Map<string, Message[]>();
-  for (const row of messages ?? []) {
+  for (const row of ordered) {
     const list = bySession.get(row.session_id) ?? [];
+    let sources: string[] | undefined;
+    if (row.sources) {
+      try {
+        sources = typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources;
+      } catch {
+        /* ignore invalid JSON */
+      }
+    }
+    let toolSteps: Message["toolSteps"];
+    if (row.tool_calls) {
+      try {
+        toolSteps = typeof row.tool_calls === "string" ? JSON.parse(row.tool_calls) : row.tool_calls;
+      } catch {
+        /* ignore invalid JSON */
+      }
+    }
+
     list.push({
       id: row.id,
       role: row.role,
       content: row.content ?? "",
       feedback: (row.feedback as "up" | "down" | null) ?? null,
       createdAt: row.created_at,
+      thinking: row.thinking ?? undefined,
+      sources,
+      toolSteps,
     });
     bySession.set(row.session_id, list);
   }
@@ -89,9 +124,7 @@ export async function loadSessionsFromDb(): Promise<ChatSession[]> {
     isPinned: Boolean(s.is_pinned),
     category: "recent",
     connectedSourceIds: Array.isArray(s.connected_source_ids) ? s.connected_source_ids : [],
-    messages: (bySession.get(s.id) ?? []).sort((a, b) =>
-      (a.createdAt ?? "").localeCompare(b.createdAt ?? "")
-    ),
+    messages: bySession.get(s.id) ?? [],
   }));
 
   return result;

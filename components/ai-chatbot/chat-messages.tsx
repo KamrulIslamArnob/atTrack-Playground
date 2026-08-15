@@ -112,14 +112,14 @@ export function ChatMessages({
   }, []);
 
   return (
-    <div className="relative flex min-h-0 flex-1 bg-white dark:bg-[#09090b]">
+    <div className="relative flex min-h-0 flex-1 bg-background">
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent px-3 py-6 sm:px-6 md:px-8 md:py-8"
+        className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent px-3 py-6 sm:px-6 md:px-8 md:py-9"
       >
         {/* Central Chat Canvas: Max-width 768px, centered, 16px spacing between messages */}
-        <div className="mx-auto w-full max-w-[768px] space-y-4 pb-12">
+        <div className="mx-auto w-full max-w-[800px] space-y-5 pb-12">
           {/* Skeleton loading state for initial session load */}
           {isInitialLoading && messages.length === 0 ? (
             <MessageSkeleton />
@@ -361,21 +361,21 @@ const MessageItem = React.memo(function MessageItem({
         <div className="flex max-w-[85%] sm:max-w-[75%] flex-col items-end">
           {/* Quoted reply banner */}
           {replyTo && (
-            <div className="mb-1 flex items-center gap-1.5 rounded-lg border border-blue-200/50 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-950/20 px-3 py-1 text-[11px] text-muted-foreground max-w-full">
-              <MessageSquareReply className="size-3 shrink-0 text-blue-500" />
+            <div className="mb-1 flex max-w-full items-center gap-1.5 rounded-lg border border-border/60 bg-muted/35 px-3 py-1 text-[11px] text-muted-foreground">
+              <MessageSquareReply className="size-3 shrink-0" />
               <span className="truncate">
                 {replyTo.role === "assistant" ? "AI: " : ""}{replyTo.preview}
               </span>
             </div>
           )}
 
-          <div className="rounded-2xl border border-blue-200/70 dark:border-blue-900/50 bg-blue-50/90 dark:bg-blue-950/40 px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-foreground shadow-2xs">
+          <div className="rounded-3xl border border-border/70 bg-muted/45 px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-foreground shadow-xs">
             {isEditing ? (
               <div className="flex flex-col gap-2 min-w-[260px]">
                 <textarea
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-border bg-background p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                   rows={3}
                 />
                 <div className="flex items-center justify-end gap-1.5 pt-1">
@@ -393,7 +393,7 @@ const MessageItem = React.memo(function MessageItem({
                   <button
                     type="button"
                     onClick={handleSaveEdit}
-                    className="flex items-center gap-1 rounded-md bg-[#2563EB] px-2.5 py-1 text-xs font-semibold text-white shadow-xs hover:bg-blue-700"
+                    className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1 text-xs font-semibold text-background shadow-xs hover:opacity-90"
                   >
                     <Send className="size-3" />
                     Save & Submit
@@ -465,7 +465,7 @@ const MessageItem = React.memo(function MessageItem({
                 <div className="mt-3.5 pt-1">
                   <Link
                     href="/settings"
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all"
+                    className="inline-flex items-center gap-2 rounded-xl bg-foreground px-3.5 py-2 text-xs font-semibold text-background shadow-sm hover:opacity-90 active:scale-[0.98] transition-all"
                   >
                     <Settings className="size-3.5" />
                     Connect AI Provider in Settings
@@ -519,10 +519,10 @@ const MessageItem = React.memo(function MessageItem({
                 <MessageAction
                   title={isSpeaking ? "Stop reading" : "Read aloud"}
                   onClick={handleToggleSpeech}
-                  className={cn(isSpeaking && "bg-blue-500/15 text-blue-600 dark:text-blue-400")}
+                  className={cn(isSpeaking && "bg-muted text-foreground")}
                 >
                   {isSpeaking ? (
-                    <VolumeX className="size-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                    <VolumeX className="size-3.5 animate-pulse" />
                   ) : (
                     <Volume2 className="size-3.5" />
                   )}
@@ -544,7 +544,7 @@ const MessageItem = React.memo(function MessageItem({
                   title={feedback === "up" ? "Remove helpful rating" : "Good response"}
                   className={cn(
                     "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer",
-                    feedback === "up" && "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold ring-1 ring-blue-500/30"
+                    feedback === "up" && "bg-muted text-foreground font-bold ring-1 ring-border"
                   )}
                 >
                   <ThumbsUp className="size-3.5" />
@@ -682,11 +682,11 @@ function StreamProgress({ content, reduceMotion }: { content: string; reduceMoti
 
 function StreamCaret({ reduceMotion }: { reduceMotion: boolean }) {
   if (reduceMotion) {
-    return <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-blue-600 align-middle" />;
+    return <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-foreground align-middle" />;
   }
   return (
     <motion.span
-      className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 rounded-full bg-blue-600 align-middle"
+      className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 rounded-full bg-foreground align-middle"
       animate={{ opacity: [1, 0.2, 1] }}
       transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
     />
@@ -719,7 +719,7 @@ function CopyButton({ text }: { text: string }) {
             exit={{ opacity: 0, scale: 0.6 }}
             transition={{ duration: 0.15 }}
           >
-            <Check className="size-3.5 text-blue-600" />
+            <Check className="size-3.5 text-foreground" />
           </motion.span>
         ) : (
           <motion.span
@@ -774,7 +774,7 @@ function ReasoningAccordion({ text }: { text: string }) {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-[0.99] cursor-pointer"
       >
-        <FileText className="size-3 text-blue-600" />
+        <FileText className="size-3" />
         <span>Reasoning</span>
         <ChevronDown
           className={cn("size-3 transition-transform duration-200", open && "rotate-180")}
@@ -804,7 +804,7 @@ function DeliveryStatus({ status }: { status?: "sending" | "sent" | "delivered" 
   if (!status || status === "delivered") {
     // Default state: delivered (double check) or no status
     return (
-      <span className="flex items-center text-blue-500/70" title="Delivered">
+      <span className="flex items-center text-muted-foreground/70" title="Delivered">
         <CheckCheck className="size-3" />
       </span>
     );

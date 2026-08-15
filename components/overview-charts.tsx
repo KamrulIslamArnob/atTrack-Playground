@@ -13,6 +13,7 @@ import {
   GraduationCap,
   HeartHandshake,
   FileText,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -71,65 +72,92 @@ export interface PipelineStage {
  */
 export function PipelineStages({ stages, total }: { stages: PipelineStage[]; total: number }) {
   const [active, setActive] = useState<string | null>(null);
-  const filled = stages.filter((s) => s.count > 0);
 
   return (
-    <div>
-      {/* One bar, one glance: how the whole search is distributed right now. */}
-      <div className="flex h-3 w-full gap-1 overflow-hidden rounded-full bg-muted">
-        {filled.map((stage, i) => (
-          <div
-            key={stage.id}
-            role="presentation"
-            title={`${stage.name}: ${stage.count}`}
-            onMouseEnter={() => setActive(stage.id)}
-            onMouseLeave={() => setActive(null)}
-            className="stat-bar-grow h-full rounded-full transition-opacity duration-200"
-            style={{
-              width: `${(stage.count / total) * 100}%`,
-              backgroundColor: stage.color,
-              animationDelay: `${i * 60}ms`,
-              opacity: active && active !== stage.id ? 0.3 : 1,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+    <div className="w-full">
+      {/* High-contrast compact pipeline flow */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none sm:gap-2">
         {stages.map((stage, i) => {
+          const isLast = i === stages.length - 1;
           const share = total > 0 ? Math.round((stage.count / total) * 100) : 0;
-          const dim = stage.count === 0;
+          const isDim = stage.count === 0;
+          const isActive = active === stage.id;
+
           return (
-            <div
-              key={stage.id}
-              onMouseEnter={() => setActive(stage.id)}
-              onMouseLeave={() => setActive(null)}
-              className={`agent-fade-up micro-hover-lift rounded-xl border border-border bg-muted/40 p-3 transition-colors ${
-                active === stage.id ? "border-primary/40" : ""
-              } ${dim ? "opacity-55" : ""}`}
-              style={{ animationDelay: `${i * 45}ms` }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: stage.color }}
-                />
-                <span className="truncate text-[11px] text-muted-foreground">{stage.name}</span>
-              </div>
-              <div className="mt-1.5 flex items-baseline gap-1.5">
-                <span className="text-xl font-bold tabular-nums leading-none">{stage.count}</span>
-                <span className="text-[10px] text-muted-foreground">{share}%</span>
-              </div>
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+            <div key={stage.id} className="flex min-w-[115px] flex-1 shrink-0 items-center gap-1.5 sm:gap-2">
+              {/* Stage Node Card */}
+              <div
+                onMouseEnter={() => setActive(stage.id)}
+                onMouseLeave={() => setActive(null)}
+                className={`group relative flex-1 overflow-hidden rounded-xl border p-2.5 sm:p-3 transition-all duration-200 cursor-default ${
+                  isActive
+                    ? "border-border shadow-md -translate-y-0.5 bg-card"
+                    : isDim
+                      ? "border-border/50 bg-muted/20 opacity-50 hover:opacity-100 hover:bg-card hover:border-border"
+                      : "border-border/80 bg-card shadow-2xs hover:-translate-y-0.5 hover:shadow-sm"
+                }`}
+                style={{
+                  backgroundColor: !isDim
+                    ? `color-mix(in oklch, ${stage.color}, var(--card) 96%)`
+                    : undefined,
+                  borderColor: isActive ? stage.color : undefined,
+                  animationDelay: `${i * 35}ms`,
+                }}
+              >
+                {/* Top Colored Stage Accent Bar */}
                 <div
-                  className="stat-bar-grow h-full rounded-full"
+                  className="absolute inset-x-0 top-0 h-[3px] transition-all duration-200 group-hover:h-[4px]"
                   style={{
-                    width: `${share}%`,
                     backgroundColor: stage.color,
-                    animationDelay: `${i * 45 + 120}ms`,
+                    opacity: isDim ? 0.35 : 1,
                   }}
                 />
+
+                {/* Stage Header */}
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="size-2 shrink-0 rounded-full ring-2 ring-background transition-transform duration-200 group-hover:scale-125"
+                      style={{ backgroundColor: stage.color }}
+                    />
+                    <span className="truncate text-xs font-semibold text-foreground/90 group-hover:text-foreground">
+                      {stage.name}
+                    </span>
+                  </div>
+                  <span
+                    className="shrink-0 rounded-full px-1.5 py-0.2 text-[10px] font-medium tabular-nums border"
+                    style={{
+                      backgroundColor: `color-mix(in oklch, ${stage.color}, transparent 92%)`,
+                      borderColor: `color-mix(in oklch, ${stage.color}, transparent 80%)`,
+                      color: isDim ? "var(--muted-foreground)" : "var(--foreground)",
+                    }}
+                  >
+                    {share}%
+                  </span>
+                </div>
+
+                {/* Stage Metrics */}
+                <div className="mt-2 flex items-baseline justify-between">
+                  <span className="text-xl font-extrabold tabular-nums tracking-tight text-foreground sm:text-2xl leading-none">
+                    {stage.count}
+                  </span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    {stage.count === 1 ? "job" : "jobs"}
+                  </span>
+                </div>
               </div>
+
+              {/* High-Contrast Directional Arrow */}
+              {!isLast && (
+                <div
+                  className={`flex shrink-0 items-center justify-center transition-colors ${
+                    !isDim ? "text-foreground/40" : "text-muted-foreground/20"
+                  }`}
+                  aria-hidden="true"
+                >
+                  <ChevronRight className="size-4 stroke-[2.5]" />
+                </div>
+              )}
             </div>
           );
         })}

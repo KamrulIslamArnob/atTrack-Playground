@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ExternalLink,
   Building2,
-  MoveRight,
   ChevronDown,
   ArrowLeft,
   Copy,
@@ -19,7 +18,6 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoveToMenu } from "@/components/board/move-to-menu";
 import { OverviewTab } from "@/components/job-detail/tabs/overview-tab";
 import { DeadlinesTab } from "@/components/job-detail/tabs/deadlines-tab";
 import { AiToolsTab } from "@/components/job-detail/tabs/ai-tools-tab";
@@ -146,14 +144,14 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Two flat chips: where the job sits, and how well it fits. */}
-            <span className="rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status & Fit metadata chips */}
+            <span className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-muted/70 px-3 text-xs font-medium text-foreground">
               {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
             </span>
 
             {band && (
-              <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold", band.className)}>
+              <span className={cn("inline-flex h-8 items-center rounded-xl px-3 text-xs font-medium", band.className)}>
                 {band.label} fit {Math.round(job.match_score!)}%
               </span>
             )}
@@ -161,7 +159,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
             {job.application_url && (
               <Button
                 size="sm"
-                // Renders an <a>, so base-ui must not assert native button semantics.
+                className="h-8 gap-1.5 rounded-xl px-3.5 text-xs font-semibold"
                 nativeButton={false}
                 render={
                   <a href={job.application_url} target="_blank" rel="noopener noreferrer">
@@ -176,7 +174,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="outline" size="sm" className="text-xs">
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground">
                     <span>
                       State:{" "}
                       {job.state
@@ -212,24 +210,11 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {lists && onMoveTo && (
-              <MoveToMenu
-                lists={lists}
-                currentListId={job.list_id}
-                onMoveTo={onMoveTo}
-                renderTrigger={<Button variant="outline" size="sm" className="text-xs" />}
-              >
-                <MoveRight className="size-3.5" />
-                <span>Move</span>
-                <ChevronDown className="size-3 opacity-70" />
-              </MoveToMenu>
-            )}
-
             {!lists && (
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs"
+                className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground"
                 nativeButton={false}
                 render={<Link href="/jobs" />}
               >
@@ -238,11 +223,13 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
               </Button>
             )}
 
-            {/* Rare and destructive actions live here, away from the tab strip. */}
+            {/* Rare and destructive actions */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 aria-label="More job actions"
-                render={<Button variant="outline" size="icon-sm" />}
+                render={
+                  <Button variant="outline" size="icon-sm" className="size-8 rounded-xl border-border/80 text-muted-foreground hover:bg-accent/60 hover:text-foreground" />
+                }
               >
                 <MoreHorizontal className="size-4" />
               </DropdownMenuTrigger>

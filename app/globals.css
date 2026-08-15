@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "tw-shimmer";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -100,6 +101,22 @@
   --radius-2xl: 1rem;     /* 16px — cards, board items, list rows */
   --radius-3xl: 1.25rem;  /* 20px — dialogs, sheets, modal shells */
   --radius-4xl: 1.5rem;   /* 24px — reserved for a rare hero/feature panel */
+  @keyframes collapsible-down {
+  from {
+    height: 0;
+    }
+  to {
+    height: var(--radix-collapsible-content-height, var(--collapsible-panel-height, auto));
+    }
+  }
+  @keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height, var(--collapsible-panel-height, auto));
+    }
+  to {
+    height: 0;
+    }
+  }
 }
 
 :root {
@@ -1258,4 +1275,6 @@
   }
 }
 
+@custom-variant data-open (&:where([data-state="open"], [data-open]:not([data-open="false"])));
 
+@custom-variant data-closed (&:where([data-state="closed"], [data-closed]:not([data-closed="false"])));

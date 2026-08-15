@@ -1,5 +1,4 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export default function OverviewLoading() {
   return (
@@ -28,8 +27,6 @@ export default function OverviewLoading() {
           ))}
         </div>
       </div>
-
-      <Breadcrumbs />
 
       {/* Pipeline */}
       <div className="rounded-2xl border border-border bg-card p-6">

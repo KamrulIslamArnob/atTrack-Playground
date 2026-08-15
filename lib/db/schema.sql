@@ -868,7 +868,11 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   role TEXT NOT NULL,
   content TEXT,
   feedback TEXT,
-  created_at TEXT
+  seq INTEGER,
+  created_at TEXT,
+  thinking TEXT,
+  sources TEXT,
+  tool_calls TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id);

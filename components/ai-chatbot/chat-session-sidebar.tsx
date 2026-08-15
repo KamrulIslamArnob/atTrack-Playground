@@ -23,8 +23,16 @@ import {
   Settings,
   FolderOpen,
   Sparkles,
+  MoreHorizontal,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 function MarkdownIcon({ className }: { className?: string }) {
@@ -168,72 +176,59 @@ export function ChatSessionSidebar({
   return (
     <aside
       className={cn(
-        "relative fixed inset-y-0 left-0 z-40 flex h-full w-[260px] shrink-0 flex-col border-r border-border/60 bg-card/95 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:transition-none md:w-[260px]",
-        isMobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
+        "relative fixed inset-y-0 left-0 z-40 flex h-full w-[280px] shrink-0 flex-col border-r border-border/70 bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:transition-none md:w-[280px]",
+        isMobileOpen ? "translate-x-0 shadow-e3" : "-translate-x-full md:translate-x-0"
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/50 px-4 py-3.5 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="size-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-            <MessageSquare className="size-3.5" />
-          </div>
-          <span className="text-sm font-semibold text-foreground tracking-tight">Chats</span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {onMobileClose && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onMobileClose}
-              className="md:hidden size-7 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
-              title="Close sidebar"
-            >
-              <X className="size-3.5" />
-            </Button>
-          )}
-        </div>
+      <div className="flex items-center justify-end px-3.5 pb-2 pt-2.5 shrink-0 md:hidden">
+        {onMobileClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMobileClose}
+            className="size-7 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="Close sidebar"
+          >
+            <X className="size-3.5" />
+          </Button>
+        )}
       </div>
 
-      {/* Primary Action & Search */}
-      <div className="space-y-2 p-3 shrink-0">
-        <Button
-          onClick={() => {
-            onNewChat();
-            if (isMobileOpen && onMobileClose) onMobileClose();
-          }}
-          className="w-full"
-        >
-          <Plus className="size-4" />
-          New chat
-        </Button>
-
-        {/* Full-width search bar matching 8px (rounded-lg) border-radius */}
+      <div className="space-y-2.5 p-3.5 pb-3 pt-3 shrink-0">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats..."
-            className="w-full rounded-lg border border-border/60 bg-muted/40 py-2 pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-blue-500 focus:bg-background focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+            className="w-full rounded-xl border border-border/80 bg-background py-2.5 pl-9 pr-9 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md transition-colors"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               title="Clear search"
             >
               <X className="size-3" />
             </button>
           )}
         </div>
+
+        <Button
+          onClick={() => {
+            onNewChat();
+            if (isMobileOpen && onMobileClose) onMobileClose();
+          }}
+          className="w-full h-10 rounded-xl bg-gradient-brand text-primary-foreground shadow-e1 hover:opacity-95"
+        >
+          <Plus className="size-4" />
+          New chat
+        </Button>
       </div>
 
-      {/* Date-grouped session list */}
-      <div className="flex-1 overflow-y-auto px-2 py-1 space-y-3.5 scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-3.5 scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent">
         {pinnedSessions.length > 0 && (
           <div>
             <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -342,7 +337,6 @@ function SessionRow({
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, y: 2 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -2 }}
@@ -363,28 +357,21 @@ function SessionRow({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative flex w-full items-center gap-2 px-2.5 py-2 text-left transition-all duration-150 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 rounded-lg",
+        "group relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl border px-2.5 py-3.5 text-left transition-none cursor-pointer focus:outline-none focus:ring-0",
         isActive
-          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          ? "border-primary/20 bg-gradient-brand-tint text-foreground shadow-e1"
+          : "border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/60 hover:text-foreground"
       )}
       title="Double click to rename"
     >
-      <MessageSquare
-        className={cn(
-          "size-3.5 shrink-0 transition-colors",
-          isActive ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground group-hover:text-foreground"
-        )}
-      />
-
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 w-full overflow-hidden">
         {isEditing ? (
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <input
               type="text"
               value={editTitle}
               onChange={(e) => onRename(e.target.value)}
-              className="w-full rounded-md border border-blue-500/50 bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+              className="w-full rounded-md border border-border bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") onSaveEdit(e as unknown as React.MouseEvent);
@@ -395,7 +382,7 @@ function SessionRow({
             <button
               type="button"
               onClick={onSaveEdit}
-              className="p-1 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer"
+              className="p-1 rounded text-foreground hover:bg-muted cursor-pointer"
               title="Save"
             >
               <Check className="size-3" />
@@ -416,7 +403,7 @@ function SessionRow({
               onEdit();
             }}
             className={cn(
-              "truncate text-xs transition-colors select-none",
+              "block w-full truncate text-xs transition-colors select-none",
               isActive ? "font-medium text-foreground" : "font-normal text-muted-foreground group-hover:text-foreground"
             )}
           >
@@ -425,43 +412,52 @@ function SessionRow({
         )}
       </div>
 
-      {/* Hover action menu for session item */}
-      {!isEditing && (isHovered || isActive) && (
-        <div
-          className="flex items-center gap-1 shrink-0 animate-in fade-in duration-150"
-          onClick={(e) => e.stopPropagation()}
-        >
+      {!isEditing && isHovered && (
+        <div className="flex w-[54px] shrink-0 items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={onTogglePin}
             className={cn(
-              "flex size-6 items-center justify-center rounded-md border transition-all duration-150 shadow-2xs cursor-pointer",
-              session.isPinned
-                ? "border-blue-300 bg-blue-100 text-blue-600 dark:border-blue-800 dark:bg-blue-950/80 dark:text-blue-400"
-                : "border-slate-200/80 bg-slate-100/90 text-slate-600 hover:bg-slate-200/90 hover:text-slate-900 dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700"
+              "flex size-5 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors duration-150 cursor-pointer hover:text-foreground",
+              session.isPinned && "text-foreground"
             )}
             title={session.isPinned ? "Unpin session" : "Pin session"}
           >
-            {session.isPinned ? <PinOff className="size-3 text-blue-600 dark:text-blue-400" /> : <Pin className="size-3" />}
+            {session.isPinned ? <PinOff className="size-3" /> : <Pin className="size-3" />}
           </button>
 
-          <button
-            type="button"
-            onClick={onExport}
-            className="flex size-6 items-center justify-center rounded-md border border-zinc-200/80 bg-zinc-100/90 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-200/90 hover:text-zinc-900 dark:border-zinc-700/60 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-all duration-150 shadow-2xs cursor-pointer"
-            title="Export markdown (.md)"
-          >
-            <MarkdownIcon className="size-3.5" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex size-5 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors duration-150 hover:text-foreground focus:outline-none cursor-pointer"
+              title="Session actions"
+              aria-label="Session actions"
+            >
+              <MoreHorizontal className="size-3" />
+            </DropdownMenuTrigger>
 
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex size-6 items-center justify-center rounded-md border border-rose-200/70 bg-rose-50/80 text-rose-600 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/60 transition-all duration-150 shadow-2xs cursor-pointer"
-            title="Delete session"
-          >
-            <Trash2 className="size-3" />
-          </button>
+            <DropdownMenuContent side="bottom" align="end" className="w-44 p-1.5">
+              <DropdownMenuItem
+                onClick={onTogglePin}
+                className="gap-2.5"
+              >
+                {session.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+                {session.isPinned ? "Unpin chat" : "Pin chat"}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={onExport} className="gap-2.5">
+                <FileText className="size-3.5" />
+                Export markdown
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={onDelete}
+                className="gap-2.5"
+              >
+                <Trash2 className="size-3.5" />
+                Delete chat
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
     </motion.div>

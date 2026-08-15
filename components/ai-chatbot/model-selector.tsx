@@ -45,13 +45,13 @@ export function ModelSelector({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-accent/50 hover:text-foreground active:scale-[0.97]",
-          isOpen && "bg-accent/50 text-foreground shadow-sm"
+          "flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted hover:text-foreground active:scale-[0.98]",
+          isOpen && "border-primary/30 bg-primary/5"
         )}
       >
-        <Sparkles className="size-3" />
+        <Sparkles className="size-3 text-primary" />
         <span className="max-w-[100px] truncate">{selectedModel.name}</span>
-        <ChevronDown className={cn("size-3 transition-transform duration-200", isOpen && "rotate-180")} />
+        <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
 
       <AnimatePresence>
