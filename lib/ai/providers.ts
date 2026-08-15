@@ -1013,6 +1013,48 @@ async function callGeminiToolRound(
   return { text: text || undefined };
 }
 
+/**
+ * LongCat-Flash's native tool-calling format is not the OpenAI `tool_calls`
+ * JSON field — it's a custom XML tag the model writes straight into
+ * `message.content`:
+ *   <longcat_tool_call>tool_name
+ *   <longcat_arg_key>k</longcat_arg_key><longcat_arg_value>v</longcat_arg_value>
+ *   </longcat_tool_call>
+ * A gateway with a matching "tool call parser" (e.g. vLLM's `longcat` parser)
+ * translates this into real `tool_calls`; LongCat's own hosted API does not,
+ * so it leaks straight through as text and the round looks like a plain
+ * answer — the model narrates success while nothing ran. Parsed here so any
+ * openai_compatible provider that leaks this tag is treated like a real
+ * function call instead of silently losing the write.
+ */
+function parseLongcatToolCallTags(content: string): FunctionCall[] {
+  const calls: FunctionCall[] = [];
+  const blockRe = /<longcat_tool_call>([\s\S]*?)<\/longcat_tool_call>/g;
+  const argRe = /<longcat_arg_key>([\s\S]*?)<\/longcat_arg_key>\s*<longcat_arg_value>([\s\S]*?)<\/longcat_arg_value>/g;
+  let block: RegExpExecArray | null;
+  let i = 0;
+  while ((block = blockRe.exec(content))) {
+    const body = block[1];
+    const firstArgIdx = body.indexOf("<longcat_arg_key>");
+    const name = (firstArgIdx === -1 ? body : body.slice(0, firstArgIdx)).trim();
+    if (!name) continue;
+    const args: Record<string, unknown> = {};
+    let arg: RegExpExecArray | null;
+    argRe.lastIndex = 0;
+    while ((arg = argRe.exec(body))) {
+      const key = arg[1].trim();
+      const raw = arg[2].trim();
+      try {
+        args[key] = JSON.parse(raw);
+      } catch {
+        args[key] = raw;
+      }
+    }
+    calls.push({ name, args, id: `longcat_${i++}` });
+  }
+  return calls;
+}
+
 async function callOpenAICompatibleToolRound(
   provider: ResolvedProvider,
   systemPrompt: string | undefined,
@@ -1053,7 +1095,22 @@ async function callOpenAICompatibleToolRound(
       assistantTurn: { role: "assistant", content: msg?.content ?? null, tool_calls: msg?.tool_calls },
     };
   }
-  return { text: typeof msg?.content === "string" ? msg.content : undefined };
+
+  const rawContent = typeof msg?.content === "string" ? msg.content : "";
+  const tagCalls = rawContent.includes("<longcat_tool_call>") ? parseLongcatToolCallTags(rawContent) : [];
+  if (tagCalls.length > 0) {
+    const fabricatedToolCalls = tagCalls.map((c) => ({
+      id: c.id,
+      type: "function",
+      function: { name: c.name, arguments: JSON.stringify(c.args) },
+    }));
+    return {
+      functionCalls: tagCalls,
+      assistantTurn: { role: "assistant", content: null, tool_calls: fabricatedToolCalls },
+    };
+  }
+
+  return { text: rawContent || undefined };
 }
 
 async function callAnthropicToolRound(
