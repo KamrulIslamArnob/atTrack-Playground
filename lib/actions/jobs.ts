@@ -8,8 +8,13 @@ import { scheduleJobScore } from "@/lib/ai/background";
 import { calculateMatchScore, extractResumeContent, type ResumeMatchData, type TotalJobInfo } from "@/lib/ai/resume";
 import { unlink } from "fs/promises";
 import path from "path";
+import { moduleLogger } from "@/lib/log";
+import { requestId } from "@/lib/log/request";
+import { logResourceActivity } from "./activity-log";
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobState } from "@/lib/types/job";
+
+const log = moduleLogger("actions.jobs");
 
 export async function createJob(formData: FormData) {
   const { supabase, userId } = await getUser();
@@ -190,7 +195,7 @@ export async function createJob(formData: FormData) {
         sourceId: job.id,
         sourceType: "job_description",
         text: description,
-      }).catch((err) => console.warn("Job description vector indexing failed:", err));
+      }).catch((err) => log.warn({ err, reqId: requestId() }, "Job description vector indexing failed:"));
     } catch {}
   }
 
@@ -256,9 +261,16 @@ export async function createJob(formData: FormData) {
         await supabase.from("job_contacts").insert({ job_id: job.id, contact_id: contactId });
       }
     } catch (e) {
-      console.error("[CreateJob] Contact linking failed:", e);
+      log.error({ err: e, reqId: requestId(), jobId: job.id }, "[CreateJob] Contact linking failed:");
     }
   }
+
+  void logResourceActivity(userId, "job.create", "job", job.id, {
+    companyId,
+    listId: targetList?.id ?? null,
+    hasDescription: Boolean(description),
+    noteCount: notes.length,
+  });
 
   revalidatePath("/jobs");
   revalidatePath("/board");
@@ -417,6 +429,10 @@ export async function updateJob(formData: FormData) {
     // best-effort staleness detection
   }
 
+  void logResourceActivity(userId, "job.update", "job", jobId, {
+    fieldCount: Object.keys(updateData).length,
+  });
+
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
   revalidatePath("/interviews");
@@ -460,6 +476,8 @@ export async function createApplication(formData: FormData) {
     throw new Error("Failed to create application.");
   }
 
+  void logResourceActivity(userId, "application.create", "application", application.id, { jobId });
+
   revalidatePath("/jobs");
   revalidatePath("/jobs/" + jobId);
   return { applicationId: application.id };
@@ -481,6 +499,8 @@ export async function updateApplicationStatus(formData: FormData) {
     throw new Error("Failed to update application status.");
   }
 
+  void logResourceActivity(userId, "application.update", "application", applicationId, { status });
+
   revalidatePath("/jobs");
 }
 
@@ -496,6 +516,8 @@ export async function deleteApplication(applicationId: string) {
   if (error) {
     throw new Error("Failed to delete application.");
   }
+
+  void logResourceActivity(userId, "application.delete", "application", applicationId);
 
   revalidatePath("/jobs");
 }
@@ -823,7 +845,7 @@ export async function deleteJobWithSmartCascade(
     const { deleteEntityChunks } = await import("@/lib/ai/embeddings");
     deleteEntityChunks(userId, jobId);
   } catch (err) {
-    console.warn("Failed to delete job vector chunks:", err);
+    log.warn({ err, reqId: requestId(), jobId }, "Failed to delete job vector chunks:");
   }
 
   // 7. Company cascade check
@@ -838,6 +860,7 @@ export async function deleteJobWithSmartCascade(
     if (count === 0) {
       await supabase.from("companies").delete().eq("id", companyId).eq("user_id", userId);
       companyDeleted = true;
+      void logResourceActivity(userId, "company.delete", "company", companyId, { cascadeFrom: "job" });
     }
   }
 
@@ -857,6 +880,7 @@ export async function deleteJobWithSmartCascade(
 
     if ((jobLinkCount ?? 0) === 0 && (!contact?.company_id || companyDeleted)) {
       await supabase.from("contacts").delete().eq("id", cid).eq("user_id", userId);
+      void logResourceActivity(userId, "contact.delete", "contact", cid, { cascadeFrom: "job" });
     }
   }
 
@@ -888,16 +912,25 @@ export async function deleteJobWithSmartCascade(
       if (doc?.file_path && doc.file_path.startsWith("/resume/")) {
         const localDiskPath = path.join(process.cwd(), "public", doc.file_path);
         await unlink(localDiskPath).catch((err) => {
-          console.warn(`Could not delete local file ${localDiskPath}:`, err);
+          // The path carries the user's own file name, so it stays out of the
+          // line — the document id below identifies it well enough.
+          log.warn({ err, reqId: requestId(), documentId: did }, "Could not delete local file:");
         });
       } else if (doc?.file_path) {
         await supabase.storage.from("documents").remove([doc.file_path]).catch(() => {});
       }
       await supabase.from("documents").delete().eq("id", did).eq("user_id", userId);
+      void logResourceActivity(userId, "document.delete", "document", did, { cascadeFrom: "job" });
     }
   }
 
   // 10. Revalidate paths & log activity
+  void logResourceActivity(userId, "job.delete", "job", jobId, {
+    companyDeleted,
+    contactsConsidered: contactIds.length,
+    documentsConsidered: docIds.size,
+  });
+
   revalidatePath("/board");
   revalidatePath("/jobs");
   revalidatePath("/crm");
@@ -918,6 +951,8 @@ export async function updateJobState(
     .eq("user_id", userId);
 
   if (error) throw new Error("Failed to update job state.");
+
+  void logResourceActivity(userId, "job.update", "job", jobId, { state });
 
   revalidatePath("/board");
   revalidatePath("/jobs");

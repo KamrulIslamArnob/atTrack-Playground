@@ -1,6 +1,9 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.interviews");
 
 export interface Interview {
   id: string;
@@ -141,7 +144,7 @@ export async function getInterviews(params?: {
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("Error fetching interviews:", error);
+    log.error({ err: error }, "Error fetching interviews:");
     return { interviews: [], total: 0, page: 1, totalPages: 0, perPage };
   }
 
@@ -213,7 +216,7 @@ export async function getPreparingJobs(): Promise<
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching preparing jobs:", error);
+    log.error({ err: error }, "Error fetching preparing jobs:");
     return [];
   }
 

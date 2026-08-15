@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { executeChatPipeline } from "@/lib/ai-chatbot/pipeline";
+import { moduleLogger } from "@/lib/log";
+import { withRoute } from "@/lib/log/route";
+
+const log = moduleLogger("api");
 
 export const runtime = "nodejs";
 /** A grounded answer over a full workspace plus tool results routinely runs
@@ -9,7 +13,7 @@ export const runtime = "nodejs";
  *  serverless ceiling to respect here. */
 export const maxDuration = 300;
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute("/api/chat", async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
     const {
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("[/api/chat] error:", errorMsg);
+    log.error({ err }, "[/api/chat] error:");
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
-}
+});

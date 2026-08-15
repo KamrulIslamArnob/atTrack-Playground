@@ -419,7 +419,7 @@ export async function retrieveChatContext(
         finalSystemPrompt = `${finalSystemPrompt}\n\n${dynamicPrompt}`;
       }
     } catch (err) {
-      console.error(`[retrieveChatContext] Failed to generate dynamic prompt for agent ${ctx.agent.id}:`, err);
+      log.error({ err, traceId }, `[retrieveChatContext] Failed to generate dynamic prompt for agent ${ctx.agent.id}:`);
     }
   }
 
@@ -436,7 +436,10 @@ export async function retrieveChatContext(
 /**
  * Stage 3: Dynamic tool execution or text generation.
  */
-export async function executeAgent(ctx: RetrievedChatContext): Promise<AgentExecutionResult> {
+export async function executeAgent(
+  ctx: RetrievedChatContext,
+  traceId: string = newTraceId()
+): Promise<AgentExecutionResult> {
   const agentTools = ctx.agent.tools
     .map((name) => getTool(name))
     .filter((t): t is NonNullable<typeof t> => t !== undefined && isSourceAllowed(t.sourceId, ctx.input.enabledSourceIds));
@@ -453,8 +456,24 @@ export async function executeAgent(ctx: RetrievedChatContext): Promise<AgentExec
 
   const needsTools = toolDeclarations.length > 0 && !ctx.hasImages && hasToolIntent;
 
+  // All three inputs to the decision, not just its result: "no tools ran" is
+  // ambiguous until you know whether the agent had none, an image vetoed them,
+  // or the prompt read as conversational.
+  aiEvent(AI_EVENTS.routeTools, {
+    traceId,
+    needsTools,
+    toolCount: toolDeclarations.length,
+    hasImages: ctx.hasImages,
+    hasToolIntent,
+    intentPrimary: ctx.intentResult.primary,
+    agentId: ctx.agent.id,
+  });
+
   if (needsTools) {
     const executedToolCalls: ToolCallRecord[] = [];
+    // onStep fires twice per call — once at "called", once terminal. Timing the
+    // gap is the only way to attribute latency to a specific tool.
+    const toolStartedAt = new Map<string, number>();
     const toolCtx: ToolExecutionContext = {
       userId: ctx.input.userId,
       personaId: ctx.input.personaId,
@@ -481,8 +500,28 @@ export async function executeAgent(ctx: RetrievedChatContext): Promise<AgentExec
           } else {
             executedToolCalls.push(step);
           }
+
+          if (step.status === "called") {
+            toolStartedAt.set(step.name, Date.now());
+            return;
+          }
+          // Argument NAMES and result SIZE only: the values are the user's own
+          // job titles, contact names and search text.
+          const fields = {
+            traceId,
+            name: step.name,
+            ok: step.status === "done",
+            durationMs: Date.now() - (toolStartedAt.get(step.name) ?? Date.now()),
+            argKeys: argKeys(step.args),
+            resultChars: sizeOf(step.result?.content),
+            citationCount: step.result?.citations?.length ?? 0,
+          };
+          if (step.status === "done") aiEvent(AI_EVENTS.toolCall, fields);
+          else aiWarn(AI_EVENTS.toolCall, fields, step.error);
         },
-        { userId: ctx.input.userId, action: "ai_chatbot", metadata: { model: ctx.targetModel, persona: ctx.input.personaId } }
+        // traceId is what joins every provider hop and its cost to this turn.
+        // Without it providers.ts mints its own and the hops orphan.
+        { userId: ctx.input.userId, action: "ai_chatbot", traceId, metadata: { model: ctx.targetModel, persona: ctx.input.personaId } }
       );
 
       return {
@@ -492,7 +531,7 @@ export async function executeAgent(ctx: RetrievedChatContext): Promise<AgentExec
         executedToolCalls: result.toolCalls,
       };
     } catch (toolErr) {
-      console.error("[executeAgent] generateTextWithToolsStream failed, falling back to direct stream:", toolErr);
+      log.error({ err: toolErr, traceId }, "[executeAgent] generateTextWithToolsStream failed, falling back to direct stream:");
     }
   }
 
@@ -503,6 +542,7 @@ export async function executeAgent(ctx: RetrievedChatContext): Promise<AgentExec
     {
       userId: ctx.input.userId,
       action: "ai_chatbot",
+      traceId,
       metadata: {
         model: ctx.targetModel,
         persona: ctx.input.personaId,
@@ -623,24 +663,75 @@ export function streamResponse(result: AgentExecutionResult): Response {
  * 4. streamResponse: Resilient streaming with true SSE token deltas, tool-call & source event frames.
  */
 export async function executeChatPipeline(input: ChatPipelineInput): Promise<Response> {
-  const base = buildChatContextBase(input);
+  const traceId = newTraceId();
+  const startedAt = Date.now();
 
-  // Chain resolution (DB read + key decryption) and retrieval (local SQLite)
-  // are independent — retrieval never reads `chain`. Overlap them.
-  const [chain, retrieved] = await Promise.all([
-    resolveChainForModel(input.userId, base.targetModel),
-    retrieveChatContext({ ...base, chain: [] }),
-  ]);
+  // Read at whichever exit fires, so an early return still reports how far the
+  // turn actually got instead of leaving the fields off.
+  let chainLength = 0;
+  let sourceCount = 0;
+  let toolCallCount = 0;
 
-  if (chain.length === 0) {
-    return new Response(
-      JSON.stringify({
-        error: "No AI provider configured. Please connect an AI Provider with your API key in Settings > AI Providers.",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+  /** Closes the trace. A start with no end is the signal that the process died
+   *  mid-turn, so every exit — including the early ones — has to call this.
+   *  Note "stream" closes when the Response is handed back, not when the last
+   *  token lands: totalDurationMs is time-to-response, not time-to-complete. */
+  const end = (outcome: "stream" | "tools" | "no-provider" | "error", err?: unknown) => {
+    const fields = {
+      traceId,
+      outcome,
+      totalDurationMs: Date.now() - startedAt,
+      chainLength,
+      sourceCount,
+      toolCallCount,
+    };
+    if (outcome === "error") aiWarn(AI_EVENTS.requestEnd, fields, err);
+    else aiEvent(AI_EVENTS.requestEnd, fields);
+  };
+
+  // Built first because it is pure — no I/O has started yet — and it is what
+  // resolves the agent and parses attachments that the start event reports.
+  const base = buildChatContextBase(input, traceId);
+  aiEvent(AI_EVENTS.requestStart, {
+    traceId,
+    userId: input.userId,
+    personaId: input.personaId,
+    agentId: base.agent.id,
+    requestedModel: input.model ?? null,
+    messageCount: base.messagesArray.length,
+    hasImages: base.hasImages,
+    promptChars: sizeOf(base.userPrompt),
+    webSearchActive: Boolean(input.webSearchActive),
+    enabledSourceCount: input.enabledSourceIds?.length ?? 0,
+  });
+
+  try {
+    // Chain resolution (DB read + key decryption) and retrieval (local SQLite)
+    // are independent — retrieval never reads `chain`. Overlap them.
+    const [chain, retrieved] = await Promise.all([
+      resolveChainForModel(input.userId, base.targetModel, traceId),
+      retrieveChatContext({ ...base, chain: [] }, traceId),
+    ]);
+    chainLength = chain.length;
+    sourceCount = retrieved.sources.length;
+
+    if (chain.length === 0) {
+      end("no-provider");
+      return new Response(
+        JSON.stringify({
+          error: "No AI provider configured. Please connect an AI Provider with your API key in Settings > AI Providers.",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const executionResult = await executeAgent({ ...retrieved, chain }, traceId);
+    sourceCount = executionResult.sources.length;
+    toolCallCount = executionResult.executedToolCalls?.length ?? 0;
+    end(executionResult.mode);
+    return streamResponse(executionResult);
+  } catch (err) {
+    end("error", err);
+    throw err;
   }
-
-  const executionResult = await executeAgent({ ...retrieved, chain });
-  return streamResponse(executionResult);
 }

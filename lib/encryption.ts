@@ -1,6 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("encryption");
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
@@ -31,7 +34,7 @@ export function getResolvedEncryptionKey(): string {
     fs.writeFileSync(KEY_FILE_PATH, generated, { encoding: "utf8", mode: 0o600 });
     return generated;
   } catch (err) {
-    console.error("[encryption] Failed to access local encryption key file:", err);
+    log.error({ err }, "[encryption] Failed to access local encryption key file:");
     return LEGACY_DEV_KEY;
   }
 }

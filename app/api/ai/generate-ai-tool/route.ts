@@ -1,8 +1,8 @@
-import { NextRequest } from "next/server";
 import { createDbClient as createClient } from "@/lib/db/client";
 import type { AiToolKind } from "@/lib/types/ai-tools";
 import { resolveProviderChain, generateTextStream } from "@/lib/ai/providers";
 import { getCachedOutput, setCachedOutput } from "@/lib/actions/ai-cache";
+import { withRoute } from "@/lib/log/route";
 
 // Shared across all 8 kinds — only the purpose paragraph below changes.
 const SPAM_RULES = `STRICT RULES FOR SPAM AVOIDANCE:
@@ -43,7 +43,7 @@ const PURPOSE: Record<AiToolKind, string> = {
     "You are writing an email requesting more time to consider a job offer before responding. Be respectful of the employer's timeline and give a reasonable new date.",
 };
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute("/api/ai/generate-ai-tool", async (req: Request) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -144,7 +144,7 @@ Return ONLY the JSON object with "subject" and "body" fields.`;
       Connection: "keep-alive",
     },
   });
-}
+});
 
 async function captureToolCache(
   cacheStream: ReadableStream<Uint8Array>,

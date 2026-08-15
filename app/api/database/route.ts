@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/sqlite";
+import { withRoute } from "@/lib/log/route";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export interface TableData {
  * foreign keys, and all rows in one shot — the client caches this and
  * never hits the API again until it remounts.
  */
-export async function GET() {
+export const GET = withRoute("/api/database", async () => {
   const db = getDb();
 
   // 1. List all user tables (skip sqlite_ internal tables).
@@ -84,4 +85,4 @@ export async function GET() {
   }
 
   return NextResponse.json({ tables: result });
-}
+});

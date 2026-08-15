@@ -10,6 +10,9 @@ import {
   type ProviderType,
   type TaskType,
 } from "@/lib/types/ai-providers";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.ai-providers");
 
 interface ProviderRow {
   id: string;
@@ -81,7 +84,7 @@ export async function createProvider(params: {
     .single();
 
   if (error || !data) {
-    console.error("Error creating AI provider:", error);
+    log.error({ err: error }, "Error creating AI provider:");
     return { error: "Failed to save provider." };
   }
 
@@ -149,7 +152,7 @@ export async function updateProvider(
   const { error } = await supabase.from("ai_providers").update(update).eq("id", id).eq("user_id", userId);
 
   if (error) {
-    console.error("Error updating AI provider:", error);
+    log.error({ err: error }, "Error updating AI provider:");
     return { error: "Failed to update provider." };
   }
 
@@ -162,7 +165,7 @@ export async function deleteProvider(id: string): Promise<{ error?: string }> {
 
   const { error } = await supabase.from("ai_providers").delete().eq("id", id).eq("user_id", userId);
   if (error) {
-    console.error("Error deleting AI provider:", error);
+    log.error({ err: error }, "Error deleting AI provider:");
     return { error: "Failed to delete provider." };
   }
 
@@ -228,7 +231,7 @@ export async function saveTaskRoute(taskType: TaskType, providerIds: string[]): 
   );
 
   if (error) {
-    console.error("Error saving AI task route:", error);
+    log.error({ err: error }, "Error saving AI task route:");
     return { error: "Failed to save task routing." };
   }
 
@@ -465,7 +468,7 @@ export async function fetchProviderModels(params: {
         headers,
         signal: AbortSignal.timeout(10000),
       }).catch((err) => {
-        console.error("Fetch models error:", err);
+        log.error({ err }, "Fetch models error:");
         return null;
       });
 
@@ -604,7 +607,7 @@ export async function exportAiProviders(): Promise<{
     try {
       if (p.encrypted_api_key) api_key = decrypt(p.encrypted_api_key as string);
     } catch (err) {
-      console.error("[ExportProviders] Decryption failed:", err);
+      log.error({ err }, "[ExportProviders] Decryption failed:");
     }
     return {
       name: p.name as string,

@@ -6,6 +6,7 @@ import { getContacts } from "@/lib/actions/contacts";
 import { getLinksAndCategories } from "@/lib/actions/links";
 import { getMemories } from "@/lib/actions/memories";
 import { createDbClient } from "@/lib/db/client";
+import { withRoute } from "@/lib/log/route";
 
 /**
  * Returns a lightweight, user-scoped snapshot of the owner's workspace so the
@@ -14,7 +15,7 @@ import { createDbClient } from "@/lib/db/client";
  * Privacy boundary: every read is scoped through getUser()'s userId — this is
  * a zero-auth single-owner app, so no query ever crosses user boundaries.
  */
-export async function GET() {
+export const GET = withRoute("/api/chat/workspace", async () => {
   try {
     const { userId } = await getUser();
 
@@ -121,4 +122,4 @@ export async function GET() {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});

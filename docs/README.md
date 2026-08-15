@@ -11,6 +11,7 @@ The docs are intentionally kept small and category-based so contributors can fin
 | Project overview, setup, and commands | [`DEVELOPMENT.md`](DEVELOPMENT.md) |
 | How to contribute safely | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Security model and vulnerability reporting | [`SECURITY.md`](SECURITY.md) |
+| Structured logs, AI trace events, and the log drain | [`LOGGING.md`](LOGGING.md) |
 | Design system: tokens, type, radius, motion, components, copy | [`Design.md`](Design.md) |
 | How to spec a screen before building it | [`DesignHandoff.md`](DesignHandoff.md) |
 | Current feature backlog and roadmap notes | [`ROADMAP.md`](ROADMAP.md) |
@@ -38,6 +39,7 @@ docs/
 ├── CONTRIBUTING.md  # Contributor workflow and PR checklist
 ├── SECURITY.md      # Security and privacy policy
 ├── DEVELOPMENT.md   # Architecture, setup, commands, Electron notes
+├── LOGGING.md       # Log format, event taxonomy, redaction, drain setup
 ├── RELEASE.md       # Step-by-step release and update checklist
 ├── Design.md        # Design system and UI rules
 ├── ROADMAP.md          # Current backlog policy

@@ -2,6 +2,9 @@
 
 import { getUser } from "@/lib/auth";
 import { getDb } from "@/lib/db/sqlite";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.search");
 
 export interface SearchResult {
   type: "job" | "company" | "contact" | "document" | "application" | "interview" | "deadline" | "position" | "page";
@@ -130,7 +133,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       });
     }
   } catch (err) {
-    console.error("Omni search query failed:", err);
+    log.error({ err }, "Omni search query failed:");
   }
 
   return results;

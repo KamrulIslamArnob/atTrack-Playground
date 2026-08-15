@@ -5,6 +5,9 @@ import { createDbClient as createAdminClient } from "@/lib/db/client";
 import { extractJob } from "@/lib/ai/ai";
 import { createExtractionLogger } from "@/lib/ai/logger";
 import type { ExtractionResult } from "@/lib/ai/schema";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.job-imports");
 
 const BUCKET = "job-imports";
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -132,7 +135,7 @@ export async function deleteScreenshots(screenshotIds: string[]): Promise<void> 
       .remove(ownedIds);
 
     if (error) {
-      console.error("Failed to delete screenshots:", error.message);
+      log.error({ err: error.message }, "Failed to delete screenshots:");
     }
 
   }
@@ -159,6 +162,6 @@ async function saveLog(
   });
 
   if (error) {
-    console.error("Failed to save extraction log:", error.message);
+    log.error({ err: error.message }, "Failed to save extraction log:");
   }
 }

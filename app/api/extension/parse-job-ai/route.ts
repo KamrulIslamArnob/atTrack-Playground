@@ -5,15 +5,19 @@ import { scrapeWithFirecrawl } from "@/lib/services/firecrawl";
 import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
 import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
+import { moduleLogger } from "@/lib/log";
+import { withRoute } from "@/lib/log/route";
 
-export async function OPTIONS(req: Request) {
+const log = moduleLogger("api.parse-job-ai");
+
+export const OPTIONS = withRoute("/api/extension/parse-job-ai", async (req: Request) => {
   return new NextResponse(null, {
     status: 204,
     headers: getExtensionCorsHeaders(req),
   });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = withRoute("/api/extension/parse-job-ai", async (req: Request) => {
   const corsHeaders = getExtensionCorsHeaders(req);
   try {
     const { userId } = await getUser();
@@ -51,13 +55,13 @@ export async function POST(req: Request) {
           { headers: corsHeaders }
         );
       }
-      console.warn(`[AI Scraper API] Firecrawl scrape failed or unconfigured. Falling back to local LLM provider chain...`);
+      log.warn(`[AI Scraper API] Firecrawl scrape failed or unconfigured. Falling back to local LLM provider chain...`);
     }
 
     // --- 2. Fallback to Local LLM Provider Chain (Gemini / OpenRouter) ---
     const chain = await resolveProviderChain(userId, "text");
     if (!chain || chain.length === 0) {
-      console.warn(`[AI Scraper API] ⚠️ No active LLM provider chain found for user. Layer 1 offline DOM data will be used.`);
+      log.warn(`[AI Scraper API] ⚠️ No active LLM provider chain found for user. Layer 1 offline DOM data will be used.`);
       return NextResponse.json(
         {
           success: false,
@@ -69,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     const providerName = chain[0].name || chain[0].provider_type;
-    console.log(`[AI Scraper API] 🤖 Running LLM Job Parser via provider: "${providerName}" (Model: "${chain[0].model}")`);
+    log.info(`[AI Scraper API] 🤖 Running LLM Job Parser via provider: "${providerName}" (Model: "${chain[0].model}")`);
 
     const prompt = `You are an expert technical recruiter and AI job parser.
 Analyze this job posting content and extract precise, structured job information.
@@ -112,7 +116,7 @@ IMPORTANT: Output ONLY the raw JSON object, no markdown commentary.`;
     const lastBrace = textRaw.lastIndexOf("}");
 
     if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      console.error(`[AI Scraper API] ❌ LLM output did not contain valid JSON bounds.`);
+      log.error(`[AI Scraper API] ❌ LLM output did not contain valid JSON bounds.`);
       return NextResponse.json(
         { success: false, reason: "PARSE_ERROR", message: "Failed to extract valid JSON structure from AI output." },
         { headers: corsHeaders }
@@ -125,7 +129,7 @@ IMPORTANT: Output ONLY the raw JSON object, no markdown commentary.`;
     try {
       parsed = JSON.parse(cleanJsonStr);
     } catch (err) {
-      console.error(`[AI Scraper API] ❌ JSON parse exception:`, err);
+      log.error({ err }, `[AI Scraper API] ❌ JSON parse exception:`);
       return NextResponse.json(
         { success: false, reason: "PARSE_ERROR", message: "AI response string could not be parsed as valid JSON." },
         { headers: corsHeaders }
@@ -149,7 +153,7 @@ IMPORTANT: Output ONLY the raw JSON object, no markdown commentary.`;
       contact_role: typeof parsed.contact_role === "string" ? parsed.contact_role.trim() : "Recruiter",
     };
 
-    console.log(`[AI Scraper API] ✅ LLM Parsing Completed via "${providerName}"! (Title: "${aiParsedData.title || "N/A"}", Company: "${aiParsedData.company || "N/A"}")`);
+    log.info(`[AI Scraper API] ✅ LLM Parsing Completed via "${providerName}"! (Title: "${aiParsedData.title || "N/A"}", Company: "${aiParsedData.company || "N/A"}")`);
 
     return NextResponse.json(
       {
@@ -160,7 +164,7 @@ IMPORTANT: Output ONLY the raw JSON object, no markdown commentary.`;
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error(`[AI Scraper API] ❌ Internal Exception:`, error);
+    log.error({ err: error }, `[AI Scraper API] ❌ Internal Exception:`);
     return NextResponse.json(
       {
         success: false,
@@ -169,4 +173,4 @@ IMPORTANT: Output ONLY the raw JSON object, no markdown commentary.`;
       { status: 500, headers: corsHeaders }
     );
   }
-}
+});

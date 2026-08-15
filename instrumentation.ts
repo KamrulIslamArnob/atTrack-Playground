@@ -1,21 +1,16 @@
 // Next.js instrumentation hook: runs once per server process, before any
 // request is served, and catches server errors Next would otherwise only
 // print to the console.
+//
+// Nothing that touches a Node API may appear in this file. Next compiles it
+// for the edge runtime as well as nodejs and statically scans that build, so
+// even code guarded by NEXT_RUNTIME warns if the scanner can see it. The
+// Node-only work lives in lib/log/boot.ts, behind the dynamic import below.
 
 export async function register(): Promise<void> {
-  // Guard the runtime even though every route in this app is `nodejs` —
-  // instrumentation is also evaluated for the edge runtime, where node:fs
-  // does not exist and importing the logger would throw at boot.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-
-  const { log, pruneLogs, LOG_DIR } = await import("@/lib/log");
-  const { version } = await import("@/package.json");
-
-  pruneLogs();
-  log.info(
-    { event: "app.boot", version, node: process.version, logDir: LOG_DIR },
-    "atTrack server started"
-  );
+  const { bootLog } = await import("@/lib/log/boot");
+  await bootLog();
 }
 
 /** Next calls this for every uncaught server-side error, including ones

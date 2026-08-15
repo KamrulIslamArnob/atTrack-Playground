@@ -1,17 +1,26 @@
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("ai.extraction");
+
+/** Start/success/error for one screenshot extraction, sharing a duration
+ *  clock. Field names are unchanged from the console version this replaced,
+ *  so anything already filtering on `[ai-extraction]` still matches. */
 export function createExtractionLogger(screenshotId: string, userId: string) {
   const startTime = Date.now();
 
   return {
     start() {
-      console.info("[ai-extraction]", { screenshotId, userId, status: "pending" }, "Extraction started");
+      log.info(
+        { event: "ai.extraction", screenshotId, userId, status: "pending" },
+        "[ai-extraction] Extraction started"
+      );
     },
 
     success(extractedFields: string[]) {
       const duration = Date.now() - startTime;
-      console.info(
-        "[ai-extraction]",
-        { screenshotId, userId, status: "success", duration, extractedFields },
-        `Extraction completed in ${duration}ms`
+      log.info(
+        { event: "ai.extraction", screenshotId, userId, status: "success", duration, extractedFields },
+        `[ai-extraction] Extraction completed in ${duration}ms`
       );
       return { duration, extractedFields };
     },
@@ -19,13 +28,11 @@ export function createExtractionLogger(screenshotId: string, userId: string) {
     error(err: unknown) {
       const duration = Date.now() - startTime;
       const message = err instanceof Error ? err.message : String(err);
-      console.error(
-        "[ai-extraction]",
-        { screenshotId, userId, status: "error", duration, error: message },
-        `Extraction failed: ${message}`
+      log.error(
+        { event: "ai.extraction", screenshotId, userId, status: "error", duration, err },
+        `[ai-extraction] Extraction failed: ${message}`
       );
       return { duration, error: message };
     },
   };
 }
-

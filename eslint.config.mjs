@@ -16,6 +16,17 @@ const eslintConfig = defineConfig([
       "react-hooks/purity": "off",
     },
   },
+  {
+    // Server code logs through lib/log (pino), never console: a console call
+    // bypasses redaction, the NDJSON format and the log file the drain ships,
+    // so it is invisible to every consumer of the logs. Client components and
+    // scripts/ are exempt — they have no logger and no drain.
+    files: ["lib/**/*.ts", "app/api/**/*.ts"],
+    ignores: ["lib/log/**", "lib/ai-chatbot/use-chat.ts", "lib/ai-chatbot/sessions.ts"],
+    rules: {
+      "no-console": "error",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     ".next/**",

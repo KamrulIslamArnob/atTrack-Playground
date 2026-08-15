@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import type { BoardCard, BoardList, ListKind, ProjectLink } from "@/lib/types/board";
 import type { JobState } from "@/lib/types/job";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.board");
 
 export interface BoardData {
   lists: BoardList[];
@@ -16,7 +19,7 @@ export interface BoardData {
  */
 function boardError(context: string, error: { message?: string }): Error {
   const message = error?.message ?? "unknown error";
-  console.error(`[Board] ${context} failed: ${message}`);
+  log.error(`[Board] ${context} failed: ${message}`);
   return new Error(`${context} failed: ${message}`);
 }
 

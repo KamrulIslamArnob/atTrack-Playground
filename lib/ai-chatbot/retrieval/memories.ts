@@ -1,6 +1,9 @@
 import { createDbClient } from "@/lib/db/client";
 import { getSemanticMemories } from "./hybrid";
+import { moduleLogger } from "@/lib/log";
 import type { RetrievedDoc } from "./types";
+
+const log = moduleLogger("chat");
 
 /**
  * AI Memories DB (ai_memories table) — user's persistent markdown notes and knowledge.
@@ -26,7 +29,7 @@ export async function getMemoriesRetrieved(
         });
       }
     } catch (err) {
-      console.warn("Semantic memory retrieval failed, falling back to lexical search:", err);
+      log.warn({ err }, "Semantic memory retrieval failed, falling back to lexical search:");
     }
   }
 

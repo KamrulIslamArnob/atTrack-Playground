@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
+import { withRoute } from "@/lib/log/route";
 
-export async function OPTIONS(req: Request) {
+export const OPTIONS = withRoute("/api/extension/status", async (req: Request) => {
   return new NextResponse(null, {
     status: 204,
     headers: getExtensionCorsHeaders(req),
   });
-}
+});
 
-export async function GET(req: Request) {
+export const GET = withRoute("/api/extension/status", async (req: Request) => {
   const corsHeaders = getExtensionCorsHeaders(req);
   try {
     const { userId } = await getUser();
@@ -38,4 +39,4 @@ export async function GET(req: Request) {
       }
     );
   }
-}
+});

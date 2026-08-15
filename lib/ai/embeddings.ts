@@ -1,4 +1,7 @@
 import { getDb } from "@/lib/db/sqlite";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("ai.embeddings");
 import { resolveProviderChain } from "@/lib/ai/providers";
 
 export const VECTOR_DIMENSION = 768;
@@ -198,7 +201,7 @@ export async function generateEmbedding(text: string, userId?: string): Promise<
         }
       }
     } catch (err) {
-      console.warn("API embedding failed, falling back to deterministic embedding:", err);
+      log.warn({ err }, "API embedding failed, falling back to deterministic embedding:");
     }
   }
 
@@ -275,7 +278,7 @@ export async function indexEntityChunks(params: {
     try {
       insertVec.run(chunkId, embedding, userId, sourceId);
     } catch (err) {
-      console.warn("Could not insert into vec_document_chunks (extension may be unavailable):", err);
+      log.warn({ err }, "Could not insert into vec_document_chunks (extension may be unavailable):");
     }
   }
 
@@ -322,7 +325,7 @@ export async function indexMemoryVector(
       VALUES (?, ?, ?)
     `).run(embedding, memoryId, userId);
   } catch (err) {
-    console.warn("Could not insert into vec_memories:", err);
+    log.warn({ err }, "Could not insert into vec_memories:");
   }
 }
 

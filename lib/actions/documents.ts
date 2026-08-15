@@ -8,7 +8,12 @@ import { unlink } from "node:fs/promises";
 import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { moduleLogger } from "@/lib/log";
+import { requestId } from "@/lib/log/request";
+import { logResourceActivity } from "./activity-log";
 import type { ResumeDoc } from "@/lib/types/resume-builder";
+
+const log = moduleLogger("actions.documents");
 
 export interface Document {
   id: string;
@@ -37,7 +42,7 @@ export async function getDocuments(): Promise<Document[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching documents:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching documents:");
     return [];
   }
 
@@ -117,6 +122,13 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
   // upload returns instantly, extraction lands first, rescore follows.
   scheduleResumeExtract(doc.id, pdfText, userId, type);
 
+  void logResourceActivity(userId, "document.create", "document", doc.id, {
+    type,
+    source: "upload",
+    bytes: file.size,
+    isDefault: setDefault,
+  });
+
   revalidatePath("/documents");
   revalidatePath("/jobs");
 
@@ -142,7 +154,9 @@ export async function deleteDocument(id: string): Promise<void> {
   if (doc.file_path && doc.file_path.startsWith("/resume/")) {
     const localDiskPath = path.join(process.cwd(), "public", doc.file_path);
     await unlink(localDiskPath).catch((err) => {
-      console.warn(`Could not delete local file ${localDiskPath}:`, err);
+      // The path carries the user's own file name, so it stays out of the line
+      // — the document id identifies it well enough.
+      log.warn({ err, reqId: requestId(), documentId: id }, "Could not delete local file:");
     });
   } else if (doc.file_path) {
     await supabase.storage.from("documents").remove([doc.file_path]).catch(() => {});
@@ -164,13 +178,15 @@ export async function deleteDocument(id: string): Promise<void> {
     const { deleteEntityChunks } = await import("@/lib/ai/embeddings");
     deleteEntityChunks(userId, id);
   } catch (err) {
-    console.warn("Failed to delete document vector chunks:", err);
+    log.warn({ err, reqId: requestId(), documentId: id }, "Failed to delete document vector chunks:");
   }
 
   // If deleted resume was matched to jobs, recalculate in background
   if (doc.type === "resume") {
     scheduleRescoreAll(userId);
   }
+
+  void logResourceActivity(userId, "document.delete", "document", id, { type: doc.type });
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
@@ -258,7 +274,7 @@ export async function getJobDocuments(jobId: string): Promise<JobDocument[]> {
     .eq("job_id", jobId);
 
   if (error) {
-    console.error("Error fetching job documents:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching job documents:");
     return [];
   }
 
@@ -362,7 +378,7 @@ export async function openDocumentFolder(id: string): Promise<void> {
     }
 
     child.on("error", (err) => {
-      console.error("Error opening document folder:", err);
+      log.error({ err, reqId: requestId() }, "Error opening document folder:");
       reject(new Error(`Failed to open folder: ${err.message}`));
     });
     child.unref();
@@ -443,6 +459,8 @@ export async function updateDocumentContent(
     throw new Error(`Failed to update document: ${error.message}`);
   }
 
+  void logResourceActivity(userId, "document.update", "document", id, { contentChars: content.length });
+
   revalidatePath("/documents");
   revalidatePath("/documents/" + id);
 }
@@ -492,6 +510,12 @@ export async function createLinkDocument(data: {
   if (insertError) {
     throw new Error(`Failed to save link document: ${insertError.message}`);
   }
+
+  void logResourceActivity(userId, "document.create", "document", doc.id, {
+    type,
+    source: "external_link",
+    isDefault: setDefault,
+  });
 
   revalidatePath("/documents");
   revalidatePath("/jobs");
@@ -544,6 +568,12 @@ export async function createRawTexDocument(data: {
 
   // Schedule AI extraction on text content for skills/roles matching
   scheduleResumeExtract(doc.id, texCode, userId, type);
+
+  void logResourceActivity(userId, "document.create", "document", doc.id, {
+    type,
+    source: "latex_raw",
+    isDefault: setDefault,
+  });
 
   revalidatePath("/documents");
   revalidatePath("/jobs");

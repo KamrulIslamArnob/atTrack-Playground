@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { createDbClient } from "@/lib/db/client";
+import { moduleLogger } from "@/lib/log";
+import { withRoute } from "@/lib/log/route";
+
+const log = moduleLogger("api");
 
 /**
  * POST /api/chat/feedback
  * Records user feedback (thumbs up / thumbs down) in both the dedicated `ai_feedback`
  * table and the message's `chat_messages.feedback` field.
  */
-export async function POST(req: Request) {
+export const POST = withRoute("/api/chat/feedback", async (req: Request) => {
   try {
     const { userId } = await getUser();
     if (!userId) {
@@ -62,16 +66,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, rating: null });
     }
   } catch (err) {
-    console.error("[chat/feedback] failed to save feedback:", err);
+    log.error({ err }, "[chat/feedback] failed to save feedback:");
     return NextResponse.json({ ok: false, error: "feedback_save_failed" }, { status: 500 });
   }
-}
+});
 
 /**
  * GET /api/chat/feedback
  * Returns user's feedback history & quality metrics.
  */
-export async function GET() {
+export const GET = withRoute("/api/chat/feedback", async () => {
   try {
     const { userId } = await getUser();
     if (!userId) {
@@ -87,7 +91,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, feedback: feedbackList ?? [] });
   } catch (err) {
-    console.error("[chat/feedback] load failed:", err);
+    log.error({ err }, "[chat/feedback] load failed:");
     return NextResponse.json({ ok: false, feedback: [] }, { status: 500 });
   }
-}
+});

@@ -1,6 +1,9 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.jobs-list");
 
 export interface JobsListParams {
   search?: string;
@@ -140,7 +143,7 @@ export async function getJobsList(params: JobsListParams = {}): Promise<JobsList
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching jobs:", error);
+    log.error({ err: error }, "Error fetching jobs:");
     return { jobs: [], total: 0, page: 1, perPage, totalPages: 0 };
   }
 
@@ -170,7 +173,7 @@ export async function getJobsForMention(): Promise<JobMentionOption[]> {
     .order("title", { ascending: true });
 
   if (error) {
-    console.error("Error fetching jobs for mention:", error);
+    log.error({ err: error }, "Error fetching jobs for mention:");
     return [];
   }
 

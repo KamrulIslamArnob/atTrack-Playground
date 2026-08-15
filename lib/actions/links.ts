@@ -15,6 +15,9 @@ import {
   UpdateQuickShortcutInput,
   DEFAULT_QUICK_SHORTCUTS,
 } from "@/lib/types/links";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.links");
 
 export async function getLinksAndCategories(): Promise<{
   categories: LinkCategory[];
@@ -30,7 +33,7 @@ export async function getLinksAndCategories(): Promise<{
     .order("sort_order", { ascending: true });
 
   if (catError) {
-    console.error("Error fetching link_categories:", catError);
+    log.error({ err: catError }, "Error fetching link_categories:");
   }
 
   let categories = (rawCategories as unknown as LinkCategory[]) ?? [];
@@ -63,7 +66,7 @@ export async function getLinksAndCategories(): Promise<{
     .order("created_at", { ascending: false });
 
   if (linksError) {
-    console.error("Error fetching links:", linksError);
+    log.error({ err: linksError }, "Error fetching links:");
   }
 
   const links = (rawLinks as unknown as SocialLink[]) ?? [];
@@ -105,7 +108,7 @@ export async function createLink(input: CreateLinkInput): Promise<{ success: boo
   const { data, error } = await from("links").insert(payload).select().single();
 
   if (error) {
-    console.error("Error creating link:", error);
+    log.error({ err: error }, "Error creating link:");
     return { success: false, error: "Failed to create link." };
   }
 
@@ -135,7 +138,7 @@ export async function updateLink(id: string, input: UpdateLinkInput): Promise<{ 
   const { error } = await from("links").update(updates).eq("id", id).eq("user_id", userId);
 
   if (error) {
-    console.error("Error updating link:", error);
+    log.error({ err: error }, "Error updating link:");
     return { success: false, error: "Failed to update link." };
   }
 
@@ -149,7 +152,7 @@ export async function deleteLink(id: string): Promise<{ success: boolean; error?
   const { error } = await from("links").delete().eq("id", id).eq("user_id", userId);
 
   if (error) {
-    console.error("Error deleting link:", error);
+    log.error({ err: error }, "Error deleting link:");
     return { success: false, error: "Failed to delete link." };
   }
 
@@ -190,7 +193,7 @@ export async function createCategory(input: CreateCategoryInput): Promise<{ succ
   const { data, error } = await from("link_categories").insert(payload).select().single();
 
   if (error) {
-    console.error("Error creating category:", error);
+    log.error({ err: error }, "Error creating category:");
     return { success: false, error: "Failed to create category." };
   }
 
@@ -211,7 +214,7 @@ export async function updateCategory(id: string, name: string): Promise<{ succes
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error updating category:", error);
+    log.error({ err: error }, "Error updating category:");
     return { success: false, error: "Failed to update category." };
   }
 
@@ -249,7 +252,7 @@ export async function deleteCategory(
   const { error } = await from("link_categories").delete().eq("id", id).eq("user_id", userId);
 
   if (error) {
-    console.error("Error deleting category:", error);
+    log.error({ err: error }, "Error deleting category:");
     return { success: false, error: "Failed to delete category." };
   }
 
@@ -284,7 +287,7 @@ export async function getQuickShortcuts(): Promise<QuickShortcut[]> {
     .order("sort_order", { ascending: true });
 
   if (error) {
-    console.error("Error fetching quick_shortcuts:", error);
+    log.error({ err: error }, "Error fetching quick_shortcuts:");
   }
 
   let shortcuts = (rawShortcuts as unknown as QuickShortcut[]) ?? [];
@@ -344,7 +347,7 @@ export async function createQuickShortcut(
   const { data, error } = await from("quick_shortcuts").insert(payload).select().single();
 
   if (error) {
-    console.error("Error creating quick shortcut:", error);
+    log.error({ err: error }, "Error creating quick shortcut:");
     return { success: false, error: "Failed to create quick shortcut." };
   }
 
@@ -373,7 +376,7 @@ export async function updateQuickShortcut(
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error updating quick shortcut:", error);
+    log.error({ err: error }, "Error updating quick shortcut:");
     return { success: false, error: "Failed to update quick shortcut." };
   }
 
@@ -387,7 +390,7 @@ export async function deleteQuickShortcut(id: string): Promise<{ success: boolea
   const { error } = await from("quick_shortcuts").delete().eq("id", id).eq("user_id", userId);
 
   if (error) {
-    console.error("Error deleting quick shortcut:", error);
+    log.error({ err: error }, "Error deleting quick shortcut:");
     return { success: false, error: "Failed to delete quick shortcut." };
   }
 

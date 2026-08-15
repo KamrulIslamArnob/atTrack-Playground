@@ -5,15 +5,19 @@ import { scheduleJobScore } from "@/lib/ai/background";
 import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
 import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
+import { moduleLogger } from "@/lib/log";
+import { withRoute } from "@/lib/log/route";
 
-export async function OPTIONS(req: Request) {
+const log = moduleLogger("api");
+
+export const OPTIONS = withRoute("/api/extension/add-job", async (req: Request) => {
   return new NextResponse(null, {
     status: 204,
     headers: getExtensionCorsHeaders(req),
   });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = withRoute("/api/extension/add-job", async (req: Request) => {
   const corsHeaders = getExtensionCorsHeaders(req);
   try {
     const { supabase, userId } = await getUser();
@@ -125,7 +129,7 @@ export async function POST(req: Request) {
       .single();
 
     if (jobError || !job) {
-      console.error("[Extension API] Job insert error:", jobError);
+      log.error({ err: jobError }, "[Extension API] Job insert error:");
       return NextResponse.json(
         { error: jobError?.message || "Failed to insert job into database." },
         { status: 500, headers: corsHeaders }
@@ -155,4 +159,4 @@ export async function POST(req: Request) {
       { status: 500, headers: corsHeaders }
     );
   }
-}
+});

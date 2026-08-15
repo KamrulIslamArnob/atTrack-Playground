@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/sqlite";
+import { withRoute } from "@/lib/log/route";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ interface UpdateBody {
  * a foreign key with ON UPDATE CASCADE — changing those would trigger
  * a cascading ripple the user didn't explicitly ask for.
  */
-export async function PUT(req: NextRequest) {
+export const PUT = withRoute("/api/database/update", async (req: Request) => {
   const body = (await req.json()) as UpdateBody;
   const { table, column, pkColumn, pkValue, value } = body;
 
@@ -105,4 +106,4 @@ export async function PUT(req: NextRequest) {
     .get(pkValue) as Record<string, unknown> | undefined;
 
   return NextResponse.json({ ok: true, row: updated });
-}
+});

@@ -1,6 +1,9 @@
 import { createDbClient } from "@/lib/db/client";
 import { getUser } from "@/lib/auth";
+import { moduleLogger } from "@/lib/log";
 import type { ChatSession, Message } from "./sessions";
+
+const log = moduleLogger("chat");
 
 // Server-side durable persistence for chatbot conversations. This is the
 // background tier of the two-tier write strategy (localStorage is the instant
@@ -121,7 +124,7 @@ export async function deleteSessionFromDb(sessionId: string): Promise<void> {
     const { deleteEntityChunks } = await import("@/lib/ai/embeddings");
     deleteEntityChunks(userId, sessionId);
   } catch (err) {
-    console.warn("Failed to delete chat session vector chunks:", err);
+    log.warn({ err, sessionId }, "Failed to delete chat session vector chunks:");
   }
 }
 
@@ -159,7 +162,7 @@ export async function clearAllSessionsFromDb(): Promise<void> {
       deleteEntityChunks(userId, sid);
     }
   } catch (err) {
-    console.warn("Failed to delete chat session vector chunks:", err);
+    log.warn({ err, sessionCount: sessionIds.length }, "Failed to delete chat session vector chunks:");
   }
 }
 

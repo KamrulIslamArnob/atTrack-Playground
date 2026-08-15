@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import sharp from "sharp";
+import { moduleLogger } from "@/lib/log";
+import { requestId } from "@/lib/log/request";
+import { logActivity, logResourceActivity } from "./activity-log";
+
+const log = moduleLogger("actions.contacts");
 
 export interface Contact {
   id: string;
@@ -145,7 +150,7 @@ export async function uploadContactAvatar(formData: FormData): Promise<string> {
     });
 
   if (uploadError) {
-    console.error("Error uploading contact avatar:", uploadError);
+    log.error({ err: uploadError, reqId: requestId() }, "Error uploading contact avatar:");
     throw new Error("Failed to upload contact photo.");
   }
 
@@ -164,7 +169,7 @@ export async function getContacts(): Promise<Contact[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Error fetching contacts:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching contacts:");
     return [];
   }
 
@@ -183,7 +188,7 @@ export async function getJobContacts(jobId: string): Promise<Contact[]> {
     .eq("job_id", jobId);
 
   if (error) {
-    console.error("Error fetching job contacts:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching job contacts:");
     return [];
   }
 
@@ -227,6 +232,8 @@ export async function createContact(
   if (error) throw new Error("Failed to create contact.");
 
   await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contact.id });
+
+  void logResourceActivity(userId, "contact.create", "contact", contact.id, { jobId });
 
   revalidatePath("/jobs/" + jobId);
   return { id: contact.id };
@@ -289,6 +296,8 @@ export async function updateContact(id: string, formData: FormData): Promise<voi
     .eq("user_id", userId);
 
   if (error) throw new Error("Failed to update contact.");
+
+  void logResourceActivity(userId, "contact.update", "contact", id, { companyId });
 }
 
 export async function updateContactNotes(id: string, notes: string | null): Promise<void> {
@@ -304,6 +313,7 @@ export async function updateContactNotes(id: string, notes: string | null): Prom
     .eq("user_id", userId);
 
   if (error) throw new Error("Failed to update contact notes.");
+  void logResourceActivity(userId, "contact.update", "contact", id, { fields: "notes" });
   revalidatePath("/crm");
 }
 
@@ -312,6 +322,8 @@ export async function deleteContact(id: string): Promise<void> {
 
   const { error } = await supabase.from("contacts").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error("Failed to delete contact.");
+
+  void logResourceActivity(userId, "contact.delete", "contact", id);
 }
 
 // --- CRM (/crm) — contacts organized by company, independent of any one job ---
@@ -327,7 +339,7 @@ export async function getCompanyContacts(companyId: string): Promise<Contact[]> 
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Error fetching company contacts:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching company contacts:");
     return [];
   }
 
@@ -346,7 +358,7 @@ export async function getOrphanContacts(): Promise<Contact[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Error fetching orphan contacts:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching orphan contacts:");
     return [];
   }
 
@@ -392,6 +404,8 @@ export async function createCompanyContact(
 
   if (error) throw new Error("Failed to create contact.");
 
+  void logResourceActivity(userId, "contact.create", "contact", contact.id, { companyId });
+
   revalidatePath("/crm");
   return { id: contact.id };
 }
@@ -414,6 +428,8 @@ export async function setContactCompany(contactId: string, companyId: string | n
     .eq("id", contactId)
     .eq("user_id", userId);
   if (error) throw new Error("Failed to link contact.");
+
+  void logResourceActivity(userId, "contact.update", "contact", contactId, { companyId, fields: "company" });
 
   revalidatePath("/crm");
 }
@@ -452,6 +468,8 @@ export async function createPersonContact(formData: FormData): Promise<{ id: str
 
   if (error) throw new Error("Failed to create contact.");
 
+  void logResourceActivity(userId, "contact.create", "contact", contact.id, { companyId });
+
   revalidatePath("/crm");
   return { id: contact.id };
 }
@@ -486,6 +504,9 @@ export async function deleteTag(tagToDelete: string): Promise<{ affectedCount: n
       affectedCount++;
     }
   }
+
+  // Tag text is the user's own wording, so only the count travels.
+  void logActivity(userId, "contact.tag.delete", { affectedCount });
 
   revalidatePath("/crm");
   return { affectedCount };
@@ -527,6 +548,8 @@ export async function renameTag(oldTag: string, newTag: string): Promise<{ affec
       affectedCount++;
     }
   }
+
+  void logActivity(userId, "contact.tag.rename", { affectedCount });
 
   revalidatePath("/crm");
   return { affectedCount };

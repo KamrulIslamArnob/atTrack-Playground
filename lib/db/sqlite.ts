@@ -58,8 +58,14 @@ function open(): DatabaseSync {
   db.exec("PRAGMA mmap_size = 268435456");
   db.exec("PRAGMA threads = 4");
 
+  // One line so a slow first launch is explainable. A fresh database runs the
+  // whole of schema.sql plus every column migration and takes seconds; an
+  // up-to-date one applies nothing and takes milliseconds — same code path,
+  // and without this there is no way to tell which one just happened.
+  const migrateStartedAt = Date.now();
+
   // Always apply forward-only column migrations so new schema columns land idempotently on existing DBs
-  addMissingColumns(db);
+  const applied = addMissingColumns(db);
 
   const versionRow = db.prepare("PRAGMA user_version").get() as { user_version: number } | undefined;
   const currentVersion = versionRow?.user_version ?? 0;
@@ -76,6 +82,8 @@ function open(): DatabaseSync {
     rebuildOmniSearchIndex(db);
     db.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION}`);
   }
+
+  dbLog.info({ event: "db.migrate", applied, durationMs: Date.now() - migrateStartedAt });
 
   return db;
 }
@@ -297,7 +305,9 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "job_deadlines", column: "type", ddl: "ALTER TABLE job_deadlines ADD COLUMN type TEXT NOT NULL DEFAULT 'deadline'" },
 ];
 
-function addMissingColumns(db: DatabaseSync) {
+/** Returns how many COLUMN_MIGRATIONS actually landed — zero on an
+ *  already-current database, the full list on a fresh one. */
+function addMissingColumns(db: DatabaseSync): number {
   // Ensure link_categories and links tables exist
   db.exec(`
     CREATE TABLE IF NOT EXISTS link_categories (
@@ -439,9 +449,11 @@ function addMissingColumns(db: DatabaseSync) {
     dbLog.warn({ err }, "Vector virtual tables skipped or not available:");
   }
 
+  let applied = 0;
   for (const { ddl } of COLUMN_MIGRATIONS) {
     try {
       db.exec(ddl);
+      applied++;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (!/duplicate column name|no such table/i.test(message)) throw err;
@@ -469,6 +481,8 @@ function addMissingColumns(db: DatabaseSync) {
       if (!/duplicate column name|no such column|no such table/i.test(message)) throw err;
     }
   }
+
+  return applied;
 }
 
 let hasRunMissingColumns = false;

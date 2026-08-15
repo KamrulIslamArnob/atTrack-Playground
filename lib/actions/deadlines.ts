@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import type { JobDeadline, ListKind } from "@/lib/types/board";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.deadlines");
 
 export async function getJobDeadlines(jobId: string): Promise<JobDeadline[]> {
   const { supabase, userId } = await getUser();
@@ -15,7 +18,7 @@ export async function getJobDeadlines(jobId: string): Promise<JobDeadline[]> {
     .order("due_date", { ascending: true });
 
   if (error) {
-    console.error("[Deadlines] Error fetching deadlines:", error);
+    log.error({ err: error }, "[Deadlines] Error fetching deadlines:");
     return [];
   }
 

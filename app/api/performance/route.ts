@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import packageJson from "@/package.json";
 import type { SystemPerformanceData } from "@/lib/types/electron";
+import { moduleLogger } from "@/lib/log";
+import { withRoute } from "@/lib/log/route";
+
+const log = moduleLogger("api");
 
 let lastCpuUsage: { user: number; system: number; timestamp: number } | null = null;
 let lastCpus: os.CpuInfo[] | null = null;
@@ -57,7 +61,7 @@ function getAppCpuUsage(cpuCount: number): number {
   return percent;
 }
 
-export async function GET() {
+export const GET = withRoute("/api/performance", async () => {
   try {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
@@ -129,7 +133,7 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("Error in performance API route:", err);
+    log.error({ err }, "Error in performance API route:");
     return NextResponse.json({ error: "Failed to fetch performance data" }, { status: 500 });
   }
-}
+});

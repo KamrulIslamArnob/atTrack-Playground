@@ -1,4 +1,7 @@
 import { getUser } from "@/lib/auth";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("ai.background");
 import { extractResumeContent, calculateMatchScore, type ResumeMatchData, type TotalJobInfo } from "@/lib/ai/resume";
 
 /** Rate-limit marker: tasks that throw this are re-queued (with backoff)
@@ -51,7 +54,7 @@ async function pump(): Promise<void> {
           const retries = task.retries + 1;
           setTimeout(() => enqueueBackground(task.key, task.run, retries), REQUEUE_DELAY_MS * retries);
         } else {
-          console.error(`[BgQueue] task "${task.key}" failed:`, err);
+          log.error({ err }, `[BgQueue] task "${task.key}" failed:`);
         }
       } finally {
         running.delete(key);
@@ -195,7 +198,7 @@ export async function recalculateAllMatchScores(userId: string): Promise<void> {
         }
       } catch (err) {
         if (err instanceof RateLimitError) throw err;
-        console.error(`Failed to score job ${job.id} against resume ${resume.id}:`, err);
+        log.error({ err }, `Failed to score job ${job.id} against resume ${resume.id}:`);
       }
     }
 
@@ -294,7 +297,7 @@ export async function scoreJob(userId: string, jobId: string, pickedResumeId?: s
       }
     } catch (err) {
       if (err instanceof RateLimitError) throw err;
-      console.error(`Failed to score job ${jobId} against resume ${resume.id}:`, err);
+      log.error({ err }, `Failed to score job ${jobId} against resume ${resume.id}:`);
     }
   }
 

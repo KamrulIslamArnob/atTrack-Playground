@@ -5,6 +5,9 @@ import { getUser } from "@/lib/auth";
 import { decrypt } from "@/lib/encryption";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.email");
 
 interface SendEmailParams {
   jobId: string;
@@ -58,7 +61,7 @@ export async function sendApplicationEmail(params: SendEmailParams): Promise<{ e
             content: fileBuffer,
           };
         } catch (e) {
-          console.error("Failed to read local resume file for email:", e);
+          log.error({ err: e }, "Failed to read local resume file for email:");
         }
       } else {
         // Download from storage fallback
@@ -187,12 +190,12 @@ export async function sendApplicationEmail(params: SendEmailParams): Promise<{ e
       .single();
 
     if (insertError) {
-      console.error("Failed to store email record:", insertError);
+      log.error({ err: insertError }, "Failed to store email record:");
     }
 
     return { success: true, emailId: emailRecord?.id };
   } catch (err) {
-    console.error("Failed to send email:", err);
+    log.error({ err }, "Failed to send email:");
     const message = err instanceof Error ? err.message : "Unknown error";
 
     // Store failed email record
@@ -228,7 +231,7 @@ export async function getApplicationEmails(jobId: string) {
     .order("sent_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to fetch application emails:", error);
+    log.error({ err: error }, "Failed to fetch application emails:");
     return [];
   }
 

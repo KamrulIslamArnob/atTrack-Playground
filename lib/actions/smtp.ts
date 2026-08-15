@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/encryption";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.smtp");
 
 export interface SmtpConfig {
   id: string;
@@ -81,7 +84,7 @@ export async function saveSmtpConfig(params: {
     );
 
   if (error) {
-    console.error("Error saving SMTP config:", error);
+    log.error({ err: error }, "Error saving SMTP config:");
     return { error: "Failed to save SMTP configuration." };
   }
 

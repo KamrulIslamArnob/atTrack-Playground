@@ -1,7 +1,7 @@
-import { NextRequest } from "next/server";
 import { createDbClient as createClient } from "@/lib/db/client";
 import { resolveProviderChain, generateTextStream } from "@/lib/ai/providers";
 import { getCachedOutput, setCachedOutput } from "@/lib/actions/ai-cache";
+import { withRoute } from "@/lib/log/route";
 
 const EMAIL_SYSTEM_PROMPT = `You are a professional job application email writer. Write a compelling, personalized application email that will stand out while avoiding spam filters.
 
@@ -35,7 +35,7 @@ Example 1 — Frontend role:
 Example 2 — Data analyst role:
 {"subject": "Interested in the Data Analyst Position — Python & SQL Background", "body": "Dear Recruiting Team,\\n\\nI'm writing to express my interest in the Data Analyst role at DataDriven Inc. My background in Python, SQL, and statistical modeling aligns well with the requirements you've outlined.\\n\\nIn my previous position at Analytics Co, I built automated reporting pipelines that reduced manual analysis time by 60% and developed predictive models that improved customer retention forecasting accuracy by 25%.\\n\\nI'm excited about DataDriven's focus on democratizing data access — it resonates with my belief that insights should be actionable for everyone, not just data teams.\\n\\nI would welcome the opportunity to discuss how my skills can support your data initiatives.\\n\\nThank you for your consideration."}`;
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute("/api/ai/generate-email", async (req: Request) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -111,7 +111,7 @@ The applicant's resume will be attached to this email. Write a personalized, pro
       Connection: "keep-alive",
     },
   });
-}
+});
 
 /**
  * Reads the cache-branch of a tee'd SSE stream, extracts the final

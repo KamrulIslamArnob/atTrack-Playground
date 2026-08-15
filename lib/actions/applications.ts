@@ -1,6 +1,9 @@
 "use server";
 
 import { getUser } from "@/lib/auth";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.applications");
 
 export interface ApplicationsParams {
   search?: string;
@@ -144,7 +147,7 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("Error fetching applications:", error);
+    log.error({ err: error }, "Error fetching applications:");
     return { applications: [], total: 0, page: 1, perPage, totalPages: 0 };
   }
 

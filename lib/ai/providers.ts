@@ -4,16 +4,19 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import type { LanguageModel } from "ai";
 import type { ProviderType, TaskType } from "@/lib/types/ai-providers";
+import { moduleLogger } from "@/lib/log";
+import { AI_EVENTS, aiEvent, aiWarn, newTraceId } from "@/lib/log/ai-events";
+import { fetchWithLog } from "@/lib/log/fetch";
+import { estimateCost } from "@/lib/ai/pricing";
 
-// ponytail: createAdminClient/decrypt/logAiUsage are imported lazily (dynamic
-// import) rather than statically, purely so `node lib/ai/providers.selfcheck.ts`
-// can load this module without resolving the "@/" tsconfig path alias — Node's
-// type-stripping (unlike webpack/turbopack) does not do path mapping, and
-// lib/db/* dodges the same issue by never using "@/" at all (see tsconfig.json's
-// comment). The self-check never exercises resolveProviderChain or a userId-
-// bearing logContext, so these imports are never actually triggered there.
-// Next.js resolves a dynamic "@/..." import identically to a static one, so
-// production behavior is unchanged.
+// createAdminClient/decrypt/logAiUsage stay dynamic imports: they drag the DB
+// client and a "use server" module into the graph of every path that loads this
+// file, including ones that never log a row.
+//
+// The "@/" alias is NOT a constraint here. An earlier version of this comment
+// said these had to be lazy so `node lib/ai/providers.selfcheck.ts` could load
+// the module without tsconfig path mapping — no such file exists, so the static
+// "@/" imports above are safe.
 /** Telemetry context threaded through every generation path. `traceId` ties
  *  each provider hop back to the chat turn that caused it — the chatbot
  *  pipeline mints one per request and passes it down. */
@@ -24,12 +27,19 @@ export interface AiLogContext {
   metadata?: Record<string, unknown>;
 }
 
+const aiLog = moduleLogger("ai");
+
 type LogUsageParams = {
   userId: string;
   action: string;
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
+  cachedTokens?: number;
+  /** null when the model has no entry in lib/ai/pricing.ts. Deliberately not
+   *  0 — see recordHop. */
+  costUsd?: number | null;
+  pricing?: "known" | "unknown";
   durationMs?: number;
   status?: "success" | "error";
   error?: string;
@@ -47,7 +57,101 @@ async function logUsage(params: LogUsageParams): Promise<void> {
  *  A failed log must not fail the generation. */
 function logUsageDetached(params: LogUsageParams): void {
   void logUsage(params).catch((err) => {
-    console.warn("AI usage logging failed (non-fatal):", err);
+    aiLog.warn({ err }, "AI usage logging failed (non-fatal):");
+  });
+}
+
+/** Everything one provider attempt should record: the `ai.provider.hop` line,
+ *  the `ai.usage` line, and the `ai_usage_logs` row — including what it cost.
+ *
+ *  Every generation path funnels through here so the cost is estimated in
+ *  exactly one place. It used to be estimated in none: `cost_usd` was written
+ *  as a literal 0 on every row, so the admin AI-usage page summed to $0.0000
+ *  no matter how much had been spent.
+ *
+ *  An unpriced model reports `costUsd: null` with `pricing: "unknown"`. The
+ *  database column keeps taking a number (the admin pages call `.toFixed(4)`
+ *  on it unguarded), so the null is carried in `pricing` instead — that way a
+ *  row that genuinely cost nothing stays distinguishable from one whose price
+ *  we simply do not know. */
+function recordHop(p: {
+  logContext: AiLogContext;
+  traceId: string;
+  provider: ResolvedProvider;
+  /** What the provider actually served, when it reports something different
+   *  from what was configured. */
+  model?: string;
+  /** 0-based position in the fallback chain. */
+  attempt: number;
+  startedAt: number;
+  ok: boolean;
+  streaming: boolean;
+  /** Time to first token. The number that decides whether the UI feels alive. */
+  ttftMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  error?: string;
+  err?: unknown;
+}): void {
+  const durationMs = Date.now() - p.startedAt;
+  const model = p.model ?? p.provider.model;
+  const hasTokens = p.inputTokens != null || p.outputTokens != null;
+
+  const { costUsd, pricing } = hasTokens
+    ? estimateCost(model, {
+        inputTokens: p.inputTokens,
+        outputTokens: p.outputTokens,
+        cachedTokens: p.cachedTokens,
+      })
+    : { costUsd: null, pricing: "unknown" as const };
+
+  const hop = {
+    traceId: p.traceId,
+    action: p.logContext.action,
+    provider: p.provider.name,
+    providerType: p.provider.provider_type,
+    model,
+    attempt: p.attempt,
+    ok: p.ok,
+    streaming: p.streaming,
+    ...(p.ttftMs != null ? { ttftMs: p.ttftMs } : {}),
+    durationMs,
+  };
+
+  // A failed hop is a warning, not an error: the chain falls through to the
+  // next provider and the user still gets an answer.
+  if (p.ok) aiEvent(AI_EVENTS.providerHop, hop);
+  else aiWarn(AI_EVENTS.providerHop, { ...hop, errorMessage: p.error }, p.err);
+
+  if (hasTokens) {
+    aiEvent(AI_EVENTS.usage, {
+      traceId: p.traceId,
+      action: p.logContext.action,
+      provider: p.provider.name,
+      model,
+      inputTokens: p.inputTokens ?? 0,
+      outputTokens: p.outputTokens ?? 0,
+      ...(p.cachedTokens != null ? { cachedTokens: p.cachedTokens } : {}),
+      costUsd,
+      pricing,
+      durationMs,
+    });
+  }
+
+  if (!p.logContext.userId) return;
+  logUsageDetached({
+    userId: p.logContext.userId,
+    action: p.logContext.action,
+    model: `${p.provider.name}/${model}`,
+    ...(p.inputTokens != null ? { inputTokens: p.inputTokens } : {}),
+    ...(p.outputTokens != null ? { outputTokens: p.outputTokens } : {}),
+    ...(p.cachedTokens != null ? { cachedTokens: p.cachedTokens } : {}),
+    costUsd,
+    pricing,
+    durationMs,
+    ...(p.ok ? {} : { status: "error" as const, error: p.error }),
+    metadata: p.logContext.metadata,
   });
 }
 
@@ -247,7 +351,7 @@ export async function callAnthropic(provider: ResolvedProvider, input: GenerateT
   }));
   content.push({ type: "text", text: input.userPrompt });
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchWithLog("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -299,7 +403,7 @@ export async function callOpenAICompatible(
   ];
 
   const baseUrl = (provider.base_url || "").replace(/\/+$/, "");
-  const res = await fetch(`${baseUrl}/chat/completions`, {
+  const res = await fetchWithLog(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -357,39 +461,52 @@ export async function runChain(
     throw new Error("No AI provider configured for this task. Please add an API key in Settings > AI Providers.");
   }
 
+  // One id for the whole chain. A caller that already has a trace (the chat
+  // pipeline) passes it down so its hops join that turn; a caller without one
+  // (background rescore, resume match, email drafting) gets its own.
+  const traceId = logContext.traceId ?? newTraceId();
+
   const errors: string[] = [];
-  for (const provider of chain) {
+  for (const [attempt, provider] of chain.entries()) {
     const startedAt = Date.now();
     try {
       const result = await withTimeout(resolveCaller(provider.provider_type)(provider, input), HOP_TIMEOUT_MS, provider.name);
-      if (logContext.userId) {
-        logUsageDetached({
-          userId: logContext.userId,
-          action: logContext.action,
-          model: `${provider.name}/${result.model}`,
-          inputTokens: result.inputTokens ?? 0,
-          outputTokens: result.outputTokens ?? 0,
-          durationMs: Date.now() - startedAt,
-          metadata: logContext.metadata,
-        });
-      }
+      recordHop({
+        logContext,
+        traceId,
+        provider,
+        model: result.model,
+        attempt,
+        startedAt,
+        ok: true,
+        streaming: false,
+        inputTokens: result.inputTokens ?? 0,
+        outputTokens: result.outputTokens ?? 0,
+      });
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       errors.push(`${provider.name}: ${message}`);
-      if (logContext.userId) {
-        logUsageDetached({
-          userId: logContext.userId,
-          action: logContext.action,
-          model: `${provider.name}/${provider.model}`,
-          durationMs: Date.now() - startedAt,
-          status: "error",
-          error: message,
-          metadata: logContext.metadata,
-        });
-      }
+      recordHop({
+        logContext,
+        traceId,
+        provider,
+        attempt,
+        startedAt,
+        ok: false,
+        streaming: false,
+        error: message,
+        err,
+      });
     }
   }
+
+  aiWarn(AI_EVENTS.providerHop, {
+    traceId,
+    action: logContext.action,
+    chainLength: chain.length,
+    exhausted: true,
+  }, undefined, "All providers failed");
 
   throw new Error(`All providers failed: ${errors.join("; ")}`);
 }
@@ -459,7 +576,7 @@ async function* streamOpenAICompatible(
   ];
 
   const baseUrl = (provider.base_url || "").replace(/\/+$/, "");
-  const res = await fetch(`${baseUrl}/chat/completions`, {
+  const res = await fetchWithLog(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -512,7 +629,7 @@ async function* streamAnthropic(
   }));
   content.push({ type: "text", text: input.userPrompt });
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchWithLog("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -578,15 +695,20 @@ export async function generateTextStream(
   }
 
   const encoder = new TextEncoder();
+  const traceId = logContext.traceId ?? newTraceId();
 
   return new ReadableStream({
     async start(controller) {
       const errors: string[] = [];
 
-      for (const provider of chain) {
+      for (const [attempt, provider] of chain.entries()) {
         const startedAt = Date.now();
         let enqueuedChunk = false;
         let usageCaptured = false;
+        /** Set the instant the first byte reaches the client. The gap between
+         *  this and durationMs is the difference between a UI that feels
+         *  alive and one that looks hung. */
+        let ttftMs: number | undefined;
 
         try {
           if (provider.provider_type === "gemini") {
@@ -615,19 +737,24 @@ export async function generateTextStream(
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
                 );
+                if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
                 enqueuedChunk = true;
               }
               const usage = chunk.value.usageMetadata;
-              if (usage && !usageCaptured && logContext.userId) {
+              if (usage && !usageCaptured) {
                 usageCaptured = true;
-                logUsageDetached({
-                  userId: logContext.userId,
-                  action: logContext.action,
-                  model: `${provider.name}/${provider.model}`,
+                recordHop({
+                  logContext,
+                  traceId,
+                  provider,
+                  attempt,
+                  startedAt,
+                  ok: true,
+                  streaming: true,
+                  ttftMs,
                   inputTokens: usage.promptTokenCount ?? 0,
                   outputTokens: usage.candidatesTokenCount ?? 0,
-                  durationMs: Date.now() - startedAt,
-                  metadata: logContext.metadata,
+                  cachedTokens: usage.cachedContentTokenCount ?? undefined,
                 });
               }
               chunk = await iterator.next();
@@ -648,32 +775,41 @@ export async function generateTextStream(
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)
                 );
+                if (!enqueuedChunk) ttftMs = Date.now() - startedAt;
                 enqueuedChunk = true;
               }
-              if ((inputTokens != null || outputTokens != null) && !usageCaptured && logContext.userId) {
+              if ((inputTokens != null || outputTokens != null) && !usageCaptured) {
                 usageCaptured = true;
-                logUsageDetached({
-                  userId: logContext.userId,
-                  action: logContext.action,
-                  model: `${provider.name}/${provider.model}`,
+                recordHop({
+                  logContext,
+                  traceId,
+                  provider,
+                  attempt,
+                  startedAt,
+                  ok: true,
+                  streaming: true,
+                  ttftMs,
                   inputTokens: inputTokens ?? 0,
                   outputTokens: outputTokens ?? 0,
-                  durationMs: Date.now() - startedAt,
-                  metadata: logContext.metadata,
                 });
               }
               step = await iterator.next();
             }
 
             // Providers that never emit a usage frame still get one log line.
-            if (enqueuedChunk && !usageCaptured && logContext.userId) {
+            // No token counts means no cost estimate is possible — the hop is
+            // still recorded so the trace is not missing an attempt.
+            if (enqueuedChunk && !usageCaptured) {
               usageCaptured = true;
-              logUsageDetached({
-                userId: logContext.userId,
-                action: logContext.action,
-                model: `${provider.name}/${provider.model}`,
-                durationMs: Date.now() - startedAt,
-                metadata: logContext.metadata,
+              recordHop({
+                logContext,
+                traceId,
+                provider,
+                attempt,
+                startedAt,
+                ok: true,
+                streaming: true,
+                ttftMs,
               });
             }
           }
@@ -686,17 +822,18 @@ export async function generateTextStream(
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           errors.push(`${provider.name}: ${message}`);
-          if (logContext.userId) {
-            logUsageDetached({
-              userId: logContext.userId,
-              action: logContext.action,
-              model: `${provider.name}/${provider.model}`,
-              durationMs: Date.now() - startedAt,
-              status: "error",
-              error: message,
-              metadata: logContext.metadata,
-            });
-          }
+          recordHop({
+            logContext,
+            traceId,
+            provider,
+            attempt,
+            startedAt,
+            ok: false,
+            streaming: true,
+            ttftMs,
+            error: message,
+            err,
+          });
           if (enqueuedChunk) {
             // Mid-stream failure
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
@@ -720,7 +857,7 @@ export async function generateTextStream(
  *  Gemini. Capped at 20k chars — plenty for a job posting, keeps the prompt
  *  bounded. */
 export async function fetchUrlAsText(url: string): Promise<string> {
-  const res = await fetch(url, {
+  const res = await fetchWithLog(url, {
     headers: { "user-agent": "Mozilla/5.0 (compatible; atTrack/1.0)" },
     signal: AbortSignal.timeout(15_000),
   });
@@ -845,7 +982,7 @@ async function callOpenAICompatibleToolRound(
   temperature?: number
 ): Promise<ProviderToolRoundResult> {
   const baseUrl = (provider.base_url || "").replace(/\/+$/, "");
-  const res = await fetch(`${baseUrl}/chat/completions`, {
+  const res = await fetchWithLog(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -887,7 +1024,7 @@ async function callAnthropicToolRound(
   toolDeclarations: Record<string, unknown>[],
   temperature?: number
 ): Promise<ProviderToolRoundResult> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchWithLog("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -962,10 +1099,14 @@ export async function generateTextWithTools(
     return { text: r.text, toolCalls };
   }
 
-  const startedAt = Date.now();
+  const lc: AiLogContext = logContext ?? { action: "ai_chatbot" };
+  const traceId = lc.traceId ?? newTraceId();
   let lastError = "";
 
-  for (const provider of chain) {
+  for (const [attempt, provider] of chain.entries()) {
+    // Per-hop, not per-call: a shared clock would bill the second provider for
+    // the time the first one spent timing out.
+    const startedAt = Date.now();
     try {
       const records: ToolCallRecord[] = [];
       // Conversation accumulators per provider shape.
@@ -992,16 +1133,16 @@ export async function generateTextWithTools(
 
         if (!roundResult.functionCalls || roundResult.functionCalls.length === 0) {
           const text = roundResult.text ?? "";
-          if (logContext?.userId) {
-            logUsageDetached({
-              userId: logContext.userId,
-              action: logContext.action,
-              model: `${provider.name}/${provider.model}`,
-              outputTokens: 0,
-              durationMs: Date.now() - startedAt,
-              metadata: logContext.metadata,
-            });
-          }
+          recordHop({
+            logContext: lc,
+            traceId,
+            provider,
+            attempt,
+            startedAt,
+            ok: true,
+            streaming: false,
+            outputTokens: 0,
+          });
           return { text, toolCalls: records };
         }
 
@@ -1070,17 +1211,17 @@ export async function generateTextWithTools(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       lastError = `${provider.name}: ${message}`;
-      if (logContext?.userId) {
-        logUsageDetached({
-          userId: logContext.userId,
-          action: logContext.action,
-          model: `${provider.name}/${provider.model}`,
-          durationMs: Date.now() - startedAt,
-          status: "error",
-          error: message,
-          metadata: logContext.metadata,
-        });
-      }
+      recordHop({
+        logContext: lc,
+        traceId,
+        provider,
+        attempt,
+        startedAt,
+        ok: false,
+        streaming: false,
+        error: message,
+        err,
+      });
     }
   }
 

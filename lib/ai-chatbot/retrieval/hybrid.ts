@@ -1,6 +1,9 @@
 import { getDb } from "@/lib/db/sqlite";
 import { generateEmbedding } from "@/lib/ai/embeddings";
+import { moduleLogger } from "@/lib/log";
 import type { RetrievedMemory } from "./types";
+
+const log = moduleLogger("chat");
 
 /**
  * Retrieves semantically relevant user memory facts using vec_memories.
@@ -61,7 +64,7 @@ export async function getSemanticMemories(
       .sort((a, b) => a.distance - b.distance)
       .slice(0, limit);
   } catch (err) {
-    console.warn("Vector memory search failed, falling back to relational query:", err);
+    log.warn({ err }, "Vector memory search failed, falling back to relational query:");
     const rows = db
       .prepare(
         "SELECT id, title, description FROM ai_memories WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?"

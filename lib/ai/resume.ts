@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("ai.resume");
 
 export const resumeMatchDataSchema = z.object({
   skills: z.array(z.string()).default([]),
@@ -143,7 +146,7 @@ ${pdfText.slice(0, 12000)}`;
   try {
     return resumeMatchDataSchema.parse(parsed);
   } catch (schemaErr) {
-    console.warn(`[Resume Parser] Schema validation soft-fallback after ${Date.now() - startedAt}ms:`, schemaErr);
+    log.warn({ err: schemaErr }, `[Resume Parser] Schema validation soft-fallback after ${Date.now() - startedAt}ms:`);
     const raw = parsed as Record<string, unknown>;
     return {
       skills: Array.isArray(raw?.skills) ? raw.skills.map(String) : [],
@@ -227,7 +230,7 @@ Example format:
   try {
     parsed = parseJsonResponse(result.text);
   } catch (err) {
-    console.warn(`[Match Score] Parse failed, applying score fallback (70):`, err);
+    log.warn({ err }, `[Match Score] Parse failed, applying score fallback (70):`);
     return {
       score: 70,
       reasoning: "AI scoring parsed with fallback criteria.",

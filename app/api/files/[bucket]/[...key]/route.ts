@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { isPublicBucket, readObject, verifyObjectToken } from "@/lib/db/storage";
+import { withRoute } from "@/lib/log/route";
 
 // Serves objects that used to come from Supabase Storage URLs.
 //
@@ -29,10 +30,13 @@ function contentTypeFor(key: string): string {
   return CONTENT_TYPES[key.slice(dot).toLowerCase()] ?? "application/octet-stream";
 }
 
-export async function GET(
-  request: NextRequest,
+// `request` is typed as the platform `Request` rather than `NextRequest` so it
+// fits withRoute's signature; the only NextRequest member used here was
+// `nextUrl.searchParams`, which `new URL(request.url)` gives identically.
+export const GET = withRoute("/api/files/[bucket]/[...key]", async (
+  request: Request,
   context: { params: Promise<{ bucket: string; key: string[] }> }
-) {
+) => {
   const { bucket, key: segments } = await context.params;
   const key = segments.map(decodeURIComponent).join("/");
 
@@ -44,8 +48,9 @@ export async function GET(
   let authorized = isPublicBucket(bucket);
 
   if (!authorized) {
-    const exp = Number(request.nextUrl.searchParams.get("exp"));
-    const token = request.nextUrl.searchParams.get("token");
+    const searchParams = new URL(request.url).searchParams;
+    const exp = Number(searchParams.get("exp"));
+    const token = searchParams.get("token");
 
     if (token && exp) {
       authorized = verifyObjectToken(bucket, key, exp, token);
@@ -80,4 +85,4 @@ export async function GET(
   } catch {
     return new NextResponse("Not found", { status: 404 });
   }
-}
+});

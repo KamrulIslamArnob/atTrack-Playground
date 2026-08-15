@@ -16,30 +16,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const statusColors: Record<string, string> = {
-  saved: "#94A3B8",
-  interested: "#3B82F6",
-  preparing: "#F59E0B",
-  applied: "#8B5CF6",
-  interview: "#84cc16",
-  offer: "#059669",
-  accepted: "#047857",
-  rejected: "#EF4444",
-  withdrawn: "#6B7280",
-};
-
-const statusLabels: Record<string, string> = {
-  saved: "Saved",
-  interested: "Interested",
-  preparing: "Preparing",
-  applied: "Applied",
-  interview: "Interview",
-  offer: "Offer",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
-};
-
 const actionColors: Record<string, string> = {
   create: "#10B981",
   update: "#3B82F6",

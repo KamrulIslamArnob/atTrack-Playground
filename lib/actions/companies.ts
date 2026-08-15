@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
+import { moduleLogger } from "@/lib/log";
+import { requestId } from "@/lib/log/request";
+import { logResourceActivity } from "./activity-log";
+
+const log = moduleLogger("actions.companies");
 
 /** job-detail-sheet Company tab — manual enrichment, no AI. */
 export async function updateCompany(companyId: string, formData: FormData): Promise<void> {
@@ -28,6 +33,7 @@ export async function updateCompany(companyId: string, formData: FormData): Prom
 
   if (error) throw new Error("Failed to update company.");
 
+  void logResourceActivity(userId, "company.update", "company", companyId, { fields: "profile" });
   revalidatePath("/jobs");
 }
 
@@ -49,6 +55,7 @@ export async function updateCompanyColor(companyId: string, color: string | null
     .eq("id", companyId)
     .eq("user_id", userId);
   if (error) throw new Error("Failed to update company color.");
+  void logResourceActivity(userId, "company.update", "company", companyId, { fields: "color" });
   revalidatePath("/crm");
 }
 
@@ -108,7 +115,7 @@ export async function getCompanyJobs(companyId: string): Promise<CompanyJob[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching company jobs:", error);
+    log.error({ err: error, reqId: requestId() }, "Error fetching company jobs:");
     return [];
   }
 
@@ -143,6 +150,7 @@ export async function createCompany(formData: FormData): Promise<{ id: string }>
 
   if (error) throw new Error("Failed to create company.");
 
+  void logResourceActivity(userId, "company.create", "company", company.id);
   revalidatePath("/crm");
   return { id: company.id };
 }
@@ -170,6 +178,7 @@ export async function updateCompanyDetails(
 
   if (error) throw new Error("Failed to update company.");
 
+  void logResourceActivity(userId, "company.update", "company", companyId, { fields: "details" });
   revalidatePath("/crm");
 
   const [{ count: jobCount }, { count: contactCount }] = await Promise.all([
@@ -214,5 +223,6 @@ export async function deleteCompany(companyId: string): Promise<void> {
 
   if (error) throw new Error("Failed to delete company.");
 
+  void logResourceActivity(userId, "company.delete", "company", companyId);
   revalidatePath("/crm");
 }

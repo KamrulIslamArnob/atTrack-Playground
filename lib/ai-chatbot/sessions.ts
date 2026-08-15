@@ -1,3 +1,9 @@
+// This module is imported by client components (the chatbot page pulls
+// CHAT_PERSONAS, readCache and fetchSessions straight out of it), so it must
+// never reach for the pino logger: lib/log imports node:fs, and dragging that
+// into a browser chunk fails the Turbopack build outright. The two catch
+// blocks below run in the browser against localStorage and use console
+// deliberately — eslint.config.mjs exempts this file from no-console.
 import type { AIModel, ChatPersona } from "./types";
 
 export type { AIModel, ChatPersona };

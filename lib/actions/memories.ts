@@ -3,6 +3,9 @@
 import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { AiMemory, CreateMemoryInput, UpdateMemoryInput } from "@/lib/types/memories";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.memories");
 
 export async function getMemories(): Promise<AiMemory[]> {
   const { supabase, userId } = await getUser();
@@ -63,7 +66,7 @@ export async function createMemory(input: CreateMemoryInput): Promise<AiMemory> 
     const { indexMemoryVector } = await import("@/lib/ai/embeddings");
     await indexMemoryVector(newMemory.id, userId, newMemory.title, newMemory.description);
   } catch (err) {
-    console.warn("Failed to index memory vector:", err);
+    log.warn({ err }, "Failed to index memory vector:");
   }
 
   revalidatePath("/preferences/ai-prompts");
@@ -102,7 +105,7 @@ export async function updateMemory(id: string, input: UpdateMemoryInput): Promis
     const { indexMemoryVector } = await import("@/lib/ai/embeddings");
     await indexMemoryVector(id, userId, title, description);
   } catch (err) {
-    console.warn("Failed to update memory vector:", err);
+    log.warn({ err }, "Failed to update memory vector:");
   }
 
   revalidatePath("/preferences/ai-prompts");
@@ -127,7 +130,7 @@ export async function deleteMemory(id: string): Promise<void> {
     const { deleteMemoryVector } = await import("@/lib/ai/embeddings");
     deleteMemoryVector(id);
   } catch (err) {
-    console.warn("Failed to delete memory vector:", err);
+    log.warn({ err }, "Failed to delete memory vector:");
   }
 
   revalidatePath("/preferences/ai-prompts");

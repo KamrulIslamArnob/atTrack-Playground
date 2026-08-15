@@ -7,12 +7,16 @@ import {
   clearAllSessionsFromDb,
 } from "@/lib/ai-chatbot/persistence";
 import type { ChatSession, Message } from "@/lib/ai-chatbot/sessions";
+import { moduleLogger } from "@/lib/log";
+import { withRoute } from "@/lib/log/route";
+
+const log = moduleLogger("api");
 
 // PUT /api/chat/sessions  -> durable write to SQLite.
 // Awaited by the client on every session mutation. SQLite is the authority for
 // chat history, so a failure here has to reach the caller: it reports 500 and
 // the client surfaces it rather than showing a save that never happened.
-export async function PUT(req: Request) {
+export const PUT = withRoute("/api/chat/sessions", async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
     const session = body?.session as ChatSession | undefined;
@@ -29,14 +33,14 @@ export async function PUT(req: Request) {
     // which made a total write failure look identical to a successful save to
     // every caller that checks `res.ok` — the client then told the user their
     // chat was saved when nothing had been written.
-    console.error("[chat/sessions] durable upsert failed:", err);
+    log.error({ err }, "[chat/sessions] durable upsert failed:");
     return NextResponse.json({ ok: false, error: "upsert_failed" }, { status: 500 });
   }
-}
+});
 
 // GET /api/chat/sessions -> load durable sessions from SQLite, the authority
 // for chat history on app open.
-export async function GET() {
+export const GET = withRoute("/api/chat/sessions", async () => {
   try {
     const { userId } = await getUser();
     const sessions = await loadSessionsFromDb();
@@ -48,13 +52,13 @@ export async function GET() {
     // wrote it over the localStorage mirror, blanking a sidebar whose history
     // was still sitting in the database. A 5xx makes `fetchSessions()` throw,
     // and the load path already falls back to the mirror on a throw.
-    console.error("[chat/sessions] load failed:", err);
+    log.error({ err }, "[chat/sessions] load failed:");
     return NextResponse.json({ error: "load_failed" }, { status: 500 });
   }
-}
+});
 
 // DELETE /api/chat/sessions -> permanent hard delete of session and associated vectors.
-export async function DELETE(req: Request) {
+export const DELETE = withRoute("/api/chat/sessions", async (req: Request) => {
   try {
     const { searchParams } = new URL(req.url);
     const idFromQuery = searchParams.get("id");
@@ -79,7 +83,7 @@ export async function DELETE(req: Request) {
     await deleteSessionFromDb(targetId);
     return NextResponse.json({ ok: true, deletedId: targetId });
   } catch (err) {
-    console.error("[chat/sessions] delete failed:", err);
+    log.error({ err }, "[chat/sessions] delete failed:");
     return NextResponse.json({ ok: false, error: "delete_failed" }, { status: 500 });
   }
-}
+});
