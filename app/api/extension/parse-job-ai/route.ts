@@ -2,29 +2,34 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { resolveProviderChain, generateText } from "@/lib/ai/providers";
 import { scrapeWithFirecrawl } from "@/lib/services/firecrawl";
+import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
 
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders,
+    headers: getExtensionCorsHeaders(req),
   });
 }
 
 export async function POST(req: Request) {
+  const corsHeaders = getExtensionCorsHeaders(req);
   try {
     const { userId } = await getUser();
+
+    if (!verifyExtensionAuth(req.headers.get("authorization"), userId)) {
+      return NextResponse.json(
+        { error: "Couldn't verify the extension token. Paste the secret from atTrack Settings into the extension popup." },
+        { status: 401, headers: corsHeaders }
+      );
+    }
 
     const body = await req.json();
     const url = typeof body.url === "string" ? body.url.trim() : "";
     const pageText = typeof body.pageText === "string" ? body.pageText.trim() : "";
     const layer1Data = typeof body.layer1Data === "object" && body.layer1Data ? body.layer1Data : {};
-    const firecrawlApiKey = typeof body.firecrawlApiKey === "string" ? body.firecrawlApiKey.trim() : process.env.FIRECRAWL_API_KEY;
+    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
 
     if (!url && !pageText && !layer1Data.title) {
       return NextResponse.json(

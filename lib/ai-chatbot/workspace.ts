@@ -5,6 +5,7 @@ import type { ChatPersona, ContextSource } from "./types";
 export interface WorkspaceJobDeadline {
   id?: string;
   title: string;
+  type?: "deadline" | "milestone";
   dueDate: string;
   stageKind?: string | null;
   isCompleted?: boolean;
@@ -45,8 +46,9 @@ export interface WorkspaceSnapshot {
   resumes: WorkspaceResume[];
   contacts: WorkspaceContact[];
   links?: { id: string; title: string; url: string; category: string }[];
+  memories?: { id: string; title: string | null; description: string; updatedAt?: string }[];
   aiToolPrompts?: number;
-  counts: { jobs: number; resumes: number; contacts: number; links?: number; aiToolPrompts?: number };
+  counts: { jobs: number; resumes: number; contacts: number; links?: number; memories?: number; aiToolPrompts?: number };
   generatedAt?: string;
 }
 
@@ -90,6 +92,7 @@ export function deriveWorkspaceSources(
   const jobCount = snapshot?.counts?.jobs ?? snapshot?.jobs?.length ?? 0;
   const contactCount = snapshot?.counts?.contacts ?? snapshot?.contacts?.length ?? 0;
   const linkCount = snapshot?.links?.length ?? 0;
+  const memoryCount = snapshot?.counts?.memories ?? snapshot?.memories?.length ?? 0;
   const promptCount = snapshot?.aiToolPrompts ?? snapshot?.counts?.aiToolPrompts ?? 0;
 
   const now = "Just now";
@@ -118,22 +121,22 @@ export function deriveWorkspaceSources(
     {
       id: "contacts",
       type: "contacts",
-      name: "Contacts CRM",
+      name: "Contacts CRM & Social Links",
       kind: "native",
-      recordCount: contactCount,
-      lastSync: contactCount > 0 ? now : null,
+      recordCount: contactCount + linkCount,
+      lastSync: contactCount > 0 || linkCount > 0 ? now : null,
       enabled: true,
       toolName: "search_contacts",
     },
     {
-      id: "links",
-      type: "links",
-      name: "Social Links",
+      id: "memories",
+      type: "memories",
+      name: "AI Memories",
       kind: "native",
-      recordCount: linkCount,
-      lastSync: linkCount > 0 ? now : null,
+      recordCount: memoryCount,
+      lastSync: memoryCount > 0 ? now : null,
       enabled: true,
-      toolName: "search_links",
+      toolName: "search_memories",
     },
     {
       id: "ai_prompts",
@@ -141,7 +144,7 @@ export function deriveWorkspaceSources(
       name: "AI Prompts",
       kind: "native",
       recordCount: promptCount,
-      lastSync: promptCount > 0 ? now : null,
+      lastSync: now,
       enabled: true,
       toolName: "search_ai_prompts",
     },
@@ -180,8 +183,11 @@ export function deriveWorkspaceSources(
     },
   ];
 
-  // Merge in user-defined custom sources (added via the Connect modal).
-  return [...seeded, ...customSources];
+  // Merge in user-defined custom sources, omitting legacy native types like "links".
+  const filteredCustom = customSources.filter(
+    (s) => s.id !== "links" && s.type !== "links" && !seeded.some((p) => p.id === s.id)
+  );
+  return [...seeded, ...filteredCustom];
 }
 
 export async function fetchWorkspaceSources(): Promise<ContextSource[]> {
@@ -237,7 +243,7 @@ export function buildWorkspaceContextBlock(
   };
 
   const lines: string[] = [];
-  lines.push("The user is working inside AtTrack, a personal career workspace. Relevant local data:");
+  lines.push("The user is working inside atTrack, a personal career workspace. Relevant local data:");
 
   if (isEnabled("jobs") && snapshot.jobs.length > 0) {
     const top = snapshot.jobs.slice(0, 15);
@@ -280,10 +286,32 @@ export function buildWorkspaceContextBlock(
     );
   }
 
+  if ((isEnabled("contacts") || isEnabled("links")) && snapshot.links && snapshot.links.length > 0) {
+    lines.push(
+      `- Saved links & resources: ${snapshot.links.length} links (e.g. ${snapshot.links
+        .slice(0, 3)
+        .map((l) => l.title)
+        .join(", ")})`
+    );
+  }
+
+  if (isEnabled("memories") && snapshot.memories && snapshot.memories.length > 0) {
+    lines.push(`- Saved AI Memories & Markdown Context (${snapshot.memories.length} entries):`);
+    for (const mem of snapshot.memories.slice(0, 10)) {
+      const titleStr = mem.title ? `[${mem.title}] ` : "";
+      const textPreview = mem.description.length > 200 ? `${mem.description.slice(0, 200)}...` : mem.description;
+      lines.push(`  · ${titleStr}${textPreview.replace(/\n+/g, " ")}`);
+    }
+  }
+
+  if (isEnabled("ai_prompts") && (snapshot.aiToolPrompts ?? 0) > 0) {
+    lines.push(`- Inbuilt AI prompt templates: ${snapshot.aiToolPrompts} system prompts available`);
+  }
+
   if (lines.length === 1) return null;
 
   lines.push(
-    "When the user references 'my resume', 'my application', 'my jobs', or 'my contacts', use the data above. Do not invent details that contradict it."
+    "When the user references 'my resume', 'my application', 'my jobs', 'my contacts', or 'my memories', use the data above. Do not invent details that contradict it."
   );
 
   return lines.join("\n");

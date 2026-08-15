@@ -7,6 +7,10 @@ const { findFreePort, waitForReady, spawnServer, stopServer } = require("./serve
 
 // Determines %APPDATA%\AtTrack (userData) instead of %APPDATA%\Electron/whatever the
 // packaged exe's internal name is — must be called before any app.getPath() use.
+//
+// This is the on-disk identity, NOT display copy: it must keep matching
+// electron-builder.json's "productName" and the userData folder existing installs
+// already use. Human-visible strings say "atTrack"; this one deliberately does not.
 app.setName("AtTrack");
 
 let mainWindow = null;
@@ -25,7 +29,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(main).catch((err) => {
-    dialog.showErrorBox("AtTrack failed to start", String(err));
+    dialog.showErrorBox("atTrack failed to start", String(err));
     app.quit();
   });
 
@@ -46,7 +50,7 @@ async function main() {
     if (!chosen) {
       dialog.showErrorBox(
         "Setup required",
-        "AtTrack needs a folder to store its data. Please relaunch and choose one."
+        "atTrack needs a folder to store its data. Please relaunch and choose one."
       );
       app.quit();
       return;
@@ -89,7 +93,7 @@ async function main() {
   try {
     await waitForReady(url);
   } catch (err) {
-    dialog.showErrorBox("AtTrack failed to start", String(err));
+    dialog.showErrorBox("atTrack failed to start", String(err));
     app.quit();
     return;
   }
@@ -100,7 +104,7 @@ async function main() {
     width: 1280,
     height: 800,
     show: false,
-    title: "AtTrack",
+    title: "atTrack",
     titleBarStyle: "hidden",
     titleBarOverlay: {
       color: "rgba(0, 0, 0, 0)",
@@ -192,13 +196,11 @@ async function main() {
         electronSharedMB: procMem ? Math.round(procMem.shared / 1024) : undefined,
       },
       paths: {
-        rootFolder: app.getAppPath(),
-        dataDir: currentSettings?.dataDir || app.getPath("userData"),
-        userDataDir: app.getPath("userData"),
-        exePath: app.getPath("exe"),
-        storageDir: currentSettings?.dataDir
-          ? path.join(currentSettings.dataDir, "storage")
-          : path.join(app.getPath("userData"), "storage"),
+        rootFolder: "[App Directory]",
+        dataDir: currentSettings?.dataDir ? path.basename(currentSettings.dataDir) : "[UserData Directory]",
+        userDataDir: "[UserData Directory]",
+        exePath: "[App Executable]",
+        storageDir: "[Storage Directory]",
       },
       network: {
         port: currentPort || 3308,
@@ -206,9 +208,7 @@ async function main() {
         host: "127.0.0.1",
         isOnline: true,
         dbStatus: "Connected",
-        dbPath: currentSettings?.dataDir
-          ? path.join(currentSettings.dataDir, "attrack.db")
-          : "In-Memory / Default",
+        dbPath: "attrack.db",
       },
       uptime: {
         systemUptimeSec: Math.round(os.uptime()),
@@ -288,8 +288,8 @@ function setupAutoUpdater() {
 
 async function promptForDataDir() {
   const { canceled, filePaths } = await dialog.showOpenDialog({
-    title: "Choose a folder for AtTrack data",
-    defaultPath: path.join(app.getPath("documents"), "AtTrack"),
+    title: "Choose a folder for atTrack data",
+    defaultPath: path.join(app.getPath("documents"), "atTrack"),
     properties: ["openDirectory", "createDirectory"],
     buttonLabel: "Use this folder",
   });
@@ -303,7 +303,7 @@ function promptForGeminiKey() {
       width: 420,
       height: 320,
       resizable: false,
-      title: "AtTrack setup",
+      title: "atTrack setup",
       webPreferences: {
         preload: path.join(__dirname, "preload-setup.js"),
         contextIsolation: true,

@@ -4,7 +4,7 @@ import { getOrCreateLocalUser } from "./local-user.ts";
 // Stands in for the slice of `supabase.auth` this app still uses, so call sites
 // keep the same `{ data: { user }, error }` shape.
 //
-// AtTrack is a native single-user app: there is no sign-in, no session, and no
+// atTrack is a native single-user app: there is no sign-in, no session, and no
 // password. getUser() always resolves the local owner (creating it on first run).
 // Everything else that used to live here — signUp, signInWithPassword, signOut,
 // OAuth, magic links, password changes — is gone along with the login screens.

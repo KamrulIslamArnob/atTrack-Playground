@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TagInput } from "@/components/ui/tag-input";
-import { Plus } from "lucide-react";
+import { Plus, FileSpreadsheet } from "lucide-react";
 
 interface LinkDialogProps {
   open: boolean;
@@ -26,6 +26,7 @@ interface LinkDialogProps {
   existingTags?: string[];
   onSubmit: (data: CreateLinkInput, editId?: string) => Promise<void>;
   onCreateCategoryInline: (name: string) => Promise<string | undefined>;
+  onOpenCsv?: () => void;
 }
 
 export function LinkDialog({
@@ -37,6 +38,7 @@ export function LinkDialog({
   existingTags = [],
   onSubmit,
   onCreateCategoryInline,
+  onOpenCsv,
 }: LinkDialogProps) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -114,7 +116,7 @@ export function LinkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl p-6">
+      <DialogContent className="sm:max-w-md rounded-3xl p-6 w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             {linkToEdit ? "Edit Link" : "Add New Link"}
@@ -198,12 +200,21 @@ export function LinkDialog({
               </div>
             ) : (
               <Select value={categoryId} onValueChange={(val) => val && setCategoryId(val)}>
-                <SelectTrigger id="category" className="rounded-lg">
-                  <SelectValue placeholder="Select a category" />
+                <SelectTrigger
+                  id="category"
+                  className="rounded-lg w-full max-w-full whitespace-normal break-words min-w-0"
+                >
+                  <SelectValue placeholder="Select a category">
+                    {(value: string | null) =>
+                      value
+                        ? categories.find((c) => c.id === value)?.name ?? value
+                        : "Select a category"
+                    }
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl w-56 max-w-[80vw] whitespace-normal">
                   {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.id} value={cat.id} className="whitespace-normal break-words">
                       {cat.name}
                     </SelectItem>
                   ))}
@@ -240,23 +251,37 @@ export function LinkDialog({
             />
           </div>
 
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="rounded-lg active:scale-[0.98] transition-transform"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="rounded-lg bg-gradient-brand text-foreground font-medium active:scale-[0.98] transition-transform"
-            >
-              {loading ? "Saving..." : linkToEdit ? "Update Link" : "Add Link"}
-            </Button>
-          </DialogFooter>
+          <div className="flex items-center justify-between gap-2 pt-2">
+            {!linkToEdit && onOpenCsv && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenCsv}
+                className="rounded-lg gap-1.5 text-xs font-medium shrink-0 active:scale-[0.98] transition-transform"
+              >
+                <FileSpreadsheet className="size-3.5 text-muted-foreground" />
+                CSV Import
+              </Button>
+            )}
+            <DialogFooter className="pt-0 flex-1 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="rounded-lg active:scale-[0.98] transition-transform"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-gradient-brand text-foreground font-medium active:scale-[0.98] transition-transform"
+              >
+                {loading ? "Saving..." : linkToEdit ? "Update Link" : "Add Link"}
+              </Button>
+            </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

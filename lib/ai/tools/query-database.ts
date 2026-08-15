@@ -12,6 +12,8 @@ import { createDbClient } from "@/lib/db/client";
 
 const ALLOWED_TABLES: Record<string, { ownerCol: string; columns: string[]; label: string }> = {
   jobs: { ownerCol: "user_id", columns: ["id", "title", "company_name", "state", "list_id", "deadline", "match_score"], label: "Job Applications" },
+  documents: { ownerCol: "user_id", columns: ["id", "name", "type", "content"], label: "Resumes & Documents" },
+  ai_memories: { ownerCol: "user_id", columns: ["id", "title", "description", "updated_at"], label: "AI Memories & Writing Rules" },
   contacts: { ownerCol: "user_id", columns: ["id", "name", "role", "company_name", "email"], label: "Contacts CRM" },
   link_categories: { ownerCol: "user_id", columns: ["id", "name", "sort_order"], label: "Link Categories" },
   social_links: { ownerCol: "user_id", columns: ["id", "title", "url", "category_name"], label: "Social Links" },

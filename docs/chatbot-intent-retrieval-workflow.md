@@ -1,4 +1,4 @@
-# AtTrack Chatbot — Intent-Aware Native-Data Retrieval Workflow
+# atTrack Chatbot — Intent-Aware Native-Data Retrieval Workflow
 
 **Type:** Implementation guideline (paste-ready spec for an AI coding agent)
 **Supersedes:** R3 "deferred" status from `chatbot-langgraph-migration-plan.md` — the user
@@ -210,7 +210,7 @@ Persona is only a hint. Output the label and nothing else.
 
 ### 10.2 Grounded system prompt (assembled in services/chat/context.ts)
 ```
-You are AtTrack AI, a career & software-engineering assistant with access to the
+You are atTrack AI, a career & software-engineering assistant with access to the
 user's OWN workspace data (jobs, resumes, CRM contacts, links, performance).
 
 ACCURACY RULES:

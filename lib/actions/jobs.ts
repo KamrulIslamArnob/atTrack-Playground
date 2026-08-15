@@ -45,16 +45,26 @@ export async function createJob(formData: FormData) {
   const description = formData.get("description") as string | null;
   const employmentType = formData.get("employment_type") as string | null;
   const workLocation = formData.get("work_location") as string | null;
-  const deadline = formData.get("deadline") as string | null;
+  const deadlineMode = formData.get("deadline_mode") as string | null;
+  let deadline = formData.get("deadline") as string | null;
   const sectionDeadline = formData.get("section_deadline") as string | null;
   const sectionDeadlineListId = formData.get("section_deadline_list_id") as string | null;
+  const milestoneName = formData.get("milestone_name") as string | null;
+  const milestoneDate = formData.get("milestone_date") as string | null;
   const source = formData.get("source") as string | null;
   const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
 
-  if (!deadline?.trim() && !sectionDeadline?.trim()) {
-    throw new Error("A deadline is required. Please provide an Application Deadline or a Section Deadline.");
+  if (deadlineMode === "asap") {
+    deadline = "asap";
+  } else if (deadlineMode === "unknown") {
+    deadline = "unknown";
+  }
+
+  // Deadlines or milestone selection is mandatory on creation
+  if (!deadline?.trim() && !sectionDeadline?.trim() && !milestoneDate?.trim()) {
+    throw new Error("A deadline or milestone selection is required. Please choose ASAP, Unknown, or a specific date.");
   }
 
   // Board placement: the requested column, else Wishlist. Every job must land
@@ -171,6 +181,32 @@ export async function createJob(formData: FormData) {
   // Match scoring is delay-tolerant: save returns instantly, the score lands
   // via the background queue and the board shows "—" until it does.
   scheduleJobScore(userId, job.id);
+
+  if (description) {
+    try {
+      const { indexEntityChunks } = await import("@/lib/ai/embeddings");
+      indexEntityChunks({
+        userId,
+        sourceId: job.id,
+        sourceType: "job_description",
+        text: description,
+      }).catch((err) => console.warn("Job description vector indexing failed:", err));
+    } catch {}
+  }
+
+  if (milestoneDate?.trim() || deadlineMode === "milestone") {
+    const mDate = milestoneDate?.trim() || new Date().toISOString().split("T")[0];
+    const mName = milestoneName?.trim() || "Applied & Waiting";
+    await supabase.from("job_deadlines").insert({
+      id: crypto.randomUUID(),
+      job_id: job.id,
+      user_id: userId,
+      name: mName,
+      target_date: mDate,
+      type: "milestone",
+      is_completed: 0,
+    });
+  }
 
   // AI-detected recruiter/hiring-manager (Import with AI) — find-or-create under
   // this job's company and link it, so the CRM grows from job imports without
@@ -781,6 +817,14 @@ export async function deleteJobWithSmartCascade(
     .eq("id", jobId)
     .eq("user_id", userId);
   if (delJobErr) throw new Error("Failed to delete job.");
+
+  // Clean up vector chunks for deleted job
+  try {
+    const { deleteEntityChunks } = await import("@/lib/ai/embeddings");
+    deleteEntityChunks(userId, jobId);
+  } catch (err) {
+    console.warn("Failed to delete job vector chunks:", err);
+  }
 
   // 7. Company cascade check
   let companyDeleted = false;

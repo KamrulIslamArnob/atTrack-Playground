@@ -23,7 +23,7 @@ const capabilities = [
     icon: Camera,
     title: "Screenshot import",
     description:
-      "Screenshot a job posting and AtTrack reads it — title, salary, requirements, all filled in.",
+      "Screenshot a job posting and atTrack reads it — title, salary, requirements, all filled in.",
     color: "text-pink-500",
     bg: "bg-pink-500/10",
   },
@@ -31,7 +31,7 @@ const capabilities = [
     icon: Send,
     title: "Application drafts",
     description:
-      "AtTrack writes a first draft of your application email using the job details and your resume.",
+      "atTrack writes a first draft of your application email using the job details and your resume.",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
   },
@@ -87,7 +87,7 @@ export function AiHighlight() {
               <span className="text-primary">job details by hand.</span>
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
-              AtTrack uses AI to read job postings, draft application emails, score
+              atTrack uses AI to read job postings, draft application emails, score
               your resume, and generate practice questions. You review, edit, and
               send — it handles the repetitive stuff.
             </p>

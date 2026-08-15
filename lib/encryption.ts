@@ -1,31 +1,54 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
+const KEY_FILE_PATH = path.join(process.cwd(), ".data", "encryption.key");
+const LEGACY_DEV_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-const DEV_FALLBACK_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
-function getKey(): Buffer {
-  const key =
-    process.env.ENCRYPTION_KEY ||
-    process.env.SMTP_ENCRYPTION_KEY ||
-    (process.env.NODE_ENV !== "production" ? DEV_FALLBACK_KEY : undefined);
-
-  if (!key) {
-    throw new Error("ENCRYPTION_KEY environment variable is not set");
+/**
+ * Resolves the AES encryption key:
+ * 1. Explicit `ENCRYPTION_KEY` or `SMTP_ENCRYPTION_KEY` env var if set.
+ * 2. Persistent installation-specific random 32-byte key stored securely in `.data/encryption.key`.
+ */
+export function getResolvedEncryptionKey(): string {
+  const envKey = process.env.ENCRYPTION_KEY || process.env.SMTP_ENCRYPTION_KEY;
+  if (envKey && envKey.trim()) {
+    return envKey.trim();
   }
 
-  // Accept hex (64 chars = 32 bytes), base64, or raw string
+  try {
+    if (fs.existsSync(KEY_FILE_PATH)) {
+      const existing = fs.readFileSync(KEY_FILE_PATH, "utf8").trim();
+      if (existing.length >= 32) return existing;
+    }
+    const dir = path.dirname(KEY_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const generated = randomBytes(32).toString("hex");
+    fs.writeFileSync(KEY_FILE_PATH, generated, { encoding: "utf8", mode: 0o600 });
+    return generated;
+  } catch (err) {
+    console.error("[encryption] Failed to access local encryption key file:", err);
+    return LEGACY_DEV_KEY;
+  }
+}
+
+function parseKeyToBuffer(key: string): Buffer {
   if (key.length === 64) {
     return Buffer.from(key, "hex");
   }
-
   const b64 = Buffer.from(key, "base64");
   if (b64.length === 32) {
     return b64;
   }
-
   return Buffer.from(key.padEnd(32, "0").slice(0, 32), "utf8");
+}
+
+function getKey(): Buffer {
+  return parseKeyToBuffer(getResolvedEncryptionKey());
 }
 
 export function encrypt(plaintext: string): string {
@@ -42,21 +65,43 @@ export function encrypt(plaintext: string): string {
   return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
-export function decrypt(encryptedData: string): string {
-  const key = getKey();
-  const [ivHex, authTagHex, ciphertext] = encryptedData.split(":");
+function tryDecryptWithBuffer(encryptedData: string, keyBuffer: Buffer): string | null {
+  try {
+    const [ivHex, authTagHex, ciphertext] = encryptedData.split(":");
+    if (!ivHex || !authTagHex || !ciphertext) return null;
 
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
+    const decipher = createDecipheriv(ALGORITHM, keyBuffer, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(ciphertext, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch {
+    return null;
+  }
+}
+
+export function decrypt(encryptedData: string): string {
+  const [ivHex, authTagHex, ciphertext] = encryptedData.split(":");
   if (!ivHex || !authTagHex || !ciphertext) {
     throw new Error("Invalid encrypted data format");
   }
 
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
+  // 1. Try primary resolved key
+  const primaryKey = getKey();
+  const primaryResult = tryDecryptWithBuffer(encryptedData, primaryKey);
+  if (primaryResult !== null) {
+    return primaryResult;
+  }
 
-  let decrypted = decipher.update(ciphertext, "hex", "utf8");
-  decrypted += decipher.final("utf8");
+  // 2. Try legacy dev key fallback
+  const legacyKey = parseKeyToBuffer(LEGACY_DEV_KEY);
+  const legacyResult = tryDecryptWithBuffer(encryptedData, legacyKey);
+  if (legacyResult !== null) {
+    return legacyResult;
+  }
 
-  return decrypted;
+  throw new Error("Failed to decrypt credentials: authentication failed with active keys.");
 }

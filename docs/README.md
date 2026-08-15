@@ -1,6 +1,6 @@
-# Aven / AtTrack Documentation
+# atTrack Documentation
 
-This folder is the public documentation home for **Aven / AtTrack**, a local-first career workspace and job application tracker.
+This folder is the public documentation home for **atTrack**, a local-first career workspace and job application tracker.
 
 The docs are intentionally kept small and category-based so contributors can find the right information quickly.
 
@@ -11,7 +11,8 @@ The docs are intentionally kept small and category-based so contributors can fin
 | Project overview, setup, and commands | [`DEVELOPMENT.md`](DEVELOPMENT.md) |
 | How to contribute safely | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Security model and vulnerability reporting | [`SECURITY.md`](SECURITY.md) |
-| UI, brand, layout, and design rules | [`Design.md`](Design.md) |
+| Design system: tokens, type, radius, motion, components, copy | [`Design.md`](Design.md) |
+| How to spec a screen before building it | [`DesignHandoff.md`](DesignHandoff.md) |
 | Current feature backlog and roadmap notes | [`ROADMAP.md`](ROADMAP.md) |
 | Release checklist for web and desktop builds | [`RELEASE.md`](RELEASE.md) |
 | Latest codebase audit status | [`AuditReport.md`](AuditReport.md) |

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -63,13 +63,15 @@ export function JobsToolbar({
     [router, searchParams]
   );
 
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSearch = useCallback(
     (value: string) => {
       setSearch(value);
-      const timeout = setTimeout(() => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = setTimeout(() => {
         updateParams("search", value);
       }, 300);
-      return () => clearTimeout(timeout);
     },
     [updateParams]
   );

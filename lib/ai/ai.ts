@@ -94,7 +94,7 @@ export async function extractJob(
 
   const chain = userId ? await resolveProviderChain(userId, "scraping") : [];
   if (chain.length === 0) {
-    const message = "No AI provider configured for scraping and no GEMINI_API_KEY fallback available.";
+    const message = "No AI provider configured. Please add an API key in Settings > AI Providers.";
     if (userId) {
       await logAiUsage({ userId, action: "extract_job", durationMs: Date.now() - startedAt, status: "error", error: message, metadata });
     }

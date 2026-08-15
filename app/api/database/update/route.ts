@@ -3,6 +3,12 @@ import { getDb } from "@/lib/db/sqlite";
 
 export const dynamic = "force-dynamic";
 
+// Tables that store credentials/secrets. Kept in sync with the twin
+// definition in app/api/database/route.ts (not imported: route.ts files may
+// only export recognized handler/config names, so a plain `const` export
+// there fails Next's generated route-type check).
+const RESTRICTED_TABLES = new Set(["users", "smtp_config", "ai_providers"]);
+
 type SQLiteInputValue = string | number | bigint | Uint8Array | null;
 
 function isSQLiteInputValue(value: unknown): value is SQLiteInputValue {
@@ -37,6 +43,14 @@ export async function PUT(req: NextRequest) {
   const ident = /^[A-Za-z_][A-Za-z0-9_]*$/;
   if (!ident.test(table) || !ident.test(column) || !ident.test(pkColumn)) {
     return NextResponse.json({ error: "Invalid identifier" }, { status: 400 });
+  }
+
+  // Credential-bearing tables are never writable through this admin route.
+  if (RESTRICTED_TABLES.has(table)) {
+    return NextResponse.json(
+      { error: `Table "${table}" cannot be edited through this route.` },
+      { status: 400 }
+    );
   }
 
   const db = getDb();

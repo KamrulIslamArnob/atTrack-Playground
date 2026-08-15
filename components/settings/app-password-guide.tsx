@@ -79,7 +79,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
               <p className="font-medium">Generate a new App Password</p>
               <p className="mt-1 text-muted-foreground">
                 Select <strong>Mail</strong> as the app and <strong>Other (Custom name)</strong> as the
-                device. Name it something like &quot;AtTrack&quot; and click{" "}
+                device. Name it something like &quot;atTrack&quot; and click{" "}
                 <strong>Generate</strong>.
               </p>
             </div>

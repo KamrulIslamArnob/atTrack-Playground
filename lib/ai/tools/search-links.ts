@@ -4,7 +4,7 @@ import { getSocialLinks } from "@/lib/ai-chatbot/retrieval/social";
 /** LLM-callable: fetch saved links / bookmarks and social URLs. */
 export const searchLinksTool: ToolDefinition = {
   name: "search_links",
-  sourceId: "links",
+  sourceId: "contacts",
   description:
     "Fetch the user's saved links, bookmarks, and social/profile URLs. Use when the user references a saved resource, a portfolio link, or a social profile. Returns link title, URL, and category.",
   parameters: {

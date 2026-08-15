@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers local setup, architecture, validation, and Electron development for Aven / AtTrack.
+This guide covers local setup, architecture, validation, and Electron development for atTrack.
 
 ## Prerequisites
 
@@ -38,7 +38,7 @@ npm run electron:dev
 
 ## Architecture overview
 
-Aven / AtTrack is a local-first, single-user app:
+atTrack is a local-first, single-user app:
 
 - **App framework:** Next.js 16 App Router, React 19, TypeScript.
 - **UI:** Tailwind CSS v4, shadcn/base-ui components, lucide icons, `next-themes`.
@@ -154,7 +154,7 @@ This builds the Next.js app into a standalone output, prepares Electron assets, 
 
 ### Data persistence in packaged apps
 
-Packaged desktop builds store user data in the OS user-data directory, not inside the application install directory. On Windows this is typically under `%APPDATA%\AtTrack\`.
+Packaged desktop builds store user data in the OS user-data directory, not inside the application install directory. On Windows this is typically under `%APPDATA%\atTrack\`.
 
 Typical persisted assets:
 

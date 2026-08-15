@@ -23,7 +23,7 @@ export function UpdateChecker() {
         } else if (data.status === "downloaded") {
           toast.success(`Update v${data.version} downloaded! Click restart to apply.`);
         } else if (data.status === "not-available") {
-          toast.success("AtTrack is already up to date.");
+          toast.success("atTrack is already up to date");
           setIsChecking(false);
         } else if (data.status === "error") {
           setIsChecking(false);
@@ -139,7 +139,7 @@ export function UpdateChecker() {
         {updateState.status === "not-available" && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <CheckCircle2 className="size-3.5 text-emerald-500" />
-            You are running the latest version of AtTrack.
+            You are running the latest version of atTrack.
           </div>
         )}
       </CardContent>

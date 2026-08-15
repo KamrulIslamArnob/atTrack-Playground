@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import { createInterview } from "@/lib/actions/interviews";
 
 export interface PreparingJob {
@@ -68,29 +69,35 @@ export function AddInterviewDialog({ jobs, trigger, lockedJobId, onCreated }: Ad
     const scheduledAtRaw = formData.get("scheduled_at") as string;
     const scheduled_at = scheduledAtRaw ? new Date(scheduledAtRaw).toISOString() : null;
 
-    await createInterview({
-      job_id: jobId,
-      scheduled_at,
-      type: type || null,
-      location: (formData.get("location") as string) || null,
-      meeting_url: (formData.get("meeting_url") as string) || null,
-      interviewer_name: (formData.get("interviewer_name") as string) || null,
-      interviewer_email: (formData.get("interviewer_email") as string) || null,
-      notes: (formData.get("notes") as string) || null,
-      prep_notes: (formData.get("prep_notes") as string) || null,
-      status,
-      duration_minutes: formData.get("duration_minutes")
-        ? Number(formData.get("duration_minutes"))
-        : null,
-    });
+    try {
+      await createInterview({
+        job_id: jobId,
+        scheduled_at,
+        type: type || null,
+        location: (formData.get("location") as string) || null,
+        meeting_url: (formData.get("meeting_url") as string) || null,
+        interviewer_name: (formData.get("interviewer_name") as string) || null,
+        interviewer_email: (formData.get("interviewer_email") as string) || null,
+        notes: (formData.get("notes") as string) || null,
+        prep_notes: (formData.get("prep_notes") as string) || null,
+        status,
+        duration_minutes: formData.get("duration_minutes")
+          ? Number(formData.get("duration_minutes"))
+          : null,
+      });
 
-    setPending(false);
-    setOpen(false);
-    setJobId(lockedJobId ?? "");
-    setType("");
-    setStatus("scheduled");
-    onCreated?.();
-    router.refresh();
+      setOpen(false);
+      setJobId(lockedJobId ?? "");
+      setType("");
+      setStatus("scheduled");
+      onCreated?.();
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to create interview:", err);
+      toast.error("Couldn't schedule interview");
+    } finally {
+      setPending(false);
+    }
   };
 
   return (

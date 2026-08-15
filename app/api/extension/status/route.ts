@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
+import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders,
+    headers: getExtensionCorsHeaders(req),
   });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const corsHeaders = getExtensionCorsHeaders(req);
   try {
     const { userId } = await getUser();
     return NextResponse.json(

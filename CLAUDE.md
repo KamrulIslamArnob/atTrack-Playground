@@ -1,4 +1,4 @@
-# atTrack / Aven — Agent Guide
+# atTrack — Agent Guide
 
 ## Overview
 
@@ -9,9 +9,11 @@ Read [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) for the full architecture and pr
 ## Repository structure
 
 - `app/` — Next.js routes, layouts, pages, and API handlers.
-- `components/` — React UI, dashboard modules, board, job detail, import, and resume-builder components; `components/ui/` contains reusable primitives.
+- `components/` — React UI, dashboard modules, board, job detail, import, ai-chatbot, and resume-builder components; `components/ui/` contains reusable primitives.
+- `extension/` — Chrome Manifest V3 companion extension for job clipping.
 - `lib/actions/` — domain-organized async Server Actions.
 - `lib/ai/` — provider routing, prompts, background tasks, caching, and usage logging.
+- `lib/ai-chatbot/` — conversational assistant pipeline, retrieval, grounded context, and workspace scoping.
 - `lib/db/` — native `node:sqlite` connection, schema, query layer, metadata, relations, and local file storage.
 - `lib/resume/` — resume parsing, HTML preview, and LaTeX/PDF rendering.
 - `lib/types/` — shared domain types.
@@ -43,4 +45,6 @@ There is no configured automated test script. Run the type-check, lint, and buil
 - Schema changes update `lib/db/schema.sql` and `COLUMN_MIGRATIONS` in `lib/db/sqlite.ts`; register JSON/boolean columns in `lib/db/meta.ts` and relations in `lib/db/relations.ts` when needed.
 - `jobs.status` is derived from `jobs.list_id`; do not write it directly. Preserve idempotent application creation when a job enters an Applied list.
 - Preserve keyboard-accessible alternatives for drag-and-drop (for example, the existing Move to menu).
-- Follow the documented radius ladder, light/white default theme, and restrained brand-gradient usage. Never commit secrets, `.env` files, `.data/`, or generated build/release artifacts.
+- **All UI follows [`docs/Design.md`](docs/Design.md).** Use design tokens only — never a raw Tailwind palette class (`bg-emerald-500`) or a hex literal in a component. Semantic status goes through `success` / `warning` / `info` / `destructive`; pipeline hues through `--stage-*`. Follow the radius ladder, the light/white default theme, restrained brand-gradient use, and the `.micro-*` motion utilities.
+- UX copy follows Design.md §9: sentence case, no exclamation marks, `Couldn't <verb> <noun>` for every error, and the product name is always `atTrack`.
+- Never commit secrets, `.env` files, `.data/`, or generated build/release artifacts.

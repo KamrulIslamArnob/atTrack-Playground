@@ -12,7 +12,6 @@ import {
   MessageSquare,
   Search,
   Trash2,
-  Edit2,
   Check,
   X,
   ChevronLeft,
@@ -21,13 +20,29 @@ import {
   PanelLeftOpen,
   Pin,
   PinOff,
-  Download,
   Settings,
   FolderOpen,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+
+function MarkdownIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M14.85 3H1.15C.52 3 0 3.52 0 4.15v7.7c0 .63.52 1.15 1.15 1.15h13.7c.63 0 1.15-.52 1.15-1.15V4.15C16 3.52 15.48 3 14.85 3zM9 11H7V8L5.5 9.5 4 8v3H2V5h2l1.5 2L7 5h2v6zm2.99.5L9.5 8H11V5h2v3h1.5l-2.51 3.5z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
 
 export interface ChatSessionSidebarProps {
   sessions: ChatSession[];
@@ -153,25 +168,15 @@ export function ChatSessionSidebar({
   return (
     <aside
       className={cn(
-        "relative fixed inset-y-0 left-0 z-40 flex h-full w-72 shrink-0 flex-col border-r border-border/50 bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:transition-none md:w-64",
+        "relative fixed inset-y-0 left-0 z-40 flex h-full w-[260px] shrink-0 flex-col border-r border-border/60 bg-card/95 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:transition-none md:w-[260px]",
         isMobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
       )}
     >
-      {/* Edge toggle pill to close chat sidebar */}
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        className="hidden md:flex absolute -right-2.5 top-8 z-30 h-7 w-4.5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-all duration-200 hover:scale-110 hover:bg-accent hover:text-foreground hover:shadow-md focus:outline-none cursor-pointer"
-        title="Close chats sidebar"
-      >
-        <ChevronLeft className="size-3" />
-      </button>
-
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/50 px-3.5 py-3 shrink-0">
+      <div className="flex items-center justify-between border-b border-border/50 px-4 py-3.5 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="size-6 rounded-lg bg-muted text-muted-foreground border border-border/50 flex items-center justify-center">
-            <Sparkles className="size-3.5" />
+          <div className="size-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <MessageSquare className="size-3.5" />
           </div>
           <span className="text-sm font-semibold text-foreground tracking-tight">Chats</span>
         </div>
@@ -192,35 +197,35 @@ export function ChatSessionSidebar({
       </div>
 
       {/* Primary Action & Search */}
-      <div className="space-y-2.5 p-3 shrink-0">
-        {/* Prominent New Chat button with single Plus icon */}
+      <div className="space-y-2 p-3 shrink-0">
+        {/* Full-width blue primary button with 8px (rounded-lg) radius */}
         <button
           type="button"
           onClick={() => {
             onNewChat();
             if (isMobileOpen && onMobileClose) onMobileClose();
           }}
-          className="w-full bg-primary text-primary-foreground font-semibold shadow-xs hover:bg-primary/90 rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer"
+          className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-xs rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 text-sm transition-all duration-150 active:scale-[0.99] cursor-pointer"
         >
           <Plus className="size-4" />
           <span>New chat</span>
         </button>
 
-        {/* Real-time Search input */}
+        {/* Full-width search bar matching 8px (rounded-lg) border-radius */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats..."
-            className="w-full rounded-xl border border-border/50 bg-muted/40 py-2 pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            className="w-full rounded-lg border border-border/60 bg-muted/40 py-2 pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-blue-500 focus:bg-background focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md transition-colors"
               title="Clear search"
             >
               <X className="size-3" />
@@ -230,13 +235,13 @@ export function ChatSessionSidebar({
       </div>
 
       {/* Date-grouped session list */}
-      <div className="flex-1 overflow-y-auto px-2 py-1 space-y-4 scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto px-2 py-1 space-y-3.5 scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent">
         {pinnedSessions.length > 0 && (
           <div>
-            <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
               PINNED
             </div>
-            <div className="space-y-1 mt-1">
+            <div className="space-y-0.5 mt-0.5">
               <AnimatePresence initial={false}>
                 {pinnedSessions.map((session) => (
                   <SessionRow
@@ -271,10 +276,10 @@ export function ChatSessionSidebar({
         ) : (
           dateGroups.map((group) => (
             <div key={group.title}>
-              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 {group.title}
               </div>
-              <div className="space-y-1 mt-1">
+              <div className="space-y-0.5 mt-0.5">
                 <AnimatePresence initial={false}>
                   {group.sessions.map((session) => (
                     <SessionRow
@@ -301,30 +306,6 @@ export function ChatSessionSidebar({
             </div>
           ))
         )}
-      </div>
-
-      {/* Bottom Workspace / Account section */}
-      <div className="border-t border-border/50 p-3 mt-auto bg-card/40 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="size-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center font-bold text-xs shrink-0 border border-border/60">
-              aT
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-foreground truncate">atTrack Workspace</p>
-              <p className="text-[10px] text-muted-foreground truncate">Local Workspace</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground shrink-0 transition-colors"
-            title="Workspace Settings"
-            onClick={() => toast.info("atTrack Workspace settings active")}
-          >
-            <Settings className="size-3.5" />
-          </Button>
-        </div>
       </div>
     </aside>
   );
@@ -371,6 +352,10 @@ function SessionRow({
       role="button"
       tabIndex={0}
       onClick={onSelect}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onEdit();
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -380,16 +365,17 @@ function SessionRow({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative flex w-full items-center gap-2 px-2.5 py-2 text-left transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20",
+        "group relative flex w-full items-center gap-2 px-2.5 py-2 text-left transition-all duration-150 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 rounded-lg",
         isActive
-          ? "bg-primary/10 border border-primary/30 text-foreground font-medium rounded-xl shadow-xs"
-          : "border border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-xl"
+          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
       )}
+      title="Double click to rename"
     >
       <MessageSquare
         className={cn(
           "size-3.5 shrink-0 transition-colors",
-          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          isActive ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground group-hover:text-foreground"
         )}
       />
 
@@ -400,17 +386,18 @@ function SessionRow({
               type="text"
               value={editTitle}
               onChange={(e) => onRename(e.target.value)}
-              className="w-full rounded-md border border-primary/50 bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+              className="w-full rounded-md border border-blue-500/50 bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") onSaveEdit(e as unknown as React.MouseEvent);
                 if (e.key === "Escape") onCancelEdit();
               }}
+              onBlur={(e) => onSaveEdit(e as unknown as React.MouseEvent)}
             />
             <button
               type="button"
               onClick={onSaveEdit}
-              className="p-1 rounded text-primary hover:bg-primary/10"
+              className="p-1 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer"
               title="Save"
             >
               <Check className="size-3" />
@@ -418,7 +405,7 @@ function SessionRow({
             <button
               type="button"
               onClick={onCancelEdit}
-              className="p-1 rounded text-muted-foreground hover:bg-muted"
+              className="p-1 rounded text-muted-foreground hover:bg-muted cursor-pointer"
               title="Cancel"
             >
               <X className="size-3" />
@@ -426,9 +413,13 @@ function SessionRow({
           </div>
         ) : (
           <p
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
             className={cn(
-              "truncate text-xs transition-colors",
-              isActive ? "font-semibold text-foreground" : "font-normal text-muted-foreground group-hover:text-foreground"
+              "truncate text-xs transition-colors select-none",
+              isActive ? "font-medium text-foreground" : "font-normal text-muted-foreground group-hover:text-foreground"
             )}
           >
             {session.title}
@@ -439,37 +430,36 @@ function SessionRow({
       {/* Hover action menu for session item */}
       {!isEditing && (isHovered || isActive) && (
         <div
-          className="flex items-center gap-0.5 shrink-0 animate-in fade-in duration-150"
+          className="flex items-center gap-1 shrink-0 animate-in fade-in duration-150"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
             onClick={onTogglePin}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className={cn(
+              "flex size-6 items-center justify-center rounded-md border transition-all duration-150 shadow-2xs cursor-pointer",
+              session.isPinned
+                ? "border-blue-300 bg-blue-100 text-blue-600 dark:border-blue-800 dark:bg-blue-950/80 dark:text-blue-400"
+                : "border-slate-200/80 bg-slate-100/90 text-slate-600 hover:bg-slate-200/90 hover:text-slate-900 dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700"
+            )}
             title={session.isPinned ? "Unpin session" : "Pin session"}
           >
-            {session.isPinned ? <PinOff className="size-3 text-primary" /> : <Pin className="size-3" />}
+            {session.isPinned ? <PinOff className="size-3 text-blue-600 dark:text-blue-400" /> : <Pin className="size-3" />}
           </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            title="Rename session"
-          >
-            <Edit2 className="size-3" />
-          </button>
+
           <button
             type="button"
             onClick={onExport}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            title="Export markdown"
+            className="flex size-6 items-center justify-center rounded-md border border-zinc-200/80 bg-zinc-100/90 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-200/90 hover:text-zinc-900 dark:border-zinc-700/60 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-all duration-150 shadow-2xs cursor-pointer"
+            title="Export markdown (.md)"
           >
-            <Download className="size-3" />
+            <MarkdownIcon className="size-3.5" />
           </button>
+
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            className="flex size-6 items-center justify-center rounded-md border border-rose-200/70 bg-rose-50/80 text-rose-600 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/60 transition-all duration-150 shadow-2xs cursor-pointer"
             title="Delete session"
           >
             <Trash2 className="size-3" />

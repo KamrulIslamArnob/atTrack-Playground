@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Building2,
   CalendarClock,
+  Hourglass,
   FileText,
   Link2,
   MoveRight,
@@ -29,7 +30,7 @@ import {
   type BoardCard,
   type BoardList,
 } from "@/lib/types/board";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 
 interface BoardCardProps {
   card: BoardCard;
@@ -53,7 +54,7 @@ export function BoardCardItem({
   onOpen,
 }: BoardCardProps) {
   const router = useRouter();
-  const band = matchScoreBand(card.match_score);
+  const band = card.match_score !== null ? matchScoreBand(card.match_score) : null;
   const linkCount = card.project_links?.length ?? 0;
   const deadlineInfo = getEffectiveDeadlineInfo(card, lists);
 
@@ -67,9 +68,10 @@ export function BoardCardItem({
         archived: "Archived",
       };
       toast.success(`Job state changed to ${labelMap[newState]}`);
+      router.refresh();
     } catch (err) {
       console.error("Failed to update job state:", err);
-      toast.error("Failed to update job state.");
+      toast.error("Couldn't update job state");
     }
   };
 
@@ -81,7 +83,7 @@ export function BoardCardItem({
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", card.id);
         e.dataTransfer.effectAllowed = "move";
-        onDragStart();
+        onDragStart?.();
       }}
       onDragEnd={onDragEnd}
       onClick={onOpen}
@@ -90,7 +92,7 @@ export function BoardCardItem({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpen();
+          onOpen?.();
         }
       }}
       style={{ borderLeftColor: accent }}
@@ -111,7 +113,11 @@ export function BoardCardItem({
           )}
         >
           <div className="flex items-center gap-1.5 min-w-0">
-            <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+            {deadlineInfo.kind === "milestone" ? (
+              <Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
+            ) : (
+              <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+            )}
             <span className="truncate text-[11px] font-semibold tracking-tight">
               {deadlineInfo.title}
             </span>
@@ -220,22 +226,32 @@ export function BoardCardItem({
             </Tooltip>
           )}
 
-          {card.deadline && (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0 cursor-help">
-                  <CalendarClock className="size-3 shrink-0" aria-hidden="true" />
-                  {new Date(card.deadline).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
-                Deadline: {new Date(card.deadline).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-              </TooltipContent>
-            </Tooltip>
-          )}
+          {card.deadline && (() => {
+            const norm = card.deadline.trim().toLowerCase();
+            const isAsap = norm === "asap";
+            const isUnknown = norm === "unknown";
+            const parsed = (!isAsap && !isUnknown) ? parseLocalDate(card.deadline) : null;
+            const valid = parsed && !isNaN(parsed.getTime());
+            const shortLabel = isAsap ? "ASAP" : isUnknown ? "Unknown" : valid ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : card.deadline;
+            const fullLabel = isAsap ? "Apply ASAP" : isUnknown ? "Unknown Deadline" : valid ? `Deadline: ${parsed.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` : card.deadline;
+
+            return (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className={cn(
+                    "inline-flex items-center gap-0.5 text-[10px] whitespace-nowrap shrink-0 cursor-help",
+                    isAsap ? "text-rose-600 dark:text-rose-400 font-semibold" : "text-muted-foreground"
+                  )}>
+                    <CalendarClock className="size-3 shrink-0" aria-hidden="true" />
+                    {shortLabel}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                  {fullLabel}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })()}
 
           {band && (
             <Tooltip>

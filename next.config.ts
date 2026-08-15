@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/**": ["./release/**", "./dist/**", "./build/**", "./.next_trash/**"],
   },
+  // pino resolves its transports through worker threads (thread-stream), a
+  // shape Turbopack cannot bundle. Externalizing keeps it a plain runtime
+  // require, exactly as sqlite-vec's native binding needs.
+  serverExternalPackages: ["sqlite-vec", "pino"],
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -31,10 +35,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
-      allowedOrigins: ["localhost:3308", "127.0.0.1:3308", "localhost:3000", "localhost:3147", "192.168.*"],
+      allowedOrigins: ["localhost:3308", "127.0.0.1:3308", "localhost:3000", "localhost:3147"],
     },
   },
 };

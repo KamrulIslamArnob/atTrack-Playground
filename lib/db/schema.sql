@@ -141,6 +141,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_positions_name_per_user
   ON positions(user_id, lower(name));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_positions_one_primary
   ON positions(user_id) WHERE is_primary = 1;
+CREATE INDEX IF NOT EXISTS idx_positions_resume_id ON positions(resume_id);
 
 -- =============================================
 -- jobs (001, 003-007, 013, 014, 016, 019)
@@ -219,6 +220,7 @@ CREATE TABLE IF NOT EXISTS applications (
 CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_applications_user_status ON applications(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_applications_job ON applications(job_id);
+CREATE INDEX IF NOT EXISTS idx_applications_resume_id ON applications(resume_id);
 
 -- =============================================
 -- interviews (011)
@@ -427,6 +429,17 @@ CREATE TABLE IF NOT EXISTS ai_tool_prompts (
 
 CREATE INDEX IF NOT EXISTS idx_ai_tool_prompts_user ON ai_tool_prompts(user_id);
 
+CREATE TABLE IF NOT EXISTS ai_memories (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT,
+  description TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_memories_user ON ai_memories(user_id, updated_at DESC);
+
 -- =============================================
 -- job_deadlines
 -- =============================================
@@ -435,6 +448,7 @@ CREATE TABLE IF NOT EXISTS job_deadlines (
   job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'deadline' CHECK (type IN ('deadline','milestone')),
   stage_kind TEXT CHECK (stage_kind IN ('wishlist','preparing','applied','interview','offer','accepted','rejected','custom')),
   due_date TEXT NOT NULL,
   is_pinned INTEGER NOT NULL DEFAULT 0,
@@ -527,6 +541,20 @@ CREATE TABLE IF NOT EXISTS smtp_config (
 );
 
 -- =============================================
+-- extension_config: per-install shared secret the companion browser
+-- extension sends as `Authorization: Bearer <secret>` on calls to
+-- /api/extension/*. Generated lazily on first read (lib/db/extension-secret.ts),
+-- same "create on first run" shape as smtp_config above.
+-- =============================================
+CREATE TABLE IF NOT EXISTS extension_config (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  secret TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- =============================================
 -- updated_at triggers (replaces the update_updated_at() trigger from 001)
 -- =============================================
 CREATE TRIGGER IF NOT EXISTS trg_profiles_updated AFTER UPDATE ON profiles
@@ -558,6 +586,9 @@ BEGIN UPDATE documents SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHE
 
 CREATE TRIGGER IF NOT EXISTS trg_smtp_config_updated AFTER UPDATE ON smtp_config
 BEGIN UPDATE smtp_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_extension_config_updated AFTER UPDATE ON extension_config
+BEGIN UPDATE extension_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
 
 -- =============================================
 -- jobs.status is DERIVED from its board list's kind (migration 019 trigger).
@@ -808,4 +839,112 @@ END;
 CREATE TRIGGER IF NOT EXISTS trg_omni_positions_del AFTER DELETE ON positions BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'position' AND entity_id = OLD.id;
 END;
+
+
+-- Chatbot conversation persistence (two-tier: localStorage instant + SQLite durable)
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT 'New Chat',
+  model TEXT,
+  persona_id TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
+  connected_source_ids TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  content TEXT,
+  feedback TEXT,
+  created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id);
+
+-- AI Feedback Loop table (tracks thumbs up / thumbs down with metadata for analytics & evaluation)
+CREATE TABLE IF NOT EXISTS ai_feedback (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  session_id TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  rating TEXT NOT NULL,
+  model TEXT,
+  persona_id TEXT,
+  message_content TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_feedback_user ON ai_feedback(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_feedback_msg ON ai_feedback(message_id);
+
+-- Virtual view pre-joining company names for fast, frictionless AI querying
+CREATE VIEW IF NOT EXISTS v_jobs AS
+SELECT
+  j.id,
+  j.user_id,
+  j.company_id,
+  c.name AS company_name,
+  c.website AS company_website,
+  c.location AS company_location,
+  j.title,
+  j.description,
+  j.location,
+  j.status,
+  j.state,
+  j.employment_type,
+  j.salary_range,
+  j.application_url,
+  j.application_email,
+  j.deadline,
+  j.match_score,
+  j.list_id,
+  j.position_id,
+  j.skills,
+  j.benefits,
+  j.salary_min,
+  j.salary_max,
+  j.salary_currency,
+  j.salary_period,
+  j.created_at,
+  j.updated_at
+FROM jobs j
+LEFT JOIN companies c ON j.company_id = c.id;
+
+-- =============================================
+-- document_chunks & sqlite-vec virtual tables
+-- =============================================
+CREATE TABLE IF NOT EXISTS document_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL,
+  source_type TEXT NOT NULL CHECK (source_type IN ('job_description', 'job_notes', 'resume', 'document')),
+  chunk_index INTEGER NOT NULL,
+  chunk_text TEXT NOT NULL,
+  token_count INTEGER,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_chunks_user_source ON document_chunks(user_id, source_id);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  embedding float[768] distance_metric=cosine,
+  +memory_id TEXT,
+  +user_id TEXT
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
+  id INTEGER PRIMARY KEY,
+  embedding float[768] distance_metric=cosine,
+  +user_id TEXT,
+  +source_id TEXT
+);
+
+
 

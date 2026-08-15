@@ -86,7 +86,33 @@ export async function createProvider(params: {
   }
 
   const id = (data as unknown as { id: string }).id;
+
+  // Automatically assign newly created provider to unconfigured task routes
+  for (const taskType of ["text", "image", "scraping"] as const) {
+    try {
+      const { data: existingRoute } = await supabase
+        .from("ai_task_routes")
+        .select("provider_ids")
+        .eq("user_id", userId)
+        .eq("task_type", taskType)
+        .maybeSingle();
+
+      const currentIds = (existingRoute as unknown as { provider_ids: string[] } | null)?.provider_ids ?? [];
+      if (currentIds.length === 0) {
+        await supabase.from("ai_task_routes").upsert({
+          user_id: userId,
+          task_type: taskType,
+          provider_ids: [id],
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // Non-critical auto-route failure
+    }
+  }
+
   revalidatePath("/settings");
+  revalidatePath("/preferences");
   return { id };
 }
 

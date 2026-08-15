@@ -4,10 +4,10 @@ import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { scheduleResumeExtract, scheduleRescoreAll } from "@/lib/ai/background";
 import { type ResumeMatchData } from "@/lib/ai/resume";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
-import path from "node:path";
+import { unlink } from "node:fs/promises";
 import fs from "node:fs";
-import { exec } from "node:child_process";
+import path from "node:path";
+import { spawn } from "node:child_process";
 import type { ResumeDoc } from "@/lib/types/resume-builder";
 
 export interface Document {
@@ -71,17 +71,19 @@ export async function uploadDocument(formData: FormData): Promise<{ documentId: 
     throw new Error("Could not extract text from PDF. Please ensure the PDF contains selectable text.");
   }
 
-  // Save PDF locally to public/resume/
-  const resumeDir = path.join(process.cwd(), "public", "resume");
-  await mkdir(resumeDir, { recursive: true });
-
+  // Save PDF to the private storage bucket (served only via signed URL).
   const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const filename = `${Date.now()}-${safeFileName}`;
-  const localDiskPath = path.join(resumeDir, filename);
-  const filePath = `/resume/${filename}`;
-
+  const key = `${userId}/${Date.now()}-${safeFileName}`;
   const arrayBuffer = await file.arrayBuffer();
-  await writeFile(localDiskPath, Buffer.from(arrayBuffer));
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from("documents")
+    .upload(key, Buffer.from(arrayBuffer), { contentType: "application/pdf" });
+
+  if (uploadError || !uploadData) {
+    throw new Error(`Failed to save resume file: ${uploadError?.message ?? "unknown error"}`);
+  }
+
+  const filePath = uploadData.path;
 
   // If setting as default, unset other defaults first
   if (setDefault) {
@@ -155,6 +157,14 @@ export async function deleteDocument(id: string): Promise<void> {
 
   if (error) {
     throw new Error(`Failed to delete document: ${error.message}`);
+  }
+
+  // Clean up vector chunks for deleted document
+  try {
+    const { deleteEntityChunks } = await import("@/lib/ai/embeddings");
+    deleteEntityChunks(userId, id);
+  } catch (err) {
+    console.warn("Failed to delete document vector chunks:", err);
   }
 
   // If deleted resume was matched to jobs, recalculate in background
@@ -297,13 +307,13 @@ export async function openDocumentFolder(id: string): Promise<void> {
     throw new Error("Document not found");
   }
 
-  if (!doc.file_path) {
-    throw new Error("No local file path recorded for this document.");
+  if (!doc.file_path || doc.file_path.startsWith("http://") || doc.file_path.startsWith("https://")) {
+    throw new Error("Invalid local file path for this document.");
   }
 
   let absPath = doc.file_path;
   if (doc.file_path.startsWith("/")) {
-    absPath = path.join(process.cwd(), "public", doc.file_path);
+    absPath = path.join(process.cwd(), "public", path.normalize(doc.file_path));
   } else if (!path.isAbsolute(absPath)) {
     const storageDir = process.env.STORAGE_DIR ?? path.join(process.cwd(), ".data", "storage");
     const candidateStoragePath = path.join(storageDir, doc.file_path);
@@ -314,6 +324,17 @@ export async function openDocumentFolder(id: string): Promise<void> {
     }
   }
 
+  absPath = path.normalize(absPath);
+  const allowedRoots = [
+    path.normalize(path.join(process.cwd(), "public")),
+    path.normalize(process.env.STORAGE_DIR ?? path.join(process.cwd(), ".data", "storage")),
+    path.normalize(process.cwd()),
+  ];
+  const isAllowed = allowedRoots.some((root) => absPath.startsWith(root));
+  if (!isAllowed) {
+    throw new Error("Unauthorized path access");
+  }
+
   const folderPath = path.dirname(absPath);
   const fileExists = fs.existsSync(absPath);
   const folderExists = fs.existsSync(folderPath);
@@ -322,27 +343,30 @@ export async function openDocumentFolder(id: string): Promise<void> {
     throw new Error(`Local directory does not exist: ${folderPath}`);
   }
 
+  const targetPath = fileExists ? absPath : folderPath;
+
   return new Promise((resolve, reject) => {
-    let command = "";
+    let child;
     if (process.platform === "win32") {
-      const winPath = (fileExists ? absPath : folderPath).replace(/\//g, "\\");
-      command = fileExists
-        ? `cmd.exe /c start explorer.exe /select,"${winPath}"`
-        : `cmd.exe /c start explorer.exe "${winPath}"`;
+      const winPath = targetPath.replace(/\//g, "\\");
+      child = fileExists
+        ? spawn("explorer.exe", [`/select,${winPath}`], { detached: true, stdio: "ignore" })
+        : spawn("explorer.exe", [winPath], { detached: true, stdio: "ignore" });
     } else if (process.platform === "darwin") {
-      command = fileExists ? `open -R "${absPath}"` : `open "${folderPath}"`;
+      child = spawn(fileExists ? "open" : "open", fileExists ? ["-R", absPath] : [folderPath], {
+        detached: true,
+        stdio: "ignore",
+      });
     } else {
-      command = `xdg-open "${folderPath}"`;
+      child = spawn("xdg-open", [folderPath], { detached: true, stdio: "ignore" });
     }
 
-    exec(command, (err) => {
-      if (err) {
-        console.error("Error opening document folder:", err);
-        reject(new Error(`Failed to open folder: ${err.message}`));
-      } else {
-        resolve();
-      }
+    child.on("error", (err) => {
+      console.error("Error opening document folder:", err);
+      reject(new Error(`Failed to open folder: ${err.message}`));
     });
+    child.unref();
+    resolve();
   });
 }
 

@@ -5,20 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Puzzle, CheckCircle2, XCircle, Copy, Check, ExternalLink, RefreshCw, Flame, Key, Save } from "lucide-react";
+import { Puzzle, CheckCircle2, XCircle, Copy, Check, ExternalLink, RefreshCw, Flame, Key, Save, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-export function ExtensionSettings() {
+export function ExtensionSettings({ secret }: { secret: string }) {
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<"idle" | "connected" | "failed">("idle");
   const [copied, setCopied] = useState(false);
+  const [secretCopied, setSecretCopied] = useState(false);
   const [firecrawlKey, setFirecrawlKey] = useState("");
   const [savingKey, setSavingKey] = useState(false);
 
-  const serverUrl = typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:3308";
+  const [serverUrl, setServerUrl] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      setServerUrl(window.location.origin);
       const savedKey = localStorage.getItem("firecrawl_api_key") || "";
       setFirecrawlKey(savedKey);
     }
@@ -32,14 +34,14 @@ export function ExtensionSettings() {
       const data = await res.json();
       if (data.status === "ok") {
         setStatus("connected");
-        toast.success("atTrack Extension API is active and listening!");
+        toast.success("atTrack Extension API is active and listening");
       } else {
         setStatus("failed");
-        toast.error("Extension API test failed.");
+        toast.error("Extension API test failed");
       }
     } catch {
       setStatus("failed");
-      toast.error("Unable to connect to local extension API.");
+      toast.error("Unable to connect to local extension API");
     } finally {
       setTesting(false);
     }
@@ -49,9 +51,9 @@ export function ExtensionSettings() {
     setSavingKey(true);
     try {
       localStorage.setItem("firecrawl_api_key", firecrawlKey.trim());
-      toast.success("Firecrawl API Key saved successfully!");
+      toast.success("Firecrawl API Key saved");
     } catch {
-      toast.error("Failed to save Firecrawl API key.");
+      toast.error("Couldn't save Firecrawl API key");
     } finally {
       setSavingKey(false);
     }
@@ -60,8 +62,15 @@ export function ExtensionSettings() {
   const handleCopyPath = () => {
     navigator.clipboard.writeText("extension");
     setCopied(true);
-    toast.success("Extension folder name copied to clipboard!");
+    toast.success("Extension folder name copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopySecret = () => {
+    navigator.clipboard.writeText(secret);
+    setSecretCopied(true);
+    toast.success("Extension secret copied to clipboard");
+    setTimeout(() => setSecretCopied(false), 2000);
   };
 
   return (
@@ -88,8 +97,8 @@ export function ExtensionSettings() {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Extension API Listener:</span>
-                <code className="text-xs px-2 py-0.5 rounded bg-background border border-border font-mono">
-                  {serverUrl}/api/extension
+                <code suppressHydrationWarning className="text-xs px-2 py-0.5 rounded bg-background border border-border font-mono">
+                  {serverUrl ? `${serverUrl}/api/extension` : "/api/extension"}
                 </code>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -134,6 +143,30 @@ export function ExtensionSettings() {
                 Select the <code className="text-xs px-1.5 py-0.5 bg-muted rounded font-mono text-foreground">extension</code> folder in your atTrack project directory.
               </li>
             </ol>
+          </div>
+
+          {/* Extension Secret */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <ShieldCheck className="size-3.5 text-primary" />
+              Extension Secret
+            </label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                readOnly
+                value={secret}
+                onFocus={(e) => e.currentTarget.select()}
+                className="font-mono text-xs"
+              />
+              <Button variant="secondary" size="sm" onClick={handleCopySecret} className="gap-1.5 shrink-0">
+                {secretCopied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                {secretCopied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              Paste this into the extension popup&apos;s settings panel so it can authenticate its requests to atTrack.
+            </p>
           </div>
 
           {/* Action Buttons */}

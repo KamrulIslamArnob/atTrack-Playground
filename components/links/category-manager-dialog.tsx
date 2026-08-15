@@ -94,7 +94,7 @@ export function CategoryManagerDialog({
     if (!deletingCat) return;
 
     if (action === "reassign" && !reassignTargetId) {
-      toast.error("Please select a target category for reassignment.");
+      toast.error("Please select a target category for reassignment");
       return;
     }
 

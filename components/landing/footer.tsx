@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Reveal } from "@/components/landing/motion";
+import { ThemeLogo } from "@/components/ui/theme-logo";
 
 const productLinks = [
   { label: "Features", href: "/#features" },
@@ -25,9 +25,9 @@ export function Footer() {
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-12">
             <div className="sm:col-span-2 lg:col-span-4">
               <Link href="/" className="inline-flex items-center gap-2.5">
-                <Image src="/logo.png" alt="AtTrack" width={18} height={18} />
+                <ThemeLogo width={18} height={18} />
                 <span className="font-heading text-lg font-semibold">
-                  AtTrack
+                  atTrack
                 </span>
               </Link>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/70 dark:text-foreground/70">
@@ -83,7 +83,7 @@ export function Footer() {
             <div className="sm:col-span-2 lg:col-span-4">
               <div className="rounded-2xl border border-background/15 bg-background/10 p-6 dark:border-foreground/15 dark:bg-foreground/10">
                 <h4 className="text-base font-semibold">
-                  Start using AtTrack
+                  Start using atTrack
                 </h4>
                 <p className="mt-1.5 text-sm text-background/70 dark:text-foreground/70">
                   It runs on this machine. No account, no cloud, no setup.
@@ -93,7 +93,7 @@ export function Footer() {
                     href="/overview"
                     className="inline-flex h-10 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
                   >
-                    Open AtTrack
+                    Open atTrack
                   </Link>
                 </div>
               </div>
@@ -103,7 +103,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-background/15 pt-8 sm:flex-row dark:border-foreground/15">
           <p className="text-xs text-background/50 dark:text-foreground/50">
-            &copy; {new Date().getFullYear()} AtTrack. All rights reserved.
+            &copy; {new Date().getFullYear()} atTrack. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-xs text-background/50 dark:text-foreground/50">
             <Link

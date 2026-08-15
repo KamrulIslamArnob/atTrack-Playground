@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "./sqlite.ts";
 
-// AtTrack runs as a native, single-user local app: there are no accounts, no
+// atTrack runs as a native, single-user local app: there are no accounts, no
 // login, and no sessions. Whoever can reach the process IS the owner.
 //
 // This module resolves that one owner, creating the row on first run so the rest
 // of the app (which is written against a `user_id`) keeps working unchanged.
 
-const OWNER_EMAIL = "connect.arnob@gmail.com";
-const OWNER_NAME = "Kamrul Islam Arnob";
+const OWNER_EMAIL = process.env.OWNER_EMAIL || "owner@attrack.local";
+const OWNER_NAME = process.env.OWNER_NAME || "atTrack User";
 
 export interface LocalUser {
   id: string;

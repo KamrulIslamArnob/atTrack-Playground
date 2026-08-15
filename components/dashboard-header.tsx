@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState, useEffect } from "react";
+import { ThemeLogo } from "@/components/ui/theme-logo";
 import { Menu, X } from "lucide-react";
 import { Sidebar, type SidebarProps } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
@@ -33,14 +33,8 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
     <>
       <header className="app-drag-region flex h-14 items-center justify-between rounded-2xl border border-border bg-card px-4 md:hidden">
         <Link href={homeHref} className="app-no-drag flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="AtTrack"
-            width={24}
-            height={24}
-            priority
-          />
-          <span className="font-heading text-base font-semibold">AtTrack</span>
+          <ThemeLogo width={24} height={24} />
+          <span className="font-heading text-base font-semibold">atTrack</span>
         </Link>
 
         <button

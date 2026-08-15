@@ -331,9 +331,9 @@ export function DocumentsList({ documents }: DocumentsListProps) {
 
   const handleDelete = async (id: string, name: string) => {
     const confirmed = await confirm({
-      title: "Delete document?",
-      description: `"${name}" will be permanently deleted. This cannot be undone.`,
-      confirmText: "Delete",
+      title: "Delete this document?",
+      description: `"${name}" will be permanently deleted. This can't be undone.`,
+      confirmText: "Delete document",
       variant: "destructive",
     });
     if (!confirmed) return;

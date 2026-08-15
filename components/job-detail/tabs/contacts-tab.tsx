@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import {
   type Contact,
 } from "@/lib/actions/contacts";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
+import { parseNoteMentions } from "@/lib/mentions";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { getContactAvatarColorClass, cn } from "@/lib/utils";
 import { Mail, Phone, Plus, Trash2, UserRound, X } from "lucide-react";
@@ -49,7 +51,7 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
       setNewRole("other");
       onRefresh();
     } catch {
-      toast.error("Could not create contact");
+      toast.error("Couldn't create contact");
     } finally {
       setPending(false);
     }
@@ -67,7 +69,7 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
       setLinking(false);
       onRefresh();
     } catch {
-      toast.error("Could not link contact");
+      toast.error("Couldn't link contact");
     }
   };
 
@@ -76,7 +78,7 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
       await unlinkContact(data.job.id, contactId);
       onRefresh();
     } catch {
-      toast.error("Could not remove contact");
+      toast.error("Couldn't remove contact");
     }
   };
 
@@ -202,7 +204,23 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
                       </span>
                     )}
                   </div>
-                  {c.notes && <p className="mt-1 text-xs text-muted-foreground">{c.notes}</p>}
+                  {c.notes && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {parseNoteMentions(c.notes).map((seg, i) =>
+                        seg.jobId ? (
+                          <Link
+                            key={i}
+                            href={`/jobs/${seg.jobId}`}
+                            className="mx-0.5 font-medium text-primary underline underline-offset-2 hover:no-underline"
+                          >
+                            @{seg.text}
+                          </Link>
+                        ) : (
+                          <span key={i}>{seg.text}</span>
+                        )
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
               <button

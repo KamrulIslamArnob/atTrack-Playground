@@ -1,4 +1,4 @@
-# AtTrack Chatbot — Tool-Calling Architecture (Real Tools, Not Hardcoded)
+# atTrack Chatbot — Tool-Calling Architecture (Real Tools, Not Hardcoded)
 
 **Date:** 2026-08-13
 **Status:** IMPLEMENTED (gated behind `CHAT_TOOLS=on`)

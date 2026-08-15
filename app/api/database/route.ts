@@ -3,6 +3,15 @@ import { getDb } from "@/lib/db/sqlite";
 
 export const dynamic = "force-dynamic";
 
+// Tables that store credentials/secrets (SMTP password, encrypted AI provider
+// keys, the local user record). Never exposed or writable through the
+// generic database admin UI, regardless of caller — this app has no login,
+// so there is no auth check to gate these routes with; exclusion is the gate.
+// Duplicated (not imported) in app/api/database/update/route.ts: route.ts
+// files may only export recognized handler/config names, so a plain `const`
+// export here fails Next's generated route-type check.
+const RESTRICTED_TABLES = new Set(["users", "smtp_config", "ai_providers"]);
+
 export interface ColumnInfo {
   name: string;
   type: string;
@@ -47,6 +56,8 @@ export async function GET() {
   const result: TableData[] = [];
 
   for (const { name } of tables) {
+    if (RESTRICTED_TABLES.has(name)) continue;
+
     // 2. Column metadata via PRAGMA.
     const columns = db
       .prepare(`PRAGMA table_info("${name}")`)

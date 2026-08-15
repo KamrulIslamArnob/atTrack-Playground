@@ -14,9 +14,10 @@ import type { AIModel, ChatPersona } from "@/lib/ai-chatbot/types";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelSelector } from "@/components/ai-chatbot/model-selector";
 import { PersonaSelector } from "@/components/ai-chatbot/persona-selector";
+import { GlidingHighlight } from "@/components/ai-chatbot/gliding-highlight";
 import { cn } from "@/lib/utils";
 import {
-  ArrowUpIcon,
+  ArrowUp,
   Plus,
   X,
   Square,
@@ -29,15 +30,18 @@ import {
   Code2,
   Briefcase,
   Users,
-  Image as ImageIcon,
   Globe,
   Upload,
+  MessageSquareReply,
+  Brain,
+  Mic,
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { getMemories } from "@/lib/actions/memories";
+import type { AiMemory } from "@/lib/types/memories";
 
-// Strong custom ease-out (emi-design-eng): starts fast, settles gracefully.
 const EASE = [0.23, 1, 0.32, 1] as const;
 
 interface UseAutoResizeTextareaProps {
@@ -92,6 +96,8 @@ interface ChatInputProps {
   onMobileMenuToggle?: () => void;
   webSearchActive?: boolean;
   onToggleWebSearch?: (active: boolean) => void;
+  replyTo?: { id: string; preview: string; role: string } | null;
+  onClearReply?: () => void;
 }
 
 interface SlashCommand {
@@ -101,6 +107,21 @@ interface SlashCommand {
   icon: ComponentType<{ className?: string }>;
   template: string;
 }
+
+/** Minimal shape of the Web Speech API we rely on. TypeScript's DOM lib does
+ *  not ship these because the API is not on a standards track. */
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onresult: ((event: { results: { length: number; [i: number]: { [j: number]: { transcript: string } } } }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 const SLASH_COMMANDS: SlashCommand[] = [
   {
@@ -168,6 +189,8 @@ function ChatInput({
   onMobileMenuToggle,
   webSearchActive: webSearchActiveProp,
   onToggleWebSearch,
+  replyTo,
+  onClearReply,
 }: ChatInputProps) {
   const [attachments, setAttachments] = useState<{ file: File; url: string }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -176,7 +199,25 @@ function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [slashQuery, setSlashQuery] = useState<string | null>(null);
   const [slashIndex, setSlashIndex] = useState(0);
+  // "Engaged" gates the gliding highlight: a freshly-opened menu shows no
+  // selection until the pointer or arrow keys actually pick a row.
+  const [atEngaged, setAtEngaged] = useState(false);
+  const [slashEngaged, setSlashEngaged] = useState(false);
+  const atRowRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const slashRowRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [dictationSupported, setDictationSupported] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const [atQuery, setAtQuery] = useState<string | null>(null);
+  const [atIndex, setAtIndex] = useState(0);
+  const [availableMemories, setAvailableMemories] = useState<AiMemory[]>([]);
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    getMemories()
+      .then((mems) => setAvailableMemories(mems))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (webSearchActiveProp !== undefined) {
@@ -185,8 +226,8 @@ function ChatInput({
   }, [webSearchActiveProp]);
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: 56,
-    maxHeight: 200,
+    minHeight: 52,
+    maxHeight: 180,
   });
 
   useEffect(() => {
@@ -195,13 +236,71 @@ function ChatInput({
     }
   }, [input, adjustHeight]);
 
+  // Arrow-key navigation must light the highlight too, not just the pointer.
+  useEffect(() => {
+    if (atQuery === null) setAtEngaged(false);
+  }, [atQuery]);
+  useEffect(() => {
+    if (slashQuery === null) setSlashEngaged(false);
+  }, [slashQuery]);
+
+  // Dictation rides the browser's own speech recognition — no dependency, but
+  // it is Chromium-only, so the button is hidden rather than shown broken.
+  useEffect(() => {
+    const w = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionCtor;
+      webkitSpeechRecognition?: SpeechRecognitionCtor;
+    };
+    setDictationSupported(Boolean(w.SpeechRecognition || w.webkitSpeechRecognition));
+    return () => {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  const toggleDictation = useCallback(() => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const w = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionCtor;
+      webkitSpeechRecognition?: SpeechRecognitionCtor;
+    };
+    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!Ctor) return;
+
+    const recognition = new Ctor();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = navigator.language || "en-US";
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from({ length: event.results.length }, (_, i) => event.results[i][0].transcript)
+        .join(" ")
+        .trim();
+      if (!transcript) return;
+      // Append to the draft rather than replacing it — the user may have typed
+      // part of the message before reaching for the microphone.
+      const next = input ? `${input.trimEnd()} ${transcript}` : transcript;
+      onInputChange({ target: { value: next } } as React.ChangeEvent<HTMLTextAreaElement>);
+      adjustHeight();
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [isListening, input, onInputChange, adjustHeight]);
+
   const toggleWebSearch = useCallback(() => {
     const next = !isWebSearchActive;
     setIsWebSearchActive(next);
     onToggleWebSearch?.(next);
-    if (next) {
-      toast.info("Web & tools search enabled");
-    }
+    // No toast: the button's own active state already reports this.
   }, [isWebSearchActive, onToggleWebSearch]);
 
   const handleFileSelect = useCallback(
@@ -216,7 +315,7 @@ function ChatInput({
 
       files.forEach((file) => {
         if (!file.type.startsWith("image/")) {
-          toast.error("Only image files are allowed.");
+          toast.error("Only image files are allowed");
           return;
         }
         const url = URL.createObjectURL(file);
@@ -274,7 +373,7 @@ function ChatInput({
 
       files.forEach((file) => {
         if (!file.type.startsWith("image/")) {
-          toast.error("Only image files are allowed as attachments.");
+          toast.error("Only image files are allowed as attachments");
           return;
         }
         const url = URL.createObjectURL(file);
@@ -294,6 +393,40 @@ function ChatInput({
       window.setTimeout(() => textareaRef.current?.focus(), 0);
     },
     [onInputChange, adjustHeight]
+  );
+
+  const filteredMemories = useMemo(() => {
+    if (atQuery === null) return [];
+    const q = atQuery.trim();
+    return availableMemories
+      .filter((m) => {
+        if (!q) return true;
+        const matchTitle = m.title ? m.title.toLowerCase().includes(q) : false;
+        const matchDesc = m.description.toLowerCase().includes(q);
+        return matchTitle || matchDesc;
+      })
+      .slice(0, 6);
+  }, [atQuery, availableMemories]);
+
+  const applyMemoryMention = useCallback(
+    (mem: AiMemory) => {
+      const cursor = textareaRef.current?.selectionStart ?? input.length;
+      const textBeforeCursor = (input || "").slice(0, cursor);
+      const textAfterCursor = (input || "").slice(cursor);
+      const match = textBeforeCursor.match(/@([a-zA-Z0-9_\-\s]*)$/);
+      if (match) {
+        const memTag = mem.title ? `@${mem.title.replace(/\s+/g, "_")}` : `@memory`;
+        const replaced = textBeforeCursor.slice(0, match.index) + `${memTag} ` + textAfterCursor;
+        onInputChange({
+          target: { value: replaced },
+        } as React.ChangeEvent<HTMLTextAreaElement>);
+        setAtQuery(null);
+        // No toast: the mention tag is now visible in the input itself.
+        adjustHeight();
+        window.setTimeout(() => textareaRef.current?.focus(), 0);
+      }
+    },
+    [input, onInputChange, adjustHeight]
   );
 
   const handleFormSubmit = useCallback(
@@ -322,6 +455,7 @@ function ChatInput({
       attachments.forEach((a) => URL.revokeObjectURL(a.url));
       setAttachments([]);
       setSlashQuery(null);
+      setAtQuery(null);
       adjustHeight(true);
     },
     [input, attachments, isLoading, onSubmit, adjustHeight]
@@ -329,15 +463,42 @@ function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (atQuery !== null && filteredMemories.length > 0) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setAtEngaged(true);
+          setAtIndex((i) => Math.min(i + 1, filteredMemories.length - 1));
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setAtEngaged(true);
+          setAtIndex((i) => Math.max(i - 1, 0));
+          return;
+        }
+        if (e.key === "Tab" || e.key === "Enter") {
+          e.preventDefault();
+          applyMemoryMention(filteredMemories[Math.min(atIndex, filteredMemories.length - 1)]);
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setAtQuery(null);
+          return;
+        }
+      }
+
       if (slashQuery !== null) {
         const filtered = SLASH_COMMANDS.filter((c) => c.command.slice(1).startsWith(slashQuery));
         if (e.key === "ArrowDown") {
           e.preventDefault();
+          setSlashEngaged(true);
           setSlashIndex((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0)));
           return;
         }
         if (e.key === "ArrowUp") {
           e.preventDefault();
+          setSlashEngaged(true);
           setSlashIndex((i) => Math.max(i - 1, 0));
           return;
         }
@@ -358,10 +519,9 @@ function ChatInput({
         handleFormSubmit(e);
       }
     },
-    [slashQuery, slashIndex, applySlashCommand, handleFormSubmit]
+    [atQuery, atIndex, filteredMemories, applyMemoryMention, slashQuery, slashIndex, applySlashCommand, handleFormSubmit]
   );
 
-  // Slash command detection (memoized on input).
   useEffect(() => {
     const trimmed = (input || "").trimStart();
     if (trimmed.startsWith("/") && !trimmed.includes(" ")) {
@@ -369,6 +529,16 @@ function ChatInput({
       setSlashIndex(0);
     } else {
       setSlashQuery(null);
+    }
+
+    const cursor = textareaRef.current?.selectionStart ?? input.length;
+    const textBeforeCursor = (input || "").slice(0, cursor);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_\-\s]*)$/);
+    if (match && !match[1].includes("\n") && match[1].length <= 25) {
+      setAtQuery(match[1].toLowerCase());
+      setAtIndex(0);
+    } else {
+      setAtQuery(null);
     }
   }, [input]);
 
@@ -395,16 +565,41 @@ function ChatInput({
     fileInputRef.current?.click();
   }, [model.supportsImages, model.name]);
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = Array.from(e.clipboardData?.items || []);
+      const imageItems = items.filter((item) => item.type.startsWith("image/"));
+      if (imageItems.length === 0) return; // let normal text paste through
+
+      e.preventDefault();
+
+      if (!model.supportsImages) {
+        toast.warning(`${model.name} does not support image attachments.`);
+        return;
+      }
+
+      imageItems.forEach((item) => {
+        const file = item.getAsFile();
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        setAttachments((prev) => [...prev, { file, url }]);
+      });
+    },
+    [model.supportsImages, model.name]
+  );
+
   return (
-    <div className="sticky bottom-0 z-30 border-t border-border/50 bg-gradient-to-t from-background via-background/95 to-background/40 px-3 py-3 backdrop-blur-md md:px-4 md:py-4">
-      <div className="mx-auto w-full max-w-3xl">
+    <div className="sticky bottom-0 z-30 border-t border-border/50 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#09090b] dark:via-[#09090b]/95 dark:to-transparent px-3 py-3 backdrop-blur-md md:px-4 md:py-4">
+      {/* Centered max-width 768px container */}
+      <div className="mx-auto w-full max-w-[768px]">
         <form onSubmit={handleFormSubmit} className="group">
+          {/* Single unified input box with 12px rounded corners */}
           <div
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className="relative rounded-2xl border border-border/60 bg-gradient-to-br from-card to-card/60 shadow-lg shadow-black/5 backdrop-blur-xl transition-all duration-200 ease-out focus-within:border-primary/50 focus-within:shadow-xl focus-within:shadow-primary/5 focus-within:ring-2 focus-within:ring-primary/25"
+            className="relative rounded-xl border border-border/70 dark:border-slate-800 bg-card shadow-sm transition-all duration-200 ease-out focus-within:border-blue-500/60 focus-within:shadow-md focus-within:ring-2 focus-within:ring-blue-500/20"
           >
             {/* Drag and Drop Overlay */}
             <AnimatePresence>
@@ -414,9 +609,9 @@ function ChatInput({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.15, ease: EASE }}
-                  className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary bg-background/90 backdrop-blur-md"
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-600 bg-background/95 backdrop-blur-md"
                 >
-                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
                     <Upload className="size-5" />
                   </div>
                   <p className="text-xs font-medium text-foreground">Drop images or files here to attach</p>
@@ -425,7 +620,67 @@ function ChatInput({
               )}
             </AnimatePresence>
 
-            {/* Slash command menu — origin-aware, scales from bottom edge */}
+            {/* @ Memory mention menu */}
+            <AnimatePresence>
+              {atQuery !== null && filteredMemories.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97, y: 6 }}
+                  transition={{ duration: 0.16, ease: EASE }}
+                  style={{ transformOrigin: "bottom center" }}
+                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/70 bg-popover/98 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md"
+                >
+                  <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+                    <Brain className="size-3.5 text-blue-500" />
+                    <span>Connect AI Memory (@)</span>
+                  </div>
+                  <GlidingHighlight
+                    rowRefs={atRowRefs}
+                    activeIndex={atIndex}
+                    visible={atEngaged}
+                    deps={[filteredMemories.length, atQuery]}
+                  />
+                  {filteredMemories.map((mem, idx) => (
+                    <button
+                      key={mem.id}
+                      type="button"
+                      ref={(el) => {
+                        atRowRefs.current[idx] = el;
+                      }}
+                      onMouseEnter={() => {
+                        setAtIndex(idx);
+                        setAtEngaged(true);
+                      }}
+                      onClick={() => applyMemoryMention(mem)}
+                      className={cn(
+                        "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 ease-out cursor-pointer",
+                        idx === atIndex && atEngaged && "text-blue-600 dark:text-blue-400"
+                      )}
+                    >
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <Brain className="size-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-medium text-xs text-foreground truncate">
+                            {mem.title || <span className="italic text-muted-foreground">Untitled Memory</span>}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.2 rounded shrink-0">
+                            @{mem.title ? mem.title.replace(/\s+/g, "_") : "memory"}
+                          </span>
+                        </div>
+                        <p className="truncate text-[10px] text-muted-foreground/80 font-mono mt-0.5">
+                          {mem.description.slice(0, 80).replace(/\n+/g, " ")}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Slash command menu */}
             <AnimatePresence>
               {slashQuery !== null && filteredCommands.length > 0 && (
                 <motion.div
@@ -434,20 +689,32 @@ function ChatInput({
                   exit={{ opacity: 0, scale: 0.97, y: 6 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   style={{ transformOrigin: "bottom center" }}
-                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/50 bg-popover/95 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md"
+                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/60 bg-popover/95 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md"
                 >
+                  <GlidingHighlight
+                    rowRefs={slashRowRefs}
+                    activeIndex={slashIndex}
+                    visible={slashEngaged}
+                    deps={[filteredCommands.length, slashQuery]}
+                  />
                   {filteredCommands.map((cmd, idx) => (
                     <button
                       key={cmd.command}
                       type="button"
-                      onMouseEnter={() => setSlashIndex(idx)}
+                      ref={(el) => {
+                        slashRowRefs.current[idx] = el;
+                      }}
+                      onMouseEnter={() => {
+                        setSlashIndex(idx);
+                        setSlashEngaged(true);
+                      }}
                       onClick={() => applySlashCommand(cmd)}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-all duration-150 ease-out",
-                        idx === slashIndex ? "bg-primary/10" : "hover:bg-accent/50"
+                        "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 ease-out cursor-pointer",
+                        idx === slashIndex && slashEngaged && "text-blue-600 dark:text-blue-400"
                       )}
                     >
-                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-primary">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-blue-600">
                         <cmd.icon className="size-3.5" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -463,7 +730,7 @@ function ChatInput({
               )}
             </AnimatePresence>
 
-            {/* Attachments */}
+            {/* Attachments list */}
             <AnimatePresence initial={false}>
               {attachments.length > 0 && (
                 <motion.div
@@ -494,40 +761,75 @@ function ChatInput({
               )}
             </AnimatePresence>
 
-            {/* Textarea */}
+            {/* Quoted Reply Banner */}
+            <AnimatePresence initial={false}>
+              {replyTo && (
+                <motion.div
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  animate={reduceMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: EASE }}
+                  className="overflow-hidden border-b border-border/50 bg-blue-500/5 px-3 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        <MessageSquareReply className="size-3" />
+                      </div>
+                      <div className="min-w-0 flex-1 text-xs">
+                        <span className="font-semibold text-foreground/90">
+                          Replying to {replyTo.role === "assistant" ? "Assistant" : "You"}:
+                        </span>{" "}
+                        <span className="text-muted-foreground truncate inline-block max-w-[320px] sm:max-w-[450px] align-bottom">
+                          {replyTo.preview}
+                        </span>
+                      </div>
+                    </div>
+                    {onClearReply && (
+                      <button
+                        type="button"
+                        onClick={onClearReply}
+                        className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                        title="Cancel reply"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Top row: Textarea */}
             <Textarea
               ref={textareaRef}
               value={input || ""}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              placeholder={`Message ${model.name}...`}
+              onPaste={handlePaste}
+              placeholder={`Message ${model.name || "Auto Hybrid Agent"}...`}
               className={cn(
-                "w-full resize-none border-none bg-transparent px-4 py-3.5 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
-                "min-h-[56px]"
+                "w-full resize-none border-none bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
+                "min-h-[52px]"
               )}
               style={{ overflow: "hidden" }}
             />
 
-            {/* Bottom bar */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2">
-              <div className="flex items-center gap-1">
+            {/* Bottom controls row */}
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border/30">
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                 {onMobileMenuToggle && (
                   <button
                     type="button"
                     onClick={onMobileMenuToggle}
-                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 ease-out hover:bg-accent/50 hover:text-foreground active:scale-[0.96] md:hidden"
+                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-[0.96] md:hidden"
                     title="Open menu"
                   >
                     <Menu className="size-4" />
                   </button>
                 )}
 
-                <PersonaSelector
-                  selectedPersonaId={selectedPersona.id}
-                  onSelectPersona={onSelectPersona}
-                  direction="up"
-                />
-
+                {/* Model Selector Dropdown */}
                 <ModelSelector
                   selectedModelId={model.id}
                   onSelectModel={onSelectModel}
@@ -535,31 +837,40 @@ function ChatInput({
                   direction="up"
                 />
 
-                <button
-                  type="button"
-                  onClick={triggerFilePicker}
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 ease-out hover:bg-accent/50 hover:text-foreground active:scale-[0.96]",
-                    !model.supportsImages && "opacity-40"
-                  )}
-                  title={model.supportsImages ? "Attach image" : "Model doesn't support images"}
-                >
-                  <Plus className="size-4" />
-                </button>
+                {/* Persona Selector Pill */}
+                <PersonaSelector
+                  selectedPersonaId={selectedPersona.id}
+                  onSelectPersona={onSelectPersona}
+                  direction="up"
+                />
 
+                {/* Search Toggle */}
                 <button
                   type="button"
                   onClick={toggleWebSearch}
                   className={cn(
-                    "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 ease-out active:scale-[0.96]",
+                    "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 active:scale-[0.96] cursor-pointer",
                     isWebSearchActive
-                      ? "bg-primary/15 text-primary shadow-xs ring-1 ring-primary/30"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 shadow-2xs ring-1 ring-blue-500/30"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                   title={isWebSearchActive ? "Web & tools search active" : "Enable Web & tools search"}
                 >
                   <Globe className="size-3.5" />
                   <span className="hidden sm:inline">Search</span>
+                </button>
+
+                {/* Attach File Button */}
+                <button
+                  type="button"
+                  onClick={triggerFilePicker}
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-[0.96] cursor-pointer",
+                    !model.supportsImages && "opacity-40"
+                  )}
+                  title={model.supportsImages ? "Attach image" : "Model doesn't support images"}
+                >
+                  <Plus className="size-4" />
                 </button>
 
                 <input
@@ -571,13 +882,47 @@ function ChatInput({
                   className="hidden"
                 />
 
-                <span className="ml-1 hidden items-center gap-1 text-[10px] text-muted-foreground/60 lg:flex">
+                {/* Dictation — hidden where the browser has no speech API. */}
+                {dictationSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleDictation}
+                    aria-pressed={isListening}
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-lg transition-all duration-150 active:scale-[0.96] cursor-pointer",
+                      isListening
+                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                    title={isListening ? "Stop dictation" : "Dictate message"}
+                  >
+                    {isListening ? (
+                      <span className="flex h-3.5 items-center gap-[2.5px]">
+                        {[0, 1, 2].map((i) => (
+                          <span
+                            key={i}
+                            className="agent-eq-bar w-[2.5px] rounded-full bg-current"
+                            style={{ height: "100%", animationDelay: `${i * 150}ms` }}
+                          />
+                        ))}
+                      </span>
+                    ) : (
+                      <Mic className="size-4" />
+                    )}
+                  </button>
+                )}
+
+                {/* Slash & At Command Hints */}
+                <span className="ml-1 hidden items-center gap-1 text-[11px] text-muted-foreground/60 lg:flex select-none">
                   <Slash className="size-3" />
-                  for commands
+                  commands
+                  <span className="opacity-40">·</span>
+                  <span className="font-mono font-medium">@</span>
+                  memories
                 </span>
               </div>
 
-              {/* Send / Stop — polished morph */}
+              {/* Send / Stop button aligned to the right */}
               {isLoading ? (
                 <motion.button
                   type="button"
@@ -586,8 +931,8 @@ function ChatInput({
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   whileTap={{ scale: 0.94 }}
-                  className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-destructive/90 text-destructive-foreground shadow-md shadow-destructive/20 transition-colors hover:from-destructive/90 hover:to-destructive/80"
-                  title="Stop"
+                  className="flex size-8 items-center justify-center rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-xs shadow-blue-500/20 transition-colors cursor-pointer shrink-0"
+                  title="Stop generation"
                 >
                   <Square className="size-3.5 fill-current" />
                 </motion.button>
@@ -600,20 +945,19 @@ function ChatInput({
                   transition={{ duration: 0.16, ease: EASE }}
                   whileTap={{ scale: hasValue ? 0.94 : 1 }}
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-xl shadow-md transition-colors",
+                    "flex size-8 items-center justify-center rounded-lg shadow-xs transition-all shrink-0",
                     hasValue
-                      ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-primary/20 hover:from-primary/90 hover:to-primary/80"
+                      ? "bg-[#2563EB] hover:bg-[#1d4ed8] text-white cursor-pointer shadow-blue-500/20"
                       : "cursor-not-allowed bg-muted text-muted-foreground/40"
                   )}
-                  title="Send"
+                  title="Send message"
                 >
-                  <ArrowUpIcon className="size-4" />
+                  <ArrowUp className="size-4" />
                 </motion.button>
               )}
             </div>
           </div>
         </form>
-
       </div>
     </div>
   );

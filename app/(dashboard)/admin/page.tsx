@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   UsersTrendChart,
-  JobsStatusChart,
+  JobsStageChart,
   AiTrendChart,
 } from "@/components/admin-charts";
 
@@ -128,14 +128,14 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Charts row 2: Jobs by Status */}
+      {/* Charts row 2: Jobs by Stage */}
       <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
         <div className="mb-4">
-          <h2 className="font-heading text-lg font-semibold">Jobs by Status</h2>
+          <h2 className="font-heading text-lg font-semibold">Jobs by Stage</h2>
           <p className="text-xs text-muted-foreground mt-1">Distribution across all users</p>
         </div>
-        {stats.jobsByStatus.length > 0 ? (
-          <JobsStatusChart data={stats.jobsByStatus} />
+        {stats.jobsByStage.length > 0 ? (
+          <JobsStageChart data={stats.jobsByStage} />
         ) : (
           <EmptyState icon={Briefcase} text="No jobs yet" />
         )}

@@ -24,10 +24,10 @@ const cormorant = Cormorant_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
-export const crimsonText = Crimson_Text({
+const crimsonText = Crimson_Text({
   variable: "--font--crimson",
   subsets: ["latin"],
-  weight: ["400", "600", "700"] 
+  weight: ["400", "600", "700"],
 });
 
 const bricolage = Bricolage_Grotesque({
@@ -38,8 +38,8 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "AtTrack",
-    template: "%s | AtTrack",
+    default: "atTrack",
+    template: "%s | atTrack",
   },
   description: "Your personal job application tracker",
 };

@@ -1,84 +1,51 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
+import { getBoard } from "@/lib/actions/board";
 import { buttonVariants } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import {
-  PipelineChart,
+  PipelineStages,
+  BreakdownBar,
   ApplicationTrendChart,
   McqScoreChart,
+  type PipelineStage,
+  type BreakdownItem,
 } from "@/components/overview-charts";
+import { DEFAULT_LIST_COLORS } from "@/lib/types/board";
 import {
   Briefcase,
   Calendar,
-  Clock,
   Target,
   ArrowRight,
   Plus,
   Camera,
   TrendingUp,
   Activity,
-  Timer,
-  Zap,
   Send,
-  CheckCircle2,
-  Award,
 } from "lucide-react";
 
-const statusLabels: Record<string, string> = {
-  saved: "Saved",
-  interested: "Interested",
-  preparing: "Preparing",
-};
-
-const pipelineColors: Record<string, string> = {
-  saved: "#94A3B8",
-  interested: "#3B82F6",
-  preparing: "#F59E0B",
-  applied: "#8B5CF6",
-  interview: "#84cc16",
-  offer: "#65a30d",
-  accepted: "#4d7c0f",
-  rejected: "#EF4444",
-  withdrawn: "#6B7280",
-};
-
-const sourceColors: Record<string, string> = {
-  linkedin: "#0A66C2",
-  indeed: "#2164F3",
-  glassdoor: "#0CAA41",
-  referral: "#8B5CF6",
-  company_site: "#F59E0B",
-  other: "#6B7280",
-  manual: "#6366F1",
-  screenshot: "#EC4899",
-};
-
-const employmentTypeColors: Record<string, string> = {
-  "Full-time": "#6366F1",
-  "Part-time": "#8B5CF6",
-  Contract: "#A855F7",
-  Freelance: "#D946EF",
-  Internship: "#EC4899",
-  Temporary: "#F43F5E",
-  Apprenticeship: "#F97316",
-  Volunteer: "#EAB308",
-};
-
-const workLocationColors: Record<string, string> = {
-  Remote: "#84cc16",
-  Hybrid: "#F59E0B",
-  "On-site": "#6366F1",
-  Unspecified: "#6B7280",
-};
+/**
+ * Importers write this field free-form, so the same mode arrives as "onsite",
+ * "On-site" and "on_site" and used to be counted as three separate categories.
+ */
+function normalizeWorkLocation(raw: string | null): string {
+  if (!raw) return "Unspecified";
+  const key = raw.toLowerCase().replace(/[\s_-]/g, "");
+  if (key === "remote") return "Remote";
+  if (key === "onsite") return "On-site";
+  if (key === "hybrid") return "Hybrid";
+  return raw;
+}
 
 export default async function OverviewPage() {
   const { supabase, userId } = await getUser();
+  const { lists: boardLists } = await getBoard();
 
   const { data: jobs } = await supabase
     .from("jobs")
     .select(`
-      id, title, status, match_score, source, employment_type, work_location,
+      id, title, list_id, match_score, source, employment_type, work_location,
       created_at, updated_at,
       company:companies(name),
       applications(id, status, applied_at, created_at),
@@ -104,15 +71,45 @@ export default async function OverviewPage() {
 
   const allJobs = jobs ?? [];
 
-  // Pipeline
-  const pipelineCounts: Record<string, number> = {};
+  // Pipeline. Counted off board_lists, not jobs.status: the trigger behind that
+  // column only ever stores 'saved' or 'preparing' (schema.sql), so it reported
+  // every applied job as still preparing. The board is the real stage, and
+  // reading it means a list the user adds shows up here in its own sort order.
+  const jobsPerList: Record<string, number> = {};
+  let unsortedJobs = 0;
   for (const job of allJobs) {
-    const s = job.status as string;
-    pipelineCounts[s] = (pipelineCounts[s] || 0) + 1;
+    const listId = job.list_id as string | null;
+    if (listId) jobsPerList[listId] = (jobsPerList[listId] || 0) + 1;
+    else unsortedJobs++;
   }
-  const pipeline = Object.fromEntries(
-    Object.entries(pipelineCounts).filter(([, count]) => count > 0)
-  );
+
+  const pipelineStages: PipelineStage[] = boardLists.map((list) => ({
+    id: list.id,
+    name: list.name,
+    count: jobsPerList[list.id] ?? 0,
+    color: list.color ?? DEFAULT_LIST_COLORS[list.kind],
+  }));
+  if (unsortedJobs > 0) {
+    pipelineStages.push({
+      id: "unsorted",
+      name: "Unsorted",
+      count: unsortedJobs,
+      color: DEFAULT_LIST_COLORS.custom,
+    });
+  }
+
+  // A job counts as applied once it sits at or past the Applied list. Using the
+  // list's own sort_order keeps custom stages (a "Screening" list between
+  // Applied and Interview) on the right side of the line automatically.
+  const appliedOrder = boardLists.find((l) => l.kind === "applied")?.sort_order;
+  const countLists = (match: (list: (typeof boardLists)[number]) => boolean) =>
+    boardLists.filter(match).reduce((sum, l) => sum + (jobsPerList[l.id] ?? 0), 0);
+
+  const reachedApplied =
+    appliedOrder != null ? countLists((l) => l.sort_order >= appliedOrder) : 0;
+  const movedPastApplied =
+    appliedOrder != null ? countLists((l) => l.sort_order > appliedOrder) : 0;
+  const offerCount = countLists((l) => l.kind === "offer" || l.kind === "accepted");
 
   // Average match score
   let totalScore = 0;
@@ -126,38 +123,24 @@ export default async function OverviewPage() {
   }
   const averageMatchScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
 
-  // Source breakdown
-  const sourceMap: Record<string, number> = {};
-  for (const job of allJobs) {
-    const src = (job.source as string) || "Other";
-    sourceMap[src] = (sourceMap[src] || 0) + 1;
-  }
-  const sourceBreakdown = Object.entries(sourceMap)
-    .map(([source, count]) => ({
-      source: source.charAt(0).toUpperCase() + source.slice(1).replace("_", " "),
-      count,
-      fill: sourceColors[source] || "#6B7280",
-    }))
-    .sort((a, b) => b.count - a.count);
-
   // Employment type breakdown
   const employmentTypeMap: Record<string, number> = {};
   for (const job of allJobs) {
     const t = (job.employment_type as string) || "Full-time";
     employmentTypeMap[t] = (employmentTypeMap[t] || 0) + 1;
   }
-  const employmentTypeBreakdown = Object.entries(employmentTypeMap)
-    .map(([type, count]) => ({ type, count, fill: employmentTypeColors[type] || "#6B7280" }))
+  const employmentTypeBreakdown: BreakdownItem[] = Object.entries(employmentTypeMap)
+    .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
   // Work location breakdown
   const workLocationMap: Record<string, number> = {};
   for (const job of allJobs) {
-    const l = (job.work_location as string) || "Unspecified";
+    const l = normalizeWorkLocation(job.work_location as string | null);
     workLocationMap[l] = (workLocationMap[l] || 0) + 1;
   }
-  const workLocationBreakdown = Object.entries(workLocationMap)
-    .map(([location, count]) => ({ location, count, fill: workLocationColors[location] || "#6B7280" }))
+  const workLocationBreakdown: BreakdownItem[] = Object.entries(workLocationMap)
+    .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
   // Application trend
@@ -202,20 +185,6 @@ export default async function OverviewPage() {
     .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
     .slice(0, 3);
 
-  // Interview stats
-  const allInterviews = allJobs.flatMap((job) => (Array.isArray(job.interviews) ? job.interviews : []));
-  const upcomingInterviewsCount = allInterviews.filter(
-    (i: { scheduled_at: string | null }) => i.scheduled_at && new Date(i.scheduled_at) >= new Date()
-  ).length;
-  const completedInterviews = allInterviews.filter((i: { status: string }) => i.status === "completed").length;
-  const passedInterviews = allInterviews.filter((i: { status: string }) => i.status === "passed").length;
-  const interviewStats = {
-    total: allInterviews.length,
-    upcoming: upcomingInterviewsCount,
-    completed: completedInterviews,
-    passRate: completedInterviews > 0 ? Math.round((passedInterviews / completedInterviews) * 100) : null,
-  };
-
   // MCQ stats
   const totalTests = mcqResults?.length ?? 0;
   const avgScore =
@@ -230,46 +199,10 @@ export default async function OverviewPage() {
       score: Math.round((r.score / r.total) * 100),
     }));
 
-  // Time analytics
-  let totalDaysToApply = 0;
-  let applyCount = 0;
-  let totalDaysToInterview = 0;
-  let interviewCount = 0;
-
-  for (const job of allJobs) {
-    const created = new Date(job.created_at as string);
-    const apps = Array.isArray(job.applications) ? job.applications : [];
-    if (apps.length > 0) {
-      const appDate = new Date(
-        (apps[0] as { applied_at: string }).applied_at || (apps[0] as { created_at: string }).created_at
-      );
-      totalDaysToApply += Math.round((appDate.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-      applyCount++;
-    }
-    const ints = Array.isArray(job.interviews) ? job.interviews : [];
-    if (ints.length > 0 && apps.length > 0) {
-      const intDate = new Date((ints[0] as { scheduled_at: string }).scheduled_at);
-      const appDate = new Date(
-        (apps[0] as { applied_at: string }).applied_at || (apps[0] as { created_at: string }).created_at
-      );
-      const d = Math.round((intDate.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (d > 0) {
-        totalDaysToInterview += d;
-        interviewCount++;
-      }
-    }
-  }
-  const timeAnalytics = {
-    averageTimeToApply: applyCount > 0 ? Math.round(totalDaysToApply / applyCount) : null,
-    averageTimeToInterview: interviewCount > 0 ? Math.round(totalDaysToInterview / interviewCount) : null,
-  };
-
   const offerRate =
-    (totalJobs ?? 0) > 0 ? Math.round(((pipeline.offer ?? 0) + (pipeline.accepted ?? 0)) / (totalJobs ?? 1) * 100) : null;
-  const totalApplied =
-    (pipeline.applied ?? 0) + (pipeline.interview ?? 0) + (pipeline.offer ?? 0) + (pipeline.accepted ?? 0) + (pipeline.rejected ?? 0);
-  const responded = (pipeline.interview ?? 0) + (pipeline.offer ?? 0) + (pipeline.accepted ?? 0) + (pipeline.rejected ?? 0);
-  const responseRate = totalApplied > 0 ? Math.round((responded / totalApplied) * 100) : null;
+    (totalJobs ?? 0) > 0 ? Math.round((offerCount / (totalJobs ?? 1)) * 100) : null;
+  const responseRate =
+    reachedApplied > 0 ? Math.round((movedPastApplied / reachedApplied) * 100) : null;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -296,6 +229,7 @@ export default async function OverviewPage() {
                     Add job
                   </button>
                 }
+                lists={boardLists}
               />
               <Link
                 href="/jobs?import=screenshot"
@@ -328,19 +262,8 @@ export default async function OverviewPage() {
           </div>
           <Link href="/jobs" className="text-xs text-green-800 dark:text-lime-400 hover:underline flex items-center gap-1">View all <ArrowRight className="size-3" /></Link>
         </div>
-        {Object.keys(pipeline).length > 0 ? (
-          <>
-            <PipelineChart pipeline={pipeline} />
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-              {Object.entries(pipeline).map(([key, count]) => (
-                <div key={key} className="flex items-center gap-1.5">
-                  <div className="size-2 rounded-full" style={{ backgroundColor: pipelineColors[key] || "#6B7280" }} />
-                  <span className="text-muted-foreground">{statusLabels[key] ?? key}</span>
-                  <span className="font-medium">{count}</span>
-                </div>
-              ))}
-            </div>
-          </>
+        {allJobs.length > 0 ? (
+          <PipelineStages stages={pipelineStages} total={allJobs.length} />
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Briefcase className="size-8 text-muted-foreground/30 mb-2" />
@@ -349,9 +272,21 @@ export default async function OverviewPage() {
         )}
       </div>
 
-      {/* Row 2: Trend + Timing */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 lg:col-span-2">
+      {/* Row 2: Breakdowns — two small splits sharing one card row */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-5">
+          <h3 className="font-heading text-sm font-semibold mb-3">Work location</h3>
+          <BreakdownBar items={workLocationBreakdown} total={allJobs.length} />
+        </div>
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-5">
+          <h3 className="font-heading text-sm font-semibold mb-3">Employment type</h3>
+          <BreakdownBar items={employmentTypeBreakdown} total={allJobs.length} />
+        </div>
+      </div>
+
+      {/* Row 3: Trend + upcoming interviews */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="mb-4">
             <h2 className="font-heading text-lg font-semibold">Applications & Interviews</h2>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
@@ -362,58 +297,6 @@ export default async function OverviewPage() {
             <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-emerald-500" /><span className="text-muted-foreground">Interviews</span></div>
           </div>
         </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-4">
-            <h2 className="font-heading text-lg font-semibold">Timing</h2>
-            <p className="text-xs text-muted-foreground">How long things take</p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10"><Timer className="size-5 text-violet-500" /></div>
-              <div>
-                <p className="text-xl font-bold">{timeAnalytics.averageTimeToApply != null ? `${timeAnalytics.averageTimeToApply}d` : "—"}</p>
-                <p className="text-[11px] text-muted-foreground">Time to apply</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10"><Zap className="size-5 text-emerald-500" /></div>
-              <div>
-                <p className="text-xl font-bold">{timeAnalytics.averageTimeToInterview != null ? `${timeAnalytics.averageTimeToInterview}d` : "—"}</p>
-                <p className="text-[11px] text-muted-foreground">Time to interview</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Breakdowns */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="font-heading text-sm font-semibold mb-3">Work Location</h3>
-          <div className="space-y-2">
-            {workLocationBreakdown.map((item) => (
-              <div key={item.location} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2"><div className="size-2 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.location}</span></div>
-                <span className="font-medium">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="font-heading text-sm font-semibold mb-3">Employment Type</h3>
-          <div className="space-y-2">
-            {employmentTypeBreakdown.slice(0, 5).map((item) => (
-              <div key={item.type} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2"><div className="size-2 rounded-full" style={{ backgroundColor: item.fill }} /><span className="text-muted-foreground">{item.type}</span></div>
-                <span className="font-medium">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 4: Upcoming Interviews + Interview Stats */}
-      <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -444,42 +327,6 @@ export default async function OverviewPage() {
               <p className="text-sm text-muted-foreground">No interviews scheduled</p>
             </div>
           )}
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6">
-          <div className="mb-4">
-            <h2 className="font-heading text-lg font-semibold">Interview Stats</h2>
-            <p className="text-xs text-muted-foreground">How they went</p>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-xl bg-emerald-500/10"><Calendar className="size-4 text-emerald-500" /></div>
-                <span className="text-sm">Total</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.total}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-xl bg-blue-500/10"><Clock className="size-4 text-blue-500" /></div>
-                <span className="text-sm">Upcoming</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.upcoming}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-xl bg-violet-500/10"><CheckCircle2 className="size-4 text-violet-500" /></div>
-                <span className="text-sm">Completed</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.completed}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10"><Award className="size-4 text-amber-500" /></div>
-                <span className="text-sm">Pass rate</span>
-              </div>
-              <span className="text-lg font-bold">{interviewStats.passRate != null ? `${interviewStats.passRate}%` : "—"}</span>
-            </div>
-          </div>
         </div>
       </div>
 

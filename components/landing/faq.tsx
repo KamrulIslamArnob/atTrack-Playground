@@ -11,37 +11,37 @@ import { Reveal, staggerContainer, staggerItem } from "@/components/landing/moti
 
 const faqs = [
   {
-    question: "What does AtTrack do?",
+    question: "What does atTrack do?",
     answer:
-      "AtTrack is a private workspace for your job search. You save jobs, track applications and interviews, draft application emails with AI, and practice for interviews — all in one place. It runs on your own machine, not in someone else's cloud.",
+      "atTrack is a private workspace for your job search. You save jobs, track applications and interviews, draft application emails with AI, and practice for interviews — all in one place. It runs on your own machine, not in someone else's cloud.",
   },
   {
     question: "How does the screenshot import work?",
     answer:
-      "You screenshot a job posting and paste it into AtTrack. The AI reads the image and fills in the title, company, salary, location, and requirements. You can review and edit before saving.",
+      "You screenshot a job posting and paste it into atTrack. The AI reads the image and fills in the title, company, salary, location, and requirements. You can review and edit before saving.",
   },
   {
     question: "How does the application email feature work?",
     answer:
-      "AtTrack drafts an email using the job details and your resume. You edit it, attach your resume if you want, and send it through your own email account — Gmail, Outlook, or any provider you set up in Settings.",
+      "atTrack drafts an email using the job details and your resume. You edit it, attach your resume if you want, and send it through your own email account — Gmail, Outlook, or any provider you set up in Settings.",
   },
   {
     question: "What's the resume match score?",
     answer:
-      "AtTrack compares your resume against a job description and gives you a percentage score with a short explanation. It helps you focus on the roles where you're a strong fit.",
+      "atTrack compares your resume against a job description and gives you a percentage score with a short explanation. It helps you focus on the roles where you're a strong fit.",
   },
   {
     question: "Can I practice for interviews?",
     answer:
-      "Yes. AtTrack generates multiple-choice questions based on a specific job. You take the test, see what you got wrong, and track your scores over time.",
+      "Yes. atTrack generates multiple-choice questions based on a specific job. You take the test, see what you got wrong, and track your scores over time.",
   },
   {
     question: "Is my data private?",
     answer:
-      "Yes. AtTrack runs entirely on your machine. Your jobs, applications, resumes, and notes live in a local database — not on a server somewhere. Nothing is shared with third parties.",
+      "Yes. atTrack runs entirely on your machine. Your jobs, applications, resumes, and notes live in a local database — not on a server somewhere. Nothing is shared with third parties.",
   },
   {
-    question: "Is AtTrack free?",
+    question: "Is atTrack free?",
     answer:
       "Yes, completely. Job tracking, screenshot import, email drafts, resume scoring, interview tracking, and practice tests are all included. There's no account, no subscription, and no credit card required.",
   },

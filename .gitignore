@@ -42,8 +42,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Local SQLite database and file storage
+# Local SQLite database, file storage, and keys
 .data/
+*.key
+
+# User uploaded/sample resume PDFs with personal data
+public/resume/*.pdf
+public/resume/**/*.pdf
 
 # electron-builder installer output
 /release/
@@ -64,9 +69,16 @@ next-env.d.ts
 .catpaw/
 .aider*
 .cursorrules*
+.cursor/
+.clinerules/
 .augment*
 .copilot/
 .opencode/
+
+# AI agent memory / context md files
+AGENTS.md
+CLAUDE.md
+PROJECT_CONTEXT.md
 
 # Editor / IDE files
 .vscode/

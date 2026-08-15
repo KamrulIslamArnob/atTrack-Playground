@@ -100,9 +100,15 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         return [...optimisticCards].sort((a, b) => (b.match_score ?? -1) - (a.match_score ?? -1));
       case "deadline":
         return [...optimisticCards].sort((a, b) => {
-          if (!a.deadline) return b.deadline ? 1 : 0;
-          if (!b.deadline) return -1;
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+          const getVal = (d: string | null | undefined) => {
+            if (!d) return Infinity;
+            const norm = d.trim().toLowerCase();
+            if (norm === "asap") return -Infinity;
+            if (norm === "unknown") return Infinity;
+            const t = new Date(d).getTime();
+            return isNaN(t) ? Infinity : t;
+          };
+          return getVal(a.deadline) - getVal(b.deadline);
         });
       case "title":
         return [...optimisticCards].sort((a, b) => a.title.localeCompare(b.title));
@@ -167,7 +173,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         await moveCard(jobId, listId, targetIndex);
         router.refresh();
       } catch {
-        toast.error("Could not move that card", {
+        toast.error("Couldn't move that card", {
           description: "Your change was reverted. Please try again.",
         });
       }
@@ -188,7 +194,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         await reorderLists(ids);
         router.refresh();
       } catch {
-        toast.error("Could not reorder that list");
+        toast.error("Couldn't reorder that list");
       }
     });
   };
@@ -206,7 +212,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         await createList(name);
         router.refresh();
       } catch {
-        toast.error("Could not create that list");
+        toast.error("Couldn't create that list");
       }
     });
   };
@@ -217,7 +223,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         await renameList(listId, name);
         router.refresh();
       } catch {
-        toast.error("Could not rename that list");
+        toast.error("Couldn't rename that list");
       }
     });
   };
@@ -226,13 +232,13 @@ export function BoardView({ lists, cards }: BoardViewProps) {
     const list = lists.find((l) => l.id === listId);
     const count = optimisticCards.filter((c) => c.list_id === listId).length;
     const message = count
-      ? `Delete "${list?.name}"? Its ${count} job${count === 1 ? "" : "s"} will move to Wishlist.`
-      : `Delete "${list?.name}"?`;
+      ? `"${list?.name}" will be deleted and its ${count} job${count === 1 ? "" : "s"} will move to Wishlist.`
+      : `"${list?.name}" will be deleted. It has no jobs in it.`;
 
     const confirmed = await confirm({
-      title: "Delete list?",
+      title: "Delete this list?",
       description: message,
-      confirmText: "Delete",
+      confirmText: "Delete list",
       variant: "destructive",
     });
     if (!confirmed) return;
@@ -243,7 +249,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         router.refresh();
         toast.success("List deleted");
       } catch {
-        toast.error("Could not delete that list");
+        toast.error("Couldn't delete that list");
       }
     });
   };
@@ -321,7 +327,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
             </button>
           </div>
         )}
-        <ImportChoice />
+        <ImportChoice lists={optimisticLists} />
       </div>
 
       {/* The board owns its horizontal scroll; the dashboard <main> only scrolls vertically. */}
@@ -453,6 +459,7 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         open={addJobListId !== null}
         onOpenChange={(open) => setAddJobListId(open ? addJobListId : null)}
         listId={addJobListId ?? undefined}
+        lists={optimisticLists}
       />
 
       <JobDetailSheet

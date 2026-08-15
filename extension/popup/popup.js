@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnOpenBoard = document.getElementById("btnOpenBoard");
 
   const firecrawlKeyInput = document.getElementById("firecrawlKeyInput");
+  const secretInput = document.getElementById("secretInput");
 
   let currentServerUrl = "http://127.0.0.1:3308";
   let currentFirecrawlKey = "";
@@ -61,6 +62,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    chrome.storage.local.get("authSecret", (res) => {
+      if (res && res.authSecret && secretInput) {
+        secretInput.value = res.authSecret;
+      }
+    });
+
     // Auto-extract job details from current active tab
     extractFromCurrentTab();
 
@@ -72,10 +79,11 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSaveServerUrl.addEventListener("click", () => {
       const newUrl = serverUrlInput.value.trim();
       const newFcKey = firecrawlKeyInput ? firecrawlKeyInput.value.trim() : "";
+      const newSecret = secretInput ? secretInput.value.trim() : "";
       if (newUrl) {
         currentServerUrl = newUrl;
         currentFirecrawlKey = newFcKey;
-        chrome.storage.local.set({ firecrawlApiKey: newFcKey });
+        chrome.storage.local.set({ firecrawlApiKey: newFcKey, authSecret: newSecret });
         chrome.runtime.sendMessage({ type: "SET_SERVER_URL", serverUrl: newUrl }, () => {
           settingsPanel.classList.add("hidden");
           showToast("Settings updated successfully", "success");
@@ -325,11 +333,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderSkills() {
-    skillsTags.innerHTML = "";
+    skillsTags.replaceChildren();
     activeSkills.forEach((skill, index) => {
       const tag = document.createElement("span");
       tag.className = "tag-chip";
-      tag.innerHTML = `${skill} <span class="tag-remove" data-index="${index}">&times;</span>`;
+      tag.textContent = `${skill} `;
+
+      const removeBtn = document.createElement("span");
+      removeBtn.className = "tag-remove";
+      removeBtn.setAttribute("data-index", String(index));
+      removeBtn.textContent = "×";
+
+      tag.appendChild(removeBtn);
       skillsTags.appendChild(tag);
     });
 

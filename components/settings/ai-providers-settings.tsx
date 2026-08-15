@@ -61,7 +61,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Provider deleted.");
+      toast.success("Provider deleted");
       const freshRoutes = await getTaskRoutes();
       setProviders((prev) => prev.filter((p) => p.id !== id));
       setRoutes(freshRoutes);
@@ -84,10 +84,10 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("AI Providers exported to JSON file.");
+      toast.success("AI Providers exported to JSON file");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to export AI providers.");
+      toast.error("Couldn't export AI providers");
     }
   };
 
@@ -107,7 +107,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to read JSON file.");
+      toast.error("Couldn't read JSON file");
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -163,9 +163,11 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
         </div>
 
         {providers.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            No providers configured — using the default Gemini key from GEMINI_API_KEY for everything.
-          </p>
+          <div className="rounded-xl border border-dashed border-border/70 p-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              No AI providers connected yet. Click <strong>Add provider</strong> above to connect Google Gemini, OpenAI, or Anthropic.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-2">
             {providers.map((p) => (

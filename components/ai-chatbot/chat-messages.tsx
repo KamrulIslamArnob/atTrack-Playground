@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import {
   Sparkles,
   User,
@@ -9,25 +10,29 @@ import {
   Check,
   RotateCcw,
   Volume2,
+  VolumeX,
   ChevronDown,
   FileText,
   ArrowDown,
   Pencil,
   ThumbsUp,
   ThumbsDown,
-  Database,
-  ExternalLink,
-  Briefcase,
-  Code2,
   X,
   Send,
+  MessageSquareReply,
+  Clock,
+  CheckCheck,
+  Settings,
+  CornerDownLeft,
 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { ToolExecutionStatus, type ToolExecutionStep } from "./tool-execution-status";
+import { followUpScenarios } from "@/lib/ai-chatbot/scenarios";
+import type { SqlQueryResult } from "@/lib/actions/database-query";
 
-// Strong custom ease-out (emi-design-eng): starts fast, settles gracefully.
+// Strong custom ease-out: starts fast, settles gracefully.
 const EASE = [0.23, 1, 0.32, 1] as const;
 
 type Role = "user" | "assistant" | "system";
@@ -40,22 +45,46 @@ export interface ChatMessageItem {
   thinking?: string;
   sources?: string[];
   toolSteps?: ToolExecutionStep[];
+  /** Delivery status for user messages: sending → sent → delivered */
+  status?: "sending" | "sent" | "delivered" | "error";
+  /** Quoted reply context */
+  replyTo?: { id: string; preview: string; role: string };
+  /** AI response rating feedback: 'up' (helpful) | 'down' (needs improvement) | null */
+  feedback?: "up" | "down" | null;
 }
 
 interface ChatMessagesProps {
   messages: ChatMessageItem[];
   isLoading: boolean;
+  /** True during initial session load before any messages render */
+  isInitialLoading?: boolean;
   onRetry?: () => void;
   onOpenCanvas?: (content: string, title?: string) => void;
   onEditMessage?: (id: string, newContent: string) => void;
+  /** Trigger quoted reply — sets reply context in the input bar */
+  onReply?: (message: ChatMessageItem) => void;
+  /** Approve and execute a proposed SQLite database query */
+  onApproveQuery?: (queryText: string, result?: SqlQueryResult) => void;
+  /** Save feedback (thumbs up / thumbs down) in database and session */
+  onFeedback?: (messageId: string, rating: "up" | "down" | null) => void;
+  /** Ask AI to analyze or summarize query results */
+  onAskAiSummary?: (prompt: string) => void;
+  /** Send a suggested follow-up prompt from the finished answer */
+  onSelectFollowUp?: (prompt: string) => void;
 }
 
 export function ChatMessages({
   messages,
   isLoading,
+  isInitialLoading,
   onRetry,
   onOpenCanvas,
   onEditMessage,
+  onReply,
+  onApproveQuery,
+  onFeedback,
+  onAskAiSummary,
+  onSelectFollowUp,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -83,18 +112,23 @@ export function ChatMessages({
   }, []);
 
   return (
-    <div className="relative flex min-h-0 flex-1">
+    <div className="relative flex min-h-0 flex-1 bg-white dark:bg-[#09090b]">
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent px-4 py-6 sm:px-6 md:px-8 md:py-8"
+        className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent px-3 py-6 sm:px-6 md:px-8 md:py-8"
       >
-        <div className="mx-auto max-w-3xl space-y-6 md:space-y-8 lg:max-w-4xl pb-6">
-          {messages.map((message, idx) => {
+        {/* Central Chat Canvas: Max-width 768px, centered, 16px spacing between messages */}
+        <div className="mx-auto w-full max-w-[768px] space-y-4 pb-12">
+          {/* Skeleton loading state for initial session load */}
+          {isInitialLoading && messages.length === 0 ? (
+            <MessageSkeleton />
+          ) : (
+          messages.map((message, idx) => {
             const role = message.role as Role;
             const isLast = idx === messages.length - 1;
             return (
-              <MessageBubble
+              <MessageItem
                 key={message.id}
                 id={message.id}
                 role={role}
@@ -103,16 +137,25 @@ export function ChatMessages({
                 thinking={message.thinking}
                 sources={message.sources}
                 toolSteps={message.toolSteps}
+                status={message.status}
+                replyTo={message.replyTo}
                 isLast={isLast}
                 isLoading={isLoading}
                 canRetry={isLast && !isLoading}
                 onRetry={onRetry}
                 onOpenCanvas={onOpenCanvas}
                 onEditMessage={onEditMessage}
+                onReply={onReply ? () => onReply(message) : undefined}
+                onApproveQuery={onApproveQuery}
+                onAskAiSummary={onAskAiSummary}
+                onSelectFollowUp={onSelectFollowUp}
+                feedback={message.feedback}
+                onFeedback={onFeedback}
                 reduceMotion={!!reduceMotion}
               />
             );
-          })}
+          })
+          )}
         </div>
       </div>
 
@@ -125,7 +168,7 @@ export function ChatMessages({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.18, ease: EASE }}
-            className="absolute bottom-4 left-1/2 z-20 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border/50 bg-popover/90 text-muted-foreground shadow-lg shadow-black/10 backdrop-blur-md transition-colors hover:bg-accent hover:text-foreground active:scale-95"
+            className="absolute bottom-4 left-1/2 z-20 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md shadow-black/10 backdrop-blur-md transition-colors hover:bg-accent hover:text-foreground active:scale-95 cursor-pointer"
             title="Scroll to latest"
           >
             <ArrowDown className="size-4" />
@@ -136,7 +179,7 @@ export function ChatMessages({
   );
 }
 
-interface MessageBubbleProps {
+interface MessageItemProps {
   id: string;
   role: Role;
   content: string;
@@ -144,16 +187,24 @@ interface MessageBubbleProps {
   thinking?: string;
   sources?: string[];
   toolSteps?: ToolExecutionStep[];
+  status?: "sending" | "sent" | "delivered" | "error";
+  replyTo?: { id: string; preview: string; role: string };
   isLast: boolean;
   isLoading: boolean;
   canRetry: boolean;
   onRetry?: () => void;
   onOpenCanvas?: (content: string, title?: string) => void;
   onEditMessage?: (id: string, newContent: string) => void;
+  onReply?: () => void;
+  onApproveQuery?: (queryText: string, result?: SqlQueryResult) => void;
+  onAskAiSummary?: (prompt: string) => void;
+  onSelectFollowUp?: (prompt: string) => void;
+  feedback?: "up" | "down" | null;
+  onFeedback?: (messageId: string, rating: "up" | "down" | null) => void;
   reduceMotion: boolean;
 }
 
-const MessageBubble = React.memo(function MessageBubble({
+const MessageItem = React.memo(function MessageItem({
   id,
   role,
   content,
@@ -161,14 +212,22 @@ const MessageBubble = React.memo(function MessageBubble({
   thinking,
   sources,
   toolSteps,
+  status,
+  replyTo,
   isLast,
   isLoading,
   canRetry,
   onRetry,
   onOpenCanvas,
   onEditMessage,
+  onReply,
+  onApproveQuery,
+  onAskAiSummary,
+  onSelectFollowUp,
+  feedback,
+  onFeedback,
   reduceMotion,
-}: MessageBubbleProps) {
+}: MessageItemProps) {
   const isUser = role === "user";
   const isAssistant = role === "assistant";
   const isEmptyStreaming = isAssistant && isLoading && isLast && !content.trim();
@@ -177,10 +236,44 @@ const MessageBubble = React.memo(function MessageBubble({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(content);
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Sources are supplied by the server (real retrieval/tool citations). No
-  // hardcoded fallback — if the server sent none, render none.
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleToggleSpeech = useCallback(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      toast.error("Speech synthesis is not supported in this browser");
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = content.replace(/[#*`_\[\]()]/g, " ").replace(/\s+/g, " ").trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }, [content, isSpeaking]);
+
   const activeSources = useMemo(() => {
     if (sources && sources.length > 0) return sources;
     return [];
@@ -191,19 +284,24 @@ const MessageBubble = React.memo(function MessageBubble({
       reduceMotion
         ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.15 } }
         : {
-            initial: { opacity: 0, y: 10, scale: 0.98 },
+            initial: { opacity: 0, y: 8, scale: 0.99 },
             animate: { opacity: 1, y: 0, scale: 1 },
-            transition: { duration: 0.22, ease: EASE },
+            transition: { duration: 0.2, ease: EASE },
           },
     [reduceMotion]
   );
 
   const handleFeedback = (type: "up" | "down") => {
-    if (feedback === type) {
-      setFeedback(null);
+    const nextRating = feedback === type ? null : type;
+    if (onFeedback) {
+      onFeedback(id, nextRating);
+    }
+    if (nextRating === "up") {
+      toast.success("Feedback saved: Helpful response");
+    } else if (nextRating === "down") {
+      toast.success("Feedback saved: Needs improvement");
     } else {
-      setFeedback(type);
-      toast.success(type === "up" ? "Feedback saved: Helpful" : "Feedback saved: Needs improvement");
+      toast.info("Feedback rating removed");
     }
   };
 
@@ -216,50 +314,68 @@ const MessageBubble = React.memo(function MessageBubble({
     }
   };
 
-  return (
-    <motion.div
-      initial={variants.initial}
-      animate={variants.animate}
-      transition={variants.transition}
-      className={cn("flex gap-3.5 sm:gap-4.5 items-start", isUser ? "flex-row-reverse justify-start" : "justify-start")}
-    >
-      {/* Author Avatar: User vs AI Icon */}
-      <div
-        className={cn(
-          "mt-1 flex size-8.5 shrink-0 items-center justify-center rounded-xl shadow-xs ring-1 transition-all",
-          isUser
-            ? "bg-muted/70 text-muted-foreground ring-border/40"
-            : "bg-primary/10 text-primary border border-primary/20 ring-1 ring-primary/20 shadow-xs"
-        )}
+  /* USER MESSAGE BUBBLE */
+  if (isUser) {
+    return (
+      <motion.div
+        initial={variants.initial}
+        animate={variants.animate}
+        transition={variants.transition}
+        className="group/msg flex w-full justify-end items-start gap-2.5"
       >
-        {isUser ? <User className="size-4" /> : <Sparkles className="size-4 text-primary" />}
-      </div>
-
-      <div className={cn("flex min-w-0 max-w-[88%] flex-col", isUser && "items-end")}>
-        {/* Inline tool execution steps during streaming / assistant generation */}
-        {isAssistant && (isStreaming || isEmptyStreaming || toolSteps) && (
-          <ToolExecutionStatus
-            steps={toolSteps}
-            sources={activeSources}
-            isStreaming={isLoading && isLast}
-          />
+        {/* Hover action toolbar — appears on hover (desktop), always on mobile */}
+        {!isEditing && (
+          <div className="flex items-center gap-0.5 self-center opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100 md:opacity-0 max-md:opacity-100">
+            {onReply && (
+              <button
+                type="button"
+                onClick={onReply}
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground/60 transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer"
+                title="Reply"
+              >
+                <MessageSquareReply className="size-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(content);
+                toast.success("Copied to clipboard");
+              }}
+              className="flex size-6 items-center justify-center rounded-md text-muted-foreground/60 transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer"
+              title="Copy"
+            >
+              <Copy className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="flex size-6 items-center justify-center rounded-md text-muted-foreground/60 transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer"
+              title="Edit"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+          </div>
         )}
 
-        <div
-          className={cn(
-            "rounded-2xl px-5 py-4 sm:px-6 sm:py-5 shadow-xs transition-colors select-text cursor-text",
-            isUser
-              ? "bg-user-bubble text-user-bubble-foreground border border-border/40 ring-1 ring-border/20"
-              : "border border-border/50 bg-card text-foreground ring-border/30"
+        <div className="flex max-w-[85%] sm:max-w-[75%] flex-col items-end">
+          {/* Quoted reply banner */}
+          {replyTo && (
+            <div className="mb-1 flex items-center gap-1.5 rounded-lg border border-blue-200/50 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-950/20 px-3 py-1 text-[11px] text-muted-foreground max-w-full">
+              <MessageSquareReply className="size-3 shrink-0 text-blue-500" />
+              <span className="truncate">
+                {replyTo.role === "assistant" ? "AI: " : ""}{replyTo.preview}
+              </span>
+            </div>
           )}
-        >
-          {isUser ? (
-            isEditing ? (
-              <div className="flex flex-col gap-2 min-w-[280px]">
+
+          <div className="rounded-2xl border border-blue-200/70 dark:border-blue-900/50 bg-blue-50/90 dark:bg-blue-950/40 px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-foreground shadow-2xs">
+            {isEditing ? (
+              <div className="flex flex-col gap-2 min-w-[260px]">
                 <textarea
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-border bg-background p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
                   rows={3}
                 />
                 <div className="flex items-center justify-end gap-1.5 pt-1">
@@ -277,7 +393,7 @@ const MessageBubble = React.memo(function MessageBubble({
                   <button
                     type="button"
                     onClick={handleSaveEdit}
-                    className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
+                    className="flex items-center gap-1 rounded-md bg-[#2563EB] px-2.5 py-1 text-xs font-semibold text-white shadow-xs hover:bg-blue-700"
                   >
                     <Send className="size-3" />
                     Save & Submit
@@ -285,91 +401,174 @@ const MessageBubble = React.memo(function MessageBubble({
                 </div>
               </div>
             ) : (
-              <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+              <div className="whitespace-pre-wrap break-words leading-relaxed">
                 {content}
               </div>
-            )
-          ) : isEmptyStreaming ? (
-            <TypingIndicator reduceMotion={reduceMotion} />
-          ) : (
-            <div className="text-[15px] leading-[1.65]">
-              <Markdown content={content} onOpenCanvas={onOpenCanvas} />
+            )}
+          </div>
+
+          {/* Timestamp + delivery status */}
+          <div className="mt-1 flex items-center gap-1.5 px-1 text-[11px] text-muted-foreground/70">
+            {createdAt && (
+              <span className="tabular-nums">
+                {new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <DeliveryStatus status={status} />
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  /* ASSISTANT RESPONSE CARD */
+  return (
+    <motion.div
+      initial={variants.initial}
+      animate={variants.animate}
+      transition={variants.transition}
+      className="group/msg flex w-full items-start"
+    >
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Assistant response. No card chrome — the answer sits directly on the
+            page background so it reads as the page's own content, with the user
+            bubble carrying the only surface in the thread. */}
+        <div className="w-full px-1 py-1">
+          {/* Inline tool execution steps during streaming */}
+          {(isStreaming || isEmptyStreaming || toolSteps) && (
+            <ToolExecutionStatus
+              steps={toolSteps}
+              sources={activeSources}
+              isStreaming={isLoading && isLast}
+            />
+          )}
+
+          {/* Main Card Content. While empty, StreamProgress below already
+              says "thinking…" with the elapsed timer — no separate typing
+              dots needed. */}
+          {isEmptyStreaming ? null : (
+            <div
+              className={cn(
+                "text-[14px] leading-relaxed text-foreground",
+                // Blur-resolves the block currently being written. Only while
+                // streaming, so a settled answer is not animated on re-render.
+                isStreaming && !reduceMotion && "agent-stream-tail"
+              )}
+            >
+              <Markdown
+                content={content}
+                onOpenCanvas={onOpenCanvas}
+                onApproveQuery={onApproveQuery}
+                onAskAiSummary={onAskAiSummary}
+              />
+              {content.includes("No AI provider configured") && (
+                <div className="mt-3.5 pt-1">
+                  <Link
+                    href="/settings"
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all"
+                  >
+                    <Settings className="size-3.5" />
+                    Connect AI Provider in Settings
+                  </Link>
+                </div>
+              )}
               {isStreaming && <StreamCaret reduceMotion={reduceMotion} />}
             </div>
           )}
-        </div>
 
-        {/* Reasoning Accordion if assistant has thinking */}
-        {hasReasoning && <ReasoningAccordion text={thinking as string} />}
-
-        {/* Collapsible Sources Used Chip at the bottom of assistant responses */}
-        {isAssistant && !isEmptyStreaming && activeSources.length > 0 && (
-          <SourcesUsedChip sources={activeSources} />
-        )}
-
-        {/* Message Actions */}
-        <div className="mt-2.5 flex items-center gap-0.5 px-1 py-0.5 opacity-70 transition-opacity hover:opacity-100">
-          <CopyButton text={content} />
-
-          {isUser && !isEditing && (
-            <MessageAction title="Edit message" onClick={() => setIsEditing(true)}>
-              <Pencil className="size-3.5" />
-            </MessageAction>
+          {/* Live elapsed/token progress. Sits below the content and outside the
+              empty/streaming branch, so it tracks the growing answer instead of
+              scrolling out of view, and its timer survives the transition
+              between the two branches rather than remounting at zero. */}
+          {isAssistant && isLoading && isLast && (
+            <StreamProgress content={content} reduceMotion={reduceMotion} />
           )}
 
-          {isAssistant && (
-            <>
-              <MessageAction
-                title="Read aloud"
-                onClick={() => {
-                  if (typeof window !== "undefined" && window.speechSynthesis) {
-                    window.speechSynthesis.cancel();
-                    const u = new SpeechSynthesisUtterance(content);
-                    window.speechSynthesis.speak(u);
-                  }
-                }}
-              >
-                <Volume2 className="size-3.5" />
-              </MessageAction>
+          {/* Reasoning Accordion if assistant has thinking */}
+          {hasReasoning && <ReasoningAccordion text={thinking as string} />}
 
-              <MessageAction
-                title="Regenerate response"
-                onClick={onRetry || (() => toast.info("Regenerating response..."))}
-              >
-                <RotateCcw className="size-3.5" />
-              </MessageAction>
+          {/* Sources are no longer chipped separately here — they are rows in
+              the trace above, alongside the tool calls, so provenance reads as
+              one list instead of two disconnected summaries. */}
 
-              {/* Thumbs Up / Down Feedback Controls */}
-              <button
-                type="button"
-                onClick={() => handleFeedback("up")}
-                title="Good response"
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground active:scale-90",
-                  feedback === "up" && "bg-primary/15 text-primary font-bold"
-                )}
-              >
-                <ThumbsUp className="size-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFeedback("down")}
-                title="Poor response"
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground active:scale-90",
-                  feedback === "down" && "bg-destructive/15 text-destructive font-bold"
-                )}
-              >
-                <ThumbsDown className="size-3.5" />
-              </button>
-            </>
+          {/* Follow-ups the answer's own evidence supports. Only on the settled
+              last message — mid-stream they would move under the cursor. */}
+          {isAssistant && isLast && !isLoading && onSelectFollowUp && (
+            <FollowUpPrompts
+              sources={activeSources}
+              onSelect={onSelectFollowUp}
+              reduceMotion={reduceMotion}
+            />
           )}
 
-          {createdAt && (
-            <span className="ml-auto pl-2 text-[10px] tabular-nums text-muted-foreground/60">
-              {new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
+          {/* Grounded Action Bar — fades in on hover (desktop), always visible on mobile */}
+          {!isEmptyStreaming && (
+            <div className="mt-4 flex items-center justify-between border-t border-border/40 dark:border-slate-800/60 pt-3 text-xs text-muted-foreground opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 transition-opacity duration-200">
+              <div className="flex items-center gap-1">
+                <CopyButton text={content} />
+
+                {onReply && (
+                  <MessageAction
+                    title="Reply"
+                    onClick={onReply}
+                  >
+                    <MessageSquareReply className="size-3.5" />
+                  </MessageAction>
+                )}
+
+                <MessageAction
+                  title={isSpeaking ? "Stop reading" : "Read aloud"}
+                  onClick={handleToggleSpeech}
+                  className={cn(isSpeaking && "bg-blue-500/15 text-blue-600 dark:text-blue-400")}
+                >
+                  {isSpeaking ? (
+                    <VolumeX className="size-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                  ) : (
+                    <Volume2 className="size-3.5" />
+                  )}
+                </MessageAction>
+
+                <MessageAction
+                  title="Regenerate response"
+                  onClick={onRetry || (() => toast.info("Regenerating response.."))}
+                >
+                  <RotateCcw className="size-3.5" />
+                </MessageAction>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* Thumbs Up / Down Feedback */}
+                <button
+                  type="button"
+                  onClick={() => handleFeedback("up")}
+                  title={feedback === "up" ? "Remove helpful rating" : "Good response"}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer",
+                    feedback === "up" && "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold ring-1 ring-blue-500/30"
+                  )}
+                >
+                  <ThumbsUp className="size-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleFeedback("down")}
+                  title={feedback === "down" ? "Remove rating" : "Poor response"}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer",
+                    feedback === "down" && "bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold ring-1 ring-rose-500/30"
+                  )}
+                >
+                  <ThumbsDown className="size-3.5" />
+                </button>
+
+                {createdAt && (
+                  <span className="pl-1 text-[10px] tabular-nums text-muted-foreground/60">
+                    {new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -377,86 +576,117 @@ const MessageBubble = React.memo(function MessageBubble({
   );
 });
 
-function SourcesUsedChip({ sources }: { sources: string[] }) {
-  const [open, setOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
 
-  const formattedSourcesText = sources.join(" • ");
+/**
+ * Suggested next prompts, drawn from the scenarios whose required sources the
+ * answer actually used. Renders nothing when no scenario matches — a generic
+ * suggestion is worse than none.
+ */
+function FollowUpPrompts({
+  sources,
+  onSelect,
+  reduceMotion,
+}: {
+  sources: string[];
+  onSelect: (prompt: string) => void;
+  reduceMotion: boolean;
+}) {
+  const scenarios = useMemo(() => followUpScenarios(sources), [sources]);
+  if (scenarios.length === 0) return null;
 
   return (
-    <div className="mt-2 max-w-full">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="group inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-foreground active:scale-[0.98]"
-      >
-        <Database className="size-3 text-primary" />
-        <span className="truncate">Sources used: <strong className="font-medium text-foreground">{formattedSourcesText}</strong></span>
-        <ChevronDown
-          className={cn("size-3 transition-transform duration-200 opacity-60 group-hover:opacity-100", open && "rotate-180")}
-        />
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            animate={reduceMotion ? { opacity: 1 } : { height: "auto", opacity: 1 }}
-            exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: EASE }}
-            className="overflow-hidden"
+    <div className="mt-3">
+      <p className="text-[11px] font-medium text-muted-foreground">Follow-ups</p>
+      <div className="mt-0.5 flex flex-col">
+        {scenarios.map((scenario, i) => (
+          <button
+            key={scenario.id}
+            type="button"
+            onClick={() => onSelect(scenario.starterPrompt)}
+            title={scenario.starterPrompt}
+            className={cn(
+              "micro-press -mx-1.5 flex items-center gap-2 rounded-lg border-b border-border/60 px-1.5 py-1.5 text-left text-[12.5px] text-foreground transition-colors last:border-0 hover:bg-muted/60",
+              !reduceMotion && "agent-fade-up"
+            )}
+            style={reduceMotion ? undefined : { animationDelay: `${i * 90}ms` }}
           >
-            <div className="mt-1.5 flex flex-wrap gap-1.5 pl-1">
-              {sources.map((src, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1 rounded-md border border-border/40 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-xs"
-                >
-                  <SourceIcon name={src} />
-                  <span>{src}</span>
-                </span>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <CornerDownLeft className="size-3 shrink-0 text-muted-foreground/70" />
+            <span className="truncate">{scenario.title}</span>
+            <span className="min-w-0 flex-1 truncate text-[11.5px] text-muted-foreground">
+              {scenario.description}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-function SourceIcon({ name }: { name: string }) {
-  const lower = name.toLowerCase();
-  if (lower.includes("resume") || lower.includes("doc")) return <FileText className="size-3 text-primary" />;
-  if (lower.includes("job") || lower.includes("app")) return <Briefcase className="size-3 text-primary" />;
-  if (lower.includes("github") || lower.includes("code")) return <Code2 className="size-3 text-primary" />;
-  return <Database className="size-3 text-primary" />;
+/** Formats a duration the way a progress line reads best: "47s", "3m 7s". */
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 }
 
-function TypingIndicator({ reduceMotion }: { reduceMotion: boolean }) {
-  if (reduceMotion) {
-    return <span className="text-sm italic text-muted-foreground">Thinking…</span>;
-  }
+/** 1200 -> "1.2k". Keeps the line short once answers get long. */
+function formatTokenCount(tokens: number): string {
+  if (tokens < 1000) return String(tokens);
+  return `${(tokens / 1000).toFixed(1)}k`;
+}
+
+/**
+ * Live progress while an answer streams: elapsed wall time, approximate tokens
+ * received, and the current phase.
+ *
+ * The token figure is a client-side estimate (~4 chars/token). The provider's
+ * real usage numbers only arrive when generation finishes, which is far too
+ * late to show as progress — and a long tool-grounded answer can run for
+ * minutes, which is exactly when the user needs to see that work is happening.
+ */
+function StreamProgress({ content, reduceMotion }: { content: string; reduceMotion: boolean }) {
+  const startedAt = useRef(Date.now());
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsedMs(Date.now() - startedAt.current), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  const hasText = content.trim().length > 0;
+  const tokens = hasText ? Math.round(content.length / 4) : 0;
+
   return (
-    <div className="flex items-center gap-1.5 py-0.5">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="size-2 rounded-full bg-primary/80"
-          animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
-          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
-        />
-      ))}
+    <div
+      className="flex items-center gap-1.5 py-1 text-[11px] text-muted-foreground"
+      role="status"
+      aria-live="polite"
+    >
+      <Sparkles
+        className={cn("size-3 shrink-0 text-muted-foreground/70", !reduceMotion && "animate-pulse")}
+      />
+      <span className="tabular-nums">{formatElapsed(elapsedMs)}</span>
+      {tokens > 0 && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span className="tabular-nums">{formatTokenCount(tokens)} tokens</span>
+        </>
+      )}
+      <span aria-hidden="true">·</span>
+      <span className="italic">{hasText ? "writing" : "thinking"}…</span>
     </div>
   );
 }
 
 function StreamCaret({ reduceMotion }: { reduceMotion: boolean }) {
   if (reduceMotion) {
-    return <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-primary align-middle" />;
+    return <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-blue-600 align-middle" />;
   }
   return (
     <motion.span
-      className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 rounded-full bg-primary align-middle"
+      className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 rounded-full bg-blue-600 align-middle"
       animate={{ opacity: [1, 0.2, 1] }}
       transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
     />
@@ -478,7 +708,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={handleCopy}
       title="Copy to clipboard"
-      className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground active:scale-90"
+      className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer"
     >
       <AnimatePresence mode="wait" initial={false}>
         {copied ? (
@@ -489,7 +719,7 @@ function CopyButton({ text }: { text: string }) {
             exit={{ opacity: 0, scale: 0.6 }}
             transition={{ duration: 0.15 }}
           >
-            <Check className="size-3.5 text-primary" />
+            <Check className="size-3.5 text-blue-600" />
           </motion.span>
         ) : (
           <motion.span
@@ -511,17 +741,22 @@ function MessageAction({
   children,
   onClick,
   title,
+  className,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   title: string;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={title}
-      className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground active:scale-90"
+      className={cn(
+        "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer",
+        className
+      )}
     >
       {children}
     </button>
@@ -533,13 +768,13 @@ function ReasoningAccordion({ text }: { text: string }) {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="mt-1.5 max-w-full overflow-hidden rounded-xl border border-border/40 bg-muted/30">
+    <div className="mt-2 max-w-full overflow-hidden rounded-xl border border-border/50 bg-muted/30">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-[0.99]"
+        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-[0.99] cursor-pointer"
       >
-        <FileText className="size-3" />
+        <FileText className="size-3 text-blue-600" />
         <span>Reasoning</span>
         <ChevronDown
           className={cn("size-3 transition-transform duration-200", open && "rotate-180")}
@@ -554,12 +789,92 @@ function ReasoningAccordion({ text }: { text: string }) {
             transition={{ duration: 0.22, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="whitespace-pre-wrap px-3 pb-3 text-[12px] leading-relaxed text-muted-foreground/90">
+            <div className="whitespace-pre-wrap px-3 pb-3 text-[12px] leading-relaxed text-muted-foreground">
               {text}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/** Delivery status micro-indicator below user messages */
+function DeliveryStatus({ status }: { status?: "sending" | "sent" | "delivered" | "error" }) {
+  if (!status || status === "delivered") {
+    // Default state: delivered (double check) or no status
+    return (
+      <span className="flex items-center text-blue-500/70" title="Delivered">
+        <CheckCheck className="size-3" />
+      </span>
+    );
+  }
+  if (status === "sending") {
+    return (
+      <span className="flex items-center text-muted-foreground/50 animate-pulse" title="Sending...">
+        <Clock className="size-3" />
+      </span>
+    );
+  }
+  if (status === "sent") {
+    return (
+      <span className="flex items-center text-muted-foreground/60" title="Sent">
+        <Check className="size-3" />
+      </span>
+    );
+  }
+  if (status === "error") {
+    return (
+      <span className="flex items-center text-destructive/70" title="Failed to send">
+        <X className="size-3" />
+      </span>
+    );
+  }
+  return null;
+}
+
+/** Skeleton loading state — structured shimmer placeholders that mimic message bubbles */
+function MessageSkeleton() {
+  return (
+    <div className="space-y-5 animate-pulse">
+      {/* User message skeleton (right-aligned) */}
+      <div className="flex justify-end items-start">
+        <div className="flex max-w-[65%] flex-col items-end gap-1.5">
+          <div className="h-10 w-52 rounded-2xl bg-blue-100/60 dark:bg-blue-950/30" />
+          <div className="h-2.5 w-16 rounded bg-muted/40" />
+        </div>
+      </div>
+
+      {/* Assistant message skeleton (left-aligned) */}
+      <div className="flex items-start">
+        <div className="flex-1 space-y-2.5 max-w-[80%]">
+          <div className="rounded-2xl border border-border/30 bg-card/60 p-4 space-y-2.5">
+            <div className="h-3 w-[90%] rounded bg-muted/50" />
+            <div className="h-3 w-[75%] rounded bg-muted/40" />
+            <div className="h-3 w-[60%] rounded bg-muted/30" />
+          </div>
+        </div>
+      </div>
+
+      {/* Another user message skeleton */}
+      <div className="flex justify-end items-start">
+        <div className="flex max-w-[65%] flex-col items-end gap-1.5">
+          <div className="h-8 w-36 rounded-2xl bg-blue-100/60 dark:bg-blue-950/30" />
+          <div className="h-2.5 w-12 rounded bg-muted/40" />
+        </div>
+      </div>
+
+      {/* Another assistant skeleton */}
+      <div className="flex items-start">
+        <div className="flex-1 space-y-2.5 max-w-[80%]">
+          <div className="rounded-2xl border border-border/30 bg-card/60 p-4 space-y-2.5">
+            <div className="h-3 w-[85%] rounded bg-muted/50" />
+            <div className="h-3 w-[70%] rounded bg-muted/40" />
+            <div className="h-3 w-[50%] rounded bg-muted/30" />
+            <div className="h-3 w-[80%] rounded bg-muted/30" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

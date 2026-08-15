@@ -49,7 +49,7 @@ export const searchGithubTool: ToolDefinition = {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "AtTrack-Chatbot",
+      "User-Agent": "atTrack-Chatbot",
     };
 
     const mode = typeof args.mode === "string" ? args.mode : "list_repos";

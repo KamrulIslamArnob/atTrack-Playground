@@ -63,7 +63,7 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
     try {
       await updateDocumentContent(doc.id, name.trim(), content);
       setIsEditing(false);
-      toast.success("Document updated successfully");
+      toast.success("Document updated");
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update document");

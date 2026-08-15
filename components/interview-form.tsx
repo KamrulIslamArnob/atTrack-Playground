@@ -76,9 +76,9 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
 
   const handleDelete = async () => {
     const confirmed = await confirm({
-      title: "Delete interview?",
-      description: "This interview will be permanently removed. This cannot be undone.",
-      confirmText: "Delete",
+      title: "Delete this interview?",
+      description: "This interview and its notes will be permanently deleted. This can't be undone.",
+      confirmText: "Delete interview",
       variant: "destructive",
     });
     if (!confirmed) return;

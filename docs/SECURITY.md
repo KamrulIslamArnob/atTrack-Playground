@@ -1,6 +1,6 @@
 # Security Policy and Data Privacy
 
-Aven / AtTrack is a local-first, privacy-focused career workspace and job application tracker.
+atTrack is a local-first, privacy-focused career workspace and job application tracker.
 
 ## Security model
 
@@ -32,7 +32,7 @@ Development data normally lives under `.data/`, including:
 - `.data/storage/`
 - SQLite WAL/journal files
 
-Packaged Electron builds store data in the OS user-data directory, such as `%APPDATA%\AtTrack\` on Windows.
+Packaged Electron builds store data in the OS user-data directory, such as `%APPDATA%\atTrack\` on Windows.
 
 Never commit local databases, uploaded files, logs, resumes, screenshots containing personal data, or generated release/build artifacts.
 

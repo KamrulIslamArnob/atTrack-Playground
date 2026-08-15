@@ -63,7 +63,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
       }
       const final = parseEmailFromStream(streamRef.current);
       if (final) setResult(final);
-      else toast.error("Could not parse the generated email");
+      else toast.error("Couldn't parse the generated email");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Generation failed");
     } finally {
@@ -79,7 +79,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
       onRefresh();
       toast.success("Saved as a document");
     } catch {
-      toast.error("Could not save document");
+      toast.error("Couldn't save document");
     } finally {
       setSavePending(false);
     }

@@ -38,7 +38,6 @@ const RELATIONS: Record<string, Record<string, Relation>> = {
     },
     applications: { target: "applications", kind: "many", column: "job_id" },
     interviews: { target: "interviews", kind: "many", column: "job_id" },
-    mcq_results: { target: "mcq_results", kind: "many", column: "job_id" },
     job_contacts: { target: "job_contacts", kind: "many", column: "job_id" },
     job_documents: { target: "job_documents", kind: "many", column: "job_id" },
     job_deadlines: { target: "job_deadlines", kind: "many", column: "job_id" },

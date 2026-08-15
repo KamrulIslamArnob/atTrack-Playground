@@ -1,7 +1,7 @@
-# AtTrack AI Chatbot — Intent → Native Retrieval → LLM Workflow
+# atTrack AI Chatbot — Intent → Native Retrieval → LLM Workflow
 
 **Goal (from Kamru):** Every user query should first be routed by *intent*. Based on that
-intent the chatbot gathers authoritative data from the user's **native** AtTrack database
+intent the chatbot gathers authoritative data from the user's **native** atTrack database
 (jobs, job details, social links, resumes, CRM, the inbuilt AI‑prompt DB, performance),
 then hands that retrieved context to the LLM so the answer is *100% accurate* on facts and
 only enriched (not contradicted) by the model's own knowledge.
@@ -73,7 +73,7 @@ export interface ChatIntent {
   reasoning: string;
 }
 
-const INTENT_SYSTEM = `You are the intent router for AtTrack, a career-tracking workspace.
+const INTENT_SYSTEM = `You are the intent router for atTrack, a career-tracking workspace.
 Given a user's chat message and the conversation so far, decide which of the user's LOCAL
 native data domains are required to answer accurately.
 Domains:
@@ -82,7 +82,7 @@ Domains:
 - social_links: the user's saved social / quick links
 - resumes: resume documents in the workspace
 - crm: contacts / recruiters / hiring managers
-- ai_prompt_db: AtTrack's built-in or custom AI prompt templates
+- ai_prompt_db: atTrack's built-in or custom AI prompt templates
 - performance: app / system performance metrics
 - general: none of the above (pure reasoning, writing, or coding help)
 Also extract any entities (jobTitle, company, dateRange, contactName, promptKind).
@@ -125,7 +125,7 @@ export async function classifyIntent(
 
 ```ts
 // lib/ai-chatbot/retrieval.ts
-// Server-only. Pulls authoritative data from the user's native AtTrack DB.
+// Server-only. Pulls authoritative data from the user's native atTrack DB.
 import { getBoard } from "@/lib/actions/board";
 import { getDocuments } from "@/lib/actions/documents";
 import { getContacts } from "@/lib/actions/contacts";
@@ -332,7 +332,7 @@ the `workspaceContext` block:
   if (input.retrievedContext && input.retrievedContext.trim().length > 0) {
     parts.push(
       "",
-      "--- RETRIEVED NATIVE DATA (authoritative source of truth from the user's local AtTrack workspace) ---",
+      "--- RETRIEVED NATIVE DATA (authoritative source of truth from the user's local atTrack workspace) ---",
       input.retrievedContext,
       "--- END RETRIEVED DATA ---",
       "The block above is GROUND TRUTH pulled live from the user's database. Rules:",

@@ -65,6 +65,12 @@ async function checkServerStatus(customUrl) {
   }
 }
 
+/** Extension API calls require the shared secret from atTrack Settings > Browser extension. */
+async function authHeaders() {
+  const { authSecret } = await chrome.storage.local.get("authSecret");
+  return authSecret ? { Authorization: `Bearer ${authSecret}` } : {};
+}
+
 async function parseJobAI(payload, customUrl) {
   const { serverUrl = DEFAULT_SERVER_URL } = await chrome.storage.local.get("serverUrl");
   const targetUrl = (customUrl || serverUrl).replace(/\/$/, "");
@@ -78,6 +84,7 @@ async function parseJobAI(payload, customUrl) {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        ...(await authHeaders()),
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -101,6 +108,7 @@ async function addJobToAtTrack(jobData, customUrl) {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        ...(await authHeaders()),
       },
       body: JSON.stringify(jobData),
     });

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
+import { ThemeLogo } from "@/components/ui/theme-logo";
 import { MapPinOff, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
@@ -8,16 +8,9 @@ export default function NotFound() {
     <div className="auth-bg flex min-h-screen items-center justify-center px-4 selection:bg-primary/20">
       <div className="w-full max-w-md text-center">
         {/* Brand Logo */}
-        <div className="flex items-center justify-center gap-2.5 opacity-90 transition-opacity hover:opacity-100">
-          <Image
-            src="/logo.png"
-            alt="AtTrack"
-            width={28}
-            height={28}
-            priority
-            className="drop-shadow-sm"
-          />
-          <span className="font-heading text-xl font-semibold tracking-tight">AtTrack</span>
+          <div className="flex items-center justify-center gap-2.5 opacity-90 transition-opacity hover:opacity-100">
+          <ThemeLogo width={28} height={28} className="drop-shadow-sm" />
+          <span className="font-heading text-xl font-semibold tracking-tight">atTrack</span>
         </div>
 
         {/* Premium Icon Container */}

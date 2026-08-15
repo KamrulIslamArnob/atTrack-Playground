@@ -71,7 +71,7 @@ export function Hero() {
           className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base"
         >
           You&apos;re tracking applications in a spreadsheet, a notes app, your
-          browser history, and your email inbox — all at once. AtTrack puts it
+          browser history, and your email inbox — all at once. atTrack puts it
           all in one place: every job, every interview, every follow-up. Private,
           local, and yours.
         </motion.p>
@@ -84,7 +84,7 @@ export function Hero() {
             href="/overview"
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
           >
-            Open AtTrack
+            Open atTrack
             <ArrowRight className="size-4" />
           </Link>
         </motion.div>

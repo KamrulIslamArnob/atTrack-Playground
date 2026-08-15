@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useTheme } from "next-themes";
+import { ThemeLogo } from "@/components/ui/theme-logo";
 import { motion, AnimatePresence } from "motion/react";
 import { Sun, Moon, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -77,15 +77,9 @@ export function LandingHeader() {
           )}
         >
           <Link href="/" className="flex items-center gap-2.5 justify-self-start">
-            <Image
-              src="/logo.png"
-              alt="AtTrack"
-              width={24}
-              height={24}
-              priority
-            />
+            <ThemeLogo width={24} height={24} />
             <span className="font-heading text-lg font-semibold tracking-tight">
-              AtTrack
+              atTrack
             </span>
           </Link>
           <nav className="hidden items-center justify-self-center gap-1 text-sm text-muted-foreground md:flex">
@@ -136,7 +130,7 @@ export function LandingHeader() {
                 href="/overview"
                 className="rounded-2xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
-                Open AtTrack
+                Open atTrack
               </Link>
             </div>
             <button
@@ -180,9 +174,9 @@ export function LandingHeader() {
               className="flex items-center gap-2.5"
               onClick={() => setMenuOpen(false)}
             >
-              <Image src="/logo.png" alt="AtTrack" width={24} height={24} />
+              <ThemeLogo width={24} height={24} />
               <span className="font-heading text-lg font-semibold tracking-tight">
-                AtTrack
+                atTrack
               </span>
             </Link>
             <button
@@ -247,7 +241,7 @@ export function LandingHeader() {
               onClick={() => setMenuOpen(false)}
               className="flex h-11 items-center justify-center rounded-2xl bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
             >
-              Open AtTrack
+              Open atTrack
             </Link>
           </div>
             </motion.div>

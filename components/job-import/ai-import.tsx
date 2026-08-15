@@ -15,9 +15,12 @@ import {
 } from "@/lib/actions/job-imports";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import type { ExtractionResult } from "@/lib/ai/schema";
+import type { BoardList } from "@/lib/types/board";
 
 interface AiImportProps {
   onClose: () => void;
+  /** User's board lists, for the section-deadline target picker. */
+  lists?: BoardList[];
 }
 
 interface UploadedImage {
@@ -26,7 +29,7 @@ interface UploadedImage {
   name: string;
 }
 
-export function AiImport({ onClose }: AiImportProps) {
+export function AiImport({ onClose, lists = [] }: AiImportProps) {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -181,7 +184,7 @@ export function AiImport({ onClose }: AiImportProps) {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              AtTrack fetches the page and merges it with anything else you&apos;ve added — useful when a social post links to a longer listing.
+              atTrack fetches the page and merges it with anything else you&apos;ve added — useful when a social post links to a longer listing.
             </p>
           </div>
 
@@ -299,6 +302,7 @@ export function AiImport({ onClose }: AiImportProps) {
           initialData={extractionResult}
           open={jobDialogOpen}
           onOpenChange={handleJobDialogClose}
+          lists={lists}
         />
       )}
     </>

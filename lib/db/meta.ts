@@ -7,13 +7,13 @@ export const JSON_COLUMNS: Record<string, readonly string[]> = {
   jobs: ["notes", "project_links", "skills", "benefits"],
   documents: ["match_data", "builder_data"],
   mcq_results: ["answers", "questions"],
-  mcq_question_cache: ["questions"],
   ai_output_cache: ["output"],
   ai_usage_logs: ["metadata"],
   ai_extraction_logs: ["extracted_fields"],
   users: ["raw_user_meta_data"],
   ai_task_routes: ["provider_ids"],
   links: ["tags"],
+  chat_sessions: ["connected_source_ids"],
 };
 
 export const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {

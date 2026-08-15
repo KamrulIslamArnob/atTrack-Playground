@@ -104,7 +104,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       setAddingCompany(false);
       toast.success("Company created");
     } catch {
-      toast.error("Could not create company");
+      toast.error("Couldn't create company");
     } finally {
       setPending(false);
     }
@@ -135,7 +135,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       toast.success(`Company "${deletingCompanyObj.name}" deleted`);
       setDeletingCompanyObj(null);
     } catch {
-      toast.error("Failed to delete company");
+      toast.error("Couldn't delete company");
     } finally {
       setDeletingCompanyPending(false);
     }
@@ -384,7 +384,7 @@ function ContactsView({
       setContacts((prev) => prev.filter((c) => c.id !== contact.id));
       onCompanyCountChange(contact.company_id, -1);
     } catch {
-      toast.error("Could not remove contact");
+      toast.error("Couldn't remove contact");
     }
   };
 
@@ -528,7 +528,7 @@ function CompanyRow({
     try {
       await updateCompanyColor(company.id, newColor);
     } catch {
-      toast.error("Could not update company color");
+      toast.error("Couldn't update company color");
     }
   };
 
@@ -715,7 +715,7 @@ function ContactsPanel({
       setCreating(false);
       setNewRole("other");
     } catch {
-      toast.error("Could not add contact");
+      toast.error("Couldn't add contact");
     } finally {
       setPending(false);
     }
@@ -732,7 +732,7 @@ function ContactsPanel({
       onContactsChange([...contacts, { ...contact, company_id: companyId }], 1);
       setLinking(false);
     } catch {
-      toast.error("Could not link contact");
+      toast.error("Couldn't link contact");
     }
   };
 
@@ -750,7 +750,7 @@ function ContactsPanel({
         0
       );
     } catch {
-      toast.error("Could not update role");
+      toast.error("Couldn't update role");
     }
   };
 
@@ -762,7 +762,7 @@ function ContactsPanel({
         -1
       );
     } catch {
-      toast.error("Could not remove contact");
+      toast.error("Couldn't remove contact");
     }
   };
 
@@ -963,7 +963,7 @@ function CompanyEditDialog({
       onOpenChange(false);
       toast.success("Company updated");
     } catch {
-      toast.error("Failed to update company");
+      toast.error("Couldn't update company");
     } finally {
       setPending(false);
     }
@@ -1094,7 +1094,7 @@ function ManageTagsDialog({
       toast.success(`Renamed tag to "${target}"`);
       setEditingTag(null);
     } catch {
-      toast.error("Failed to rename tag");
+      toast.error("Couldn't rename tag");
     } finally {
       setPending(false);
     }

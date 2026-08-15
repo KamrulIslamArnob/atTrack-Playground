@@ -180,13 +180,18 @@ export function AiTrendChart({ data }: { data: { date: string; requests: number 
   );
 }
 
-export function JobsStatusChart({ data }: { data: { status: string; count: number }[] }) {
+/**
+ * Stage names and colours arrive from board_lists, so a renamed or recoloured
+ * list — and any list a user created themselves — shows up here as-is. There is
+ * no local label or colour table to keep in sync.
+ */
+export function JobsStageChart({ data }: { data: { stage: string; count: number; color: string }[] }) {
   const chartData = useMemo(
     () =>
       data.map((d) => ({
-        name: statusLabels[d.status] ?? d.status,
+        name: d.stage,
         value: d.count,
-        fill: statusColors[d.status] || "#6B7280",
+        fill: d.color,
       })),
     [data]
   );

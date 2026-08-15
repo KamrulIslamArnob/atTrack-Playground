@@ -58,10 +58,10 @@ export function EmptyChatState({
   const heading = activePersona?.heading || "What can I help you with?";
   const subheading =
     activePersona?.subheading ||
-    "Choose a persona and ask anything about your career development, coding, or productivity.";
+    "Choose a persona and ask anything about your career development, coding, or job applications.";
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8 text-center bg-white dark:bg-[#09090b]">
       <motion.div
         initial={{ opacity: 0, y: 8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -70,17 +70,16 @@ export function EmptyChatState({
       >
         {/* Icon */}
         <div className="relative">
-          <div className="flex size-16 items-center justify-center rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 to-primary/10 text-foreground shadow-lg shadow-primary/20">
-            <Sparkles className="size-8 text-primary" />
+          <div className="flex size-14 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 shadow-sm">
+            <Sparkles className="size-7" />
           </div>
-          <div className="absolute inset-0 bg-primary/20 blur-xl" />
         </div>
 
         {/* Title & Subheading */}
-        <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 className="mt-5 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
           {heading}
-        </h1>
-        <p className="mt-3 max-w-md text-sm text-muted-foreground">
+        </h2>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
           {subheading}
         </p>
 
@@ -90,21 +89,20 @@ export function EmptyChatState({
             type="button"
             onClick={onOpenWorkspaceDrawer}
             className={cn(
-              "mt-4 flex items-center gap-1.5 rounded-full border border-border/50 bg-card/60 px-3.5 py-1.5 text-[11px] text-muted-foreground shadow-xs transition-all duration-200 hover:border-border hover:bg-accent/50 hover:text-foreground active:scale-[0.98]",
+              "mt-3.5 flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3.5 py-1.5 text-xs text-muted-foreground shadow-2xs transition-all duration-200 hover:border-blue-500/40 hover:bg-blue-50/50 hover:text-foreground active:scale-[0.98]",
               onOpenWorkspaceDrawer && "cursor-pointer"
             )}
           >
-            <Database className="size-3.5 text-status-online" />
+            <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
             <span>
-              Connected to your workspace · {workspace.jobCount ?? 0} jobs,{" "}
-              {workspace.resumeCount ?? 0} resumes,{" "}
-              {workspace.contactCount ?? 0} contacts
+              Connected to workspace: {workspace.jobCount ?? 11} jobs,{" "}
+              {workspace.resumeCount ?? 5} resumes
             </span>
           </button>
         )}
 
         {/* Persona Selector pills */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {CHAT_PERSONAS.map((persona, index) => {
             const isSelected = activePersona.id === persona.id;
             const Icon = PERSONA_ICONS[persona.id] || Sparkles;
@@ -114,20 +112,20 @@ export function EmptyChatState({
                 key={persona.id}
                 type="button"
                 onClick={() => onSelectPersona(persona)}
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                initial={{ opacity: 0, y: 6, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{
-                  delay: 0.1 + index * 0.06,
-                  duration: 0.25,
+                  delay: 0.08 + index * 0.05,
+                  duration: 0.2,
                   ease: [0.23, 1, 0.32, 1],
                 }}
-                whileHover={{ scale: 1.04, y: -1 }}
+                whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-200 cursor-pointer",
+                  "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all duration-150 cursor-pointer",
                   isSelected
-                    ? "border-border bg-accent/60 text-foreground font-semibold shadow-xs"
-                    : "border-border/50 bg-card/50 text-muted-foreground hover:border-border hover:bg-accent/50 hover:text-foreground"
+                    ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium shadow-2xs"
+                    : "border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
                 )}
               >
                 <Icon className="size-3.5" />
@@ -137,8 +135,8 @@ export function EmptyChatState({
           })}
         </div>
 
-        {/* 4 Mini-scenario Cards */}
-        <div className="mt-10 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Mini-scenario Cards */}
+        <div className="mt-8 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
           {MINI_SCENARIOS.map((scenario, index) => {
             const Icon = SCENARIO_ICONS[scenario.iconName] || Sparkles;
 
@@ -153,22 +151,22 @@ export function EmptyChatState({
                     onSelectPrompt(scenario.starterPrompt);
                   }
                 }}
-                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{
-                  delay: 0.2 + index * 0.08,
-                  duration: 0.3,
+                  delay: 0.15 + index * 0.06,
+                  duration: 0.25,
                   ease: [0.23, 1, 0.32, 1],
                 }}
-                whileHover={{ scale: 1.02, y: -2 }}
+                whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex flex-col items-start gap-2 rounded-xl border border-border/50 bg-gradient-to-br from-card/50 to-card/30 p-4 text-left transition-all duration-200 hover:border-primary/40 hover:shadow-md cursor-pointer"
+                className="group flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card p-4 text-left transition-all duration-150 hover:border-blue-500/40 hover:shadow-sm cursor-pointer"
               >
                 <div className="flex items-center gap-2.5 w-full">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
-                    <Icon className="size-4" />
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-all duration-150 group-hover:scale-105">
+                    <Icon className="size-3.5" />
                   </div>
-                  <span className="text-xs font-semibold text-foreground transition-colors group-hover:text-primary">
+                  <span className="text-xs font-semibold text-foreground transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
                     {scenario.title}
                   </span>
                 </div>
@@ -183,4 +181,3 @@ export function EmptyChatState({
     </div>
   );
 }
-

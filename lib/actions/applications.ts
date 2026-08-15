@@ -152,19 +152,28 @@ export async function getApplications(params: ApplicationsParams = {}): Promise<
   const total = count ?? applications.length;
   const totalPages = Math.ceil(total / perPage);
 
+  const getDeadlineTimestamp = (d: string | null | undefined, fallback: number) => {
+    if (!d) return fallback;
+    const norm = d.trim().toLowerCase();
+    if (norm === "asap") return -Infinity;
+    if (norm === "unknown") return Infinity;
+    const t = new Date(d).getTime();
+    return isNaN(t) ? fallback : t;
+  };
+
   // Sort modes that depend on embedded data must still sort in memory.
   switch (sort) {
     case "deadline_earliest":
       applications = [...applications].sort((a, b) => {
-        const aTime = a.job?.deadline ? new Date(a.job.deadline).getTime() : Infinity;
-        const bTime = b.job?.deadline ? new Date(b.job.deadline).getTime() : Infinity;
+        const aTime = getDeadlineTimestamp(a.job?.deadline, Infinity);
+        const bTime = getDeadlineTimestamp(b.job?.deadline, Infinity);
         return aTime - bTime;
       });
       break;
     case "deadline_latest":
       applications = [...applications].sort((a, b) => {
-        const aTime = a.job?.deadline ? new Date(a.job.deadline).getTime() : -Infinity;
-        const bTime = b.job?.deadline ? new Date(b.job.deadline).getTime() : -Infinity;
+        const aTime = getDeadlineTimestamp(a.job?.deadline, -Infinity);
+        const bTime = getDeadlineTimestamp(b.job?.deadline, -Infinity);
         return bTime - aTime;
       });
       break;

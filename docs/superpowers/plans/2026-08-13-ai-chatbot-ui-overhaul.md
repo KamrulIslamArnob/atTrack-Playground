@@ -44,7 +44,7 @@ export const CHAT_PERSONAS: ChatPersona[] = [
     name: "General Assistant",
     badge: "Versatile",
     description: "All-purpose career, coding, and productivity assistant",
-    systemPrompt: "You are AtTrack AI, a helpful, precise, and professional career & software engineering assistant.",
+    systemPrompt: "You are atTrack AI, a helpful, precise, and professional career & software engineering assistant.",
   },
   {
     id: "ats_coach",
@@ -78,9 +78,9 @@ export const CHAT_PERSONAS: ChatPersona[] = [
 
 export function exportSessionToMarkdown(session: ChatSession): string {
   let md = `# ${session.title}\n\n`;
-  md += `*Exported from AtTrack AI Chatbot on ${new Date().toLocaleDateString()}*\n\n---\n\n`;
+  md += `*Exported from atTrack AI Chatbot on ${new Date().toLocaleDateString()}*\n\n---\n\n`;
   session.messages.forEach((msg) => {
-    const roleName = msg.role === "user" ? "User" : "AtTrack AI";
+    const roleName = msg.role === "user" ? "User" : "atTrack AI";
     md += `### ${roleName}\n${msg.content}\n\n`;
   });
   return md;

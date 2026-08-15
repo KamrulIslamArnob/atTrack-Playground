@@ -11,6 +11,7 @@ import { Mail, Sparkles } from "lucide-react";
 
 import { UpdateChecker } from "@/components/settings/update-checker";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
+import { getExtensionSecret } from "@/lib/actions/extension";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -22,7 +23,11 @@ export default async function SettingsPage() {
     .single();
 
   const smtpConfig = await getSmtpConfig();
-  const [aiProviders, aiTaskRoutes] = await Promise.all([listProviders(), getTaskRoutes()]);
+  const [aiProviders, aiTaskRoutes, extensionSecret] = await Promise.all([
+    listProviders(),
+    getTaskRoutes(),
+    getExtensionSecret(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -39,7 +44,7 @@ export default async function SettingsPage() {
 
       <UpdateChecker />
 
-      <ExtensionSettings />
+      <ExtensionSettings secret={extensionSecret} />
 
       <Card>
         <CardContent className="pt-0">

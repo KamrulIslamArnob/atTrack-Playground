@@ -48,7 +48,7 @@ export function LinkRow({ link, categories, onEdit, onDelete, onMoveCategory }: 
       toast.success("Link copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error("Couldn't copy link");
     }
   };
 

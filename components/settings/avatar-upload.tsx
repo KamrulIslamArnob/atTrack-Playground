@@ -31,11 +31,11 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
   const validateFile = (file: File): boolean => {
     const validTypes = ["image/jpeg", "image/png", "image/gif"];
     if (!validTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, or GIF image.");
+      toast.error("Please select a JPG, PNG, or GIF image");
       return false;
     }
     if (file.size > 500 * 1024) {
-      toast.error("File size must be less than 500KB.");
+      toast.error("File size must be less than 500KB");
       return false;
     }
     return true;

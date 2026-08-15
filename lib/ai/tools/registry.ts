@@ -4,6 +4,7 @@ import { getResumeTool } from "./get-resume";
 import { searchContactsTool } from "./search-contacts";
 import { searchLinksTool } from "./search-links";
 import { searchAiPromptsTool } from "./search-ai-prompts";
+import { searchMemoriesTool } from "./search-memories";
 import { webSearchTool } from "./web-search";
 import { queryDatabaseTool } from "./query-database";
 import { readObsidianTool } from "./read-obsidian";
@@ -21,6 +22,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   searchContactsTool,
   searchLinksTool,
   searchAiPromptsTool,
+  searchMemoriesTool,
   queryDatabaseTool,
   readObsidianTool,
   searchGithubTool,
@@ -29,6 +31,15 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
 export function getTool(name: string): ToolDefinition | undefined {
   return TOOL_REGISTRY.find((t) => t.name === name);
+}
+
+function isSourceAllowed(toolSourceId: string | undefined, enabledSourceIds?: string[]): boolean {
+  if (!toolSourceId || !enabledSourceIds) return true;
+  if (enabledSourceIds.includes(toolSourceId)) return true;
+  // Social link and CRM merge: granting CRM ("contacts") also gives social link ("links") access and vice-versa
+  if (toolSourceId === "links" && enabledSourceIds.includes("contacts")) return true;
+  if (toolSourceId === "contacts" && enabledSourceIds.includes("links")) return true;
+  return false;
 }
 
 /** JSON-Schema declarations for the active provider, filtered by persona AND
@@ -41,7 +52,7 @@ export function listToolDeclarations(
 ): Record<string, unknown>[] {
   return TOOL_REGISTRY.filter((t) => {
     if (t.personas && !t.personas.includes(personaId ?? "")) return false;
-    if (enabledSourceIds && t.sourceId && !enabledSourceIds.includes(t.sourceId)) return false;
+    if (!isSourceAllowed(t.sourceId, enabledSourceIds)) return false;
     return true;
   }).map((t) => ({
     name: t.name,
@@ -55,7 +66,7 @@ export function listToolDeclarations(
 export function getEnabledTools(personaId?: string, enabledSourceIds?: string[]): ToolDefinition[] {
   return TOOL_REGISTRY.filter((t) => {
     if (t.personas && !t.personas.includes(personaId ?? "")) return false;
-    if (enabledSourceIds && t.sourceId && !enabledSourceIds.includes(t.sourceId)) return false;
+    if (!isSourceAllowed(t.sourceId, enabledSourceIds)) return false;
     return true;
   });
 }

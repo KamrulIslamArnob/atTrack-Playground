@@ -1,6 +1,6 @@
 # Release Checklist
 
-This guide is the step-by-step checklist for shipping a new version of Aven / AtTrack.
+This guide is the step-by-step checklist for shipping a new version of atTrack.
 
 Use it when you want to:
 

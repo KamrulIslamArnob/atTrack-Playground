@@ -3,6 +3,7 @@
 import { getAdminUser } from "@/lib/auth";
 import type { ActivityLog } from "@/lib/actions/activity-log";
 import { createDbClient as createAdminClient } from "@/lib/db/client";
+import { DEFAULT_LIST_COLORS } from "@/lib/types/board";
 
 interface AdminDashboardStats {
   totalUsers: number;
@@ -16,7 +17,7 @@ interface AdminDashboardStats {
   aiRequestsToday: number;
   recentActivity: ActivityLog[];
   usersTrend: { date: string; count: number }[];
-  jobsByStatus: { status: string; count: number }[];
+  jobsByStage: { stage: string; count: number; color: string }[];
   activityByAction: { action: string; count: number }[];
   aiTrend: { date: string; requests: number }[];
 }
@@ -40,7 +41,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     aiTotalRes,
     aiTodayRes,
     usersTrendRes,
-    jobsStatusRes,
+    jobsListRes,
+    boardListsRes,
     aiTrendRes,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -54,7 +56,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     supabase.from("ai_usage_logs").select("id", { count: "exact", head: true })
       .gte("created_at", new Date(Date.now() - 86400000).toISOString()),
     supabase.from("profiles").select("created_at").gte("created_at", sinceIso),
-    supabase.from("jobs").select("status"),
+    supabase.from("jobs").select("list_id"),
+    supabase.from("board_lists").select("id, name, kind, color, sort_order"),
     supabase.from("ai_usage_logs").select("created_at").gte("created_at", sinceIso),
   ]);
 
@@ -67,13 +70,50 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const statusMap: Record<string, number> = {};
-  for (const row of jobsStatusRes.data ?? []) {
-    statusMap[row.status] = (statusMap[row.status] ?? 0) + 1;
+  // Counted off board_lists rather than jobs.status: the triggers behind that
+  // column only ever store 'saved' or 'preparing' (schema.sql), so every applied
+  // or interviewing job reported as still preparing. Same correction as the
+  // Overview pipeline.
+  //
+  // Board list ids are per-user, so this aggregate buckets by list *name* — two
+  // users' "Applied" lists have different ids but are the same stage, and a
+  // custom list keeps the name its owner gave it.
+  interface StageBucket {
+    count: number;
+    color: string;
+    /** Lowest sort_order seen for this name, so the chart reads in board order. */
+    order: number;
   }
-  const jobsByStatus = Object.entries(statusMap)
-    .map(([status, count]) => ({ status, count }))
-    .sort((a, b) => b.count - a.count);
+  const stageById = new Map<string, { name: string; color: string; order: number }>();
+  for (const list of boardListsRes.data ?? []) {
+    stageById.set(list.id, {
+      name: list.name,
+      color: list.color ?? DEFAULT_LIST_COLORS[list.kind as keyof typeof DEFAULT_LIST_COLORS],
+      order: list.sort_order,
+    });
+  }
+
+  const stageBuckets = new Map<string, StageBucket>();
+  for (const row of jobsListRes.data ?? []) {
+    const list = row.list_id ? stageById.get(row.list_id) : undefined;
+    const name = list?.name ?? "Unsorted";
+    const existing = stageBuckets.get(name);
+    if (existing) {
+      existing.count++;
+      existing.order = Math.min(existing.order, list?.order ?? Number.MAX_SAFE_INTEGER);
+    } else {
+      stageBuckets.set(name, {
+        count: 1,
+        color: list?.color ?? DEFAULT_LIST_COLORS.custom,
+        order: list?.order ?? Number.MAX_SAFE_INTEGER,
+      });
+    }
+  }
+
+  const jobsByStage = [...stageBuckets.entries()]
+    .map(([stage, bucket]) => ({ stage, count: bucket.count, color: bucket.color, order: bucket.order }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ stage, count, color }) => ({ stage, count, color }));
 
   const aiTrendMap: Record<string, number> = {};
   for (const row of aiTrendRes.data ?? []) {
@@ -96,7 +136,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     aiRequestsToday: aiTodayRes.count ?? 0,
     recentActivity: [],
     usersTrend,
-    jobsByStatus,
+    jobsByStage,
     activityByAction: [],
     aiTrend,
   };

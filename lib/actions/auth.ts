@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
 
-// AtTrack is a native single-user app: no sign-in, sign-up, or sign-out.
+// atTrack is a native single-user app: no sign-in, sign-up, or sign-out.
 // What remains here is profile and avatar editing, plus a destructive reset.
 
 export async function updateProfile(formData: FormData) {
@@ -115,19 +115,50 @@ export async function resetAllData(formData: FormData) {
     }
   }
 
-  // Order matters: children before parents, since foreign keys are enforced.
+  // Every user-owned table (anything with a `user_id` column — see
+  // lib/db/schema.sql) has to be listed explicitly: the owner's `profiles` row
+  // is kept above, so `ON DELETE CASCADE FROM profiles` never fires here.
+  // job_contacts/job_documents have no user_id column and aren't listed; they
+  // cascade automatically off jobs/contacts/documents below.
+  //
+  // Order is children-before-parents for clarity, though every FK in the
+  // schema is ON DELETE CASCADE or SET NULL (never RESTRICT), so no ordering
+  // here can actually trip a foreign-key violation.
   const tables = [
+    // Children of jobs (job_id -> jobs ON DELETE CASCADE) — before jobs.
     "mcq_results",
+    "mcq_question_cache",
+    "job_deadlines",
     "application_emails",
     "interviews",
     "applications",
-    "documents",
-    "ai_extraction_logs",
-    "smtp_config",
     "jobs",
+
+    // Children of link_categories (category_id -> link_categories CASCADE).
+    "links",
+    "link_categories",
+
+    // Remaining directly user-owned tables.
+    "contacts",
+    "quick_shortcuts",
+    "positions",
+    "documents",
     "companies",
     "board_lists",
+    "ai_extraction_logs",
+    "smtp_config",
     "ai_usage_logs",
+    "ai_providers",
+    "ai_task_routes",
+    "ai_tool_prompts",
+    "ai_memories",
+    "ai_output_cache",
+    "extension_config",
+
+    // Chat: messages before sessions (session_id -> chat_sessions CASCADE).
+    "chat_messages",
+    "chat_sessions",
+    "ai_feedback",
   ];
 
   for (const table of tables) {

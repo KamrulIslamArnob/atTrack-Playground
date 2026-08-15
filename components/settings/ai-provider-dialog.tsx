@@ -92,7 +92,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
         success: true,
         message: `Connected (${res.latencyMs ?? 0}ms)`,
       });
-      toast.success("Connection test successful!");
+      toast.success("Connection test successful");
     } else {
       setTestResult({
         success: false,

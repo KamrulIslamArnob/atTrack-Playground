@@ -53,7 +53,7 @@ export default function PerformancePreferencesPage() {
     } catch (err) {
       console.error("Failed to load performance data:", err);
       if (isManual) {
-        toast.error("Failed to refresh system metrics");
+        toast.error("Couldn't refresh system metrics");
       }
     } finally {
       setLoading(false);

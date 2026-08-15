@@ -46,7 +46,7 @@ export function Cta() {
                 <span className="text-primary">where you applied.</span>
               </h2>
               <p className="mx-auto mt-5 max-w-md text-sm text-muted-foreground sm:text-base">
-                Open AtTrack, save your first job, and see what a job search
+                Open atTrack, save your first job, and see what a job search
                 looks like when it&apos;s all in one place.
               </p>
               <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -54,7 +54,7 @@ export function Cta() {
                   href="/overview"
                   className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
                 >
-                  Open AtTrack
+                  Open atTrack
                   <ArrowRight className="size-4" />
                 </Link>
               </div>

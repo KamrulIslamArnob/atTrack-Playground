@@ -4,11 +4,12 @@ import { getBoard } from "@/lib/actions/board";
 import { getDocuments } from "@/lib/actions/documents";
 import { getContacts } from "@/lib/actions/contacts";
 import { getLinksAndCategories } from "@/lib/actions/links";
+import { getMemories } from "@/lib/actions/memories";
 import { createDbClient } from "@/lib/db/client";
 
 /**
  * Returns a lightweight, user-scoped snapshot of the owner's workspace so the
- * chatbot can ground its answers in real AtTrack data (jobs, resumes, contacts).
+ * chatbot can ground its answers in real atTrack data (jobs, resumes, contacts, memories).
  *
  * Privacy boundary: every read is scoped through getUser()'s userId — this is
  * a zero-auth single-owner app, so no query ever crosses user boundaries.
@@ -17,11 +18,12 @@ export async function GET() {
   try {
     const { userId } = await getUser();
 
-    const [board, documents, contacts, linksData] = await Promise.all([
+    const [board, documents, contacts, linksData, memoriesList] = await Promise.all([
       getBoard().catch(() => null),
       getDocuments().catch(() => []),
       getContacts().catch(() => []),
       getLinksAndCategories().catch(() => ({ categories: [], links: [], shortcuts: [] })),
+      getMemories().catch(() => []),
     ]);
 
     const links = (linksData?.links ?? []).map((l) => ({
@@ -29,6 +31,13 @@ export async function GET() {
       title: l.title,
       url: l.url,
       category: (l as { category_name?: string }).category_name ?? "",
+    }));
+
+    const memories = (memoriesList ?? []).map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      updatedAt: m.updated_at,
     }));
 
     // Inbuilt AI-prompt DB count (read-only, user-scoped).
@@ -51,6 +60,7 @@ export async function GET() {
       const deadlines = (card.deadlines ?? []).map((d) => ({
         id: d.id,
         title: d.title,
+        type: d.type,
         dueDate: d.due_date,
         stageKind: d.stage_kind,
         isCompleted: d.is_completed,
@@ -95,12 +105,14 @@ export async function GET() {
       resumes,
       contacts: people,
       links,
+      memories,
       aiToolPrompts: promptCount,
       counts: {
         jobs: jobs.length,
         resumes: resumes.length,
         contacts: people.length,
         links: links.length,
+        memories: memories.length,
         aiToolPrompts: promptCount,
       },
       generatedAt: new Date().toISOString(),

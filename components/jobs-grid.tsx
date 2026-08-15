@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -84,7 +84,12 @@ function matchBadgeClass(score: number) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  const norm = iso.trim().toLowerCase();
+  if (norm === "asap") return "ASAP";
+  if (norm === "unknown") return "Unknown";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 }
 
 interface Row {
@@ -100,17 +105,32 @@ function enrichJob(job: JobListItem): Row {
   const displayStatus = hasApplied && job.status === "saved" ? "applied" : job.status;
 
   const dateIso = latestApplication?.applied_at ?? job.deadline ?? null;
-  const dateLabel = latestApplication?.applied_at
-    ? `Applied ${formatDate(latestApplication.applied_at)}`
-    : job.deadline
-      ? `Due ${formatDate(job.deadline)}`
-      : "—";
+  let dateLabel = "—";
+  if (latestApplication?.applied_at) {
+    dateLabel = `Applied ${formatDate(latestApplication.applied_at)}`;
+  } else if (job.deadline) {
+    const norm = job.deadline.trim().toLowerCase();
+    if (norm === "asap") dateLabel = "Apply ASAP";
+    else if (norm === "unknown") dateLabel = "Unknown";
+    else dateLabel = `Due ${formatDate(job.deadline)}`;
+  }
+
+  let dateValue: number | null = null;
+  if (dateIso) {
+    const norm = dateIso.trim().toLowerCase();
+    if (norm === "asap") dateValue = 0;
+    else if (norm === "unknown") dateValue = Infinity;
+    else {
+      const t = new Date(dateIso).getTime();
+      dateValue = isNaN(t) ? null : t;
+    }
+  }
 
   return {
     job,
     displayStatus,
     dateLabel,
-    dateValue: dateIso ? new Date(dateIso).getTime() : null,
+    dateValue,
   };
 }
 
@@ -414,13 +434,15 @@ export function JobsGrid({
     [router, searchParams]
   );
 
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSearch = useCallback(
     (value: string) => {
       setSearch(value);
-      const timeout = setTimeout(() => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = setTimeout(() => {
         updateParams("search", value);
       }, 300);
-      return () => clearTimeout(timeout);
     },
     [updateParams]
   );
@@ -625,9 +647,8 @@ export function JobsGrid({
         return (
           <Link
             href={`/jobs/${job.id}`}
-            className="static font-semibold hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
+            className="font-semibold hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
           >
-            <span className="absolute inset-0" aria-hidden="true" />
             {job.title}
           </Link>
         );

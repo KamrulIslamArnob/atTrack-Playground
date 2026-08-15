@@ -1,6 +1,6 @@
-# Contributing to Aven / AtTrack
+# Contributing to atTrack
 
-Thank you for contributing to **Aven / AtTrack**. This project is intended to be open source and approachable, so please keep changes focused, documented, and safe for users' local data.
+Thank you for contributing to **atTrack**. This project is intended to be open source and approachable, so please keep changes focused, documented, and safe for users' local data.
 
 ## Before you start
 
@@ -22,8 +22,8 @@ Thank you for contributing to **Aven / AtTrack**. This project is intended to be
 ### Install
 
 ```bash
-git clone https://github.com/kaiumallimon/aven.git
-cd aven
+git clone https://github.com/KamrulIslamArnob/atTrack.git
+cd atTrack
 npm install
 ```
 

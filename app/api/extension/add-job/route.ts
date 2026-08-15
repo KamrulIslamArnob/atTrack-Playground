@@ -2,23 +2,28 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { scheduleJobScore } from "@/lib/ai/background";
+import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
 
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders,
+    headers: getExtensionCorsHeaders(req),
   });
 }
 
 export async function POST(req: Request) {
+  const corsHeaders = getExtensionCorsHeaders(req);
   try {
     const { supabase, userId } = await getUser();
+
+    if (!verifyExtensionAuth(req.headers.get("authorization"), userId)) {
+      return NextResponse.json(
+        { error: "Couldn't verify the extension token. Paste the secret from atTrack Settings into the extension popup." },
+        { status: 401, headers: corsHeaders }
+      );
+    }
 
     const body = await req.json();
     const title = typeof body.title === "string" ? body.title.trim() : "";
@@ -46,11 +51,7 @@ export async function POST(req: Request) {
     }
 
     // Parse or calculate deadline
-    let deadline = typeof body.deadline === "string" && body.deadline.trim() ? body.deadline.trim() : null;
-    if (!deadline) {
-      const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      deadline = future.toISOString().split("T")[0];
-    }
+    const deadline = typeof body.deadline === "string" && body.deadline.trim() ? body.deadline.trim() : "unknown";
 
     // Find or create company
     let companyId: string;

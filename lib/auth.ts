@@ -20,7 +20,7 @@ export interface AuthResult {
 /**
  * Resolves the local owner.
  *
- * AtTrack is a native single-user app — there is no login, so this never
+ * atTrack is a native single-user app — there is no login, so this never
  * redirects and never fails. The owner row is created on first run
  * (lib/db/local-user.ts), with a matching profile.
  *

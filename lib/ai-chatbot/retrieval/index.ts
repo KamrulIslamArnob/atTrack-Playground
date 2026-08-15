@@ -5,6 +5,7 @@ import { getResumes } from "./resumes";
 import { getContactsRetrieved } from "./crm";
 import { getSocialLinks } from "./social";
 import { getAiToolPrompts } from "./prompts";
+import { getMemoriesRetrieved } from "./memories";
 
 // Source chip labels for the existing SourcesUsedChip UI (chat-messages.tsx).
 const SOURCE_LABEL: Record<RetrievedDoc["source"], string> = {
@@ -14,6 +15,7 @@ const SOURCE_LABEL: Record<RetrievedDoc["source"], string> = {
   crm: "CRM Contacts",
   social: "Saved Links",
   ai_prompts: "AI Tool Prompts",
+  memories: "AI Memories",
   applications: "Applications",
   interviews: "Interviews",
 };
@@ -54,8 +56,14 @@ export async function retrieveContext(
   // the intent would. `enabledSourceIds === undefined` means the permission
   // model isn't in play (legacy client) -> no gating. `[]` means all off.
   // A non-empty array restricts to exactly those source ids.
-  const allowed = (id: string) =>
-    enabledSourceIds === undefined || enabledSourceIds.includes(id);
+  const allowed = (id: string) => {
+    if (enabledSourceIds === undefined) return true;
+    if (enabledSourceIds.includes(id)) return true;
+    // Social links and CRM merge: granting CRM ("contacts") also gives social links ("links") access and vice-versa
+    if (id === "links" && enabledSourceIds.includes("contacts")) return true;
+    if (id === "contacts" && enabledSourceIds.includes("links")) return true;
+    return false;
+  };
 
   switch (intent) {
     case "job_list":
@@ -63,42 +71,58 @@ export async function retrieveContext(
       else dropped.push("Job Applications source is disabled.");
       break;
     case "job_detail":
-      if (allowed("jobs")) docs = await getJobDetails(userId, query).then((r) => {
+      if (allowed("jobs")) {
+        const r = await getJobDetails(userId, query);
         dropped.push(...r.dropped);
-        return r.docs;
-      });
-      else dropped.push("Job Applications source is disabled.");
+        docs = r.docs;
+      } else {
+        dropped.push("Job Applications source is disabled.");
+      }
       break;
     case "resume_review":
       if (allowed("resume")) docs = await getResumes(userId);
       else dropped.push("Resume source is disabled.");
       break;
-    case "outreach":
-      if (allowed("contacts")) docs = [...(await getContactsRetrieved(userId))];
-      if (allowed("ai_prompts")) docs = [...docs, ...(await getAiToolPrompts(userId, "email"))];
+    case "outreach": {
+      const [crmDocs, aiDocs] = await Promise.all([
+        allowed("contacts") ? getContactsRetrieved(userId) : Promise.resolve([]),
+        allowed("ai_prompts") ? getAiToolPrompts(userId, "email") : Promise.resolve([]),
+      ]);
+      docs = [...crmDocs, ...aiDocs];
       if (!allowed("contacts") && !allowed("ai_prompts")) dropped.push("Outreach sources disabled.");
       break;
+    }
     case "crm_lookup":
-      if (allowed("contacts")) docs = await getContactsRetrieved(userId);
-      else dropped.push("CRM Contacts source is disabled.");
+      if (allowed("contacts") || allowed("links")) docs = await getContactsRetrieved(userId);
+      else dropped.push("Contacts CRM & Social Links source is disabled.");
       break;
-    case "interview_prep":
-      if (allowed("jobs")) docs = [...(await getJobsSummary(userId).then((d) => d.slice(0, 5)))];
-      if (allowed("ai_prompts")) docs = [...docs, ...(await getAiToolPrompts(userId, "interview"))];
+    case "interview_prep": {
+      const [jobsSummary, aiDocs] = await Promise.all([
+        allowed("jobs") ? getJobsSummary(userId).then((d) => d.slice(0, 4)) : Promise.resolve([]),
+        allowed("ai_prompts") ? getAiToolPrompts(userId, "interview") : Promise.resolve([]),
+      ]);
+      docs = [...jobsSummary, ...aiDocs];
       break;
+    }
     case "social_links":
-      if (allowed("links")) docs = await getSocialLinks(userId);
-      else dropped.push("Social Links source is disabled.");
+      if (allowed("contacts") || allowed("links")) docs = await getSocialLinks(userId);
+      else dropped.push("Contacts CRM & Social Links source is disabled.");
       break;
     case "performance":
-      // No native career-performance source exists. Return empty; the model
-      // answers from general knowledge and is instructed not to invent metrics.
       dropped.push("Performance intent: no native career-performance data source (app/performance is OS metrics).");
       break;
     case "general_qa":
     default:
       docs = [];
       break;
+  }
+
+  // Fast memory check: if query specifically mentions memories/notes or contains @ mention, pull memories
+  if (allowed("memories") && (/\b(memor(y|ies)|notes?|guidelines?|rules?|preferences?|saved context|custom context)\b/i.test(query) || query.includes("@"))) {
+    const memDocs = await getMemoriesRetrieved(userId, query.includes("@") ? undefined : query);
+    if (memDocs.length > 0) {
+      docs = [...docs, ...memDocs];
+    }
   }
 
   // Token safety net: hard cap total docs to avoid runaway context.

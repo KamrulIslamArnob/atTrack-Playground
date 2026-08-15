@@ -31,7 +31,7 @@ export function NotesTab({ data, onRefresh }: NotesTabProps) {
       onRefresh();
       toast.success("Notes saved");
     } catch {
-      toast.error("Could not save notes");
+      toast.error("Couldn't save notes");
     } finally {
       setPending(false);
     }

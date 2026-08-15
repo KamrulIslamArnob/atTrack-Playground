@@ -28,7 +28,7 @@ export function WindowTitlebar({ className }: { className?: string }) {
       )}
     >
       <div className="flex items-center gap-2 font-medium">
-        <span className="truncate">AtTrack</span>
+        <span className="truncate">atTrack</span>
       </div>
       {/* Space reserved for Electron native titleBarOverlay window buttons */}
       <div className="w-36 h-full" />

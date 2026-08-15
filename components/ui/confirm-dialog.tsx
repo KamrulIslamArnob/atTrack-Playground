@@ -92,7 +92,6 @@ export function useConfirm() {
     (params: {
       title: string;
       description?: string;
-      message?: string;
       confirmText?: string;
       cancelText?: string;
       variant?: "default" | "destructive";
@@ -101,7 +100,7 @@ export function useConfirm() {
         setState({
           open: true,
           title: params.title,
-          description: params.description ?? params.message,
+          description: params.description,
           confirmText: params.confirmText ?? "Confirm",
           cancelText: params.cancelText ?? "Cancel",
           variant: params.variant ?? "default",

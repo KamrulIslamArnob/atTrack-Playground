@@ -21,7 +21,7 @@ const steps = [
     step: "01",
     title: "Find a job",
     description:
-      "Screenshot a posting or paste a link. AtTrack pulls out the title, company, salary, and requirements — so you don&apos;t have to copy them by hand.",
+      "Screenshot a posting or paste a link. atTrack pulls out the title, company, salary, and requirements — so you don&apos;t have to copy them by hand.",
     icon: Camera,
     color: "text-pink-500",
     bg: "bg-pink-500/10",
@@ -30,7 +30,7 @@ const steps = [
     step: "02",
     title: "Apply to it",
     description:
-      "AtTrack drafts an application email using your resume and the job details. You edit it, attach your resume, and send it from your own email address.",
+      "atTrack drafts an application email using your resume and the job details. You edit it, attach your resume, and send it from your own email address.",
     icon: Send,
     color: "text-violet-500",
     bg: "bg-violet-500/10",
@@ -69,7 +69,7 @@ export function HowItWorks() {
             A job search has a beginning and an end
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            You find a job, you apply, you interview, you get an offer. AtTrack
+            You find a job, you apply, you interview, you get an offer. atTrack
             walks through each step with you — nothing more, nothing less.
           </p>
         </Reveal>

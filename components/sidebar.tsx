@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { ThemeLogo } from "@/components/ui/theme-logo";
 import { cn } from "@/lib/utils";
 import { globalSearch, adminGlobalSearch, type SearchResult, type AdminSearchResult } from "@/lib/actions/search";
 import {
@@ -298,7 +299,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
       toast.success("Email copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy email");
+      toast.error("Couldn't copy email");
     }
   }, [user.email]);
 
@@ -666,7 +667,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
           )}
         </nav>
 
-        {/* Bottom Section: AtTrack Logo, Search, Notification & Theme */}
+        {/* Bottom Section: atTrack Logo, Search, Notification & Theme */}
         <div className={cn("border-t border-border/50 space-y-2.5", isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3")}>
           {/* Row 1: Logo & Notification Button */}
           <div className="app-no-drag flex items-center justify-between">
@@ -674,10 +675,10 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
               href={homeHref}
               onClick={onNavigate}
               className="flex items-center gap-2 min-w-0 px-1"
-              title={isCollapsed ? "AtTrack Overview" : undefined}
+              title={isCollapsed ? "atTrack Overview" : undefined}
             >
-              <Image src="/logo.png" alt="AtTrack" width={22} height={22} priority />
-              {!isCollapsed && <span className="font-heading text-sm font-semibold truncate">AtTrack</span>}
+              <ThemeLogo width={22} height={22} />
+              {!isCollapsed && <span className="font-heading text-sm font-semibold truncate">atTrack</span>}
             </Link>
             {!isCollapsed && <NotificationButton />}
           </div>

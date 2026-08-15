@@ -367,7 +367,11 @@ export function ApplicationsGrid({
                   {app.applied_at
                     ? `Applied ${new Date(app.applied_at).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
                     : app.job?.deadline
-                      ? `Deadline ${new Date(app.job.deadline).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
+                      ? app.job.deadline.trim().toLowerCase() === "asap"
+                        ? "Apply ASAP"
+                        : app.job.deadline.trim().toLowerCase() === "unknown"
+                          ? "Unknown deadline"
+                          : `Deadline ${new Date(app.job.deadline).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
                       : "No deadline"}
                 </span>
                 {app.job?.application_url && (

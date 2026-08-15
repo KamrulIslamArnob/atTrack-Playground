@@ -3,6 +3,21 @@
  * Docs: https://docs.firecrawl.dev
  */
 
+import { fetchWithLog } from "@/lib/log/fetch";
+import { moduleLogger } from "@/lib/log";
+
+const svcLog = moduleLogger("services.firecrawl");
+
+/** The scrape target is a URL the user pasted — it identifies the exact
+ *  posting they are looking at, so only the host goes to the log. */
+function targetHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "invalid";
+  }
+}
+
 export interface FirecrawlJobResult {
   success: boolean;
   data?: {
@@ -29,12 +44,11 @@ export async function scrapeWithFirecrawl(
   const fcApiKey = apiKey || process.env.FIRECRAWL_API_KEY;
   const startTime = Date.now();
 
-  console.log(`\n=================================================`);
-  console.log(`[Firecrawl Parser] 🚀 Initiating Cloud Scrape for URL: ${url}`);
-  console.log(`=================================================`);
+  const host = targetHost(url);
+  svcLog.info({ event: "firecrawl.scrape.start", host });
 
   if (!fcApiKey) {
-    console.warn(`[Firecrawl Parser] ⚠️ FIRECRAWL_API_KEY is missing. Skipping Firecrawl.`);
+    svcLog.warn({ event: "firecrawl.scrape.skipped", host, reason: "no_api_key" });
     return {
       success: false,
       error: "Firecrawl API key not configured. Set FIRECRAWL_API_KEY environment variable or in Settings.",
@@ -42,7 +56,7 @@ export async function scrapeWithFirecrawl(
   }
 
   try {
-    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+    const response = await fetchWithLog("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -72,13 +86,15 @@ export async function scrapeWithFirecrawl(
           },
         },
       }),
-    });
+    }, { service: "firecrawl" });
 
     const elapsedMs = Date.now() - startTime;
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[Firecrawl Parser] ❌ HTTP ${response.status} Error after ${elapsedMs}ms:`, errText);
+      // errText echoes the provider's message, which can quote the scraped
+      // URL — status and timing are enough to diagnose from a log.
+      svcLog.error({ event: "firecrawl.scrape.failed", host, status: response.status, elapsedMs });
       return {
         success: false,
         error: `Firecrawl API Error (${response.status}): ${errText}`,
@@ -87,7 +103,7 @@ export async function scrapeWithFirecrawl(
 
     const resData = await response.json();
     if (!resData.success || !resData.data) {
-      console.warn(`[Firecrawl Parser] ⚠️ Unsuccessful response payload after ${elapsedMs}ms:`, resData.error || "No data");
+      svcLog.warn({ event: "firecrawl.scrape.unsuccessful", host, elapsedMs, hasData: Boolean(resData.data) });
       return {
         success: false,
         error: resData.error || "Firecrawl returned unsuccessful scrape response.",
@@ -97,13 +113,13 @@ export async function scrapeWithFirecrawl(
     const jsonData = resData.data.json || {};
     const markdown = resData.data.markdown || "";
 
-    console.log(`[Firecrawl Parser] ✅ SUCCESS in ${elapsedMs}ms!`);
-    console.log(`  • Title: "${jsonData.title || "N/A"}"`);
-    console.log(`  • Company: "${jsonData.company || "N/A"}"`);
-    console.log(`  • Location: "${jsonData.location || "N/A"}"`);
-    console.log(`  • Salary: "${jsonData.salary_range || "N/A"}"`);
-    console.log(`  • Skills (${jsonData.skills?.length || 0}):`, jsonData.skills || []);
-    console.log(`=================================================\n`);
+    svcLog.info({
+      event: "firecrawl.scrape.ok",
+      host,
+      elapsedMs,
+      markdownChars: markdown.length,
+      fields: Object.keys(jsonData).length,
+    });
 
     return {
       success: true,
@@ -125,7 +141,7 @@ export async function scrapeWithFirecrawl(
   } catch (error) {
     const elapsedMs = Date.now() - startTime;
     const msg = error instanceof Error ? error.message : "Network error";
-    console.error(`[Firecrawl Parser] ❌ Request failed after ${elapsedMs}ms:`, msg);
+    svcLog.error({ event: "firecrawl.scrape.error", host, elapsedMs, err: error });
     return {
       success: false,
       error: msg,

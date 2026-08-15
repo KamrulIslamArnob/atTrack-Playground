@@ -5,13 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Plus, Sparkles, X } from "lucide-react";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import { AiImport } from "@/components/job-import/ai-import";
+import type { BoardList } from "@/lib/types/board";
 
-export function ImportChoice() {
+interface ImportChoiceProps {
+  /** User's board lists, for the section-deadline target picker. */
+  lists?: BoardList[];
+}
+
+export function ImportChoice({ lists = [] }: ImportChoiceProps) {
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<"manual" | "ai" | null>(null);
 
   if (choice === "ai") {
-    return <AiImport onClose={() => { setChoice(null); setOpen(false); }} />;
+    return <AiImport lists={lists} onClose={() => { setChoice(null); setOpen(false); }} />;
   }
 
   return (
@@ -63,7 +69,7 @@ export function ImportChoice() {
                 <div>
                   <p className="font-medium">Import with AI</p>
                   <p className="text-xs text-muted-foreground">
-                    Screenshot or paste text — AtTrack reads it and fills in the details
+                    Screenshot or paste text — atTrack reads it and fills in the details
                   </p>
                 </div>
               </button>
@@ -90,6 +96,7 @@ export function ImportChoice() {
             setOpen(false);
           }
         }}
+        lists={lists}
       />
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { updateJob } from "@/lib/actions/jobs";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,14 @@ interface EditTabProps {
   data: JobDetailData;
   companyName: string | null;
   onRefresh: () => void;
+  /**
+   * Fires the first time anything in the form is touched, so the slide-over can
+   * guard against closing on unsaved edits without lifting every field's state.
+   * It's a one-way touched flag: typing and then undoing still reads as dirty.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Called after a successful save, so the slide-over can close itself. */
+  onSaved?: () => void;
 }
 
 const employmentTypes = [
@@ -45,9 +53,16 @@ const currencies = [
   { label: "AUD ($)", value: "AUD" },
 ];
 
-export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
+export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }: EditTabProps) {
   const { job } = data;
   const [pending, setPending] = useState(false);
+  const dirty = useRef(false);
+
+  const markDirty = () => {
+    if (dirty.current) return;
+    dirty.current = true;
+    onDirtyChange?.(true);
+  };
   const [workLocation, setWorkLocation] = useState(job.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(job.employment_type ?? "Full-time");
   
@@ -81,8 +96,11 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
       formData.append("map_url", mapUrl);
 
       await updateJob(formData);
+      dirty.current = false;
+      onDirtyChange?.(false);
       onRefresh();
-      toast.success("Job details saved!");
+      toast.success("Job details saved");
+      onSaved?.();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update job");
     } finally {
@@ -91,7 +109,7 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} onInput={markDirty} className="space-y-6">
       {/* Basic Job Details */}
       <div className="space-y-4 rounded-2xl border border-border bg-card/60 p-4">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -126,7 +144,13 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <Label>Employment type</Label>
-            <Select value={employmentType} onValueChange={(v) => setEmploymentType(v ?? "Full-time")}>
+            <Select
+              value={employmentType}
+              onValueChange={(v) => {
+                setEmploymentType(v ?? "Full-time");
+                markDirty();
+              }}
+            >
               <SelectTrigger className="h-9 text-xs w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -141,7 +165,13 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
           </div>
           <div className="space-y-1.5">
             <Label>Work location</Label>
-            <Select value={workLocation} onValueChange={(v) => setWorkLocation(v ?? "")}>
+            <Select
+              value={workLocation}
+              onValueChange={(v) => {
+                setWorkLocation(v ?? "");
+                markDirty();
+              }}
+            >
               <SelectTrigger className="h-9 text-xs w-full">
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
@@ -204,7 +234,10 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
             <input
               type="checkbox"
               checked={isUnpaid}
-              onChange={(e) => setIsUnpaid(e.target.checked)}
+              onChange={(e) => {
+                setIsUnpaid(e.target.checked);
+                markDirty();
+              }}
               className="rounded border-border size-4 text-primary focus:ring-primary"
             />
             <span>Unpaid / Volunteer Position</span>
@@ -239,7 +272,13 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
             </div>
             <div className="space-y-1.5">
               <Label>Currency</Label>
-              <Select value={salaryCurrency} onValueChange={(v) => setSalaryCurrency(v ?? "USD")}>
+              <Select
+                value={salaryCurrency}
+                onValueChange={(v) => {
+                  setSalaryCurrency(v ?? "USD");
+                  markDirty();
+                }}
+              >
                 <SelectTrigger className="h-9 text-xs w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -254,7 +293,13 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
             </div>
             <div className="space-y-1.5">
               <Label>Frequency</Label>
-              <Select value={salaryPeriod} onValueChange={(v) => setSalaryPeriod(v ?? "yearly")}>
+              <Select
+                value={salaryPeriod}
+                onValueChange={(v) => {
+                  setSalaryPeriod(v ?? "yearly");
+                  markDirty();
+                }}
+              >
                 <SelectTrigger className="h-9 text-xs w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -292,7 +337,10 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
           </Label>
           <TagInput
             tags={skills}
-            onChange={setSkills}
+            onChange={(next) => {
+              setSkills(next);
+              markDirty();
+            }}
             placeholder="Type skill keyword (e.g. Node.js, React, Docker) and press Enter..."
           />
         </div>
@@ -316,7 +364,10 @@ export function EditTab({ data, companyName, onRefresh }: EditTabProps) {
           </Label>
           <TagInput
             tags={benefits}
-            onChange={setBenefits}
+            onChange={(next) => {
+              setBenefits(next);
+              markDirty();
+            }}
             placeholder="Type benefit (e.g. Subsidized Lunch, Mentorship, Unlimited Tea) and press Enter..."
           />
         </div>

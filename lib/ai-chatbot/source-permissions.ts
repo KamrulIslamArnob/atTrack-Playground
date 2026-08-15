@@ -143,7 +143,12 @@ export function buildSourcePayload(sources: ContextSource[]): {
   const sourceConfig: Record<string, Record<string, unknown>> = {};
   for (const s of sources) {
     const on = s.id in store.enabled ? store.enabled[s.id] : s.enabled;
-    if (on) enabledSourceIds.push(s.id);
+    if (on) {
+      enabledSourceIds.push(s.id);
+      if (s.id === "contacts" && !enabledSourceIds.includes("links")) {
+        enabledSourceIds.push("links");
+      }
+    }
     const cfg = store.config[s.id];
     if (cfg) {
       const out: Record<string, unknown> = {};

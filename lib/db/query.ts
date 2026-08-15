@@ -6,6 +6,13 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "./sqlite.ts";
 import { decodeRow, encodeValue, NO_AUTO_ID } from "./meta.ts";
 import { findRelation } from "./relations.ts";
+import { moduleLogger } from "../log/index.ts";
+
+const dbLog = moduleLogger("db");
+
+/** Above this, a local SQLite query is worth a warn rather than a debug: it is
+ *  the slow-query log, so it has to survive production's `info` level. */
+const SLOW_MS = Number(process.env.ATTRACK_DB_SLOW_MS ?? 50);
 
 // A PostgREST-shaped query builder over SQLite.
 //
@@ -242,6 +249,9 @@ class QueryBuilder implements PromiseLike<DbResult> {
   private wantCount = false;
   private headOnly = false;
   private rowMode: "many" | "single" | "maybeSingle" = "many";
+  /** Rows the write statements actually touched, for the db.query log line —
+   *  a write without a chained .select() returns no data to count. */
+  private changes = 0;
 
   constructor(table: string) {
     this.table = table;
@@ -381,7 +391,48 @@ class QueryBuilder implements PromiseLike<DbResult> {
     return this.run().then(onfulfilled, onrejected);
   }
 
+  /**
+   * The one choke point every read and write in the app passes through, so it
+   * is the only place query timing has to be measured. Stays synchronous —
+   * `node:sqlite` is synchronous and the thenable above depends on it.
+   */
   private execute(): DbResult {
+    const startedAt = Date.now();
+    const result = this.runAction();
+    const durationMs = Date.now() - startedAt;
+
+    // Nothing is built unless a sink will take it: debug is off in production,
+    // where only the slow-query line survives.
+    if (durationMs >= SLOW_MS || dbLog.isLevelEnabled("debug")) {
+      const fields = {
+        table: this.table,
+        op: this.action === "select" && this.headOnly ? "count" : this.action,
+        durationMs,
+        rowCount: this.rowCount(result),
+        // Column NAMES only. A filter VALUE is the owner's own data; the keys
+        // are the half that tells you an index is missing.
+        filterKeys: [
+          ...new Set(
+            this.filters.flatMap((f) =>
+              f.op === "or" ? f.clauses.map((c) => c.column) : f.column
+            )
+          ),
+        ],
+      };
+      dbLog.debug({ event: "db.query", ...fields });
+      if (durationMs >= SLOW_MS) dbLog.warn({ event: "db.slow", ...fields });
+    }
+
+    return result;
+  }
+
+  private rowCount(result: DbResult): number {
+    if (this.action !== "select") return this.changes;
+    if (this.headOnly) return result.count ?? 0;
+    return Array.isArray(result.data) ? result.data.length : result.data ? 1 : 0;
+  }
+
+  private runAction(): DbResult {
     try {
       switch (this.action) {
         case "select":
@@ -498,7 +549,7 @@ class QueryBuilder implements PromiseLike<DbResult> {
           : ` ON CONFLICT (${target}) DO NOTHING`;
       }
 
-      db.prepare(sql).run(...(encoded as never[]));
+      this.changes += Number(db.prepare(sql).run(...(encoded as never[])).changes);
       if (values["id"] != null) ids.push(String(values["id"]));
     }
 
@@ -533,8 +584,10 @@ class QueryBuilder implements PromiseLike<DbResult> {
     const setSql = cols.map((c) => `${quoteIdent(c)} = ?`).join(", ");
     const setParams = cols.map((c) => encodeValue(this.table, c, values[c]));
 
-    db.prepare(`UPDATE ${quoteIdent(this.table)} SET ${setSql}${whereSql}`).run(
-      ...([...setParams, ...whereParams] as never[])
+    this.changes = Number(
+      db
+        .prepare(`UPDATE ${quoteIdent(this.table)} SET ${setSql}${whereSql}`)
+        .run(...([...setParams, ...whereParams] as never[])).changes
     );
 
     if (!this.selectSpec) return { data: this.emptyData(), error: null };
@@ -553,7 +606,10 @@ class QueryBuilder implements PromiseLike<DbResult> {
       };
     }
 
-    db.prepare(`DELETE FROM ${quoteIdent(this.table)}${whereSql}`).run(...(params as never[]));
+    this.changes = Number(
+      db.prepare(`DELETE FROM ${quoteIdent(this.table)}${whereSql}`).run(...(params as never[]))
+        .changes
+    );
     return { data: this.emptyData(), error: null };
   }
 

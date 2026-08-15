@@ -61,7 +61,7 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
       </div>
 
       {selected.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Using default Gemini (from GEMINI_API_KEY).</p>
+        <p className="text-xs text-muted-foreground">No route assigned (auto-routes to first available provider).</p>
       ) : (
         <ul className="space-y-1.5">
           {selected.map((p, i) => (

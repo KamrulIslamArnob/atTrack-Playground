@@ -15,6 +15,7 @@ import {
   FolderOpen,
   Sparkles,
   ChevronDown,
+  Brain,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,10 @@ interface WorkspaceConnectionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   sources: ContextSource[];
+  /** Currently-connected source ids. In "chat" mode this is the active chat's set. */
+  connectedSourceIds: string[];
+  /** "chat" scopes toggles to the active conversation; "global" edits defaults. */
+  mode: "chat" | "global";
   onToggleSource: (id: string) => void;
   onSaveConfig: (id: string, config: Record<string, unknown>, secretKeys?: string[]) => void;
   onAddCustomSource: (src: ContextSource) => void;
@@ -45,6 +50,7 @@ const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   resume: FileText,
   jobs: Briefcase,
   contacts: Users,
+  memories: Brain,
   github: Code2,
   obsidian: BookOpen,
   db_query: Database,
@@ -54,24 +60,27 @@ const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 };
 
 function formatSourceUnit(type: string, count: number): string {
-  if (!count) return "not connected";
   switch (type) {
     case "resume":
-      return `${count} ${count === 1 ? "resume" : "resumes"}`;
+      return count > 0 ? `${count} ${count === 1 ? "resume" : "resumes"}` : "0 resumes";
     case "jobs":
-      return `${count} ${count === 1 ? "job" : "jobs"}`;
+      return count > 0 ? `${count} ${count === 1 ? "job" : "jobs"}` : "0 jobs";
     case "contacts":
-      return `${count} ${count === 1 ? "contact" : "contacts"}`;
+      return count > 0 ? `${count} ${count === 1 ? "record" : "contacts & links"}` : "0 records";
+    case "memories":
+      return count > 0 ? `${count} ${count === 1 ? "memory" : "memories"}` : "0 memories";
     case "links":
-      return `${count} ${count === 1 ? "link" : "links"}`;
+      return count > 0 ? `${count} ${count === 1 ? "link" : "links"}` : "0 links";
     case "ai_prompts":
-      return `${count} ${count === 1 ? "prompt" : "prompts"}`;
+      return count > 0 ? `${count} templates` : "Inbuilt library";
     case "github":
-      return `${count} ${count === 1 ? "repo" : "repos"}`;
+      return count > 0 ? `${count} ${count === 1 ? "repo" : "repos"}` : "PAT auth";
     case "obsidian":
-      return `${count} ${count === 1 ? "note" : "notes"}`;
+      return count > 0 ? `${count} ${count === 1 ? "note" : "notes"}` : "Local vault";
+    case "db_query":
+      return "SQLite database";
     default:
-      return `${count} items`;
+      return count > 0 ? `${count} items` : "Ready";
   }
 }
 
@@ -132,10 +141,15 @@ function GithubConfig({ source, onSave }: { source: ContextSource; onSave: (id: 
 
 function DbQueryInfo() {
   return (
-    <div className="mt-3 rounded-lg border border-border/40 bg-muted/30 p-3 text-[11px] leading-snug text-muted-foreground">
-      Read-only access to your own workspace tables (jobs, contacts, links, prompts). All queries are
-      auto-scoped to your user and limited to an allowlist — no writes, no cross-user access. Toggle on to
-      let the assistant run scoped database questions.
+    <div className="mt-3 rounded-lg border border-border/40 bg-muted/30 p-3 text-[11px] leading-relaxed text-muted-foreground">
+      <div className="flex items-center gap-1.5 font-medium text-foreground mb-1">
+        <Database className="size-3.5 text-primary" />
+        Local SQLite Database Connection
+      </div>
+      Direct read-only connection to your local database tables (jobs, contacts, links, prompts).
+      <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+        🔒 <strong>Human-in-the-loop approval:</strong> The agent cannot execute database queries without your permission. It will always present the query proposal and wait for your explicit approval before running it in SQLite.
+      </div>
     </div>
   );
 }
@@ -175,7 +189,7 @@ function ConnectSourceModal({
 
   const submit = () => {
     if (!name.trim()) {
-      toast.error("Name your connection.");
+      toast.error("Name your connection");
       return;
     }
     const id = `custom:${Date.now().toString(36)}`;
@@ -255,12 +269,14 @@ export function WorkspaceConnectionDrawer({
   isOpen,
   onClose,
   sources,
+  connectedSourceIds,
+  mode,
   onToggleSource,
   onSaveConfig,
   onAddCustomSource,
   onRemoveCustomSource,
 }: WorkspaceConnectionDrawerProps) {
-  const activeCount = sources.filter((s) => s.enabled).length;
+  const activeCount = connectedSourceIds.length;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
 
@@ -276,27 +292,30 @@ export function WorkspaceConnectionDrawer({
       >
         <SheetContent
           side="right"
-          className="flex h-full w-full flex-col border-l border-border/50 bg-background/95 p-0 backdrop-blur-xl sm:max-w-md"
+          className="flex h-full w-full flex-col border-l border-border/50 bg-background/95 p-0 backdrop-blur-xl sm:max-w-[480px] md:max-w-[500px] shadow-2xl"
         >
-          <SheetHeader className="shrink-0 border-b border-border/40 bg-muted/10 px-6 py-5">
-            <div className="flex items-center justify-between gap-2">
-              <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <SheetHeader className="shrink-0 border-b border-border/40 bg-muted/10 px-6 py-5 pr-14 text-left">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Database className="size-4" />
                 </div>
-                Workspace Sources
-              </SheetTitle>
+                <SheetTitle className="text-base font-semibold text-foreground tracking-tight">
+                  Workspace Sources
+                </SheetTitle>
+              </div>
               <Badge
                 variant="outline"
-                className="border-primary/30 bg-primary/5 text-[11px] font-normal text-primary"
+                className="border-primary/30 bg-primary/5 text-[11px] font-medium text-primary px-2.5 py-0.5"
               >
                 <Sparkles className="mr-1 size-3" />
                 {activeCount} / {sources.length} Active
               </Badge>
             </div>
-            <SheetDescription className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Toggle which data sources the AI may use. Each switch is a real permission — disabled sources
-              are never queried.
+            <SheetDescription className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              {mode === "chat"
+                ? "Sources connected to this chat. Toggle any source on or off — changes are saved specifically for this conversation."
+                : "Default sources the AI may use. Each switch is a real permission — disabled sources are never queried."}
             </SheetDescription>
           </SheetHeader>
 
@@ -306,13 +325,15 @@ export function WorkspaceConnectionDrawer({
               const unitText = formatSourceUnit(source.type, source.recordCount);
               const needsSetup = source.auth?.status === "needed";
               const isExpanded = expanded === source.id;
+              // In chat mode the toggle reflects THIS chat's connected set.
+              const enabled = connectedSourceIds.includes(source.id);
 
               return (
                 <div
                   key={source.id}
                   className={cn(
                     "rounded-xl border p-3.5 transition-all duration-200 ease-out",
-                    source.enabled
+                    enabled
                       ? "border-border/60 bg-card shadow-sm hover:border-border"
                       : "border-border/30 bg-muted/20 opacity-75 hover:border-border/50 hover:opacity-100"
                   )}
@@ -322,7 +343,7 @@ export function WorkspaceConnectionDrawer({
                       <div
                         className={cn(
                           "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors",
-                          source.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                          enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                         )}
                       >
                         <Icon className="size-4" />
@@ -331,7 +352,7 @@ export function WorkspaceConnectionDrawer({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="truncate text-xs font-semibold text-foreground">{source.name}</span>
-                          {source.enabled ? (
+                          {enabled ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-status-online/20 bg-status-online/10 px-2 py-0.5 text-[10px] font-medium text-status-online">
                               <span className="size-1.5 animate-pulse rounded-full bg-status-online" />
                               {needsSetup ? "Set up required" : `Connected · ${unitText}`}
@@ -352,35 +373,35 @@ export function WorkspaceConnectionDrawer({
                     <button
                       type="button"
                       role="switch"
-                      aria-checked={source.enabled}
+                      aria-checked={enabled}
                       aria-label={`Toggle ${source.name}`}
                       onClick={() => onToggleSource(source.id)}
                       className={cn(
                         "mt-1 relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95",
-                        source.enabled ? "bg-primary" : "bg-muted-foreground/30"
+                        enabled ? "bg-primary" : "bg-muted-foreground/30"
                       )}
                     >
                       <span
                         className={cn(
                           "pointer-events-none inline-block size-4 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-out",
-                          source.enabled ? "translate-x-4" : "translate-x-0"
+                          enabled ? "translate-x-4" : "translate-x-0"
                         )}
                       />
                     </button>
                   </div>
 
-                  {/* Expand for auth/config when the source needs setup and is on */}
-                  {source.enabled && needsSetup && (
+                  {/* Expand for auth/config/info when source has settings or information */}
+                  {enabled && (needsSetup || source.type === "obsidian" || source.type === "github" || source.type === "db_query") && (
                     <button
                       type="button"
                       onClick={() => toggleExpand(source.id)}
-                      className="mt-2 flex w-full items-center justify-between rounded-md px-1 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/5"
+                      className="mt-2 flex w-full items-center justify-between rounded-md px-1 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/5 cursor-pointer"
                     >
-                      {isExpanded ? "Hide setup" : "Set up connection"}
+                      {isExpanded ? "Hide details" : needsSetup ? "Set up connection" : "Configure / details"}
                       <ChevronDown className={cn("size-3.5 transition-transform duration-200 ease-out", isExpanded && "rotate-180")} />
                     </button>
                   )}
-                  {isExpanded && source.enabled && needsSetup && (
+                  {isExpanded && enabled && (
                     <SourceConfigPanel source={source} onSave={onSaveConfig} />
                   )}
 

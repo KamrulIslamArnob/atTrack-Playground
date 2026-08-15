@@ -101,7 +101,7 @@ export function ContactCard({
       setEditingNote(false);
       toast.success("Note updated");
     } catch {
-      toast.error("Could not save note");
+      toast.error("Couldn't save note");
     } finally {
       setSavingNote(false);
     }

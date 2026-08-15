@@ -54,16 +54,8 @@ export function assembleGroundedSystemPrompt(opts: {
     );
   }
 
-  if (webSearchActive) {
-    parts.push(
-      "",
-      "--- WEB SEARCH & LINK VALIDATION DIRECTIVES ---",
-      "- Web search is active. Synthesize web findings into clear, structured insights.",
-      "- Every URL MUST be a valid fully-qualified https link; never output placeholder/hallucinated URLs."
-    );
-  }
-
   void persona;
   void personaPrompt;
+  void webSearchActive;
   return parts.join("\n");
 }

@@ -9,7 +9,7 @@ export interface ChatPromptInput {
 }
 
 const FALLBACK_INSTRUCTION =
-  "You are AtTrack AI Chatbot, an intelligent career workspace assistant, code reviewer, and interview preparation mentor.";
+  "You are atTrack AI Chatbot, an intelligent career workspace assistant, code reviewer, and interview preparation mentor.";
 
 /**
  * Pure, side-effect-free assembly of the system prompt.
@@ -25,19 +25,15 @@ export function assembleChatSystemPrompt(input: ChatPromptInput): string {
   const parts: string[] = [
     personaInstruction,
     "",
-    "Provide structured, accurate, and insightful responses using Markdown formatting. Use fenced code blocks when presenting code or scripts.",
-    "Do NOT include any thinking process, reasoning text, or <think> blocks. Respond directly to the user.",
+    "Format responses using clean Markdown. Use code blocks for code/SQL. Do NOT include <think> blocks or reasoning preamble; respond directly.",
   ];
 
   if (input.webSearchActive) {
     parts.push(
       "",
-      "--- WEB SEARCH & LINK VALIDATION DIRECTIVES ---",
-      "- Web search is active. Synthesize web findings into clear, sensible, and structured insights.",
-      "- Every web link or URL included MUST be a valid, fully qualified HTTP/HTTPS link (e.g., https://...).",
-      "- Never output broken, dead, placeholder (e.g. example.com), or hallucinated URLs.",
-      "- Format all links with descriptive markdown anchor text (e.g. [Company Careers Page](https://real-url...)).",
-      "- Ensure every link provided makes sense in context and directly answers the user's career or technical request."
+      "--- WEB SEARCH ACTIVE ---",
+      "- Format links as markdown: [Anchor Text](https://...)",
+      "- Only include valid, relevant URLs."
     );
   }
 
@@ -48,13 +44,20 @@ export function assembleChatSystemPrompt(input: ChatPromptInput): string {
   if (input.workspaceContext && input.workspaceContext.trim().length > 0) {
     parts.push(
       "",
-      "--- WORKSPACE CONTEXT (the user's local AtTrack data — jobs, resumes, contacts, deadlines) ---",
+      "--- WORKSPACE CONTEXT ---",
       input.workspaceContext,
       "--- END WORKSPACE CONTEXT ---",
-      "Use this context to ground your answers with the user's real data when relevant. Include specific application deadlines, sub-deadlines, and stage details provided above.",
-      "When discussing database queries or deeper data extraction beyond the provided summary, state your intent clearly in natural language (e.g., 'I am going to extract this data from the jobs table by joining with job_deadlines and board_lists'). Offer to preview the SQL query when relevant."
+      "Ground answers in this real user data (jobs, resumes, contacts, deadlines)."
     );
   }
+
+  parts.push(
+    "",
+    "--- LOCAL SQLITE TABLES ---",
+    "Tables: `jobs`, `documents`, `ai_memories`, `contacts`, `links`, `ai_tool_prompts`, `interviews`, `applications`.",
+    "For user notes/preferences, reference `ai_memories`.",
+    "To query local database, provide a single read-only SQL code block (` ```sql SELECT... ``` `) and ask user to click 'Approve & Execute Query'. When database results are returned, synthesize the final answer."
+  );
 
   return parts.join("\n");
 }

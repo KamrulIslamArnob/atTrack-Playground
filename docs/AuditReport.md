@@ -7,7 +7,7 @@ This file should contain the latest audit only. When a new audit is performed, r
 
 ## Current architecture
 
-Aven / AtTrack is a native, single-user local app:
+atTrack is a native, single-user local app:
 
 - **Framework:** Next.js 16 App Router, React 19, TypeScript.
 - **Data:** local SQLite through `lib/db/`.

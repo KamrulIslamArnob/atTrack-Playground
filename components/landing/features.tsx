@@ -21,7 +21,7 @@ const features = [
     icon: Camera,
     title: "Screenshot Import",
     description:
-      "See a job posting? Screenshot it. AtTrack reads the image and fills in the title, company, salary, and requirements for you.",
+      "See a job posting? Screenshot it. atTrack reads the image and fills in the title, company, salary, and requirements for you.",
     color: "text-pink-500",
     bg: "bg-pink-500/10",
     border: "hover:border-pink-500/30",
@@ -31,7 +31,7 @@ const features = [
     icon: Send,
     title: "Application Emails",
     description:
-      "AtTrack drafts a personalized email for each application using your resume and the job details. Edit it, then send it from your own inbox.",
+      "atTrack drafts a personalized email for each application using your resume and the job details. Edit it, then send it from your own inbox.",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
     border: "hover:border-violet-500/30",
@@ -41,7 +41,7 @@ const features = [
     icon: Target,
     title: "Resume Match Score",
     description:
-      "Upload your resume and AtTrack scores how well it fits each job. Spend your time on the roles where you&apos;re actually competitive.",
+      "Upload your resume and atTrack scores how well it fits each job. Spend your time on the roles where you&apos;re actually competitive.",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
     border: "hover:border-amber-500/30",
@@ -51,7 +51,7 @@ const features = [
     icon: Calendar,
     title: "Interview Tracking",
     description:
-      "Log your interviews, add prep notes, and sync them to Google Calendar. AtTrack reminds you what stage each application is in.",
+      "Log your interviews, add prep notes, and sync them to Google Calendar. atTrack reminds you what stage each application is in.",
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
     border: "hover:border-emerald-500/30",
@@ -81,7 +81,7 @@ const features = [
 
 const extractedFields = [
   { label: "Title", value: "Senior Software Engineer" },
-  { label: "Company", value: "AtTrack" },
+  { label: "Company", value: "atTrack" },
   { label: "Salary", value: "80k — 120k BDT" },
   { label: "Location", value: "Dhaka, Bangladesh" },
 ];

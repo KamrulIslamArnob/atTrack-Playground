@@ -10,22 +10,28 @@ import {
   AI_TOOL_KINDS,
   type AiToolKind,
 } from "@/lib/types/ai-tools";
+import type { AiMemory } from "@/lib/types/memories";
 import {
   getCustomPrompts,
   saveCustomPrompt,
   resetCustomPrompt,
 } from "@/lib/actions/ai-prompts";
+import { getMemories } from "@/lib/actions/memories";
 import {
   getDefaultPrompt,
   DEFAULT_PURPOSES,
 } from "@/lib/ai/prompts-defaults";
-import { Sparkles, RotateCcw, Save, Mail, Info } from "lucide-react";
+import { Sparkles, RotateCcw, Save, Mail, Info, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { MemoriesTab } from "@/components/preferences/memories-tab";
+import { cn } from "@/lib/utils";
 
 export default function AiPromptsPreferencesPage() {
+  const [activeTab, setActiveTab] = useState<"prompts" | "memories">("prompts");
   const [selectedKind, setSelectedKind] = useState<AiToolKind>("cover_letter");
   const [customPrompts, setCustomPrompts] = useState<Record<string, string>>({});
+  const [memories, setMemories] = useState<AiMemory[]>([]);
   const [currentPromptText, setCurrentPromptText] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSaving, startSaveTransition] = useTransition();
@@ -35,10 +41,14 @@ export default function AiPromptsPreferencesPage() {
   useEffect(() => {
     async function load() {
       try {
-        const loaded = await getCustomPrompts();
-        setCustomPrompts(loaded);
+        const [loadedPrompts, loadedMemories] = await Promise.all([
+          getCustomPrompts().catch(() => ({})),
+          getMemories().catch(() => []),
+        ]);
+        setCustomPrompts(loadedPrompts);
+        setMemories(loadedMemories);
       } catch {
-        toast.error("Failed to load custom prompts");
+        toast.error("Couldn't load prompts and memories");
       } finally {
         setLoading(false);
       }
@@ -113,9 +123,9 @@ export default function AiPromptsPreferencesPage() {
                 <Sparkles className="size-5" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Custom AI Prompts</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">Custom AI Prompts & Memory</h1>
                 <p className="text-sm text-muted-foreground">
-                  Customize the system prompt instructions used by AI models for each of the 8 email and cover letter tools.
+                  Customize system prompt instructions and manage Markdown memories for grounded AI chatbot context.
                 </p>
               </div>
             </div>
@@ -125,8 +135,50 @@ export default function AiPromptsPreferencesPage() {
 
       <Breadcrumbs />
 
-      {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      {/* Main Tabs Navigation */}
+      <div className="flex items-center gap-2 border-b border-border/70 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("prompts")}
+          className={cn(
+            "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer",
+            activeTab === "prompts"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Sparkles className="size-3.5" />
+          <span>AI Tool Prompts</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("memories")}
+          className={cn(
+            "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer",
+            activeTab === "memories"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Brain className="size-3.5" />
+          <span>AI Memories</span>
+          {memories.length > 0 && (
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.2 text-[10px] font-bold",
+                activeTab === "memories" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {memories.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Tab 1: AI Prompts View */}
+      {activeTab === "prompts" && (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Left Sidebar: Tool Selector List */}
         <div className="md:col-span-4 space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-3">
@@ -242,7 +294,7 @@ export default function AiPromptsPreferencesPage() {
                 Available Context Variables
               </div>
               <p className="text-xs text-muted-foreground">
-                When generating, AtTrack automatically injects the job details and candidate profile into the user prompt:
+                When generating, atTrack automatically injects the job details and candidate profile into the user prompt:
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {["jobTitle", "companyName", "jobDescription", "applicantName", "applicantHeadline", "resumeContent", "context"].map((v) => (
@@ -255,6 +307,13 @@ export default function AiPromptsPreferencesPage() {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Tab 2: AI Memories View */}
+      {activeTab === "memories" && (
+        <MemoriesTab initialMemories={memories} />
+      )}
+
       {dialog}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   LinkCategory,
   SocialLink,
@@ -12,6 +13,7 @@ import {
 import { CategoryPanel } from "./category-panel";
 import { LinkDialog } from "./link-dialog";
 import { CategoryManagerDialog } from "./category-manager-dialog";
+import { CsvImportDialog } from "./csv-import-dialog";
 import { QuickShortcutsBar } from "./quick-shortcuts-bar";
 import { Search, Plus, Settings2, Link2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -56,6 +58,7 @@ export function LinksView({
   const [selectedCatFilter, setSelectedCatFilter] = useState("all");
   const [shortcuts, setShortcuts] = useState<QuickShortcut[]>(initialShortcuts);
   const [, startTransition] = useTransition();
+  const router = useRouter();
 
   const handleAddShortcut = async (input: CreateQuickShortcutInput) => {
     const temp: QuickShortcut = {
@@ -99,6 +102,7 @@ export function LinksView({
   // Modals state
   const [addLinkOpen, setAddLinkOpen] = useState(false);
   const [manageCatOpen, setManageCatOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
 
   const [scopedCatId, setScopedCatId] = useState<string | undefined>();
   const [editingLink, setEditingLink] = useState<SocialLink | null>(null);
@@ -482,6 +486,18 @@ export function LinksView({
         existingTags={existingTags}
         onSubmit={handleSaveLink}
         onCreateCategoryInline={handleCreateCategoryInline}
+        onOpenCsv={() => setCsvOpen(true)}
+      />
+
+      <CsvImportDialog
+        open={csvOpen}
+        onOpenChange={setCsvOpen}
+        categories={categories}
+        initialCategoryId={scopedCatId}
+        onDone={() => {
+          setCsvOpen(false);
+          router.refresh();
+        }}
       />
 
       <CategoryManagerDialog

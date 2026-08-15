@@ -9,7 +9,7 @@ export async function getJobDeadlines(jobId: string): Promise<JobDeadline[]> {
 
   const { data, error } = await supabase
     .from("job_deadlines")
-    .select("id, job_id, title, stage_kind, due_date, is_pinned, is_completed, notes, created_at")
+    .select("id, job_id, title, type, stage_kind, due_date, is_pinned, is_completed, notes, created_at")
     .eq("job_id", jobId)
     .eq("user_id", userId)
     .order("due_date", { ascending: true });
@@ -23,6 +23,7 @@ export async function getJobDeadlines(jobId: string): Promise<JobDeadline[]> {
     id: row.id,
     job_id: row.job_id,
     title: row.title,
+    type: (row.type as "deadline" | "milestone") ?? "deadline",
     stage_kind: (row.stage_kind as ListKind | "custom" | null) ?? "custom",
     due_date: row.due_date,
     is_pinned: Boolean(row.is_pinned),
@@ -34,13 +35,15 @@ export async function getJobDeadlines(jobId: string): Promise<JobDeadline[]> {
 
 export async function createJobDeadline(
   jobId: string,
-  payload: { title: string; due_date: string; stage_kind?: string; notes?: string }
+  payload: { title: string; due_date: string; type?: "deadline" | "milestone"; stage_kind?: string; notes?: string }
 ): Promise<JobDeadline> {
   const { supabase, userId } = await getUser();
 
   const title = payload.title.trim();
   if (!title) throw new Error("Deadline title is required.");
-  if (!payload.due_date) throw new Error("Due date is required.");
+  if (!payload.due_date) throw new Error("Date is required.");
+
+  const itemType = payload.type || "deadline";
 
   const { data, error } = await supabase
     .from("job_deadlines")
@@ -49,6 +52,7 @@ export async function createJobDeadline(
       job_id: jobId,
       user_id: userId,
       title,
+      type: itemType,
       stage_kind: payload.stage_kind || "custom",
       due_date: payload.due_date,
       is_pinned: 0,
@@ -70,6 +74,7 @@ export async function createJobDeadline(
     id: data.id,
     job_id: data.job_id,
     title: data.title,
+    type: (data.type as "deadline" | "milestone") ?? "deadline",
     stage_kind: (data.stage_kind as ListKind | "custom" | null) ?? "custom",
     due_date: data.due_date,
     is_pinned: Boolean(data.is_pinned),
@@ -80,13 +85,14 @@ export async function createJobDeadline(
 
 export async function updateJobDeadline(
   deadlineId: string,
-  payload: { title?: string; due_date?: string; stage_kind?: string; notes?: string }
+  payload: { title?: string; due_date?: string; type?: "deadline" | "milestone"; stage_kind?: string; notes?: string }
 ): Promise<void> {
   const { supabase, userId } = await getUser();
 
   const updateFields: Record<string, unknown> = {};
   if (payload.title !== undefined) updateFields.title = payload.title.trim();
   if (payload.due_date !== undefined) updateFields.due_date = payload.due_date;
+  if (payload.type !== undefined) updateFields.type = payload.type;
   if (payload.stage_kind !== undefined) updateFields.stage_kind = payload.stage_kind;
   if (payload.notes !== undefined) updateFields.notes = payload.notes;
 

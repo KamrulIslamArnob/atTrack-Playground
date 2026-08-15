@@ -78,7 +78,7 @@ export async function GET() {
 
     const data: SystemPerformanceData = {
       appVersion: packageJson.version || "1.5.0",
-      appName: "AtTrack",
+      appName: "atTrack",
       isPackaged: process.env.NODE_ENV === "production",
       electronVersion: undefined,
       nodeVersion: process.version,
@@ -106,11 +106,11 @@ export async function GET() {
         appRamPercent: appRamPercent,
       },
       paths: {
-        rootFolder: process.cwd(),
-        dataDir: dataDir,
-        userDataDir: dataDir,
-        exePath: process.execPath,
-        storageDir: storageDir,
+        rootFolder: "[App Directory]",
+        dataDir: ".data",
+        userDataDir: ".data",
+        exePath: "[Runtime Executable]",
+        storageDir: ".data/storage",
       },
       network: {
         port: port,
@@ -118,7 +118,7 @@ export async function GET() {
         host: "127.0.0.1",
         isOnline: true,
         dbStatus: "Connected",
-        dbPath: path.join(dataDir, "attrack.db"),
+        dbPath: "attrack.db",
       },
       uptime: {
         systemUptimeSec: Math.round(os.uptime()),

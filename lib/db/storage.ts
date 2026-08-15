@@ -17,6 +17,8 @@ import path from "node:path";
 
 const STORAGE_DIR = process.env.STORAGE_DIR ?? path.join(process.cwd(), ".data", "storage");
 
+import { getResolvedEncryptionKey } from "../encryption.ts";
+
 const PUBLIC_BUCKETS = new Set(["avatar"]);
 
 export interface StorageError {
@@ -24,19 +26,7 @@ export interface StorageError {
 }
 
 function signingKey(): string {
-  const key =
-    process.env.ENCRYPTION_KEY ||
-    process.env.SMTP_ENCRYPTION_KEY ||
-    (process.env.NODE_ENV !== "production"
-      ? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-      : undefined);
-
-  if (!key) {
-    throw new Error(
-      "ENCRYPTION_KEY environment variable is required to sign storage URLs. Add it to .env.local."
-    );
-  }
-  return key;
+  return getResolvedEncryptionKey();
 }
 
 /**

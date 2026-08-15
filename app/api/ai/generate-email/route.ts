@@ -69,7 +69,7 @@ The applicant's resume will be attached to this email. Write a personalized, pro
   const chain = await resolveProviderChain(user.id, "text");
   if (chain.length === 0) {
     return new Response(
-      JSON.stringify({ error: "No AI provider configured and no GEMINI_API_KEY fallback available." }),
+      JSON.stringify({ error: "No AI provider configured. Please add your API key in Settings > AI Providers." }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
@@ -123,15 +123,20 @@ async function captureEmailCache(
   kind: string,
   params: Record<string, unknown>
 ): Promise<void> {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  let readComplete = false;
   try {
-    const reader = cacheStream.getReader();
+    reader = cacheStream.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     let raw = "";
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        readComplete = true;
+        break;
+      }
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
@@ -177,5 +182,12 @@ async function captureEmailCache(
     }
   } catch {
     // non-fatal
+    if (reader && !readComplete) {
+      try {
+        await reader.cancel();
+      } catch {}
+    }
+  } finally {
+    reader?.releaseLock();
   }
 }

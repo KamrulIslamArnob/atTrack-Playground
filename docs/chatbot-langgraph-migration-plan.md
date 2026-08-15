@@ -1,4 +1,4 @@
-# AtTrack Chatbot → LangChain / LangGraph Migration Plan
+# atTrack Chatbot → LangChain / LangGraph Migration Plan
 
 **Document type:** Consolidated migration contract (planning artifact, not implementation)
 **Date:** 2026-08-13

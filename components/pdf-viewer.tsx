@@ -87,6 +87,7 @@ function PdfPage({ url, pageNum, scale }: { url: string; pageNum: number; scale:
 
   useEffect(() => {
     let cancelled = false;
+    let renderTask: pdfjsLib.RenderTask | null = null;
 
     const renderPage = async () => {
       try {
@@ -103,14 +104,21 @@ function PdfPage({ url, pageNum, scale }: { url: string; pageNum: number; scale:
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        await page.render({
+        renderTask = page.render({
           canvasContext: context,
           viewport,
-        }).promise;
+        });
+        await renderTask.promise;
 
         if (!cancelled) setRendered(true);
       } catch (err) {
-        console.error(`Failed to render page ${pageNum}:`, err);
+        // pdf.js throws a RenderingCancelledException when a render is cancelled
+        // mid-flight (expected when scale changes rapidly) — don't log that as a
+        // real error, only log genuine failures.
+        const isCancelled = err instanceof Error && err.name === "RenderingCancelledException";
+        if (!isCancelled) {
+          console.error(`Failed to render page ${pageNum}:`, err);
+        }
       }
     };
 
@@ -118,6 +126,7 @@ function PdfPage({ url, pageNum, scale }: { url: string; pageNum: number; scale:
 
     return () => {
       cancelled = true;
+      renderTask?.cancel();
     };
   }, [url, pageNum, scale]);
 

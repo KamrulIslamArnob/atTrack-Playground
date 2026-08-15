@@ -36,7 +36,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("SMTP configuration saved.");
+      toast.success("SMTP configuration saved");
       setIsEditing(false);
       setPassword("");
     }
@@ -50,7 +50,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("SMTP configuration removed.");
+      toast.success("SMTP configuration removed");
       setIsEditing(true);
       setHost("smtp.gmail.com");
       setPort("465");

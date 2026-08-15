@@ -74,6 +74,27 @@ export interface UpdateQuickShortcutInput {
   sort_order?: number;
 }
 
+/** A normalized link row parsed from a CSV / pasted block (pre-import). */
+export interface CsvLinkRow {
+  /** Stable client id for list keys. */
+  id: string;
+  title: string;
+  url: string;
+  /** Category name (display) — resolved to category_id at import time. */
+  categoryName?: string;
+  notes?: string;
+  tags?: string[];
+  /** True when title/url were heuristically recovered (missing/garbage). */
+  needsReview?: boolean;
+}
+
+/** Result of the (optional) AI normalization step. */
+export interface FormatLinksResult {
+  rows: CsvLinkRow[];
+  /** Free-text notes from the model, e.g. what it guessed. */
+  notes?: string;
+}
+
 export const DEFAULT_QUICK_SHORTCUTS = [
   { title: "LinkedIn", icon: "linkedin", value: "" },
   { title: "GitHub", icon: "github", value: "" },

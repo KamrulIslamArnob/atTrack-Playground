@@ -23,14 +23,14 @@ const testimonials = [
     name: "Sarah Chen",
     role: "Software Engineer at Google",
     quote:
-      "I applied to over forty jobs and didn't lose track of a single one. That never happened before AtTrack.",
+      "I applied to over forty jobs and didn't lose track of a single one. That never happened before atTrack.",
     avatar: "/user-avatars/alex-suprun-mynsNaNwVDc-unsplash.jpg",
   },
   {
     name: "Marcus Johnson",
     role: "Product Designer at Stripe",
     quote:
-      "Writing application emails used to take forever. AtTrack drafts them in seconds, and I just edit and send. It's the feature I use every day.",
+      "Writing application emails used to take forever. atTrack drafts them in seconds, and I just edit and send. It's the feature I use every day.",
     avatar: "/user-avatars/diego-hernandez-MSepzbKFz10-unsplash.jpg",
   },
 ];
@@ -56,7 +56,7 @@ export function Testimonials() {
             People actually use this
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
-            AtTrack isn&apos;t a demo. It&apos;s what job seekers open every day
+            atTrack isn&apos;t a demo. It&apos;s what job seekers open every day
             to manage their search.
           </p>
           <div className="mt-6 inline-flex items-center gap-2.5">

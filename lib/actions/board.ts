@@ -43,6 +43,7 @@ interface RawJobRow {
     id: string;
     job_id: string;
     title: string;
+    type?: string | null;
     stage_kind: string | null;
     due_date: string;
     is_pinned: boolean;
@@ -110,7 +111,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       position:positions(name),
       resume:documents!jobs_resume_id_fkey(name),
       applications(id, status),
-      job_deadlines(id, job_id, title, stage_kind, due_date, is_pinned, is_completed, notes)
+      job_deadlines(id, job_id, title, type, stage_kind, due_date, is_pinned, is_completed, notes)
     `
     )
     .eq("user_id", userId);
@@ -132,6 +133,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
         id: d.id,
         job_id: d.job_id,
         title: d.title,
+        type: (d.type as "deadline" | "milestone") ?? "deadline",
         stage_kind: (d.stage_kind as ListKind | "custom" | null) ?? "custom",
         due_date: d.due_date,
         is_pinned: Boolean(d.is_pinned),

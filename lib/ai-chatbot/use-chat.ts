@@ -8,6 +8,12 @@ export interface ChatMessage {
   content: string;
   createdAt?: string;
   experimental_attachments?: { url: string; contentType?: string }[];
+  /** Delivery status: sending → sent → delivered | error */
+  status?: "sending" | "sent" | "delivered" | "error";
+  /** Quoted reply context (visual-only, prepended to content on send) */
+  replyTo?: { id: string; preview: string; role: string };
+  /** Feedback rating: up (liked) | down (disliked) | null */
+  feedback?: "up" | "down" | null;
 }
 
 interface UseAtTrackChatOptions {
@@ -27,7 +33,7 @@ function uid(): string {
 }
 
 /**
- * Minimal chat hook that streams Server-Sent-Events from the AtTrack
+ * Minimal chat hook that streams Server-Sent-Events from the atTrack
  * `/api/chat` endpoint. The route emits the same SSE shape as the rest of
  * the app's AI streams: `data: {choices:[{delta:{content}}]}` frames
  * terminated by `data: [DONE]`. We re-use the project's own provider layer
@@ -59,7 +65,10 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
         id: uid(),
         role: "user" as const,
         content: userContent,
+        createdAt: new Date().toISOString(),
         experimental_attachments: attachments,
+        status: "sending",
+        replyTo: undefined, // Caller can set this before calling runStream
       };
       const baseHistory = [...history, userMsg];
 
@@ -98,6 +107,11 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
           }
           throw new Error(detail);
         }
+
+        // Mark user message as "sent" — the server accepted the request.
+        setMessages((prev) =>
+          prev.map((m) => (m.id === userMsg.id ? { ...m, status: "sent" as const } : m))
+        );
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -147,15 +161,134 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") {
-          // User stopped — keep whatever we accumulated.
+          // User stopped — mark as delivered with whatever we accumulated.
+          setMessages((prev) =>
+            prev.map((m) => (m.id === userMsg.id ? { ...m, status: "delivered" as const } : m))
+          );
         } else {
           const message = err instanceof Error ? err.message : String(err);
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: m.content || `⚠️ ${message}` }
-                : m
-            )
+            prev.map((m) => {
+              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}` };
+              if (m.id === userMsg.id) return { ...m, status: "error" as const };
+              return m;
+            })
+          );
+          onError?.(err instanceof Error ? err : new Error(message));
+        }
+      } finally {
+        // Mark user message as delivered on successful completion.
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === userMsg.id && m.status !== "error" ? { ...m, status: "delivered" as const } : m
+          )
+        );
+        setIsLoading(false);
+        abortRef.current = null;
+      }
+    },
+    [api, buildBody, onError]
+  );
+
+  const sendBackgroundQuery = useCallback(
+    async (backgroundPrompt: string) => {
+      if (isLoading) return;
+      const assistantId = uid();
+      const history = messagesRef.current;
+      const apiMessages = [
+        ...history.map((m) => ({
+          role: m.role,
+          content: m.content,
+          experimental_attachments: m.experimental_attachments,
+        })),
+        {
+          role: "user",
+          content: backgroundPrompt,
+        },
+      ];
+
+      // Add only the streaming assistant message container to UI state (no user bubble with raw JSON)
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: "assistant", content: "" },
+      ]);
+      setIsLoading(true);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const res = await fetch(api, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: apiMessages,
+            ...buildBody(),
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok || !res.body) {
+          let detail = `Request failed (${res.status})`;
+          try {
+            const j = await res.json();
+            if (j?.error) detail = j.error;
+          } catch {
+            /* ignore */
+          }
+          throw new Error(detail);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = "";
+        let buffer = "";
+
+        const stripThink = (s: string): string =>
+          s.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "");
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const data = trimmed.slice(5).trim();
+            if (data === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(data);
+              const content: string | undefined =
+                parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+              if (content) {
+                acc += content;
+                const visible = stripThink(acc);
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantId ? { ...m, content: visible } : m))
+                );
+              }
+              if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                onSources?.(parsed.sources as string[]);
+              }
+              if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
+                onToolSteps?.(parsed.tool_calls as unknown[]);
+              }
+            } catch {
+              /* ignore partial chunks */
+            }
+          }
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          const message = err instanceof Error ? err.message : String(err);
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}` };
+              return m;
+            })
           );
           onError?.(err instanceof Error ? err : new Error(message));
         }
@@ -164,7 +297,7 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
         abortRef.current = null;
       }
     },
-    [api, buildBody, onError]
+    [api, buildBody, isLoading, onError, onSources, onToolSteps]
   );
 
   const sendMessage = useCallback(
@@ -178,8 +311,12 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
   );
 
   const handleSubmit = useCallback(() => {
-    sendMessage(input);
-  }, [input, sendMessage]);
+    const value = input.trim();
+    if (!value || isLoading) return;
+    sendMessage(value);
+    // The draft has become a message — the composer must not still hold it.
+    setInput("");
+  }, [input, isLoading, sendMessage]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -207,9 +344,11 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
   return {
     messages,
     input,
+    setInput,
     handleInputChange,
     handleSubmit,
     sendMessage,
+    sendBackgroundQuery,
     stop,
     isLoading,
     setMessages: setMessagesExternal,

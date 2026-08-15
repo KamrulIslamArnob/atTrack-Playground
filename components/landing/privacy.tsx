@@ -34,7 +34,7 @@ export function Privacy() {
             Your job search isn&apos;t anyone else&apos;s business
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            AtTrack runs on your machine. Your data never leaves it.
+            atTrack runs on your machine. Your data never leaves it.
           </p>
         </Reveal>
 
@@ -63,7 +63,7 @@ export function Privacy() {
               Not a job board
             </h3>
             <p className="relative mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-              AtTrack is a personal workspace. Your jobs, applications, resumes,
+              atTrack is a personal workspace. Your jobs, applications, resumes,
               and interview notes live on your machine — not on a server, not in
               a database someone else controls.
             </p>
@@ -139,7 +139,7 @@ export function Privacy() {
             </h3>
             <p className="relative mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
               Application emails come from your Gmail, Outlook, or whatever you
-              set up. AtTrack doesn&apos;t have its own email address — it uses yours.
+              set up. atTrack doesn&apos;t have its own email address — it uses yours.
             </p>
 
             <div className="relative mt-6 flex items-center gap-2">

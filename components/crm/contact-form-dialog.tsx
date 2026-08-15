@@ -105,7 +105,7 @@ export function ContactFormDialog({
       onDeleted?.(contact.id);
       onOpenChange(false);
     } catch {
-      toast.error("Could not delete contact");
+      toast.error("Couldn't delete contact");
     } finally {
       setDeleting(false);
     }
@@ -198,7 +198,7 @@ export function ContactFormDialog({
       setAvatarUrl(url);
       toast.success("Contact photo processed & uploaded");
     } catch {
-      toast.error("Could not upload photo");
+      toast.error("Couldn't upload photo");
     } finally {
       setUploadingAvatar(false);
     }

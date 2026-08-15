@@ -1,7 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
+import * as sqliteVec from "sqlite-vec";
 import { readFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { moduleLogger } from "../log/index.ts";
+
+const dbLog = moduleLogger("db");
 
 // Single process-wide connection. `node:sqlite` is synchronous, so there is no
 // pool to manage; WAL mode lets Next's concurrent request handlers read while a
@@ -17,12 +21,28 @@ declare global {
   var __attrackDb: DatabaseSync | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 5;
+const CURRENT_SCHEMA_VERSION = 7;
+
+function loadSqliteVec(db: DatabaseSync): boolean {
+  try {
+    db.enableLoadExtension(true);
+    sqliteVec.load(db);
+    db.enableLoadExtension(false);
+    return true;
+  } catch (err) {
+    try {
+      db.enableLoadExtension(false);
+    } catch {}
+    dbLog.warn({ err }, "Could not load sqlite-vec extension:");
+    return false;
+  }
+}
 
 function open(): DatabaseSync {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
-  const db = new DatabaseSync(DB_PATH);
+  const db = new DatabaseSync(DB_PATH, { allowExtension: true });
+  loadSqliteVec(db);
 
   // WAL survives across connections; setting it every open is harmless.
   db.exec("PRAGMA journal_mode = WAL");
@@ -32,10 +52,11 @@ function open(): DatabaseSync {
   db.exec("PRAGMA foreign_keys = ON");
   // Wait rather than throw SQLITE_BUSY when another handler holds the write lock.
   db.exec("PRAGMA busy_timeout = 5000");
-  // Performance PRAGMAs: 64MB memory cache, RAM temp tables, 256MB memory mapping.
+  // Performance PRAGMAs: 64MB memory cache, RAM temp tables, 256MB memory mapping, multi-threading.
   db.exec("PRAGMA cache_size = -64000");
   db.exec("PRAGMA temp_store = MEMORY");
   db.exec("PRAGMA mmap_size = 268435456");
+  db.exec("PRAGMA threads = 4");
 
   // Always apply forward-only column migrations so new schema columns land idempotently on existing DBs
   addMissingColumns(db);
@@ -122,7 +143,7 @@ export function rebuildOmniSearchIndex(db: DatabaseSync) {
       FROM positions;
     `);
   } catch (err) {
-    console.error("Failed to rebuild omni search index:", err);
+    dbLog.error({ err }, "Failed to rebuild omni search index:");
   }
 }
 
@@ -271,6 +292,9 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "jobs", column: "salary_period", ddl: "ALTER TABLE jobs ADD COLUMN salary_period TEXT" },
   { table: "jobs", column: "state", ddl: "ALTER TABLE jobs ADD COLUMN state TEXT NOT NULL DEFAULT 'active'" },
   { table: "links", column: "tags", ddl: "ALTER TABLE links ADD COLUMN tags TEXT" },
+  { table: "chat_sessions", column: "connected_source_ids", ddl: "ALTER TABLE chat_sessions ADD COLUMN connected_source_ids TEXT" },
+  { table: "chat_messages", column: "feedback", ddl: "ALTER TABLE chat_messages ADD COLUMN feedback TEXT" },
+  { table: "job_deadlines", column: "type", ddl: "ALTER TABLE job_deadlines ADD COLUMN type TEXT NOT NULL DEFAULT 'deadline'" },
 ];
 
 function addMissingColumns(db: DatabaseSync) {
@@ -312,7 +336,108 @@ function addMissingColumns(db: DatabaseSync) {
       updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
     CREATE INDEX IF NOT EXISTS idx_quick_shortcuts_user ON quick_shortcuts(user_id, sort_order);
+
+    CREATE TABLE IF NOT EXISTS ai_memories (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      title TEXT,
+      description TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_memories_user ON ai_memories(user_id, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS ai_feedback (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      session_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      rating TEXT NOT NULL,
+      model TEXT,
+      persona_id TEXT,
+      message_content TEXT,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_feedback_user ON ai_feedback(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ai_feedback_msg ON ai_feedback(message_id);
+
+    CREATE TABLE IF NOT EXISTS extension_config (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+      secret TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE TRIGGER IF NOT EXISTS trg_extension_config_updated AFTER UPDATE ON extension_config
+    BEGIN UPDATE extension_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
+
+    CREATE VIEW IF NOT EXISTS v_jobs AS
+    SELECT
+      j.id,
+      j.user_id,
+      j.company_id,
+      c.name AS company_name,
+      c.website AS company_website,
+      c.location AS company_location,
+      j.title,
+      j.description,
+      j.location,
+      j.status,
+      j.state,
+      j.employment_type,
+      j.salary_range,
+      j.application_url,
+      j.application_email,
+      j.deadline,
+      j.match_score,
+      j.list_id,
+      j.position_id,
+      j.skills,
+      j.benefits,
+      j.salary_min,
+      j.salary_max,
+      j.salary_currency,
+      j.salary_period,
+      j.created_at,
+      j.updated_at
+    FROM jobs j
+    LEFT JOIN companies c ON j.company_id = c.id;
+
+    CREATE TABLE IF NOT EXISTS document_chunks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      source_id TEXT NOT NULL,
+      source_type TEXT NOT NULL CHECK (source_type IN ('job_description', 'job_notes', 'resume', 'document')),
+      chunk_index INTEGER NOT NULL,
+      chunk_text TEXT NOT NULL,
+      token_count INTEGER,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_document_chunks_user_source ON document_chunks(user_id, source_id);
+
   `);
+
+  try {
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        embedding float[768] distance_metric=cosine,
+        +memory_id TEXT,
+        +user_id TEXT
+      );
+
+      CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
+        id INTEGER PRIMARY KEY,
+        embedding float[768] distance_metric=cosine,
+        +user_id TEXT,
+        +source_id TEXT
+      );
+    `);
+  } catch (err) {
+    // sqlite-vec might not be loaded on existing connection or unsupported platform
+    dbLog.warn({ err }, "Vector virtual tables skipped or not available:");
+  }
 
   for (const { ddl } of COLUMN_MIGRATIONS) {
     try {
@@ -330,6 +455,10 @@ function addMissingColumns(db: DatabaseSync) {
     "CREATE INDEX IF NOT EXISTS idx_applications_user_status ON applications(user_id, status)",
     "CREATE INDEX IF NOT EXISTS idx_interviews_user_scheduled ON interviews(user_id, scheduled_at)",
     "CREATE INDEX IF NOT EXISTS idx_documents_user_type ON documents(user_id, type)",
+    "CREATE INDEX IF NOT EXISTS idx_positions_resume_id ON positions(resume_id)",
+    "CREATE INDEX IF NOT EXISTS idx_applications_resume_id ON applications(resume_id)",
+    "CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_document_chunks_user_source ON document_chunks(user_id, source_id)",
   ];
 
   for (const idxDdl of indexes) {
@@ -337,15 +466,20 @@ function addMissingColumns(db: DatabaseSync) {
       db.exec(idxDdl);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (!/duplicate column name|no such column/i.test(message)) throw err;
+      if (!/duplicate column name|no such column|no such table/i.test(message)) throw err;
     }
   }
 }
 
+let hasRunMissingColumns = false;
+
 export function getDb(): DatabaseSync {
   if (!globalThis.__attrackDb) {
     globalThis.__attrackDb = open();
-  } else {
+    hasRunMissingColumns = true;
+  } else if (!hasRunMissingColumns) {
+    hasRunMissingColumns = true;
+    loadSqliteVec(globalThis.__attrackDb);
     addMissingColumns(globalThis.__attrackDb);
   }
   return globalThis.__attrackDb;

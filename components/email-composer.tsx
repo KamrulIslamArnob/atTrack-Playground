@@ -117,13 +117,13 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
         setBody(final.body);
         setIsReady(true);
       } else {
-        toast.error("Failed to generate email. Please try again.");
+        toast.error("Couldn't generate email. Please try again");
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        toast.info("Generation cancelled.");
+        toast.info("Generation cancelled");
       } else {
-        toast.error("Failed to generate email.");
+        toast.error("Couldn't generate email");
         console.error(err);
       }
     } finally {
@@ -154,12 +154,12 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
     navigator.clipboard.writeText(fullEmail);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast.success("Email copied to clipboard.");
+    toast.success("Email copied to clipboard");
   };
 
   const handleCopySubject = () => {
     navigator.clipboard.writeText(subject);
-    toast.success("Subject copied.");
+    toast.success("Subject copied");
   };
 
   const handleSend = async () => {
@@ -177,7 +177,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Email sent successfully!", {
+      toast.success("Email sent", {
         description: `Sent to ${job.applicationEmail}`,
       });
       router.push(`/jobs/${job.id}`);

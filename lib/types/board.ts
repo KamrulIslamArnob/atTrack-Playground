@@ -1,4 +1,5 @@
 import type { JobState } from "./job";
+import { parseLocalDate } from "@/lib/utils";
 
 // Board = a single unified pipeline over `jobs`. One card per job opportunity,
 // spanning Wishlist -> Offer. Columns live in the `board_lists` table (migration
@@ -29,10 +30,13 @@ export interface ProjectLink {
   url: string;
 }
 
+export type DeadlineKind = "deadline" | "milestone";
+
 export interface JobDeadline {
   id: string;
   job_id: string;
   title: string;
+  type?: DeadlineKind;
   stage_kind: ListKind | "custom" | null;
   due_date: string;
   is_pinned: boolean;
@@ -66,6 +70,7 @@ export interface BoardCard {
 
 export interface EffectiveDeadlineInfo {
   type: "section" | "job" | "milestone";
+  kind?: DeadlineKind;
   title: string;
   date: Date;
   dateString: string;
@@ -73,7 +78,7 @@ export interface EffectiveDeadlineInfo {
   label: string;
   targetListName?: string;
   isPinned?: boolean;
-  urgency: "overdue" | "red" | "yellow" | "blue" | "gray";
+  urgency: "overdue" | "red" | "yellow" | "blue" | "purple" | "gray";
   bannerClassName: string;
   badgeClassName: string;
 }
@@ -85,6 +90,7 @@ export function getEffectiveDeadlineInfo(
   let activeDeadlineStr: string | null = null;
   let deadlineTitle = "Job Deadline";
   let deadlineType: "section" | "job" | "milestone" = "job";
+  let deadlineKind: DeadlineKind = "deadline";
   let targetListName: string | undefined = undefined;
   let isPinned = false;
 
@@ -96,6 +102,7 @@ export function getEffectiveDeadlineInfo(
     activeDeadlineStr = pinned.due_date;
     deadlineTitle = pinned.title;
     deadlineType = "milestone";
+    deadlineKind = pinned.type ?? "deadline";
     isPinned = true;
   } else if (uncompletedDeadlines.length > 0) {
     // 2. Check if a milestone matches the current board list stage
@@ -108,15 +115,17 @@ export function getEffectiveDeadlineInfo(
       activeDeadlineStr = stageMatch.due_date;
       deadlineTitle = stageMatch.title;
       deadlineType = "milestone";
+      deadlineKind = stageMatch.type ?? "deadline";
       targetListName = currentList?.name;
     } else {
-      // 3. Otherwise pick the earliest upcoming deadline
+      // 3. Otherwise pick the earliest upcoming deadline / milestone
       const sorted = [...uncompletedDeadlines].sort(
         (a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
       );
       activeDeadlineStr = sorted[0].due_date;
       deadlineTitle = sorted[0].title;
       deadlineType = "milestone";
+      deadlineKind = sorted[0].type ?? "deadline";
     }
   }
 
@@ -138,6 +147,7 @@ export function getEffectiveDeadlineInfo(
       activeDeadlineStr = card.section_deadline;
       deadlineTitle = targetListName ? `${targetListName} Deadline` : "Section Deadline";
       deadlineType = "section";
+      deadlineKind = "deadline";
     }
   }
 
@@ -145,45 +155,90 @@ export function getEffectiveDeadlineInfo(
     activeDeadlineStr = card.deadline;
     deadlineTitle = "Job Deadline";
     deadlineType = "job";
+    deadlineKind = "deadline";
   }
 
   if (!activeDeadlineStr) return null;
 
-  const targetDate = new Date(activeDeadlineStr);
+  const normalized = activeDeadlineStr.trim().toLowerCase();
+  if (normalized === "asap") {
+    return {
+      type: deadlineType,
+      kind: "deadline",
+      title: deadlineTitle || "Job Deadline",
+      date: new Date(),
+      dateString: "ASAP",
+      daysRemaining: 0,
+      label: "Apply ASAP",
+      urgency: "red",
+      bannerClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40",
+      badgeClassName: "bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold",
+    };
+  }
+
+  if (normalized === "unknown") {
+    return {
+      type: deadlineType,
+      kind: "deadline",
+      title: deadlineTitle || "Job Deadline",
+      date: new Date(),
+      dateString: "Unknown",
+      daysRemaining: 999,
+      label: "Unknown",
+      urgency: "gray",
+      bannerClassName: "bg-muted/60 text-muted-foreground border-border",
+      badgeClassName: "bg-muted text-muted-foreground",
+    };
+  }
+
+  const targetDate = parseLocalDate(activeDeadlineStr);
   if (isNaN(targetDate.getTime())) return null;
 
   const now = new Date();
   const diffMs = targetDate.getTime() - now.getTime();
   const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-  let urgency: "overdue" | "red" | "yellow" | "blue" | "gray" = "gray";
-  if (daysRemaining <= 0) {
-    urgency = "overdue";
-  } else if (daysRemaining <= 3) {
-    urgency = "red";
-  } else if (daysRemaining <= 7) {
-    urgency = "yellow";
-  } else if (daysRemaining <= 10) {
-    urgency = "blue";
+  let urgency: "overdue" | "red" | "yellow" | "blue" | "purple" | "gray" = "gray";
+  let label = "";
+
+  if (deadlineKind === "milestone") {
+    // Milestone count-up elapsed time
+    const elapsedDays = Math.max(0, Math.floor((now.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24)));
+    urgency = "purple";
+    if (elapsedDays === 0) {
+      label = "Started Today";
+    } else if (elapsedDays === 1) {
+      label = "1 day waiting";
+    } else {
+      label = `${elapsedDays} days waiting`;
+    }
   } else {
-    urgency = "gray";
+    // Deadline countdown
+    if (daysRemaining < 0) {
+      urgency = "overdue";
+      label = `Overdue by ${Math.abs(daysRemaining)}d`;
+    } else if (daysRemaining === 0) {
+      urgency = "overdue";
+      label = "Due Today";
+    } else if (daysRemaining <= 3) {
+      urgency = "red";
+      label = daysRemaining === 1 ? "1 day left" : `${daysRemaining} days left`;
+    } else if (daysRemaining <= 7) {
+      urgency = "yellow";
+      label = `${daysRemaining} days left`;
+    } else if (daysRemaining <= 10) {
+      urgency = "blue";
+      label = `${daysRemaining} days left`;
+    } else {
+      urgency = "gray";
+      label = `${daysRemaining} days left`;
+    }
   }
 
   const dateFormatted = targetDate.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
   });
-
-  let label = "";
-  if (daysRemaining < 0) {
-    label = `Overdue by ${Math.abs(daysRemaining)}d`;
-  } else if (daysRemaining === 0) {
-    label = "Due Today";
-  } else if (daysRemaining === 1) {
-    label = "1 day left";
-  } else {
-    label = `${daysRemaining} days left`;
-  }
 
   let bannerClassName = "";
   let badgeClassName = "";
@@ -205,6 +260,10 @@ export function getEffectiveDeadlineInfo(
       bannerClassName = "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40";
       badgeClassName = "bg-blue-500/20 text-blue-700 dark:text-blue-300";
       break;
+    case "purple":
+      bannerClassName = "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/40";
+      badgeClassName = "bg-purple-500/20 text-purple-700 dark:text-purple-300";
+      break;
     case "gray":
     default:
       bannerClassName = "bg-muted/60 text-muted-foreground border-border";
@@ -214,6 +273,7 @@ export function getEffectiveDeadlineInfo(
 
   return {
     type: deadlineType,
+    kind: deadlineKind,
     title: deadlineTitle,
     date: targetDate,
     dateString: dateFormatted,

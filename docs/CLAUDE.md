@@ -10,16 +10,18 @@ This file is the navigation map for Claude Code and other coding agents working 
 | Documentation index | [`docs/README.md`](README.md) | Before changing docs or adding new docs. |
 | Development and architecture | [`docs/DEVELOPMENT.md`](DEVELOPMENT.md) | Before changing data, actions, Electron, build scripts, or app architecture. |
 | Release checklist | [`docs/RELEASE.md`](RELEASE.md) | Before shipping a new version, building installers, or publishing update artifacts. |
-| Design and UI rules | [`docs/Design.md`](Design.md) | Before touching colors, gradients, spacing, radius, board UI, sidebar, sheets, CRM, or copy affected by the no-auth product model. |
+| Design system | [`docs/Design.md`](Design.md) | Before touching colors, gradients, typography, spacing, radius, elevation, motion, components, UX copy, board UI, sidebar, sheets, or CRM. Tokens only — never a raw palette class or a hex literal. |
+| Handoff spec format | [`docs/DesignHandoff.md`](DesignHandoff.md) | Before building a new screen or component, to spec states, edge cases, motion, and accessibility up front. |
 | Latest audit | [`docs/AuditReport.md`](AuditReport.md) | Before cleanup work, lint/build fixes, or when checking known issues. Replace with the latest dated audit when a new audit happens. |
 | Roadmap / future features | [`docs/ROADMAP.md`](ROADMAP.md) | Before starting feature work. Verify backlog items against code before rebuilding anything. |
 | Historical task summaries | [`docs/PlanningSummary.md`](PlanningSummary.md) | When you need context from old implementation plans. Treat as historical and verify against code. |
 | Contributing | [`docs/CONTRIBUTING.md`](CONTRIBUTING.md) | Before preparing a PR or changing contributor-facing workflow. |
 | Security | [`docs/SECURITY.md`](SECURITY.md) | Before touching auth assumptions, local data, file storage, credentials, AI providers, SMTP, or release/distribution behavior. |
+| Logging and observability | [`docs/LOGGING.md`](LOGGING.md) | Before adding a log call, reading the AI trace events, changing what is redacted, or turning on the log drain. |
 
 ## Repository summary
 
-Aven / AtTrack is a local-first, single-user job application workspace:
+atTrack is a local-first, single-user job application workspace:
 
 - **Framework:** Next.js 16 App Router, React 19, TypeScript.
 - **UI:** Tailwind CSS v4, shadcn/base-ui components, lucide icons.
@@ -30,8 +32,8 @@ Aven / AtTrack is a local-first, single-user job application workspace:
 
 ## Must-know conventions
 
-- The product is currently referred to as **Aven / AtTrack**. Preserve existing naming unless the task explicitly asks for a rename.
-- The `next-themes` storage key `"aven-theme"` is intentionally kept for existing users.
+- The product is named **atTrack**.
+- The `next-themes` storage key `"aven-theme"` is intentionally kept as-is (legacy name) so existing local installs don't lose their saved theme.
 - Do **not** add login, signup, sign-out, switch-account, or public-account UX without first changing the product/security model.
 - SQLite schema changes require both:
   - `lib/db/schema.sql` for new databases.
