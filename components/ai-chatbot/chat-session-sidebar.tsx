@@ -198,18 +198,16 @@ export function ChatSessionSidebar({
 
       {/* Primary Action & Search */}
       <div className="space-y-2 p-3 shrink-0">
-        {/* Full-width blue primary button with 8px (rounded-lg) radius */}
-        <button
-          type="button"
+        <Button
           onClick={() => {
             onNewChat();
             if (isMobileOpen && onMobileClose) onMobileClose();
           }}
-          className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-xs rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 text-sm transition-all duration-150 active:scale-[0.99] cursor-pointer"
+          className="w-full"
         >
           <Plus className="size-4" />
-          <span>New chat</span>
-        </button>
+          New chat
+        </Button>
 
         {/* Full-width search bar matching 8px (rounded-lg) border-radius */}
         <div className="relative">
