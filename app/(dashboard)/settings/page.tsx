@@ -12,6 +12,7 @@ import { Mail, Sparkles } from "lucide-react";
 import { UpdateChecker } from "@/components/settings/update-checker";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
 import { getExtensionSecret } from "@/lib/actions/extension";
+import { RawDatabaseToggle } from "@/components/settings/raw-database-toggle";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -87,6 +88,8 @@ export default async function SettingsPage() {
           <AiProvidersSettings initialProviders={aiProviders} initialRoutes={aiTaskRoutes} />
         </CardContent>
       </Card>
+
+      <RawDatabaseToggle initialEnabled={Boolean(profile?.show_raw_database)} />
 
       <Card className="border-destructive/20">
         <CardHeader>

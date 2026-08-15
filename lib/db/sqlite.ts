@@ -303,6 +303,8 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "chat_sessions", column: "connected_source_ids", ddl: "ALTER TABLE chat_sessions ADD COLUMN connected_source_ids TEXT" },
   { table: "chat_messages", column: "feedback", ddl: "ALTER TABLE chat_messages ADD COLUMN feedback TEXT" },
   { table: "job_deadlines", column: "type", ddl: "ALTER TABLE job_deadlines ADD COLUMN type TEXT NOT NULL DEFAULT 'deadline'" },
+  { table: "ai_providers", column: "verified_at", ddl: "ALTER TABLE ai_providers ADD COLUMN verified_at TEXT" },
+  { table: "profiles", column: "show_raw_database", ddl: "ALTER TABLE profiles ADD COLUMN show_raw_database INTEGER NOT NULL DEFAULT 0" },
 ];
 
 /** Returns how many COLUMN_MIGRATIONS actually landed — zero on an

@@ -7,6 +7,23 @@ import { getUser } from "@/lib/auth";
 // atTrack is a native single-user app: no sign-in, sign-up, or sign-out.
 // What remains here is profile and avatar editing, plus a destructive reset.
 
+/** Toggles the raw database viewer (/preferences/database) on or off — see
+ *  the column comment in lib/db/schema.sql for why it defaults off. */
+export async function setShowRawDatabase(enabled: boolean): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase
+    .from("profiles")
+    .upsert({ id: userId, show_raw_database: enabled }, { onConflict: "id" });
+
+  if (error) {
+    throw new Error("Couldn't update the setting.");
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/preferences/database");
+}
+
 export async function updateProfile(formData: FormData) {
   const { supabase, userId } = await getUser();
 

@@ -139,6 +139,8 @@ export interface SidebarProps {
   avatarUrl?: string | null;
   fullName?: string | null;
   role?: string;
+  /** Gates the "Database" nav item — off by default, see lib/db/schema.sql. */
+  showRawDatabase?: boolean;
   onNavigate?: () => void;
   /** Desktop shell only — draggable width, persisted. The mobile drawer's own
       fixed-width panel passes this false and Sidebar just fills it. */
@@ -152,10 +154,13 @@ const SIDEBAR_MAX_WIDTH = 360;
 const SIDEBAR_DEFAULT_WIDTH = 224;
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 
-export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNavigate, resizable }: SidebarProps) {
+export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawDatabase, onNavigate, resizable }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const visibleSecondaryNavigation = showRawDatabase
+    ? secondaryNavigation
+    : secondaryNavigation.filter((item) => item.href !== "/preferences/database");
 
   const [width, setWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -641,7 +646,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, onNaviga
                 </div>
               )}
               <div className="space-y-1">
-                {secondaryNavigation.map((item) => {
+                {visibleSecondaryNavigation.map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Link

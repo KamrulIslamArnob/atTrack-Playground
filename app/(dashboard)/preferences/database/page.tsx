@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Database,
   Table2,
@@ -134,8 +135,10 @@ function InlineEditor({
 // ---------------------------------------------------------------------------
 
 export default function DatabasePage() {
+  const router = useRouter();
   const [tables, setTables] = useState<TableData[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
@@ -154,7 +157,11 @@ export default function DatabasePage() {
     async function fetchAll() {
       try {
         const res = await fetch("/api/database");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          if (res.status === 403 && !cancelled) setDisabled(true);
+          throw new Error(errData.error ?? `HTTP ${res.status}`);
+        }
         const data = await res.json();
         if (!cancelled) {
           setTables(data.tables);
@@ -164,7 +171,7 @@ export default function DatabasePage() {
         }
       } catch (err) {
         if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load database");
+          setError(err instanceof Error ? err.message : "Couldn't load the database");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -318,6 +325,27 @@ export default function DatabasePage() {
     return (
       <div className="flex h-[70vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // --- turned off in Settings ----------------------------------------------
+  if (disabled) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-4">
+        <div className="max-w-sm space-y-3 text-center">
+          <Database className="mx-auto size-10 text-muted-foreground/40" />
+          <div>
+            <p className="text-sm font-medium text-foreground">The database viewer is off</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              This shows every table in your local database, including internal columns — built for
+              engineers. Turn it on in Settings if that&apos;s you.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => router.push("/settings")}>
+            Open settings
+          </Button>
+        </div>
       </div>
     );
   }

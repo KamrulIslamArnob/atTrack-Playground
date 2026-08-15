@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/sqlite";
+import { getUser } from "@/lib/auth";
+import { isRawDatabaseEnabled } from "@/lib/db/raw-database-gate";
 import { withRoute } from "@/lib/log/route";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +38,14 @@ interface UpdateBody {
  * a cascading ripple the user didn't explicitly ask for.
  */
 export const PUT = withRoute("/api/database/update", async (req: Request) => {
+  const { userId } = await getUser();
+  if (!isRawDatabaseEnabled(userId)) {
+    return NextResponse.json(
+      { error: "The raw database viewer is turned off. Turn it on in Settings to use it." },
+      { status: 403 }
+    );
+  }
+
   const body = (await req.json()) as UpdateBody;
   const { table, column, pkColumn, pkValue, value } = body;
 

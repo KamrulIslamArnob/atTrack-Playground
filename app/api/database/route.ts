@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/sqlite";
+import { getUser } from "@/lib/auth";
+import { isRawDatabaseEnabled } from "@/lib/db/raw-database-gate";
 import { withRoute } from "@/lib/log/route";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,14 @@ export interface TableData {
  * never hits the API again until it remounts.
  */
 export const GET = withRoute("/api/database", async () => {
+  const { userId } = await getUser();
+  if (!isRawDatabaseEnabled(userId)) {
+    return NextResponse.json(
+      { error: "The raw database viewer is turned off. Turn it on in Settings to use it." },
+      { status: 403 }
+    );
+  }
+
   const db = getDb();
 
   // 1. List all user tables (skip sqlite_ internal tables).

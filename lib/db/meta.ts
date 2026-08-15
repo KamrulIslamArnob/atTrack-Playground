@@ -17,7 +17,7 @@ export const JSON_COLUMNS: Record<string, readonly string[]> = {
 };
 
 export const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {
-  profiles: ["is_banned"],
+  profiles: ["is_banned", "show_raw_database"],
   documents: ["is_default"],
   positions: ["is_primary"],
   job_deadlines: ["is_pinned", "is_completed"],

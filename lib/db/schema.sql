@@ -56,6 +56,11 @@ CREATE TABLE IF NOT EXISTS profiles (
   is_banned INTEGER NOT NULL DEFAULT 0,
   banned_at TEXT,
   onboarded_at TEXT,
+  -- Off by default: the raw database viewer (/preferences/database) is a full
+  -- table/column browser with inline editing, no allowlist or confirmation —
+  -- overwhelming (and easy to misuse) for anyone who isn't comfortable with
+  -- databases. Opt-in from Settings.
+  show_raw_database INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -400,6 +405,7 @@ CREATE TABLE IF NOT EXISTS ai_providers (
   base_url TEXT,
   model TEXT NOT NULL,
   encrypted_api_key TEXT NOT NULL,
+  verified_at TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );

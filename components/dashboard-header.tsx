@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import { Sidebar, type SidebarProps } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
 
-export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProps) {
+export function DashboardHeader({ user, avatarUrl, fullName, role, showRawDatabase }: SidebarProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const homeHref = role === "admin" ? "/admin" : "/overview";
@@ -77,7 +77,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role }: SidebarProp
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {mobileNavOpen && (
-              <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} role={role} onNavigate={() => setMobileNavOpen(false)} />
+              <Sidebar user={user} avatarUrl={avatarUrl} fullName={fullName} role={role} showRawDatabase={showRawDatabase} onNavigate={() => setMobileNavOpen(false)} />
             )}
           </div>
         </div>
