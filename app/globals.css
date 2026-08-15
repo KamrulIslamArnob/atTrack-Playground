@@ -1187,6 +1187,31 @@
   animation: agent-shimmer 1.4s linear infinite;
 }
 
+/* 6. Primary CTA lift — Button component's `default` variant only (see
+   components/ui/button.tsx). Matches the atTrack Component Kit (claude.ai
+   design project 0fd41341-4a3a-485a-b192-52b49f30fb46, "03 · Six buttons
+   with proper hover"): flat --gradient-brand fill at rest with a quiet
+   colored shadow, lifts 2px and deepens the glow on hover, settles back
+   down with a quick scale on press. Replaces this session's earlier
+   corner-peel sweep now that the kit is the standard reference. Hover
+   deepen/lift is hover-capable-pointer only; reduced motion keeps the
+   shadow change and drops the transform (see override below). */
+.btn-cta {
+  box-shadow: 0 4px 12px -4px color-mix(in oklch, var(--gradient-brand-via) 45%, transparent);
+  transition: transform 200ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1)),
+              box-shadow 200ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1));
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-cta:hover,
+  .btn-cta:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px -6px color-mix(in oklch, var(--gradient-brand-via) 55%, transparent);
+  }
+}
+.btn-cta:active {
+  transform: translateY(0) scale(0.98);
+}
+
 /* Reduced Motion Override */
 @media (prefers-reduced-motion: reduce) {
   .micro-press,
@@ -1197,6 +1222,14 @@
   .micro-icon-spring:hover svg {
     transform: none !important;
     transition: opacity 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out !important;
+  }
+
+  .btn-cta,
+  .btn-cta:hover,
+  .btn-cta:focus-visible,
+  .btn-cta:active {
+    transform: none !important;
+    transition: box-shadow 150ms ease-out !important;
   }
 
   /* Keep the arrival cue, drop the movement and the blur. */
