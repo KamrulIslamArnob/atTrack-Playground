@@ -7,6 +7,8 @@ import { searchAiPromptsTool } from "./search-ai-prompts";
 import { searchMemoriesTool } from "./search-memories";
 import { webSearchTool } from "./web-search";
 import { queryDatabaseTool } from "./query-database";
+import { writeDatabaseTool } from "./write-database";
+import { deleteDatabaseTool } from "./delete-database";
 import { readObsidianTool } from "./read-obsidian";
 import { searchGithubTool } from "./search-github";
 
@@ -24,6 +26,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   searchAiPromptsTool,
   searchMemoriesTool,
   queryDatabaseTool,
+  writeDatabaseTool,
+  deleteDatabaseTool,
   readObsidianTool,
   searchGithubTool,
   webSearchTool,
