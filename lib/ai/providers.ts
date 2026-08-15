@@ -1267,20 +1267,40 @@ export async function generateTextWithTools(
   throw new Error(`All providers failed (tool loop): ${lastError}`);
 }
 
+/** Renders executed tool calls as prompt text. Shared by the intermediate
+ *  rounds of the streaming tool loop and by its final follow-up prompt. Each
+ *  result is capped: a whole-workspace dump inflates the prompt, and every
+ *  extra input token is paid back as time-to-first-token. */
+function renderToolContext(records: ToolCallRecord[]): string {
+  return records
+    .map((r) => {
+      const body = r.result?.content ?? "";
+      const clipped =
+        body.length > MAX_TOOL_RESULT_CHARS
+          ? `${body.slice(0, MAX_TOOL_RESULT_CHARS)}\n…[truncated, ${body.length - MAX_TOOL_RESULT_CHARS} more chars]`
+          : body;
+      return `### ${r.name}\n${clipped}`;
+    })
+    .join("\n\n");
+}
+
 /**
- * Streaming variant of the tool loop. Runs ONE non-streaming tool round to let
- * the model pick its tools, executes them, then streams the final prose answer
+ * Runs up to MAX_TOOL_ROUNDS non-streaming tool rounds so the model can chain
+ * a lookup into an action within one turn, then streams the final prose answer
  * so the user sees tokens as they are generated instead of waiting for the
  * whole response to be buffered.
  *
  * Returns the executed tool calls (already complete, so the caller can emit its
  * tool_calls frame first) plus the token stream for the answer.
  *
- * ponytail: exactly one tool round, because streaming a round means parsing
- * partial tool-call deltas out of three different vendor stream formats. Every
- * tool in the registry is a single-shot lookup, so nothing chains today. If a
- * tool ever needs another tool's output, either add streamed tool-call parsing
- * or route that agent through the buffered generateTextWithTools.
+ * Intermediate results are folded into the next round's prompt as text rather
+ * than replayed as vendor-native tool-result turns — the rounds declare no
+ * paired assistant turn, so the strict pairing those APIs require does not
+ * apply.
+ *
+ * ponytail: results are folded in as text, so a very long chain re-sends every
+ * earlier result on each round. Fine at MAX_TOOL_ROUNDS=4 with per-result caps;
+ * switch to vendor-native tool-result turns if the budget is ever raised much.
  */
 export async function generateTextWithToolsStream(
   chain: ResolvedProvider[],
@@ -1304,6 +1324,24 @@ export async function generateTextWithToolsStream(
   const provider = chain[0];
   const records: ToolCallRecord[] = [];
 
+  // Fold tool output into the prompt instead of replaying each vendor's native
+  // tool-result message shape — the follow-up call declares no tools, so the
+  // strict assistant-turn/tool-result pairing those APIs require doesn't apply.
+  const finalAnswer = (): Promise<ReadableStream<Uint8Array>> => {
+    const followUp: GenerateTextInput = {
+      ...input,
+      userPrompt: [
+        input.userPrompt,
+        "",
+        "--- TOOL RESULTS ---",
+        renderToolContext(records),
+        "--- END TOOL RESULTS ---",
+        "Answer the question using the tool results above. Do not mention the tools themselves.",
+      ].join("\n"),
+    };
+    return generateTextStream(chain, followUp, log);
+  };
+
   // The selection round only has to name tools and arguments — it never writes
   // prose. Sending the full grounded system prompt (retrieved docs, workspace
   // context, history) makes that trivial call as expensive as the answer
@@ -1311,12 +1349,12 @@ export async function generateTextWithToolsStream(
   // prompt goes to the follow-up call, which is the one that actually writes.
   const selectionPrompt = TOOL_SELECTION_PROMPT;
 
-  const runRound = (): Promise<ProviderToolRoundResult> => {
+  const runRound = (prompt: string): Promise<ProviderToolRoundResult> => {
     if (provider.provider_type === "gemini") {
       return callGeminiToolRound(
         provider,
         selectionPrompt,
-        [{ role: "user", parts: [{ text: input.userPrompt }] }],
+        [{ role: "user", parts: [{ text: prompt }] }],
         toolDeclarations,
         input.temperature
       );
@@ -1325,7 +1363,7 @@ export async function generateTextWithToolsStream(
       return callAnthropicToolRound(
         provider,
         selectionPrompt,
-        [{ role: "user", content: [{ type: "text", text: input.userPrompt }] }],
+        [{ role: "user", content: [{ type: "text", text: prompt }] }],
         toolDeclarations,
         input.temperature
       );
@@ -1335,74 +1373,79 @@ export async function generateTextWithToolsStream(
       selectionPrompt,
       [
         { role: "system", content: selectionPrompt },
-        { role: "user", content: input.userPrompt },
+        { role: "user", content: prompt },
       ],
       toolDeclarations,
       input.temperature
     );
   };
 
-  // Bounded separately from a full generation: this round returns a few dozen
-  // tokens, so if it has not landed quickly the provider is not going to serve
-  // tools usefully this turn. Failing fast here hands the remaining budget to
-  // the ungrounded fallback instead of burning it twice.
-  const round = await withTimeout(runRound(), TOOL_ROUND_TIMEOUT_MS, `${provider.name} tool round`);
+  // Bounded multi-round loop. The buffered generateTextWithTools has done this
+  // since it was written; the streaming path was capped at one round because
+  // replaying vendor-native tool-result turns is fiddly. It does not have to —
+  // results are folded in as prompt text below, and the round declares no
+  // assistant turn to pair with, so plain text round-trips fine.
+  //
+  // The budget is the blast radius: a model that keeps calling tools stops
+  // after MAX_TOOL_ROUNDS and answers with what it has.
+  for (let roundIndex = 0; roundIndex < MAX_TOOL_ROUNDS; roundIndex++) {
+    const roundPrompt =
+      records.length === 0
+        ? input.userPrompt
+        : [
+            input.userPrompt,
+            "",
+            "--- TOOL RESULTS SO FAR ---",
+            renderToolContext(records),
+            "--- END TOOL RESULTS ---",
+            "Call another tool only if the question still cannot be answered. Otherwise call nothing.",
+          ].join("\n");
 
-  // No tool wanted. Whatever text the selection round produced was written
-  // against the lean prompt that told it not to answer, so it is not usable —
-  // stream the real answer from the full grounded prompt instead.
-  if (!round.functionCalls || round.functionCalls.length === 0) {
-    return { toolCalls: [], stream: await generateTextStream(chain, input, log) };
-  }
+    // Bounded separately from a full generation: this round returns a few dozen
+    // tokens, so if it has not landed quickly the provider is not going to serve
+    // tools usefully this turn.
+    const round = await withTimeout(runRound(roundPrompt), TOOL_ROUND_TIMEOUT_MS, `${provider.name} tool round`);
 
-  for (const fc of round.functionCalls) {
-    const record: ToolCallRecord = { name: fc.name, args: fc.args, status: "called" };
-    onStep?.(record);
-    try {
-      const res = await executor(fc.name, fc.args, ctx);
-      record.result = res;
-      record.status = "done";
-      if (res.citations.length) {
-        (record as ToolCallRecord & { citations?: string[] }).citations = res.citations;
+    if (!round.functionCalls || round.functionCalls.length === 0) {
+      // No tool wanted. On the first round there is nothing to ground the
+      // answer in, so stream from the full grounded prompt — whatever text the
+      // selection round produced was written against the lean prompt that told
+      // it not to answer, so it is not usable. On a later round the model is
+      // signalling it has enough, so fall through to the follow-up below.
+      if (records.length === 0) {
+        return { toolCalls: [], stream: await generateTextStream(chain, input, log) };
       }
-    } catch (err) {
-      record.status = "error";
-      record.error = err instanceof Error ? err.message : String(err);
-      record.result = { content: `Tool error: ${record.error}`, citations: [] };
+      break;
     }
-    records.push(record);
-    onStep?.(record);
+
+    for (const fc of round.functionCalls) {
+      const record: ToolCallRecord = { name: fc.name, args: fc.args, status: "called" };
+      onStep?.(record);
+      try {
+        const res = await executor(fc.name, fc.args, ctx);
+        record.result = res;
+        record.status = "done";
+        if (res.citations.length) {
+          (record as ToolCallRecord & { citations?: string[] }).citations = res.citations;
+        }
+      } catch (err) {
+        record.status = "error";
+        record.error = err instanceof Error ? err.message : String(err);
+        record.result = { content: `Tool error: ${record.error}`, citations: [] };
+      }
+      records.push(record);
+      onStep?.(record);
+
+      // A pending delete never gets a second round: the approval card is the
+      // next step, not another tool call. Stop immediately so the model can't
+      // re-propose or chain past it.
+      if (record.result?.approval) {
+        return { toolCalls: records, stream: await finalAnswer() };
+      }
+    }
   }
 
-  // Fold tool output into the prompt instead of replaying each vendor's native
-  // tool-result message shape — the follow-up call declares no tools, so the
-  // strict assistant-turn/tool-result pairing those APIs require doesn't apply.
-  // Each result is capped: a whole-workspace dump inflates the prompt and every
-  // extra input token is paid back as time-to-first-token.
-  const toolContext = records
-    .map((r) => {
-      const body = r.result?.content ?? "";
-      const clipped =
-        body.length > MAX_TOOL_RESULT_CHARS
-          ? `${body.slice(0, MAX_TOOL_RESULT_CHARS)}\n…[truncated, ${body.length - MAX_TOOL_RESULT_CHARS} more chars]`
-          : body;
-      return `### ${r.name}\n${clipped}`;
-    })
-    .join("\n\n");
-
-  const followUp: GenerateTextInput = {
-    ...input,
-    userPrompt: [
-      input.userPrompt,
-      "",
-      "--- TOOL RESULTS ---",
-      toolContext,
-      "--- END TOOL RESULTS ---",
-      "Answer the question using the tool results above. Do not mention the tools themselves.",
-    ].join("\n"),
-  };
-
-  return { toolCalls: records, stream: await generateTextStream(chain, followUp, log) };
+  return { toolCalls: records, stream: await finalAnswer() };
 }
 
 /**
