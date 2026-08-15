@@ -173,7 +173,7 @@ export function deriveWorkspaceSources(
     {
       id: "db_query",
       type: "db_query",
-      name: "Database Query",
+      name: "Database Access",
       kind: "native",
       recordCount: 0,
       lastSync: null,

@@ -146,9 +146,9 @@ function DbQueryInfo() {
         <Database className="size-3.5 text-primary" />
         Local SQLite Database Connection
       </div>
-      Direct read-only connection to your local database tables (jobs, contacts, links, prompts).
+      Direct read, create, and update access to your local database tables (jobs, companies, contacts, links, prompts, memories). Reads and writes run immediately.
       <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-300 font-medium">
-        🔒 <strong>Human-in-the-loop approval:</strong> The agent cannot execute database queries without your permission. It will always present the query proposal and wait for your explicit approval before running it in SQLite.
+        🔒 <strong>Deletes need your OK:</strong> the agent always shows the exact rows and SQL it wants to delete first. Nothing is removed until you confirm in your next message.
       </div>
     </div>
   );
