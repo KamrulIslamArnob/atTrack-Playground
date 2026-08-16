@@ -40,6 +40,55 @@ export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
   withdrawn: "#6B7280",
 };
 
+// Priority Tiers
+export type JobTier = "1" | "2" | "3";
+
+export interface TierConfig {
+  value: JobTier;
+  label: string;
+  shortLabel: string;
+  badgeClass: string;
+  borderClass: string;
+  dotColor: string;
+  description: string;
+}
+
+export const JOB_TIERS: Record<JobTier, TierConfig> = {
+  "1": {
+    value: "1",
+    label: "Tier 1",
+    shortLabel: "T1",
+    badgeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    borderClass: "border-amber-500/40",
+    dotColor: "#f59e0b",
+    description: "Top priority",
+  },
+  "2": {
+    value: "2",
+    label: "Tier 2",
+    shortLabel: "T2",
+    badgeClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    borderClass: "border-blue-500/40",
+    dotColor: "#3b82f6",
+    description: "Second priority",
+  },
+  "3": {
+    value: "3",
+    label: "Tier 3",
+    shortLabel: "T3",
+    badgeClass: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    borderClass: "border-purple-500/40",
+    dotColor: "#8b5cf6",
+    description: "Third priority",
+  },
+};
+
+export function getJobTierConfig(tier: string | null | undefined): TierConfig | null {
+  if (!tier) return null;
+  const key = tier.toString().trim() as JobTier;
+  return JOB_TIERS[key] ?? null;
+}
+
 export interface JobNote {
   id: string;
   title: string;

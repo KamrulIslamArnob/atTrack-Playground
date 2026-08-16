@@ -12,7 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InfoTooltip } from "@/components/ui/tooltip";
 import { createResumeBuilderDocument } from "@/lib/actions/resume-builder";
-import { FilePenLine, Loader2, Upload, Link2, Code2, Plus, ChevronDown } from "lucide-react";
+import { FilePenLine, Loader2, Code2 } from "lucide-react";
+import { UploadIcon } from "@/components/ui/upload";
+import { Link2Icon } from "@/components/ui/link-2";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
 
 export function DocumentsUploadInline() {
   const [open, setOpen] = useState(false);
@@ -45,17 +49,17 @@ export function DocumentsUploadInline() {
 
       <DropdownMenu>
         <DropdownMenuTrigger className={buttonVariants({ size: "sm" })}>
-          <Plus className="mr-1 size-4" />
+          <PlusIcon className="mr-1 size-4" />
           Add Resume
-          <ChevronDown className="ml-1 size-3.5 opacity-70" />
+          <ChevronDownIcon className="ml-1 size-3.5 opacity-70" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52 rounded-xl">
           <DropdownMenuItem onClick={() => handleOpenTab("upload")} className="gap-2 cursor-pointer">
-            <Upload className="size-4 text-muted-foreground" />
+            <UploadIcon className="size-4 text-muted-foreground" />
             Upload PDF
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenTab("link")} className="gap-2 cursor-pointer">
-            <Link2 className="size-4 text-muted-foreground" />
+            <Link2Icon className="size-4 text-muted-foreground" />
             External Link
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenTab("tex")} className="justify-between cursor-pointer">
@@ -75,4 +79,3 @@ export function DocumentsUploadInline() {
     </div>
   );
 }
-

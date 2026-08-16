@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { ChatQueueProvider } from "@/lib/ai-chatbot/chat-queue-context";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -14,13 +15,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme="light"
       enableSystem
       disableTransitionOnChange
-      storageKey="aven-theme"
+      storageKey="attrack-theme"
     >
-      {children}
-      <Toaster richColors position="bottom-right" />
+      <ChatQueueProvider>
+        {children}
+        <Toaster richColors position="bottom-right" />
+      </ChatQueueProvider>
     </NextThemesProvider>
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Database, Check, X, Code2, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
+import { Database, Code2, ShieldAlert } from "lucide-react";
+import { CheckIcon } from "@/components/ui/check";
+import { XIcon } from "@/components/ui/x";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { ChevronUpIcon } from "@/components/ui/chevron-up";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +42,7 @@ export function SQLApprovalCard({
   if (cardStatus === "approved") {
     return (
       <div className="mt-3 flex items-center gap-2 rounded-xl border border-status-online/30 bg-status-online/10 px-3.5 py-2.5 text-xs text-status-online">
-        <Check className="size-4 shrink-0 text-status-online" />
+        <CheckIcon className="size-4 shrink-0 text-status-online" />
         <span>Database access approved. Accessing <strong>{tableName}</strong> records...</span>
       </div>
     );
@@ -47,14 +51,14 @@ export function SQLApprovalCard({
   if (cardStatus === "denied") {
     return (
       <div className="mt-3 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive">
-        <X className="size-4 shrink-0" />
+        <XIcon className="size-4 shrink-0" />
         <span>Database query denied by user.</span>
       </div>
     );
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-sm backdrop-blur-md">
+    <div className="mt-3 rounded-2xl border border-primary/20 bg-card/90 p-4 backdrop-blur-md">
       <div className="flex items-start gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
           <Database className="size-4" />
@@ -83,7 +87,7 @@ export function SQLApprovalCard({
               >
                 <Code2 className="size-3.5 text-primary" />
                 <span>{showQuery ? "Hide SQL Query" : "Preview SQL Query"}</span>
-                {showQuery ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                {showQuery ? <ChevronUpIcon className="size-3" /> : <ChevronDownIcon className="size-3" />}
               </button>
 
               {showQuery && (
@@ -99,9 +103,9 @@ export function SQLApprovalCard({
               type="button"
               size="sm"
               onClick={handleApprove}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl text-xs h-8 px-3.5 cursor-pointer shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl text-xs h-8 px-3.5 cursor-pointer"
             >
-              <Check className="size-3.5 mr-1" />
+              <CheckIcon className="size-3.5 mr-1" />
               Approve & Run Query
             </Button>
             <Button
@@ -111,7 +115,7 @@ export function SQLApprovalCard({
               onClick={handleDeny}
               className="rounded-xl text-xs h-8 px-3 text-muted-foreground hover:text-destructive border-border/60 hover:bg-destructive/10 cursor-pointer"
             >
-              <X className="size-3.5 mr-1" />
+              <XIcon className="size-3.5 mr-1" />
               Deny
             </Button>
           </div>

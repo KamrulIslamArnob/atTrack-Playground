@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ResumeBuilderEditor } from "@/components/resume-builder/resume-builder-editor";
 import { getResumeBuilderDocument } from "@/lib/actions/resume-builder";
@@ -23,7 +24,7 @@ export default async function ResumeBuilderPage({ params }: PageProps) {
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-2xl bg-gradient-brand text-primary-foreground">
-              <FileText className="size-5" />
+              <FileTextIcon className="size-5" />
             </div>
             <div>
               <h1 className="font-heading text-2xl font-semibold tracking-tight">Editable resume template</h1>

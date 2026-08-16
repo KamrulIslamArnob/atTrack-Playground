@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { RotateCCWIcon } from "@/components/ui/rotate-ccw";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardError({
@@ -25,7 +26,7 @@ export default function DashboardError({
         <p className="text-sm text-muted-foreground">Something went wrong loading this part of atTrack.</p>
       </div>
       <Button onClick={() => reset()}>
-        <RotateCcw className="size-4" />
+        <RotateCCWIcon className="size-4" />
         Try again
       </Button>
     </div>

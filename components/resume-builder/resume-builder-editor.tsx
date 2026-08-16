@@ -3,7 +3,8 @@
 import { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download, ExternalLink, Loader2, Save } from "lucide-react";
+import { Download, Loader2, Save } from "lucide-react";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ResumePreview } from "@/lib/resume/render-html";
 import { exportResumeBuilderTex, saveResumeBuilderDocument } from "@/lib/actions/resume-builder";
@@ -130,7 +131,7 @@ export function ResumeBuilderEditor({ id, initialName, initialDocument }: Resume
             {isPending ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} Download .tex
           </Button>
           <Link href={`/print/resume/${id}`} target="_blank" className={buttonVariants({ variant: "outline" })}>
-            <ExternalLink className="size-4" /> Print / Save PDF
+            <ExternalLinkIcon className="size-4" /> Print / Save PDF
           </Link>
           <Button type="button" onClick={save} disabled={isPending || !dirty}>
             {isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Save resume

@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { ArrowLeftIcon } from "@/components/ui/arrow-left";
 import { ThemeLogo } from "@/components/ui/theme-logo";
 import { Button, buttonVariants } from "@/components/ui/button";
 
@@ -51,7 +52,7 @@ export default function RootError({
               className: "h-11 rounded-full px-6",
             })}
           >
-            <ArrowLeft className="mr-2 size-4" strokeWidth={2} />
+            <ArrowLeftIcon size={16} className="mr-2 size-4" />
             Dashboard
           </Link>
         </div>

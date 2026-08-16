@@ -5,7 +5,7 @@ import {
   AlertCircleIcon,
   CheckIcon,
   ChevronDownIcon,
-  LoaderIcon,
+  Loader2Icon,
   XCircleIcon,
 } from "lucide-react";
 import {
@@ -26,8 +26,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const ANIMATION_DURATION = 200;
-
-const pressable = "active:scale-[0.98]";
 
 export type ToolFallbackRootProps = Omit<
   React.ComponentProps<typeof Collapsible>,
@@ -86,15 +84,6 @@ function ToolFallbackRoot({
   );
 }
 
-type ToolStatus = ToolCallMessagePartStatus["type"];
-
-const statusIconMap: Record<ToolStatus, React.ElementType> = {
-  running: LoaderIcon,
-  complete: CheckIcon,
-  incomplete: XCircleIcon,
-  "requires-action": AlertCircleIcon,
-};
-
 const formatToolDuration = (ms: number) => {
   if (ms < 1000) return "<1s";
   const seconds = ms / 1000;
@@ -114,7 +103,7 @@ function ToolFallbackDuration({
     <span
       data-slot="tool-fallback-duration"
       className={cn(
-        "aui-tool-fallback-duration text-muted-foreground text-xs tabular-nums",
+        "aui-tool-fallback-duration text-muted-foreground text-[11px] tabular-nums",
         className,
       )}
       {...props}
@@ -138,57 +127,35 @@ function ToolFallbackTrigger({
   const isCancelled =
     status?.type === "incomplete" && status.reason === "cancelled";
 
-  const Icon = statusIconMap[statusType];
-  const label = isCancelled ? "Cancelled tool" : "Used tool";
+  const label = isCancelled ? "Cancelled" : isRunning ? "Running" : "Used";
 
   return (
     <CollapsibleTrigger
       data-slot="tool-fallback-trigger"
       className={cn(
-        "aui-tool-fallback-trigger group/trigger text-muted-foreground hover:text-foreground flex w-fit origin-left items-center gap-2 py-1.5 text-sm transition-[color,scale] active:scale-[0.98]",
-        className,
+        "aui-tool-fallback-trigger group/trigger -mx-1.5 flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer active:scale-95",
+        className
       )}
       {...props}
     >
-      <Icon
-        data-slot="tool-fallback-trigger-icon"
-        className={cn(
-          "aui-tool-fallback-trigger-icon size-4 shrink-0",
-          isCancelled && "text-muted-foreground",
-          isRunning && "animate-spin [animation-duration:0.6s]",
-        )}
-      />
+      {isRunning ? (
+        <Loader2Icon className="size-3.5 shrink-0 animate-spin text-primary" />
+      ) : isCancelled ? (
+        <XCircleIcon className="size-3.5 shrink-0 text-destructive" />
+      ) : (
+        <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
+      )}
       <span
-        data-slot="tool-fallback-trigger-label"
         className={cn(
-          "aui-tool-fallback-trigger-label-wrapper relative inline-block text-start leading-none",
-          isCancelled && "text-muted-foreground line-through",
+          "leading-none text-xs",
+          isCancelled && "text-muted-foreground line-through"
         )}
       >
-        <span>
-          {label}: <b>{toolName}</b>
-        </span>
-        {isRunning && (
-          <span
-            aria-hidden
-            data-slot="tool-fallback-trigger-shimmer"
-            className="aui-tool-fallback-trigger-shimmer shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
-          >
-            {label}: <b>{toolName}</b>
-          </span>
-        )}
+        <span className="text-muted-foreground font-normal">{label}</span>{" "}
+        <span className="font-mono text-foreground text-[11px]">{toolName}</span>
       </span>
       <ToolFallbackDuration />
-      <ChevronDownIcon
-        data-slot="tool-fallback-trigger-chevron"
-        className={cn(
-          "aui-tool-fallback-trigger-chevron size-4 shrink-0",
-          "transition-transform duration-(--animation-duration) ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
-          "-rotate-90",
-          "group-data-open/trigger:rotate-0",
-          "group-data-panel-open/trigger:rotate-0",
-        )}
-      />
+      <ChevronDownIcon className="size-3.5 text-muted-foreground/70 transition-transform duration-200 -rotate-90 group-data-open/trigger:rotate-0 group-data-panel-open/trigger:rotate-0" />
     </CollapsibleTrigger>
   );
 }
@@ -202,26 +169,13 @@ function ToolFallbackContent({
     <CollapsibleContent
       data-slot="tool-fallback-content"
       className={cn(
-        "aui-tool-fallback-content relative overflow-hidden text-sm outline-none",
-        "group/collapsible-content ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:animate-none",
-        "data-closed:animate-collapsible-up",
-        "data-open:animate-collapsible-down",
-        "data-closed:fill-mode-forwards",
-        "data-closed:pointer-events-none",
-        "data-open:duration-(--animation-duration)",
-        "data-closed:duration-(--animation-duration)",
-        className,
+        "aui-tool-fallback-content relative overflow-hidden text-xs outline-none",
+        "data-closed:animate-collapsible-up data-open:animate-collapsible-down",
+        className
       )}
       {...props}
     >
-      <div
-        className={cn(
-          "flex flex-col gap-2 ps-6 pt-1 pb-2 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:animate-none",
-          "group-data-open/collapsible-content:animate-in group-data-open/collapsible-content:fade-in-0 group-data-open/collapsible-content:blur-in-[2px] group-data-open/collapsible-content:slide-in-from-top-1",
-          "group-data-closed/collapsible-content:animate-out group-data-closed/collapsible-content:fade-out-0 group-data-closed/collapsible-content:blur-out-[2px] group-data-closed/collapsible-content:slide-out-to-top-1",
-          "group-data-closed/collapsible-content:duration-(--animation-duration) group-data-open/collapsible-content:duration-(--animation-duration)",
-        )}
-      >
+      <div className="relative mt-1 ml-2 pl-3.5 border-l border-border py-1 space-y-1 text-muted-foreground">
         {children}
       </div>
     </CollapsibleContent>
@@ -243,7 +197,7 @@ function ToolFallbackArgs({
       className={cn("aui-tool-fallback-args", className)}
       {...props}
     >
-      <pre className="aui-tool-fallback-args-value bg-muted/50 text-foreground/90 rounded-md p-2.5 text-xs whitespace-pre-wrap">
+      <pre className="font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
         {argsText}
       </pre>
     </div>
@@ -265,10 +219,10 @@ function ToolFallbackResult({
       className={cn("aui-tool-fallback-result", className)}
       {...props}
     >
-      <p className="aui-tool-fallback-result-header text-muted-foreground text-xs font-medium">
+      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">
         Result:
       </p>
-      <pre className="aui-tool-fallback-result-content bg-muted/50 text-foreground/90 mt-1 rounded-md p-2.5 text-xs whitespace-pre-wrap">
+      <pre className="font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
         {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
       </pre>
     </div>
@@ -302,10 +256,10 @@ function ToolFallbackError({
       className={cn("aui-tool-fallback-error", className)}
       {...props}
     >
-      <p className="aui-tool-fallback-error-header text-muted-foreground font-semibold">
+      <p className="aui-tool-fallback-error-header text-destructive text-xs font-semibold">
         {headerText}
       </p>
-      <p className="aui-tool-fallback-error-reason text-muted-foreground">
+      <p className="aui-tool-fallback-error-reason text-destructive/90 text-xs">
         {errorText}
       </p>
     </div>
@@ -356,10 +310,6 @@ function ToolFallbackApproval({
   )
     return null;
 
-  // Custom (`_`-prefixed) kinds cannot be resolved to a boolean by the kit;
-  // hosts using custom kinds render their own bar. A declared option list is
-  // a host constraint: the kit never adds an approval path beyond it, but
-  // always preserves a refusal path.
   const declaredOptions = respondToApproval ? approval?.options : undefined;
   const options = declaredOptions?.filter((o) =>
     Object.hasOwn(APPROVAL_OPTION_DEFAULT_LABELS, o.kind),
@@ -415,11 +365,11 @@ function ToolFallbackApproval({
         )}
         {...props}
       >
-        <p className="aui-tool-fallback-approval-confirm-title font-semibold">
+        <p className="aui-tool-fallback-approval-confirm-title text-xs font-semibold text-foreground">
           {confirmMeta?.title ?? `${approvalOptionLabel(confirming)}?`}
         </p>
         {confirmDescription && (
-          <p className="aui-tool-fallback-approval-confirm-description text-muted-foreground">
+          <p className="aui-tool-fallback-approval-confirm-description text-xs text-muted-foreground">
             {confirmDescription}
           </p>
         )}
@@ -427,7 +377,7 @@ function ToolFallbackApproval({
           <ul className="aui-tool-fallback-approval-confirm-grants flex flex-col gap-1">
             {confirming.grants.map((grant) => (
               <li key={grant}>
-                <code className="aui-tool-fallback-approval-confirm-grant bg-muted rounded px-1.5 py-0.5 text-xs">
+                <code className="aui-tool-fallback-approval-confirm-grant bg-muted rounded-md px-1.5 py-0.5 font-mono text-[11px]">
                   {grant}
                 </code>
               </li>
@@ -437,7 +387,7 @@ function ToolFallbackApproval({
         <div className="flex items-center gap-2">
           <Button
             size="sm"
-            className={pressable}
+            className="rounded-xl active:scale-95 cursor-pointer text-xs"
             onClick={() => respondWithOption(confirming)}
             disabled={submitted}
           >
@@ -446,7 +396,7 @@ function ToolFallbackApproval({
           <Button
             size="sm"
             variant="outline"
-            className={pressable}
+            className="rounded-xl active:scale-95 cursor-pointer text-xs"
             onClick={() => setConfirmingId(null)}
             disabled={submitted}
           >
@@ -474,7 +424,7 @@ function ToolFallbackApproval({
             key={option.id}
             size="sm"
             variant={option === allowOptions[0] ? "default" : "outline"}
-            className={pressable}
+            className="rounded-xl active:scale-95 cursor-pointer text-xs"
             onClick={() => handleOption(option)}
             disabled={submitted}
           >
@@ -485,7 +435,7 @@ function ToolFallbackApproval({
           <Button
             size="sm"
             variant="outline"
-            className={pressable}
+            className="rounded-xl active:scale-95 cursor-pointer text-xs"
             onClick={() => respond(false)}
             disabled={submitted}
           >
@@ -507,7 +457,7 @@ function ToolFallbackApproval({
     >
       <Button
         size="sm"
-        className={pressable}
+        className="rounded-xl active:scale-95 cursor-pointer text-xs"
         onClick={() => respond(true)}
         disabled={submitted}
       >
@@ -516,7 +466,7 @@ function ToolFallbackApproval({
       <Button
         size="sm"
         variant="outline"
-        className={pressable}
+        className="rounded-xl active:scale-95 cursor-pointer text-xs"
         onClick={() => respond(false)}
         disabled={submitted}
       >

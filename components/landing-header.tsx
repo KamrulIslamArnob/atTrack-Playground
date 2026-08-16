@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { ThemeLogo } from "@/components/ui/theme-logo";
 import { motion, AnimatePresence } from "motion/react";
-import { Sun, Moon, Menu, X } from "lucide-react";
+import { Sun } from "lucide-react";
+import { MoonIcon } from "@/components/ui/moon";
+import { MenuIcon } from "@/components/ui/menu";
+import { XIcon } from "@/components/ui/x";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -121,7 +124,7 @@ export function LandingHeader() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Moon className="size-3.5" />
+                  <MoonIcon className="size-3.5" />
                 </button>
               </div>
             )}
@@ -138,7 +141,7 @@ export function LandingHeader() {
               className="flex size-8 items-center justify-center rounded-2xl border border-border/50 bg-card/50 text-foreground transition-colors hover:bg-muted md:hidden"
               aria-label="Open menu"
             >
-              <Menu className="size-4" />
+              <MenuIcon className="size-4" />
             </button>
           </div>
         </header>
@@ -184,7 +187,7 @@ export function LandingHeader() {
               className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Close menu"
             >
-              <X className="size-4" />
+              <XIcon className="size-4" />
             </button>
           </div>
 
@@ -231,7 +234,7 @@ export function LandingHeader() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <Moon className="size-3.5" />
+                    <MoonIcon className="size-3.5" />
                   </button>
                 </div>
               )}

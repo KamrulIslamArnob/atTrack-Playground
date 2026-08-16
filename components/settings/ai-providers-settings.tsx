@@ -6,7 +6,10 @@ import { AiProviderDialog } from "@/components/settings/ai-provider-dialog";
 import { AiTaskRoutePicker } from "@/components/settings/ai-task-route-picker";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Pencil, Plus, Trash2, Plug, Download, Upload } from "lucide-react";
+import { Pencil, Trash2, Plug } from "lucide-react";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { DownloadIcon } from "@/components/ui/download";
+import { UploadIcon } from "@/components/ui/upload";
 import { toast } from "sonner";
 import { PROVIDER_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
 
@@ -141,7 +144,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
               disabled={importing}
               className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
-              <Upload className="size-3.5" />
+              <UploadIcon className="size-3.5" />
               {importing ? "Importing..." : "Import JSON"}
             </button>
 
@@ -150,7 +153,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
               onClick={handleExportJson}
               className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
-              <Download className="size-3.5" />
+              <DownloadIcon className="size-3.5" />
               Export JSON
             </button>
 
@@ -159,7 +162,7 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
               onClick={() => setDialogOpen("add")}
               className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
-              <Plus className="size-3.5" />
+              <PlusIcon className="size-3.5" />
               Add provider
             </button>
           </div>

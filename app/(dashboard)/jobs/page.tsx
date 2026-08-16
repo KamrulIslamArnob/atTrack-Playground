@@ -1,7 +1,6 @@
 import { getJobsList } from "@/lib/actions/jobs-list";
-import { JobsGrid } from "@/components/jobs-grid";
-import { PageHeader } from "@/components/page-header";
-import { JobsToolbar } from "@/components/jobs-toolbar";
+import { getBoard } from "@/lib/actions/board";
+import { UnifiedJobsView } from "@/components/jobs/unified-jobs-view";
 
 interface PageProps {
   searchParams: Promise<{
@@ -10,8 +9,11 @@ interface PageProps {
     sort?: string;
     page?: string;
     perPage?: string;
+    view?: string;
   }>;
 }
+
+export const metadata = { title: "Jobs" };
 
 export default async function JobsPage(props: PageProps) {
   const params = await props.searchParams;
@@ -21,39 +23,27 @@ export default async function JobsPage(props: PageProps) {
   const sort = params.sort ?? "newest";
   const page = Number(params.page) || 1;
   const perPage = Number(params.perPage) || 30;
+  const initialView = params.view === "list" ? "list" : "board";
 
-  const result = await getJobsList({
-    search,
-    status,
-    sort,
-    page,
-    perPage,
-  });
+  const [{ lists, cards }, jobsListResult] = await Promise.all([
+    getBoard(),
+    getJobsList({
+      search,
+      status,
+      sort,
+      page,
+      perPage,
+    }),
+  ]);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Jobs"
-        subtitle="Every job you've saved, in one list. Search, filter, and open any of them."
-      >
-        <JobsToolbar
-          initialSearch={search}
-          initialStatus={status}
-          page={result.page}
-          totalPages={result.totalPages}
-          perPage={result.perPage}
-        />
-      </PageHeader>
-
-      <JobsGrid
-        jobs={result.jobs}
-        total={result.total}
-        initialSearch={search}
-        initialStatus={status}
-        page={result.page}
-        totalPages={result.totalPages}
-        perPage={result.perPage}
-      />
-    </div>
+    <UnifiedJobsView
+      initialView={initialView}
+      boardLists={lists}
+      boardCards={cards}
+      jobsListResult={jobsListResult}
+      initialSearch={search}
+      initialStatus={status}
+    />
   );
 }

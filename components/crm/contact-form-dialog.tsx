@@ -10,34 +10,21 @@ import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { InfoTooltip } from "@/components/ui/tooltip";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
-  createCompanyContact,
-  createPersonContact,
-  updateContact,
-  uploadContactAvatar,
-  deleteContact,
-  type Contact,
-} from "@/lib/actions/contacts";
+  createCompanyContact, createPersonContact, updateContact, uploadContactAvatar, deleteContact, type Contact, } from "@/lib/actions/contacts";
 import { createCompany, type CrmCompany } from "@/lib/actions/companies";
 import { getJobsForMention, type JobMentionOption } from "@/lib/actions/jobs-list";
 import { insertMentionToken } from "@/lib/mentions";
 import { getTagColorClass, getContactAvatarColorClass, cn } from "@/lib/utils";
-import { Plus, Trash2, X, Building2, Camera, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
+import { Plus, Trash2, Building2, Camera, Loader2 } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { LinkIcon } from "@/components/ui/link";
+import { UploadIcon } from "@/components/ui/upload";
 import { parseContactSocialLinks } from "./contact-card";
 
 const NO_COMPANY = "__none__";
@@ -469,12 +456,10 @@ export function ContactFormDialog({
                   onClick={() => fileInputRef.current?.click()}
                   className="h-7 text-xs"
                 >
-                  {uploadingAvatar ? (
-                    <Loader2 className="mr-1 size-3 animate-spin" />
-                  ) : (
-                    <Upload className="mr-1 size-3" />
+                  {uploadingAvatar && (
+                    <Loader2 className="mr-1.5 size-3 animate-spin" />
                   )}
-                  Upload photo
+                  Upload Photo
                 </Button>
 
                 <Button
@@ -610,7 +595,7 @@ export function ContactFormDialog({
                     aria-label={`Remove ${tag}`}
                     className="rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    <X className="size-3" />
+                    <XIcon className="size-3" />
                   </button>
                 </Badge>
               ))}

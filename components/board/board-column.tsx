@@ -1,24 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Archive,
   Briefcase,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Clock,
   GripVertical,
-  Heart,
   MoreHorizontal,
   Pencil,
   Plus,
   ThumbsDown,
   Trash2,
   Trophy,
-  Wrench,
-  type LucideIcon,
 } from "lucide-react";
+import { CheckIcon } from "@/components/ui/check";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { ClockIcon } from "@/components/ui/clock";
+import { HeartIcon } from "@/components/ui/heart";
+import { WrenchIcon } from "@/components/ui/wrench";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,25 +35,15 @@ import {
 } from "@/lib/types/board";
 import { cn } from "@/lib/utils";
 
-const LIST_KIND_ICONS: Record<ListKind, LucideIcon> = {
-  wishlist: Heart,
-  preparing: Wrench,
+const LIST_KIND_ICONS: Record<ListKind, React.ComponentType<{ className?: string }>> = {
+  wishlist: HeartIcon,
+  preparing: WrenchIcon,
   applied: Briefcase,
   interview: Briefcase,
   offer: Trophy,
-  accepted: Check,
+  accepted: CheckIcon,
   rejected: ThumbsDown,
   custom: Briefcase,
-};
-
-// Very-light per-lane tints so columns read apart at a glance. Interview keeps
-// its own "hot" gradient wash (below) instead of a static entry here.
-const LIST_KIND_BG: Partial<Record<ListKind, string>> = {
-  wishlist: "bg-white dark:bg-card/40",
-  preparing: "bg-amber-50/70 dark:bg-amber-950/20",
-  applied: "bg-purple-50/70 dark:bg-purple-950/20",
-  interview: "bg-lime-100/90 dark:bg-lime-950/30 border-lime-400/80 dark:border-lime-500/40",
-  offer: "bg-teal-50/80 dark:bg-teal-950/20 border-teal-300/80 dark:border-teal-500/30",
 };
 
 const LIST_KIND_TEXT_COLORS: Record<ListKind, string> = {
@@ -63,7 +53,7 @@ const LIST_KIND_TEXT_COLORS: Record<ListKind, string> = {
   interview: "text-lime-900 dark:text-lime-400",
   offer: "text-teal-800 dark:text-teal-400",
   accepted: "text-emerald-800 dark:text-emerald-400",
-  rejected: "text-red-800 dark:text-red-400",
+  rejected: "text-rose-800 dark:text-rose-400",
   custom: "text-sky-800 dark:text-sky-400",
 };
 
@@ -81,8 +71,6 @@ const GROUP_FALLBACK: Record<Exclude<GroupOption, "none">, string> = {
   resume: "No resume",
 };
 
-// Cards keep whatever order the caller already sorted them in — grouping only
-// clusters them, sorted A–Z by group label with the fallback bucket last.
 function groupCards(cards: BoardCard[], groupBy: Exclude<GroupOption, "none">) {
   const field = GROUP_FIELD[groupBy];
   const fallback = GROUP_FALLBACK[groupBy];
@@ -128,9 +116,6 @@ interface BoardColumnProps {
   onListDropColumn: () => void;
 }
 
-// Custom drag MIME type that marks "this drag is a column reorder, not a card
-// move" — checked via dataTransfer.types (readable during dragover, unlike
-// getData) so one shared onDragOver/onDrop pair can route to either handler.
 const LIST_DRAG_TYPE = "application/x-board-list";
 
 export function BoardColumn({
@@ -165,6 +150,7 @@ export function BoardColumn({
   const [draftName, setDraftName] = useState(list.name);
   const [onHoldOpen, setOnHoldOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   const activeCards = cards.filter((c) => !c.state || c.state === "active");
   const onHoldCards = cards.filter((c) => c.state === "on_hold");
@@ -172,10 +158,7 @@ export function BoardColumn({
   const hasInactiveCards = onHoldCards.length > 0 || archivedCards.length > 0;
 
   const Icon = LIST_KIND_ICONS[list.kind] ?? Briefcase;
-  const accent = DEFAULT_LIST_COLORS[list.kind] ?? list.color ?? "#84cc16";
-  // Interview lane gets a brand-tinted wash once it's carrying jobs — a quiet
-  // "these are hot" signal, not present on any other lane.
-  const isHot = list.kind === "interview" && cards.length > 0;
+  const accent = DEFAULT_LIST_COLORS[list.kind] ?? list.color ?? "var(--primary)";
 
   const submitRename = () => {
     const trimmed = draftName.trim();
@@ -185,29 +168,9 @@ export function BoardColumn({
 
   const renderCardItems = (items: BoardCard[]) => {
     if (groupBy === "none") {
-      return items.map((card) => (
-        <BoardCardItem
-          key={card.id}
-          card={card}
-          lists={lists}
-          accent={accent}
-          isDragging={draggingId === card.id}
-          onDragStart={() => onDragStartCard(card.id)}
-          onDragEnd={onDragEndCard}
-          onMoveTo={(listId) => onMoveCard(card.id, listId)}
-          onOpen={() => onOpenCard(card.id)}
-        />
-      ));
-    }
-
-    return groupCards(items, groupBy).map(([label, groupedCards]) => (
-      <div key={label}>
-        <div className="flex items-center gap-1.5 px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <span className="truncate">{label}</span>
-          <span className="tabular-nums">{groupedCards.length}</span>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {groupedCards.map((card) => (
+      return (
+        <AnimatePresence mode="popLayout" initial={false}>
+          {items.map((card) => (
             <BoardCardItem
               key={card.id}
               card={card}
@@ -220,6 +183,32 @@ export function BoardColumn({
               onOpen={() => onOpenCard(card.id)}
             />
           ))}
+        </AnimatePresence>
+      );
+    }
+
+    return groupCards(items, groupBy).map(([label, groupedCards]) => (
+      <div key={label} className="space-y-1.5">
+        <div className="flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="truncate">{label}</span>
+          <span className="tabular-nums font-semibold">{groupedCards.length}</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {groupedCards.map((card) => (
+              <BoardCardItem
+                key={card.id}
+                card={card}
+                lists={lists}
+                accent={accent}
+                isDragging={draggingId === card.id}
+                onDragStart={() => onDragStartCard(card.id)}
+                onDragEnd={onDragEndCard}
+                onMoveTo={(listId) => onMoveCard(card.id, listId)}
+                onOpen={() => onOpenCard(card.id)}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       </div>
     ));
@@ -250,27 +239,23 @@ export function BoardColumn({
         }
       }}
       className={cn(
-        // Dashed outline gives every column its own visible compartment instead of
-        // relying on whitespace alone — "separation" the flex gap couldn't carry
-        // on its own once boards had 6+ columns side by side.
-        "flex min-h-40 min-w-[240px] flex-1 basis-0 flex-col rounded-2xl border border-dashed border-border/70 p-1.5 transition-colors duration-200",
-        LIST_KIND_BG[list.kind] ?? "bg-card/40",
-        isHot && !isDropTarget && "border-primary/25 bg-gradient-brand-tint",
-        (isDropTarget || isListDropTarget) && "border-solid border-primary/50 bg-primary/5",
+        "flex min-h-40 min-w-[240px] flex-1 basis-0 flex-col rounded-2xl p-2 transition-colors duration-200",
+        (isDropTarget || isListDropTarget) && "border-2 border-solid border-primary/50 bg-primary/5",
         isListDragging && "opacity-40"
       )}
+      style={{
+        backgroundColor: list.kind === "interview" ? "#bef26425" : `${accent}14`,
+      }}
     >
-      {/* Boxed and accent-tinted so the header reads as its own block, separated
-          from the column body below it, instead of just floating text. */}
+      {/* Column Header */}
       <header
-        className="mb-1.5 flex items-center gap-1.5 rounded-xl border p-1.5 transition-all shadow-xs"
+        className="mb-2 flex items-center gap-1.5 rounded-xl border p-1.5 transition-all"
         style={{
           backgroundColor: list.kind === "interview" ? "#bef26470" : `${accent}25`,
           borderColor: list.kind === "interview" ? "#84cc16" : `${accent}45`,
         }}
       >
-        {/* Column reorder handle — separate from the title's pointer-pan drag
-            below so the two gestures never fight over the same pointerdown. */}
+        {/* Column reorder handle */}
         <span
           draggable
           onDragStart={(e) => {
@@ -286,9 +271,10 @@ export function BoardColumn({
         >
           <GripVertical className="size-3.5" aria-hidden="true" />
         </span>
+
         <span
           className={cn(
-            "flex size-5 shrink-0 items-center justify-center rounded-full shadow-xs",
+            "flex size-5 shrink-0 items-center justify-center rounded-full",
             LIST_KIND_TEXT_COLORS[list.kind] ?? "text-foreground"
           )}
           style={{
@@ -316,9 +302,6 @@ export function BoardColumn({
               className="h-7 text-xs"
             />
           ) : (
-            // Pointer-drag pans the board via the parent's scrollLeft — an
-            // alternative to the hidden scrollbar. Pointer capture keeps
-            // move/up events firing here even once the cursor leaves the div.
             <div
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture(e.pointerId);
@@ -349,15 +332,12 @@ export function BoardColumn({
           )}
         </div>
 
-        {/* Every other list is a travel-through stage reached by dragging/moving a
-            card — only Wishlist creates new jobs, so only it gets the affordance,
-            compact inline instead of its own button row. */}
         {list.kind === "wishlist" && !renaming && (
           <button
             type="button"
             onClick={() => onAddJob(list.id)}
             aria-label="Add job to Wishlist"
-            className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer active:scale-95"
           >
             <Plus className="size-3.5" aria-hidden="true" />
           </button>
@@ -367,7 +347,7 @@ export function BoardColumn({
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={`${list.name} list options`}
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer active:scale-95"
             >
               <MoreHorizontal className="size-4" />
             </DropdownMenuTrigger>
@@ -383,7 +363,8 @@ export function BoardColumn({
         )}
       </header>
 
-      <div className="flex flex-1 flex-col gap-1.5 px-1.5 pb-1.5">
+      {/* Column Content */}
+      <div className="flex flex-1 flex-col gap-2">
         {renderCardItems(activeCards)}
 
         {activeCards.length === 0 && (
@@ -393,60 +374,75 @@ export function BoardColumn({
         )}
 
         {hasInactiveCards && (
-          <div className="my-2.5 border-t border-dashed border-border/50" />
+          <div className="my-2 border-t border-dashed border-border/50" />
         )}
 
         {onHoldCards.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="space-y-1.5">
             <button
               type="button"
               onClick={() => setOnHoldOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground active:scale-95 cursor-pointer"
             >
               <div className="flex items-center gap-1.5">
-                <Clock className="size-3.5" />
+                <ClockIcon className="size-3.5" />
                 <span>On Hold ({onHoldCards.length})</span>
               </div>
               {onHoldOpen ? (
-                <ChevronDown className="size-3.5" />
+                <ChevronDownIcon className="size-3.5" />
               ) : (
-                <ChevronRight className="size-3.5" />
+                <ChevronRightIcon className="size-3.5" />
               )}
             </button>
-            {onHoldOpen && (
-              <div className="flex flex-col gap-1.5">
-                {renderCardItems(onHoldCards)}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {onHoldOpen && (
+                <motion.div
+                  initial={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+                  className="flex flex-col gap-2 overflow-hidden"
+                >
+                  {renderCardItems(onHoldCards)}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
         {archivedCards.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="space-y-1.5">
             <button
               type="button"
               onClick={() => setArchivedOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground active:scale-95 cursor-pointer"
             >
               <div className="flex items-center gap-1.5">
                 <Archive className="size-3.5" />
-                <span>Archived Jobs ({archivedCards.length})</span>
+                <span>Archived ({archivedCards.length})</span>
               </div>
               {archivedOpen ? (
-                <ChevronDown className="size-3.5" />
+                <ChevronDownIcon className="size-3.5" />
               ) : (
-                <ChevronRight className="size-3.5" />
+                <ChevronRightIcon className="size-3.5" />
               )}
             </button>
-            {archivedOpen && (
-              <div className="flex flex-col gap-1.5">
-                {renderCardItems(archivedCards)}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {archivedOpen && (
+                <motion.div
+                  initial={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+                  className="flex flex-col gap-2 overflow-hidden"
+                >
+                  {renderCardItems(archivedCards)}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
     </section>
   );
 }
-

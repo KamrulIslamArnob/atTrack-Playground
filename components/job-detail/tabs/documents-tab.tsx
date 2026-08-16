@@ -11,7 +11,11 @@ import { setJobProjectLinks } from "@/lib/actions/jobs";
 import { getDocuments, linkDocument, unlinkDocument, type Document } from "@/lib/actions/documents";
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
-import { FileText, Link2, Plus, Trash2, Upload, X } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
+import { Link2Icon } from "@/components/ui/link-2";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { UploadIcon } from "@/components/ui/upload";
+import { XIcon } from "@/components/ui/x";
 
 interface DocumentsTabProps {
   data: JobDetailData;
@@ -83,7 +87,7 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
             size="sm"
             onClick={() => setLinks([...links, { id: crypto.randomUUID(), label: "", url: "" }])}
           >
-            <Plus className="mr-1 size-3.5" />
+            <PlusIcon className="mr-1 size-3.5" />
             Add link
           </Button>
         </div>
@@ -139,11 +143,11 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
           <Label>Documents</Label>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={openPicker}>
-              <Link2 className="mr-1 size-3.5" />
+              <Link2Icon className="mr-1 size-3.5" />
               Link document
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
-              <Upload className="mr-1 size-3.5" />
+              <UploadIcon className="mr-1 size-3.5" />
               Upload
             </Button>
           </div>
@@ -154,7 +158,7 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-medium text-muted-foreground">Pick a document to link</p>
               <button onClick={() => setPicking(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="size-3.5" />
+                <XIcon className="size-3.5" />
               </button>
             </div>
             {library === null ? (

@@ -15,7 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, UserRound, X, CalendarClock, Calendar, Zap, HelpCircle, Hourglass } from "lucide-react";
+import { Plus, UserRound, CalendarClock, Calendar, HelpCircle, Hourglass } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { ZapIcon } from "@/components/ui/zap";
 import { toast } from "sonner";
 import type { ExtractionResult } from "@/lib/ai/schema";
 import type { BoardList } from "@/lib/types/board";
@@ -55,7 +57,14 @@ interface AddJobDialogProps {
 
 type DeadlineMode = "unknown" | "asap" | "date" | "milestone";
 
-export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpenChange, listId, lists = [] }: AddJobDialogProps) {
+export function AddJobDialog({
+  initialData,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  listId,
+  lists = [],
+}: AddJobDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -77,6 +86,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
   );
   const [workLocation, setWorkLocation] = useState(initialData?.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(initialData?.employment_type ?? "Full-time");
+  const [tier, setTier] = useState<string>("none");
   const [status, setStatus] = useState("saved");
   const [contact, setContact] = useState(initialData?.contact ?? null);
   const [skills, setSkills] = useState<string[]>(initialData?.skills ?? []);
@@ -108,6 +118,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
     formData.append("notes", JSON.stringify(notes));
     formData.append("work_location", workLocation);
     formData.append("employment_type", employmentType);
+    formData.append("tier", tier === "none" ? "" : tier);
     formData.append("status", status);
     formData.append("skills", JSON.stringify(skills));
     formData.append("benefits", JSON.stringify(benefits));
@@ -144,6 +155,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
       setMapUrl("");
       setWorkLocation("");
       setEmploymentType("Full-time");
+      setTier("none");
       setStatus("saved");
       setContact(null);
       setDeadlineMode(null);
@@ -184,7 +196,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                 onClick={() => setOpen(false)}
                 className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <X className="size-4" />
+                <XIcon className="size-4" />
               </button>
             </div>
 
@@ -215,26 +227,58 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
               </div>
               <div className="space-y-2">
                 <Label htmlFor="application_url">Job URL</Label>
-                <Input id="application_url" name="application_url" type="url" placeholder="https://..." defaultValue={initialData?.application_url ?? ""} className="h-10" />
+                <Input
+                  id="application_url"
+                  name="application_url"
+                  type="url"
+                  placeholder="https://..."
+                  defaultValue={initialData?.application_url ?? ""}
+                  className="h-10"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="application_email">Application email</Label>
-                  <Input id="application_email" name="application_email" type="email" placeholder="careers@example.com" defaultValue={initialData?.application_email ?? ""} className="h-10" />
+                  <Input
+                    id="application_email"
+                    name="application_email"
+                    type="email"
+                    placeholder="careers@example.com"
+                    defaultValue={initialData?.application_email ?? ""}
+                    className="h-10"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="application_process">Application instructions</Label>
-                  <Input id="application_process" name="application_process" placeholder="e.g. Send resume with subject..." defaultValue={initialData?.application_process ?? ""} className="h-10" />
+                  <Input
+                    id="application_process"
+                    name="application_process"
+                    placeholder="e.g. Send resume with subject..."
+                    defaultValue={initialData?.application_process ?? ""}
+                    className="h-10"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
-                  <Input id="location" name="location" placeholder="e.g. San Francisco, CA" defaultValue={initialData?.location ?? ""} className="h-10" />
+                  <Input
+                    id="location"
+                    name="location"
+                    placeholder="e.g. San Francisco, CA"
+                    defaultValue={initialData?.location ?? ""}
+                    className="h-10"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salary_range">Salary range</Label>
-                  <Input id="salary_range" name="salary_range" placeholder="e.g. $150k - $200k" defaultValue={initialData?.salary_range ?? ""} className="h-10" />
+                  <Input
+                    id="salary_range"
+                    name="salary_range"
+                    placeholder="e.g. $150k - $200k"
+                    defaultValue={initialData?.salary_range ?? ""}
+                    className="h-10"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -269,6 +313,20 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Priority Tier</Label>
+                  <Select value={tier} onValueChange={(v) => setTier(v ?? "none")}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Select tier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No tier</SelectItem>
+                      <SelectItem value="1">Tier 1 (Top)</SelectItem>
+                      <SelectItem value="2">Tier 2 (Second)</SelectItem>
+                      <SelectItem value="3">Tier 3 (Third)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Status</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v ?? "saved")}>
                     <SelectTrigger className="h-10 w-full">
@@ -283,17 +341,15 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="source">Source</Label>
-                  <Input id="source" name="source" placeholder="e.g. LinkedIn" defaultValue={initialData?.source ?? ""} className="h-10" />
-                </div>
               </div>
 
               {/* Deadlines & Milestones Section — Mandatory */}
-              <div className={cn(
-                "rounded-2xl border p-4 space-y-3 transition-colors",
-                !deadlineMode ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-muted/20"
-              )}>
+              <div
+                className={cn(
+                  "rounded-2xl border p-4 space-y-3 transition-colors",
+                  !deadlineMode ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-muted/20"
+                )}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                     <CalendarClock className="size-3.5 text-primary" />
@@ -337,7 +393,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                         : "border-border bg-background hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <Zap className="size-4 mb-1 text-rose-500" />
+                    <ZapIcon className="size-4 mb-1 text-rose-500" />
                     <span className="text-xs font-medium">ASAP</span>
                     <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">Apply immediately</span>
                   </button>
@@ -480,7 +536,7 @@ export function AddJobDialog({ initialData, trigger, open: controlledOpen, onOpe
                     onClick={() => setContact(null)}
                     className="shrink-0 text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-3.5" />
+                    <XIcon className="size-3.5" />
                   </button>
                 </div>
               )}

@@ -3,10 +3,7 @@
 import { useState, useTransition, useRef, useCallback } from "react";
 import type { AiMemory } from "@/lib/types/memories";
 import {
-  createMemory,
-  updateMemory,
-  deleteMemory,
-} from "@/lib/actions/memories";
+  createMemory, updateMemory, deleteMemory, } from "@/lib/actions/memories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,21 +13,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Markdown } from "@/components/ai-chatbot/markdown";
 import {
-  Brain,
-  Plus,
-  Search,
-  Upload,
-  FileText,
-  Trash2,
-  Edit2,
-  Copy,
-  Check,
-  Sparkles,
-  Eye,
-  Code,
-  X,
-  FileCode2,
-} from "lucide-react";
+  Brain, Trash2, Edit2, Code, FileCode2 } from "lucide-react";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { SearchIcon } from "@/components/ui/search";
+import { UploadIcon } from "@/components/ui/upload";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { EyeIcon } from "@/components/ui/eye";
+import { XIcon } from "@/components/ui/x";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -178,10 +170,10 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Top Action & Search Bar */}
+      {/* Top Action & SearchIcon Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -196,7 +188,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md"
               title="Clear search"
             >
-              <X className="size-3.5" />
+              <XIcon className="size-3.5" />
             </button>
           )}
         </div>
@@ -218,7 +210,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
             className="rounded-xl border-border/70 gap-1.5 text-xs font-medium hover:bg-muted/80 active:scale-[0.98] cursor-pointer"
             title="Import markdown (.md) file directly"
           >
-            <Upload className="size-3.5" />
+            <UploadIcon className="size-3.5" />
             <span>Upload .md file</span>
           </Button>
 
@@ -228,7 +220,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
             onClick={openCreateDialog}
             className="rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-1.5 text-xs font-medium shadow-xs active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="size-3.5" />
+            <PlusIcon className="size-3.5" />
             <span>New Memory</span>
           </Button>
         </div>
@@ -258,7 +250,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
                 onClick={openCreateDialog}
                 className="rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs gap-1.5 cursor-pointer shadow-xs"
               >
-                <Plus className="size-3.5" />
+                <PlusIcon className="size-3.5" />
                 <span>Create Memory</span>
               </Button>
               <Button
@@ -268,7 +260,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
                 onClick={() => fileInputRef.current?.click()}
                 className="rounded-xl text-xs gap-1.5 cursor-pointer"
               >
-                <Upload className="size-3.5" />
+                <UploadIcon className="size-3.5" />
                 <span>Upload .md file</span>
               </Button>
             </div>
@@ -317,7 +309,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
                         className="flex size-7 items-center justify-center rounded-lg border border-zinc-200/80 bg-zinc-100/90 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900 dark:border-zinc-700/60 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-all duration-150 shadow-2xs cursor-pointer"
                         title="Copy Markdown"
                       >
-                        {isCopied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                        {isCopied ? <CheckIcon className="size-3.5 text-emerald-600" /> : <CopyIcon className="size-3.5" />}
                       </button>
 
                       <button
@@ -351,7 +343,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
                 {/* Footer Tag */}
                 <div className="mt-3 pt-2.5 flex items-center justify-between border-t border-border/30 text-[11px] text-muted-foreground/80">
                   <span className="flex items-center gap-1 text-primary">
-                    <Sparkles className="size-3" />
+                    <SparklesIcon className="size-3" />
                     Available in Chatbot & @ Mentions
                   </span>
                   <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
@@ -402,7 +394,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
                   onClick={() => modalFileInputRef.current?.click()}
                   className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <Upload className="size-3" /> Load from .md file
+                  <UploadIcon className="size-3" /> Load from .md file
                 </button>
               </div>
               <Input
@@ -444,7 +436,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <Eye className="size-3" />
+                    <EyeIcon className="size-3" />
                     <span>Preview</span>
                   </button>
                 </div>
@@ -493,7 +485,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
               disabled={isPending || !description.trim()}
               className="rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs gap-1.5"
             >
-              {isPending ? <Spinner className="size-3.5" /> : <Check className="size-3.5" />}
+              {isPending ? <Spinner className="size-3.5" /> : <CheckIcon className="size-3.5" />}
               <span>{editingMemory ? "Update Memory" : "Save Memory"}</span>
             </Button>
           </DialogFooter>

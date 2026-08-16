@@ -3,13 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { ChevronLeft } from "lucide-react";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
 
 interface PaginationProps {
   page: number;
@@ -98,7 +94,7 @@ export function Pagination({ page, totalPages, perPage }: PaginationProps) {
           onClick={() => goToPage(page + 1)}
           disabled={page >= totalPages}
         >
-          <ChevronRight className="size-4" />
+          <ChevronRightIcon className="size-4" />
         </Button>
       </div>
     </div>

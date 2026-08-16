@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { generateSessionTitle, type ChatSession, type Message } from "./sessions";
 
 export interface ToolExecutionStep {
   id: string;
@@ -17,6 +18,8 @@ export interface DbApproval {
   label: string;
   preview: string;
   sql: string;
+  expiresAt?: number;
+  sessionId?: string;
 }
 
 export interface ChatMessage {
@@ -41,17 +44,20 @@ export interface ChatMessage {
   approval?: DbApproval;
 }
 
-interface UseAtTrackChatOptions {
+export interface UseAtTrackChatOptions {
   api: string;
+  activeSessionId: string | null;
   /** Builds the extra request body (model, persona, workspaceContext, ...). */
   buildBody: () => Record<string, unknown>;
-  onError?: (error: Error) => void;
+  onSessionUpdated?: (sessionId: string, messages: ChatMessage[], newTitle?: string) => void;
+  onSessionComplete?: (sessionId: string, messages: ChatMessage[]) => void;
+  onError?: (error: Error, sessionId?: string) => void;
   /** Receives real "Sources used" labels from the server (retrieval workflow). */
-  onSources?: (sources: string[]) => void;
+  onSources?: (sources: string[], sessionId?: string) => void;
   /** Receives real tool-call records from the server (tool-calling workflow). */
-  onToolSteps?: (steps: unknown[]) => void;
+  onToolSteps?: (steps: unknown[], sessionId?: string) => void;
   /** Receives a pending operation that needs the user's interactive sign-off. */
-  onApproval?: (approval: DbApproval) => void;
+  onApproval?: (approval: DbApproval, sessionId?: string) => void;
 }
 
 function uid(): string {
@@ -59,7 +65,7 @@ function uid(): string {
   return `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function extractThinkingAndContent(
+export function extractThinkingAndContent(
   rawText: string,
   structuredThinking: string
 ): { thinking?: string; content: string } {
@@ -89,54 +95,112 @@ function extractThinkingAndContent(
 }
 
 /**
- * Minimal chat hook that streams Server-Sent-Events from the atTrack
- * `/api/chat` endpoint. The route emits the same SSE shape as the rest of
- * the app's AI streams: `data: {choices:[{delta:{content}}]}` frames
- * terminated by `data: [DONE]`. We re-use the project's own provider layer
- * on the server, so this client stays transport-agnostic.
+ * Multi-session safe chat hook that maintains isolated message streams
+ * and state per session ID. Switching chats or creating new chats does NOT
+ * corrupt or abort active background streams.
  */
-export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps, onApproval }: UseAtTrackChatOptions) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function useAtTrackChat({
+  api,
+  activeSessionId,
+  buildBody,
+  onSessionUpdated,
+  onSessionComplete,
+  onError,
+  onSources,
+  onToolSteps,
+  onApproval,
+}: UseAtTrackChatOptions) {
+  const [messagesBySession, setMessagesBySession] = useState<Record<string, ChatMessage[]>>({});
+  const [loadingBySession, setLoadingBySession] = useState<Record<string, boolean>>({});
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const messagesRef = useRef<ChatMessage[]>([]);
-  const abortRef = useRef<AbortController | null>(null);
+  const messagesBySessionRef = useRef<Record<string, ChatMessage[]>>({});
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const activeSessionIdRef = useRef<string | null>(activeSessionId);
+
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+    messagesBySessionRef.current = messagesBySession;
+  }, [messagesBySession]);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
+  const activeMessages = (activeSessionId && messagesBySession[activeSessionId]) || [];
+  const isLoading = Boolean(activeSessionId && loadingBySession[activeSessionId]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   }, []);
 
+  const setSessionMessages = useCallback((sessionId: string, msgs: ChatMessage[]) => {
+    setMessagesBySession((prev) => ({
+      ...prev,
+      [sessionId]: msgs,
+    }));
+  }, []);
+
+  const setMessagesForActive = useCallback(
+    (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+      const currentId = activeSessionIdRef.current;
+      if (!currentId) return;
+
+      setMessagesBySession((prev) => {
+        const currentList = prev[currentId] || [];
+        const nextList = typeof updater === "function" ? updater(currentList) : updater;
+        return {
+          ...prev,
+          [currentId]: nextList,
+        };
+      });
+    },
+    []
+  );
+
   const runStream = useCallback(
     async (
+      targetSessionId: string,
       history: ChatMessage[],
       userContent: string,
       attachments?: { url: string; contentType?: string }[]
     ) => {
+      const now = Date.now();
       const assistantId = uid();
       const userMsg: ChatMessage = {
         id: uid(),
         role: "user" as const,
         content: userContent,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(now).toISOString(),
         experimental_attachments: attachments,
         status: "sending",
-        replyTo: undefined, // Caller can set this before calling runStream
       };
-      const baseHistory = [...history, userMsg];
+      const assistantMsg: ChatMessage = {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        status: "sending",
+        createdAt: new Date(now + 1).toISOString(),
+      };
 
-      setMessages(baseHistory);
-      setMessages((prev) => [
+      const baseHistory = [...history, userMsg];
+      const initialWithAssistant = [...baseHistory, assistantMsg];
+
+      // Update state for this specific session
+      setMessagesBySession((prev) => ({
         ...prev,
-        { id: assistantId, role: "assistant", content: "", status: "sending", createdAt: new Date().toISOString() },
-      ]);
-      setIsLoading(true);
+        [targetSessionId]: initialWithAssistant,
+      }));
+      setLoadingBySession((prev) => ({
+        ...prev,
+        [targetSessionId]: true,
+      }));
+
+      const isFirstMessage = history.length === 0;
+      const initialTitle = isFirstMessage ? generateSessionTitle(userContent) : undefined;
+      onSessionUpdated?.(targetSessionId, initialWithAssistant, initialTitle);
 
       const controller = new AbortController();
-      abortRef.current = controller;
+      abortControllersRef.current.set(targetSessionId, controller);
 
       try {
         const res = await fetch(api, {
@@ -164,15 +228,12 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
           throw new Error(detail);
         }
 
-        // Mark user message as "sent" — the server accepted the request.
-        setMessages((prev) =>
-          prev.map((m) => (m.id === userMsg.id ? { ...m, status: "sent" as const } : m))
-        );
-
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let structuredThinkingAcc = "";
         let rawContentAcc = "";
+        let sourcesAcc: string[] = [];
+        let toolStepsAcc: ToolExecutionStep[] = [];
         let buffer = "";
 
         while (true) {
@@ -187,6 +248,7 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
             if (!trimmed.startsWith("data:")) continue;
             const data = trimmed.slice(5).trim();
             if (data === "[DONE]") continue;
+
             try {
               const parsed = JSON.parse(data);
               const reasoningDelta: string | undefined =
@@ -195,264 +257,282 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
                 parsed?.delta?.reasoning_content ??
                 parsed?.thinking;
 
-              if (reasoningDelta) {
-                structuredThinkingAcc += reasoningDelta;
-              }
+              if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
 
               const contentDelta: string | undefined =
                 parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
 
-              if (contentDelta) {
-                rawContentAcc += contentDelta;
+              if (contentDelta) rawContentAcc += contentDelta;
+
+              if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                sourcesAcc = parsed.sources;
+                onSources?.(sourcesAcc, targetSessionId);
               }
 
-              if (reasoningDelta || contentDelta) {
-                const { thinking, content } = extractThinkingAndContent(
-                  rawContentAcc,
-                  structuredThinkingAcc
-                );
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? {
-                          ...m,
-                          content,
-                          thinking,
-                          status: "sending" as const,
-                        }
-                      : m
-                  )
-                );
-              }
-              // Real "Sources used" from the retrieval workflow.
-              if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
-                onSources?.(parsed.sources as string[]);
-              }
-              // Real tool calls from the tool-calling workflow.
               if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
-                onToolSteps?.(parsed.tool_calls as unknown[]);
+                toolStepsAcc = parsed.tool_calls.map((s: unknown, i: number) => {
+                  const rec = s as {
+                    name?: string;
+                    status?: string;
+                    args?: Record<string, unknown>;
+                    error?: string;
+                    result?: { content?: string };
+                  };
+                  return {
+                    id: `tool-${i}`,
+                    label: rec.name ?? "tool",
+                    status: (rec.status === "error" ? "failed" : rec.status === "called" ? "running" : "completed") as
+                      | "pending"
+                      | "running"
+                      | "completed"
+                      | "failed",
+                    detail: rec.args ? JSON.stringify(rec.args) : undefined,
+                    result: rec.result?.content,
+                    error: rec.error,
+                  };
+                });
+                onToolSteps?.(toolStepsAcc, targetSessionId);
               }
-              // A pending operation that needs the user's interactive sign-off.
+
               if (parsed?.approval && typeof parsed.approval === "object") {
-                onApproval?.(parsed.approval as DbApproval);
+                const approvalObj: DbApproval = {
+                  ...parsed.approval,
+                  sessionId: targetSessionId,
+                  expiresAt: parsed.approval.expiresAt || Date.now() + 60_000,
+                };
+                onApproval?.(approvalObj, targetSessionId);
               }
+
+              const { thinking, content } = extractThinkingAndContent(
+                rawContentAcc,
+                structuredThinkingAcc
+              );
+
+              setMessagesBySession((prev) => {
+                const currentMsgs = prev[targetSessionId] || initialWithAssistant;
+                const nextMsgs = currentMsgs.map((m) =>
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content,
+                        thinking,
+                        sources: sourcesAcc.length > 0 ? sourcesAcc : m.sources,
+                        toolSteps: toolStepsAcc.length > 0 ? toolStepsAcc : m.toolSteps,
+                        status: "sending" as const,
+                      }
+                    : m
+                );
+                return { ...prev, [targetSessionId]: nextMsgs };
+              });
             } catch {
-              /* partial frame; ignore until complete */
+              /* partial frame */
             }
           }
         }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") {
-          // User stopped — mark as delivered with whatever we accumulated.
-          setMessages((prev) =>
-            prev.map((m) => (m.id === userMsg.id ? { ...m, status: "delivered" as const } : m))
-          );
-        } else {
-          const message = err instanceof Error ? err.message : String(err);
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}`, status: "error" as const };
-              if (m.id === userMsg.id) return { ...m, status: "error" as const };
-              return m;
-            })
-          );
-          onError?.(err instanceof Error ? err : new Error(message));
+
+        // Flush trailing partial frame if stream ended without trailing newline
+        if (buffer.trim()) {
+          const trimmed = buffer.trim();
+          if (trimmed.startsWith("data:")) {
+            const data = trimmed.slice(5).trim();
+            if (data !== "[DONE]") {
+              try {
+                const parsed = JSON.parse(data);
+                const reasoningDelta: string | undefined =
+                  parsed?.choices?.[0]?.delta?.reasoning_content ??
+                  parsed?.choices?.[0]?.delta?.reasoning ??
+                  parsed?.delta?.reasoning_content ??
+                  parsed?.thinking;
+                if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
+
+                const contentDelta: string | undefined =
+                  parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+                if (contentDelta) rawContentAcc += contentDelta;
+
+                if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                  sourcesAcc = parsed.sources;
+                  onSources?.(sourcesAcc, targetSessionId);
+                }
+                if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
+                  toolStepsAcc = parsed.tool_calls.map((s: unknown, i: number) => {
+                    const rec = s as {
+                      name?: string;
+                      status?: string;
+                      args?: Record<string, unknown>;
+                      error?: string;
+                      result?: { content?: string };
+                    };
+                    return {
+                      id: `tool-${i}`,
+                      label: rec.name ?? "tool",
+                      status: (rec.status === "error" ? "failed" : rec.status === "called" ? "running" : "completed") as
+                        | "pending"
+                        | "running"
+                        | "completed"
+                        | "failed",
+                      detail: rec.args ? JSON.stringify(rec.args) : undefined,
+                      result: rec.result?.content,
+                      error: rec.error,
+                    };
+                  });
+                  onToolSteps?.(toolStepsAcc, targetSessionId);
+                }
+                if (parsed?.approval && typeof parsed.approval === "object") {
+                  const approvalObj: DbApproval = {
+                    ...parsed.approval,
+                    sessionId: targetSessionId,
+                    expiresAt: parsed.approval.expiresAt || Date.now() + 60_000,
+                  };
+                  onApproval?.(approvalObj, targetSessionId);
+                }
+              } catch {
+                /* ignore partial unparseable chunk */
+              }
+            }
+          }
         }
-      } finally {
-        // Mark user message and assistant message as delivered on completion.
-        setMessages((prev) =>
-          prev.map((m) => {
-            if (m.id === userMsg.id && m.status !== "error") return { ...m, status: "delivered" as const };
-            if (m.id === assistantId && m.status === "sending") return { ...m, status: "delivered" as const };
-            return m;
-          })
+
+        // Stream completed cleanly
+        const { thinking, content } = extractThinkingAndContent(
+          rawContentAcc,
+          structuredThinkingAcc
         );
-        setIsLoading(false);
-        abortRef.current = null;
-      }
-    },
-    [api, buildBody, onError, onSources, onToolSteps]
-  );
 
-  const sendBackgroundQuery = useCallback(
-    async (backgroundPrompt: string) => {
-      if (isLoading) return;
-      const assistantId = uid();
-      const history = messagesRef.current;
-      const apiMessages = [
-        ...history.map((m) => ({
-          role: m.role,
-          content: m.content,
-          experimental_attachments: m.experimental_attachments,
-        })),
-        {
-          role: "user",
-          content: backgroundPrompt,
-        },
-      ];
-
-      // Add only the streaming assistant message container to UI state (no user bubble with raw JSON)
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantId, role: "assistant", content: "", status: "sending", createdAt: new Date().toISOString() },
-      ]);
-      setIsLoading(true);
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        const res = await fetch(api, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: apiMessages,
-            ...buildBody(),
-          }),
-          signal: controller.signal,
+        let finalSessionMessages: ChatMessage[] = [];
+        setMessagesBySession((prev) => {
+          const currentMsgs = prev[targetSessionId] || initialWithAssistant;
+          const hasAssistant = currentMsgs.some((m) => m.id === assistantId);
+          const nextMsgs: ChatMessage[] = hasAssistant
+            ? currentMsgs.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content,
+                      thinking,
+                      sources: sourcesAcc.length > 0 ? sourcesAcc : m.sources,
+                      toolSteps: toolStepsAcc.length > 0 ? toolStepsAcc : m.toolSteps,
+                      status: "delivered" as const,
+                      createdAt: m.createdAt || new Date().toISOString(),
+                    }
+                  : {
+                      ...m,
+                      status: "delivered" as const,
+                    }
+              )
+            : [
+                ...baseHistory.map((m) => ({ ...m, status: "delivered" as const })),
+                {
+                  id: assistantId,
+                  role: "assistant" as const,
+                  content,
+                  thinking,
+                  sources: sourcesAcc,
+                  toolSteps: toolStepsAcc,
+                  status: "delivered" as const,
+                  createdAt: new Date().toISOString(),
+                },
+              ];
+          finalSessionMessages = nextMsgs;
+          return { ...prev, [targetSessionId]: nextMsgs };
         });
 
-        if (!res.ok || !res.body) {
-          let detail = `Request failed (${res.status})`;
-          try {
-            const j = await res.json();
-            if (j?.error) detail = j.error;
-          } catch {
-            /* ignore */
-          }
-          throw new Error(detail);
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let structuredThinkingAcc = "";
-        let rawContentAcc = "";
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith("data:")) continue;
-            const data = trimmed.slice(5).trim();
-            if (data === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(data);
-              const reasoningDelta: string | undefined =
-                parsed?.choices?.[0]?.delta?.reasoning_content ??
-                parsed?.choices?.[0]?.delta?.reasoning ??
-                parsed?.delta?.reasoning_content ??
-                parsed?.thinking;
-
-              if (reasoningDelta) {
-                structuredThinkingAcc += reasoningDelta;
-              }
-
-              const contentDelta: string | undefined =
-                parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
-
-              if (contentDelta) {
-                rawContentAcc += contentDelta;
-              }
-
-              if (reasoningDelta || contentDelta) {
-                const { thinking, content } = extractThinkingAndContent(
-                  rawContentAcc,
-                  structuredThinkingAcc
-                );
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? {
-                          ...m,
-                          content,
-                          thinking,
-                          status: "sending" as const,
-                        }
-                      : m
-                  )
-                );
-              }
-              if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
-                onSources?.(parsed.sources as string[]);
-              }
-              if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
-                onToolSteps?.(parsed.tool_calls as unknown[]);
-              }
-            } catch {
-              /* ignore partial chunks */
-            }
-          }
-        }
+        onSessionUpdated?.(targetSessionId, finalSessionMessages);
+        onSessionComplete?.(targetSessionId, finalSessionMessages);
       } catch (err) {
-        if ((err as Error).name !== "AbortError") {
+        if ((err as Error).name === "AbortError") {
+          setMessagesBySession((prev) => {
+            const currentMsgs = prev[targetSessionId] || initialWithAssistant;
+            return {
+              ...prev,
+              [targetSessionId]: currentMsgs.map((m) => ({ ...m, status: "delivered" as const })),
+            };
+          });
+        } else {
           const message = err instanceof Error ? err.message : String(err);
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}`, status: "error" as const };
-              return m;
-            })
-          );
-          onError?.(err instanceof Error ? err : new Error(message));
+          const errorMsgs: ChatMessage[] = [
+            ...baseHistory,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: `⚠️ ${message}`,
+              status: "error",
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          setMessagesBySession((prev) => ({ ...prev, [targetSessionId]: errorMsgs }));
+          onSessionUpdated?.(targetSessionId, errorMsgs);
+          onError?.(err instanceof Error ? err : new Error(message), targetSessionId);
         }
       } finally {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId && m.status === "sending" ? { ...m, status: "delivered" as const } : m
-          )
-        );
-        setIsLoading(false);
-        abortRef.current = null;
+        setLoadingBySession((prev) => ({ ...prev, [targetSessionId]: false }));
+        abortControllersRef.current.delete(targetSessionId);
       }
     },
-    [api, buildBody, isLoading, onError, onSources, onToolSteps]
+    [api, buildBody, onSessionUpdated, onSessionComplete, onError, onSources, onToolSteps, onApproval]
   );
 
   const sendMessage = useCallback(
-    (text: string, attachments?: { url: string; contentType?: string }[]) => {
+    (text: string, attachments?: { url: string; contentType?: string }[], targetSessionId?: string) => {
+      const currentId = targetSessionId || activeSessionIdRef.current;
       const value = text.trim();
       const hasAttachments = Boolean(attachments && attachments.length > 0);
-      if ((!value && !hasAttachments) || isLoading) return;
-      void runStream(messagesRef.current, value, attachments);
+      if (!currentId || (!value && !hasAttachments)) return;
+
+      const history = messagesBySessionRef.current[currentId] || [];
+      void runStream(currentId, history, value, attachments);
     },
-    [isLoading, runStream]
+    [runStream]
+  );
+
+  const sendBackgroundQuery = useCallback(
+    async (backgroundPrompt: string, targetSessionId?: string) => {
+      const currentId = targetSessionId || activeSessionIdRef.current;
+      if (!currentId) return;
+
+      const history = messagesBySessionRef.current[currentId] || [];
+      void runStream(currentId, history, backgroundPrompt);
+    },
+    [runStream]
   );
 
   const handleSubmit = useCallback(() => {
     const value = input.trim();
-    if (!value || isLoading) return;
+    if (!value) return;
     sendMessage(value);
-    // The draft has become a message — the composer must not still hold it.
     setInput("");
-  }, [input, isLoading, sendMessage]);
+  }, [input, sendMessage]);
 
   const sendApproval = useCallback(
-    (approvalId: string, decision: "allow" | "deny") => {
-      if (isLoading) return;
+    (approvalId: string, decision: "allow" | "deny", targetSessionId?: string) => {
+      const currentId = targetSessionId || activeSessionIdRef.current;
+      if (!currentId) return;
+
       const assistantId = uid();
       const userContent = decision === "allow" ? "✅ Approved delete" : "⛔ Denied delete";
+      const now = Date.now();
       const userMsg: ChatMessage = {
         id: uid(),
         role: "user",
         content: userContent,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(now).toISOString(),
         status: "sent",
       };
-      const history = [...messagesRef.current, userMsg];
-      setMessages((prev) => [
-        ...prev,
-        userMsg,
-        { id: assistantId, role: "assistant", content: "", status: "sending", createdAt: new Date().toISOString() },
-      ]);
-      setIsLoading(true);
+      const assistantMsg: ChatMessage = {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        status: "sending",
+        createdAt: new Date(now + 1).toISOString(),
+      };
+
+      const history = [...(messagesBySessionRef.current[currentId] || []), userMsg];
+      const initialWithAssistant = [...history, assistantMsg];
+
+      setMessagesBySession((prev) => ({ ...prev, [currentId]: initialWithAssistant }));
+      setLoadingBySession((prev) => ({ ...prev, [currentId]: true }));
 
       const controller = new AbortController();
-      abortRef.current = controller;
+      abortControllersRef.current.set(currentId, controller);
 
       (async () => {
         try {
@@ -476,15 +556,12 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
             try {
               const j = await res.json();
               if (j?.error) detail = j.error;
-            } catch {
-              /* ignore */
-            }
+            } catch {}
             throw new Error(detail);
           }
 
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
-          let structuredThinkingAcc = "";
           let rawContentAcc = "";
           let buffer = "";
 
@@ -492,7 +569,6 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
-
             const lines = buffer.split("\n");
             buffer = lines.pop() ?? "";
             for (const line of lines) {
@@ -502,95 +578,126 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
               if (data === "[DONE]") continue;
               try {
                 const parsed = JSON.parse(data);
-                const reasoningDelta: string | undefined =
-                  parsed?.choices?.[0]?.delta?.reasoning_content ??
-                  parsed?.choices?.[0]?.delta?.reasoning ??
-                  parsed?.delta?.reasoning_content ??
-                  parsed?.thinking;
+                const delta = parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+                if (delta) {
+                  rawContentAcc += delta;
+                  setMessagesBySession((prev) => {
+                    const currentList = prev[currentId] || initialWithAssistant;
+                    return {
+                      ...prev,
+                      [currentId]: currentList.map((m) =>
+                        m.id === assistantId ? { ...m, content: rawContentAcc, status: "sending" as const } : m
+                      ),
+                    };
+                  });
+                }
+              } catch {}
+            }
+          }
 
-                if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
-                const contentDelta: string | undefined =
-                  parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
-                if (contentDelta) rawContentAcc += contentDelta;
-
-                if (reasoningDelta || contentDelta) {
-                  const { thinking, content } = extractThinkingAndContent(
-                    rawContentAcc,
-                    structuredThinkingAcc
-                  );
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId
-                        ? { ...m, content, thinking, status: "sending" as const }
-                        : m
-                    )
-                  );
-                }
-                if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
-                  onSources?.(parsed.sources as string[]);
-                }
-                if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
-                  onToolSteps?.(parsed.tool_calls as unknown[]);
-                }
-                if (parsed?.approval && typeof parsed.approval === "object") {
-                  onApproval?.(parsed.approval as DbApproval);
-                }
-              } catch {
-                /* ignore partial chunks */
+          if (buffer.trim()) {
+            const trimmed = buffer.trim();
+            if (trimmed.startsWith("data:")) {
+              const data = trimmed.slice(5).trim();
+              if (data !== "[DONE]") {
+                try {
+                  const parsed = JSON.parse(data);
+                  const delta = parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+                  if (delta) {
+                    rawContentAcc += delta;
+                  }
+                } catch {}
               }
             }
           }
+
+          let finalMsgs: ChatMessage[] = [];
+          setMessagesBySession((prev) => {
+            const currentList = prev[currentId] || initialWithAssistant;
+            const hasAssistant = currentList.some((m) => m.id === assistantId);
+            const nextList: ChatMessage[] = hasAssistant
+              ? currentList.map((m) =>
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content: rawContentAcc || (decision === "allow" ? "Delete executed." : "Delete cancelled."),
+                        status: "delivered" as const,
+                      }
+                    : {
+                        ...m,
+                        status: "delivered" as const,
+                      }
+                )
+              : [
+                  ...history.map((m) => ({ ...m, status: "delivered" as const })),
+                  {
+                    id: assistantId,
+                    role: "assistant" as const,
+                    content: rawContentAcc || (decision === "allow" ? "Delete executed." : "Delete cancelled."),
+                    status: "delivered" as const,
+                    createdAt: new Date().toISOString(),
+                  },
+                ];
+            finalMsgs = nextList;
+            return { ...prev, [currentId]: nextList };
+          });
+
+          onSessionUpdated?.(currentId, finalMsgs);
+          onSessionComplete?.(currentId, finalMsgs);
         } catch (err) {
           if ((err as Error).name !== "AbortError") {
             const message = err instanceof Error ? err.message : String(err);
-            setMessages((prev) =>
-              prev.map((m) => {
-                if (m.id === assistantId) return { ...m, content: m.content || `⚠️ ${message}`, status: "error" as const };
-                return m;
-              })
-            );
-            onError?.(err instanceof Error ? err : new Error(message));
+            onError?.(err instanceof Error ? err : new Error(message), currentId);
           }
         } finally {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId && m.status === "sending" ? { ...m, status: "delivered" as const } : m
-            )
-          );
-          setIsLoading(false);
-          abortRef.current = null;
+          setLoadingBySession((prev) => ({ ...prev, [currentId]: false }));
+          abortControllersRef.current.delete(currentId);
         }
       })();
     },
-    [api, buildBody, isLoading, onError, onSources, onToolSteps, onApproval]
+    [api, buildBody, onSessionUpdated, onSessionComplete, onError]
   );
 
-  const stop = useCallback(() => {
-    abortRef.current?.abort();
+  const stop = useCallback((sessionId?: string) => {
+    const currentId = sessionId || activeSessionIdRef.current;
+    if (currentId) {
+      abortControllersRef.current.get(currentId)?.abort();
+      abortControllersRef.current.delete(currentId);
+      setLoadingBySession((prev) => ({ ...prev, [currentId]: false }));
+    }
   }, []);
 
-  const setMessagesExternal = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
-    setMessages(updater as (prev: ChatMessage[]) => ChatMessage[]);
-  }, []);
+  const reload = useCallback((sessionId?: string) => {
+    const currentId = sessionId || activeSessionIdRef.current;
+    if (!currentId) return;
 
-  const clear = useCallback(() => {
-    setMessages([]);
-    setInput("");
-  }, []);
-
-  const reload = useCallback(() => {
-    const history = messagesRef.current;
+    const history = messagesBySessionRef.current[currentId] || [];
     if (history.length < 2) return;
-    // Drop the last assistant message and re-run the last user turn.
     const lastUser = [...history].reverse().find((m) => m.role === "user");
     if (!lastUser) return;
     const trimmed = history.slice(0, history.lastIndexOf(lastUser));
-    setMessages(trimmed);
-    void runStream(trimmed, lastUser.content);
+    void runStream(currentId, trimmed, lastUser.content);
   }, [runStream]);
 
+  const resubmitMessage = useCallback(
+    (targetId: string, newContent: string, sessionId?: string) => {
+      const currentId = sessionId || activeSessionIdRef.current;
+      if (!currentId) return;
+
+      const history = messagesBySessionRef.current[currentId] || [];
+      let targetIdx = history.findIndex((m) => m.id === targetId);
+      if (targetIdx === -1) targetIdx = history.length - 1;
+      if (targetIdx >= 0) {
+        const targetMsg = history[targetIdx];
+        const trimmed = history.slice(0, targetIdx);
+        void runStream(currentId, trimmed, newContent, targetMsg?.experimental_attachments);
+      }
+    },
+    [runStream]
+  );
+
   return {
-    messages,
+    messages: activeMessages,
     input,
     setInput,
     handleInputChange,
@@ -600,8 +707,9 @@ export function useAtTrackChat({ api, buildBody, onError, onSources, onToolSteps
     sendApproval,
     stop,
     isLoading,
-    setMessages: setMessagesExternal,
-    clear,
+    setMessages: setMessagesForActive,
+    setSessionMessages,
     reload,
+    resubmitMessage,
   };
 }

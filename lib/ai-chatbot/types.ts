@@ -30,7 +30,6 @@ export interface MiniScenario {
   iconName: string;
   agentId: string;
   starterPrompt: string;
-  requiredSources: string[];
 }
 
 export type SourceKind =

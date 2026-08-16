@@ -5,7 +5,7 @@ import { isSmtpConfigured } from "@/lib/actions/smtp";
 import { getJobDocuments } from "@/lib/actions/documents";
 import { getJobContacts } from "@/lib/actions/contacts";
 import type { JobDetailData } from "@/lib/types/job-detail";
-import type { JobState } from "@/lib/types/job";
+import type { JobState, JobTier } from "@/lib/types/job";
 
 /**
  * Single fetch backing job-detail-content.tsx — called directly from the
@@ -115,6 +115,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       resume_name: resume?.name ?? null,
       project_links: Array.isArray(job.project_links) ? job.project_links : null,
       color: job.color ?? null,
+      tier: (job.tier as JobTier) ?? null,
       position_id: job.position_id ?? null,
       position_name: position?.name ?? null,
       list_id: job.list_id ?? null,

@@ -4,14 +4,10 @@ import { useState } from "react";
 import { QuickShortcut } from "@/lib/types/links";
 import { QuickShortcutDialog } from "./quick-shortcut-dialog";
 import { RenderShortcutIcon } from "./social-icons";
-import { InfoTooltip } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import {
-  Copy,
-  Check,
-  Plus,
-  Pencil,
-} from "lucide-react";
+import { Pencil } from "lucide-react";
+import { CheckIcon } from "@/components/ui/check";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 
 interface QuickShortcutsBarProps {
   shortcuts: QuickShortcut[];
@@ -60,7 +56,7 @@ export function QuickShortcutsBar({
   };
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-card/60 p-3 shadow-2xs backdrop-blur-xs">
+    <div className="rounded-2xl border border-border bg-card p-3 shadow-2xs">
       <div className="flex flex-wrap items-center gap-2">
         {shortcuts.map((sc) => {
           const isCopied = copiedId === sc.id;
@@ -77,60 +73,54 @@ export function QuickShortcutsBar({
                   ? `Click to copy ${sc.title}: ${sc.value}`
                   : `Click to set ${sc.title} value`
               }
-              className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-200 ease-out cursor-pointer select-none active:scale-[0.96] hover:-translate-y-0.5 ${
+              className={`group relative h-8 inline-flex items-center justify-center gap-2 rounded-xl border px-3 text-xs font-medium transition-all duration-150 ease-out cursor-pointer select-none active:scale-[0.97] ${
                 isCopied
-                  ? "border-emerald-600/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-xs ring-2 ring-emerald-500/20"
+                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/30"
                   : hasValue
-                  ? "border-border/80 bg-background/80 hover:bg-card hover:border-zinc-400 dark:hover:border-zinc-600 text-foreground shadow-2xs hover:shadow-xs"
-                  : "border-dashed border-border/70 bg-muted/30 hover:bg-muted/60 text-muted-foreground"
+                  ? "border-border bg-background hover:bg-accent text-foreground shadow-2xs"
+                  : "border-dashed border-border bg-muted/40 hover:bg-muted text-muted-foreground"
               }`}
             >
               {/* Platform Icon */}
-              <span className="shrink-0 transition-transform duration-200 ease-out group-hover:scale-110 group-hover:-translate-y-0.5 text-zinc-800 dark:text-zinc-200">
+              <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors">
                 {isCopied ? (
-                  <Check className="size-4 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-150" />
+                  <CheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-150" />
                 ) : (
-                  <RenderShortcutIcon icon={sc.icon} className="size-4 text-zinc-700 dark:text-zinc-300" />
+                  <RenderShortcutIcon icon={sc.icon} className="size-3.5" />
                 )}
               </span>
 
               {/* Title */}
-              <span className="font-semibold tracking-tight truncate max-w-[120px] text-zinc-800 dark:text-zinc-200">
+              <span className="font-medium tracking-tight truncate max-w-[120px] leading-none">
                 {sc.title}
               </span>
 
-              {/* Quick Edit Action Button (Revealed on Hover) */}
+              {/* Quick Edit Action Button */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleOpenEdit(sc);
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-all duration-150 p-1 text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-100 rounded-md hover:bg-muted/80 active:scale-90 shrink-0 -mr-1"
-                title="Edit Link / Value"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted active:scale-90 inline-flex items-center justify-center shrink-0 -mr-0.5"
+                title="Edit Shortcut"
               >
-                <Pencil className="size-3" />
+                <Pencil className="size-2.5" />
               </button>
             </div>
           );
         })}
 
-        {/* Add Shortcut (+) Button & Info Tooltip */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 rounded-xl border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all duration-200 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/60 hover:-translate-y-0.5 active:scale-[0.96]"
-            title="Add New Quick Copy Shortcut"
-          >
-            <Plus className="size-4 text-zinc-700 dark:text-zinc-300 transition-transform duration-200 group-hover:rotate-90" />
-            <span>Add Shortcut</span>
-          </button>
-          <InfoTooltip
-            content="Quick Copy Bar: Pin your most-used portfolio links, emails, handles, or phone numbers here for 1-click clipboard copying while applying to jobs."
-            side="top"
-          />
-        </div>
+        {/* Add Shortcut (+) Button */}
+        <button
+          type="button"
+          onClick={handleOpenAdd}
+          className="h-8 inline-flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-[0.97]"
+          title="Add Quick Copy Shortcut"
+        >
+          <PlusIcon className="size-3.5 shrink-0" />
+          <span>Add Quick Copy Shortcut</span>
+        </button>
       </div>
 
       {/* Dialog for Add / Edit */}

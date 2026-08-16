@@ -9,16 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { streamGenerateEmail, parseEmailFromStream, type EmailGenerationParams } from "@/lib/ai/email";
 import { sendApplicationEmail } from "@/lib/actions/email";
 import { getCachedOutput } from "@/lib/actions/ai-cache";
-import { ArrowLeft, RefreshCw, Copy, Check, Loader2, FileText, Paperclip, Send, Pencil } from "lucide-react";
+import { ArrowLeft, Loader2, Paperclip, Pencil } from "lucide-react";
+import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { SendIcon } from "@/components/ui/send";
 
 interface Resume {
   id: string;
@@ -82,7 +82,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
       resumeContent: resume?.content ?? null,
     };
 
-    // Check cache first — if the same inputs were generated before, skip streaming.
+    // CheckIcon cache first — if the same inputs were generated before, skip streaming.
     try {
       const cached = await getCachedOutput("email", {
         kind: "email",
@@ -201,19 +201,19 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
         <div className="flex flex-wrap items-center gap-2">
           {!isStreaming && (
             <Button variant="outline" size="sm" onClick={() => { abortRef.current?.abort(); const c = new AbortController(); abortRef.current = c; generateEmail(selectedResumeId, c.signal); }} className="gap-1.5">
-              <RefreshCw className="size-3.5" />
+              <RefreshCWIcon className="size-3.5" />
               Regenerate
             </Button>
           )}
           {isReady && (
             <Button size="sm" onClick={handleCopy} className="gap-1.5">
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
               {copied ? "Copied" : "Copy email"}
             </Button>
           )}
           {isReady && (
             <Button size="sm" onClick={() => setShowConfirm(true)} disabled={isSending} className="gap-1.5">
-              {isSending ? <Spinner className="size-3.5" /> : <Send className="size-3.5" />}
+              {isSending ? <Spinner className="size-3.5" /> : <SendIcon className="size-3.5" />}
               {isSending ? "Sending..." : "Send"}
             </Button>
           )}
@@ -253,7 +253,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
                   {resumes.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       <span className="flex items-center gap-1.5">
-                        <FileText className="size-3.5 shrink-0" />
+                        <FileTextIcon className="size-3.5 shrink-0" />
                         {r.name}
                         {r.isDefault && <span className="text-[10px] text-muted-foreground">(default)</span>}
                       </span>
@@ -278,7 +278,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
           />
           {isReady && (
             <Button variant="outline" size="sm" onClick={handleCopySubject} className="shrink-0">
-              Copy
+              CopyIcon
             </Button>
           )}
         </div>
@@ -393,7 +393,7 @@ export function EmailComposer({ job, applicant, resumes, defaultResumeId }: Emai
                 Cancel
               </Button>
               <Button size="sm" onClick={handleSend} disabled={isSending} className="w-full gap-1.5 sm:w-auto">
-                {isSending ? <Spinner className="size-3.5" /> : <Send className="size-3.5" />}
+                {isSending ? <Spinner className="size-3.5" /> : <SendIcon className="size-3.5" />}
                 {isSending ? "Sending..." : "Send email"}
               </Button>
             </div>

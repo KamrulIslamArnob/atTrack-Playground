@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { toast } from "sonner";
 
 import type { ElectronUpdateStatus } from "@/lib/types/electron";
@@ -69,7 +71,7 @@ export function UpdateChecker() {
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader>
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" />
+          <SparklesIcon className="size-4 text-primary" />
           Desktop Application Updates
         </CardTitle>
       </CardHeader>
@@ -95,7 +97,7 @@ export function UpdateChecker() {
                 variant="outline"
                 className="gap-2"
               >
-                <RefreshCw className={`size-4 ${isChecking || updateState.status === "checking" ? "animate-spin" : ""}`} />
+                <RefreshCWIcon className={`size-4 ${isChecking || updateState.status === "checking" ? "animate-spin" : ""}`} />
                 {isChecking || updateState.status === "checking"
                   ? "Checking..."
                   : updateState.status === "downloading"

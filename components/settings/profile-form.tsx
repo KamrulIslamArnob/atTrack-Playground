@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, X } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfile } from "@/lib/actions/auth";
@@ -100,7 +101,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 onClick={() => setIsEditing(false)}
                 className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
-                <X className="size-4" />
+                <XIcon className="size-4" />
                 Cancel
               </button>
               <button

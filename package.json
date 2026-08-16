@@ -1,7 +1,8 @@
 {
   "name": "atTrack",
-  "version": "1.5.0",
+  "version": "0.1.0",
   "description": "Personal career workspace for managing job applications, documents, interviews, and AI-assisted preparation.",
+  "author": "atTrack",
   "license": "MIT",
   "private": true,
   "main": "electron/main.js",

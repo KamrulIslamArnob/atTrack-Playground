@@ -215,6 +215,32 @@ function defaultGeminiProvider(): ResolvedProvider | null {
   };
 }
 
+/** Every provider the user has configured, decrypted, in creation order —
+ *  independent of any task route. The chat model picker is built from this same
+ *  set, so the router needs it to honour a pick the "text" route does not list.
+ *  A row whose key fails to decrypt is skipped like any other unusable hop. */
+export async function resolveAllProviders(userId: string): Promise<ResolvedProvider[]> {
+  const { createDbClient: createAdminClient } = await import("@/lib/db/client");
+  const admin = createAdminClient();
+  const { decrypt } = await import("@/lib/encryption");
+
+  const { data } = await admin
+    .from("ai_providers")
+    .select("id, name, provider_type, base_url, model, encrypted_api_key")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  const resolved: ResolvedProvider[] = [];
+  for (const row of (data ?? []) as unknown as ProviderRow[]) {
+    try {
+      resolved.push({ ...row, api_key: decrypt(row.encrypted_api_key) });
+    } catch {
+      // skip an unusable key, don't drop the rest
+    }
+  }
+  return resolved;
+}
+
 /** Resolves a task's ordered fallback chain, decrypting each provider's key.
  *  A key that fails to decrypt, or a route pointing at a deleted provider, is
  *  skipped like any other unusable hop rather than failing the whole chain. */
@@ -246,24 +272,9 @@ export async function resolveProviderChain(userId: string, taskType: TaskType): 
 
   if (providerIds.length === 0) {
     // If no explicit task route was assigned, auto-fallback to any configured active provider
-    const { data: anyProviders } = await admin
-      .from("ai_providers")
-      .select("id, name, provider_type, base_url, model, encrypted_api_key")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
-
-    if (anyProviders && anyProviders.length > 0) {
-      const resolvedFallback: ResolvedProvider[] = [];
-      for (const row of anyProviders as unknown as ProviderRow[]) {
-        try {
-          resolvedFallback.push({ ...row, api_key: decrypt(row.encrypted_api_key) });
-        } catch {
-          // skip corrupt key
-        }
-      }
-      if (resolvedFallback.length > 0) {
-        return resolvedFallback;
-      }
+    const resolvedFallback = await resolveAllProviders(userId);
+    if (resolvedFallback.length > 0) {
+      return resolvedFallback;
     }
 
     const fallback = defaultGeminiProvider();
@@ -855,6 +866,25 @@ export async function generateTextStream(
             controller.close();
             return;
           }
+
+          // The hop ran to completion without producing a single token.
+          // Falling through to the next provider is right — an empty answer is
+          // no answer — but doing it silently is not: the turn is then served
+          // by a provider the user never picked, the UI still labels it with
+          // the picked one, and the trace shows no failure at all. Seen live:
+          // a Gemini pick finished ok with 17 output tokens and zero text
+          // parts, and the next chain entry answered under Gemini's name.
+          errors.push(`${provider.name}: produced no output`);
+          recordHop({
+            logContext,
+            traceId,
+            provider,
+            attempt,
+            startedAt,
+            ok: false,
+            streaming: true,
+            error: "empty stream",
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           errors.push(`${provider.name}: ${message}`);
@@ -1385,6 +1415,7 @@ export async function generateTextWithToolsStream(
   // tool-result message shape — the follow-up call declares no tools, so the
   // strict assistant-turn/tool-result pairing those APIs require doesn't apply.
   const finalAnswer = (): Promise<ReadableStream<Uint8Array>> => {
+    const hasApproval = records.some((r) => r.result?.approval);
     const followUp: GenerateTextInput = {
       ...input,
       userPrompt: [
@@ -1393,18 +1424,22 @@ export async function generateTextWithToolsStream(
         "--- TOOL RESULTS ---",
         renderToolContext(records),
         "--- END TOOL RESULTS ---",
-        "Answer the question using the tool results above. Do not mention the tools themselves.",
+        hasApproval
+          ? "CRITICAL MANDATORY INSTRUCTION: A deletion or sensitive action is currently PENDING USER CONFIRMATION via the approval card. The row has NOT been deleted yet. You MUST clearly inform the user that you prepared the deletion request and ask them to confirm by clicking Allow in the confirmation box above (or Deny to cancel). NEVER claim or suggest that the data has already been deleted or that the deletion was successful."
+          : "Answer the question using the tool results above. Do not mention the tools themselves.",
       ].join("\n"),
     };
     return generateTextStream(chain, followUp, log);
   };
 
-  // The selection round only has to name tools and arguments — it never writes
-  // prose. Sending the full grounded system prompt (retrieved docs, workspace
-  // context, history) makes that trivial call as expensive as the answer
-  // itself, and input size is what dominates time-to-first-token. The heavy
-  // prompt goes to the follow-up call, which is the one that actually writes.
-  const selectionPrompt = TOOL_SELECTION_PROMPT;
+  // Include the grounded system prompt (conversation history, schema, and IDs)
+  // along with the selection prompt so the model can resolve pronoun/contextual references.
+  const selectionPrompt = [
+    input.systemPrompt,
+    TOOL_SELECTION_PROMPT,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const runRound = (prompt: string): Promise<ProviderToolRoundResult> => {
     if (provider.provider_type === "gemini") {

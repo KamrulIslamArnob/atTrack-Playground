@@ -2,13 +2,9 @@
 
 import { motion } from "motion/react";
 import {
-  Camera,
-  Send,
-  Target,
-  Calendar,
-  Sparkles,
-  BarChart3,
-} from "lucide-react";
+  Camera, Target, Calendar, BarChart3 } from "lucide-react";
+import { SendIcon } from "@/components/ui/send";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { cn } from "@/lib/utils";
 import {
   staggerContainer,
@@ -28,7 +24,7 @@ const features = [
     accent: "from-pink-500/[0.07]",
   },
   {
-    icon: Send,
+    icon: SendIcon,
     title: "Application Emails",
     description:
       "atTrack drafts a personalized email for each application using your resume and the job details. Edit it, then send it from your own inbox.",
@@ -58,7 +54,7 @@ const features = [
     accent: "from-emerald-500/[0.07]",
   },
   {
-    icon: Sparkles,
+    icon: SparklesIcon,
     title: "Practice Questions",
     description:
       "Generate multiple-choice questions tailored to a specific job. Take a practice test, see where you struggled, and try again.",
@@ -133,7 +129,7 @@ export function Features() {
                 <featured.icon className={cn("size-6", featured.color)} />
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-medium text-emerald-600">
-                <Sparkles className="size-3" />
+                <SparklesIcon className="size-3" />
                 AI
               </span>
             </div>

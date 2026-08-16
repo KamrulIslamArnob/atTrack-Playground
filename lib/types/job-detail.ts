@@ -78,6 +78,7 @@ export interface JobDetailJob {
   resume_name: string | null;
   project_links: ProjectLink[] | null;
   color: string | null;
+  tier: import("@/lib/types/job").JobTier | null;
   position_id: string | null;
   position_name: string | null;
   list_id: string | null;

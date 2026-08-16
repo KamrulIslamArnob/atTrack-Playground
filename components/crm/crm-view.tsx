@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -25,6 +24,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   createCompanyContact,
   deleteContact,
   deleteTag,
@@ -39,7 +46,7 @@ import {
   createCompany,
   deleteCompany,
   getCompanyJobs,
-  updateCompanyColor,
+  updateCompanyTier,
   updateCompanyDetails,
   type CompanyJob,
   type CrmCompany,
@@ -47,24 +54,24 @@ import {
 import { ContactCard } from "@/components/crm/contact-card";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
-import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/types/job";
-import { getContactAvatarColorClass, getTagColorClass, cn } from "@/lib/utils";
+import { JOB_STATUS_LABELS, JOB_TIERS, type JobStatus, type JobTier } from "@/lib/types/job";
+import { getContactAvatarColorClass, cn } from "@/lib/utils";
 import {
   Briefcase,
   Building2,
-  ChevronDown,
-  Globe,
-  Link2,
   Mail,
+  MoreHorizontal,
   Pencil,
-  Phone,
-  Plus,
-  Search,
   Tag,
   Trash2,
   UserRound,
-  X,
 } from "lucide-react";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { Link2Icon } from "@/components/ui/link-2";
+import { PhoneIcon } from "@/components/ui/phone";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { SearchIcon } from "@/components/ui/search";
+import { XIcon } from "@/components/ui/x";
 
 interface CrmViewProps {
   companies: CrmCompany[];
@@ -77,6 +84,8 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
   const [view, setView] = useState<"contacts" | "companies">("contacts");
   const [addingCompany, setAddingCompany] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyTierFilter, setCompanyTierFilter] = useState<string>("all");
   const [pending, setPending] = useState(false);
 
   // Edit Company dialog state
@@ -86,6 +95,26 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
   const [manageTagsOpen, setManageTagsOpen] = useState(false);
 
   const { confirm, dialog: confirmDialog } = useConfirm();
+
+  const filteredCompanies = useMemo(() => {
+    const q = companySearch.trim().toLowerCase();
+    return companies.filter((c) => {
+      if (companyTierFilter !== "all") {
+        if (companyTierFilter === "none" && c.tier) return false;
+        if (companyTierFilter !== "none" && c.tier !== companyTierFilter) return false;
+      }
+      if (!q) return true;
+      return (
+        c.name.toLowerCase().includes(q) ||
+        (c.location ?? "").toLowerCase().includes(q) ||
+        (c.website ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [companies, companySearch, companyTierFilter]);
+
+  const handleCompanyTierChange = (companyId: string, tier: JobTier | null) => {
+    setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier } : c)));
+  };
 
   const handleCreateCompany = async () => {
     if (!companyName.trim()) return;
@@ -97,9 +126,19 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       setCompanies((prev) =>
         prev.some((c) => c.id === id)
           ? prev
-          : [...prev, { id, name: companyName.trim(), website: null, location: null, color: null, job_count: 0, contact_count: 0 }].sort((a, b) =>
-              a.name.localeCompare(b.name)
-            )
+          : [
+              ...prev,
+              {
+                id,
+                name: companyName.trim(),
+                website: null,
+                location: null,
+                color: null,
+                tier: null,
+                job_count: 0,
+                contact_count: 0,
+              },
+            ].sort((a, b) => a.name.localeCompare(b.name))
       );
       setCompanyName("");
       setAddingCompany(false);
@@ -220,13 +259,20 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
                   {pending && <Spinner className="mr-1 size-4" />}
                   Add
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setCompanyName(""); setAddingCompany(false); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCompanyName("");
+                    setAddingCompany(false);
+                  }}
+                >
                   Cancel
                 </Button>
               </div>
             ) : (
               <Button size="sm" onClick={() => setAddingCompany(true)}>
-                <Plus className="mr-1 size-4" />
+                <PlusIcon className="mr-1 size-4" />
                 Add company
               </Button>
             ))}
@@ -244,7 +290,38 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
           />
         </TabsContent>
 
-        <TabsContent value="companies" className="mt-4">
+        <TabsContent value="companies" className="mt-4 space-y-4">
+          {companies.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-48 max-w-lg">
+                <div className="relative flex-1 min-w-44">
+                  <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={companySearch}
+                    onChange={(e) => setCompanySearch(e.target.value)}
+                    placeholder="Search companies, locations..."
+                    className="h-9 pl-8 text-xs"
+                  />
+                </div>
+                <Select value={companyTierFilter} onValueChange={(v) => setCompanyTierFilter(v ?? "all")}>
+                  <SelectTrigger className="h-9 w-32 text-xs">
+                    <SelectValue placeholder="All tiers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tiers</SelectItem>
+                    <SelectItem value="1">Tier 1 (Top)</SelectItem>
+                    <SelectItem value="2">Tier 2 (Second)</SelectItem>
+                    <SelectItem value="3">Tier 3 (Third)</SelectItem>
+                    <SelectItem value="none">No tier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                {filteredCompanies.length} {filteredCompanies.length === 1 ? "company" : "companies"}
+              </span>
+            </div>
+          )}
+
           {companies.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
               <p className="text-sm text-muted-foreground">No companies yet.</p>
@@ -252,14 +329,19 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
                 Companies appear automatically as you save jobs, or add one directly.
               </p>
             </div>
+          ) : filteredCompanies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
+              <p className="text-sm text-muted-foreground">No companies match your search or tier filter.</p>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {companies.map((company) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+              {filteredCompanies.map((company) => (
                 <CompanyRow
                   key={company.id}
                   company={company}
                   onEdit={(c) => setEditingCompany(c)}
                   onDelete={handleDeleteCompany}
+                  onTierChange={handleCompanyTierChange}
                 />
               ))}
             </div>
@@ -364,7 +446,7 @@ function ContactsView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -375,7 +457,11 @@ function ContactsView({
         <Select value={companyFilter} onValueChange={(v) => setCompanyFilter(v ?? "all")}>
           <SelectTrigger className="h-9 w-44">
             <SelectValue>
-              {companyFilter === "all" ? "All companies" : companyFilter === "unassigned" ? "No company" : companyName(companyFilter)}
+              {companyFilter === "all"
+                ? "All companies"
+                : companyFilter === "unassigned"
+                ? "No company"
+                : companyName(companyFilter)}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -401,7 +487,7 @@ function ContactsView({
             setDialogOpen(true);
           }}
         >
-          <Plus className="mr-1 size-4" />
+          <PlusIcon className="mr-1 size-4" />
           Add contact
         </Button>
       </div>
@@ -450,34 +536,24 @@ function ContactsView({
   );
 }
 
-const COMPANY_COLORS = [
-  { value: "#10b981", label: "Emerald" },
-  { value: "#6366f1", label: "Indigo" },
-  { value: "#8b5cf6", label: "Violet" },
-  { value: "#f59e0b", label: "Amber" },
-  { value: "#f43f5e", label: "Rose" },
-  { value: "#06b6d4", label: "Cyan" },
-  { value: "#3b82f6", label: "Blue" },
-  { value: "#64748b", label: "Slate" },
-];
-
 /** Company-grouped view — same roster, sorted under the company tag; a job list rides along for context. */
 function CompanyRow({
   company,
   onEdit,
   onDelete,
+  onTierChange,
 }: {
   company: CrmCompany;
   onEdit?: (company: CrmCompany) => void;
   onDelete?: (company: CrmCompany) => void;
+  onTierChange?: (companyId: string, tier: JobTier | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [color, setColor] = useState<string | null>(company.color);
+  const [tier, setTier] = useState<JobTier | null>(company.tier ?? null);
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [jobs, setJobs] = useState<CompanyJob[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [contactCount, setContactCount] = useState(company.contact_count);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const load = async () => {
     if (contacts !== null) return;
@@ -493,152 +569,212 @@ function CompanyRow({
     if (!expanded) load();
   };
 
-  const handleSetColor = async (newColor: string | null) => {
-    setColor(newColor);
-    setColorPickerOpen(false);
+  const handleSetTier = async (newTier: JobTier | null) => {
+    if (tier === newTier) return;
+    setTier(newTier);
+    onTierChange?.(company.id, newTier);
     try {
-      await updateCompanyColor(company.id, newColor);
+      await updateCompanyTier(company.id, newTier);
+      toast.success(newTier ? `${company.name} set to ${JOB_TIERS[newTier].label}` : "Company tier cleared");
     } catch {
-      toast.error("Couldn't update company color");
+      toast.error("Couldn't update company tier");
     }
   };
 
+  const tierConfig = tier && JOB_TIERS[tier] ? JOB_TIERS[tier] : null;
+
   return (
     <div
-      className="rounded-2xl border border-border bg-card overflow-hidden transition-all"
-      style={color ? { borderLeftColor: color, borderLeftWidth: "4px" } : undefined}
+      className={cn(
+        "rounded-2xl border bg-card overflow-hidden transition-all duration-150 shadow-2xs",
+        tier === "1" && "border-amber-500/40 bg-gradient-to-r from-amber-500/[0.05] via-transparent to-transparent dark:border-amber-500/30",
+        tier === "2" && "border-blue-500/40 bg-gradient-to-r from-blue-500/[0.05] via-transparent to-transparent dark:border-blue-500/30",
+        tier === "3" && "border-purple-500/40 bg-gradient-to-r from-purple-500/[0.05] via-transparent to-transparent dark:border-purple-500/30",
+        !tier && "border-border hover:border-border/80 hover:bg-card/90"
+      )}
     >
-      <div className="flex w-full items-center justify-between px-4 py-3">
+      <div className="flex w-full items-center justify-between px-3.5 py-2.5 gap-2.5">
         <button
           type="button"
           onClick={handleToggle}
           aria-expanded={expanded}
-          className="flex flex-1 items-center gap-3 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="group flex flex-1 items-center gap-2.5 text-left rounded-lg min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           <div
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted"
-            style={color ? { backgroundColor: `${color}20`, color } : undefined}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/60 text-muted-foreground transition-colors"
+            style={
+              tierConfig
+                ? {
+                    backgroundColor: `${tierConfig.dotColor}18`,
+                    color: tierConfig.dotColor,
+                    borderColor: `${tierConfig.dotColor}35`,
+                  }
+                : undefined
+            }
           >
-            <Building2 className="size-4" />
+            <Building2 className="size-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{company.name}</p>
-            {company.location && <p className="truncate text-xs text-muted-foreground">{company.location}</p>}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                {company.name}
+              </p>
+              {tierConfig && (
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.2 text-[10px] font-semibold tracking-tight shadow-2xs",
+                    tierConfig.badgeClass
+                  )}
+                  title={`${tierConfig.label} · ${tierConfig.description}`}
+                >
+                  <span
+                    className="size-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: tierConfig.dotColor }}
+                  />
+                  {tierConfig.label}
+                </span>
+              )}
+            </div>
+            {(company.location || company.website) && (
+              <p className="truncate text-[11px] text-muted-foreground">
+                {[company.location, company.website?.replace(/^https?:\/\//, "")].filter(Boolean).join(" · ")}
+              </p>
+            )}
           </div>
         </button>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Color picker */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setColorPickerOpen((v) => !v)}
-              aria-label="Change company accent color"
-              aria-haspopup="true"
-              aria-expanded={colorPickerOpen}
-              className="flex size-5 items-center justify-center rounded-full border border-border/80 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              style={{ backgroundColor: color ?? "transparent" }}
-              title="Change company accent color"
-            >
-              {!color && <span className="size-2 rounded-full bg-muted-foreground/40" />}
-            </button>
-
-            {colorPickerOpen && (
-              <div className="absolute right-0 top-full z-20 mt-1 flex items-center gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-xs">
-                {COMPANY_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => handleSetColor(c.value)}
-                    aria-label={c.label}
-                    className="size-5 rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    style={{ backgroundColor: c.value }}
-                    title={c.label}
-                  />
-                ))}
-                {color && (
-                  <button
-                    type="button"
-                    onClick={() => handleSetColor(null)}
-                    aria-label="Clear color"
-                    className="flex size-5 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    title="Clear color"
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Jobs">
-            <Briefcase className="size-3.5" />
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Metadata badges */}
+          <span
+            className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
+            title={`${company.job_count} linked jobs`}
+          >
+            <Briefcase className="size-3" />
             {company.job_count}
           </span>
-          <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Contacts">
-            <UserRound className="size-3.5" />
+          <span
+            className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
+            title={`${contactCount} linked contacts`}
+          >
+            <UserRound className="size-3" />
             {contactCount}
           </span>
 
-          {/* Edit company */}
-          <button
-            type="button"
-            onClick={() => onEdit?.(company)}
-            aria-label="Edit company details"
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            title="Edit company details"
-          >
-            <Pencil className="size-3.5" />
-          </button>
+          {/* Context Menu (Priority Tier, Edit, Delete) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Company options"
+                  className="flex size-6.5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </button>
+              }
+            />
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                Priority Tier
+              </DropdownMenuLabel>
+              {(["1", "2", "3"] as JobTier[]).map((t) => {
+                const cfg = JOB_TIERS[t];
+                const isSelected = tier === t;
+                return (
+                  <DropdownMenuItem
+                    key={t}
+                    onClick={() => handleSetTier(isSelected ? null : t)}
+                    className={cn(
+                      "flex items-center justify-between cursor-pointer",
+                      isSelected && "font-semibold bg-accent"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: cfg.dotColor }}
+                      />
+                      <span>{cfg.label}</span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">{cfg.description}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+              {tier && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleSetTier(null)}
+                    className="text-xs text-muted-foreground cursor-pointer"
+                  >
+                    <XIcon className="mr-2 size-3" />
+                    Clear tier
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onEdit?.(company)}>
+                <Pencil className="mr-2 size-3 text-muted-foreground" />
+                Edit details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onDelete?.(company)}
+              >
+                <Trash2 className="mr-2 size-3" />
+                Delete company
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* Delete company */}
-          <button
-            type="button"
-            onClick={() => onDelete?.(company)}
-            aria-label="Delete company"
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            title="Delete company"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-
+          {/* Expand toggle */}
           <button
             type="button"
             onClick={handleToggle}
-            aria-label="Toggle section"
+            aria-label={expanded ? "Collapse section" : "Expand section"}
             aria-expanded={expanded}
-            className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="flex size-6.5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+            <ChevronDownIcon
+              className={cn("size-3.5 transition-transform duration-200", expanded && "rotate-180")}
+            />
           </button>
         </div>
       </div>
 
       {expanded && (
-        <div className="border-t border-border px-4 py-3">
+        <div className="border-t border-border bg-muted/15 px-3.5 py-3 space-y-3.5">
           {loading ? (
             <div className="flex justify-center py-4">
               <Spinner className="size-4" />
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <>
               <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Jobs</h3>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Jobs ({(jobs ?? []).length})
+                  </h3>
+                </div>
                 <div className="space-y-1">
                   {(jobs ?? []).map((job) => (
                     <Link
                       key={job.id}
                       href={`/jobs/${job.id}`}
-                      className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
+                      className="group flex items-center justify-between rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-xs transition-colors hover:border-primary/40 hover:bg-muted/50"
                     >
-                      <span className="truncate">{job.title}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+                      <span className="truncate font-medium text-foreground group-hover:text-primary transition-colors">
+                        {job.title}
+                      </span>
+                      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
                         {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
                       </span>
                     </Link>
                   ))}
                   {(jobs ?? []).length === 0 && (
-                    <p className="px-2 text-xs text-muted-foreground">No jobs saved at this company yet.</p>
+                    <div className="rounded-lg border border-dashed border-border py-2.5 text-center">
+                      <p className="text-[11px] text-muted-foreground">No jobs saved at this company.</p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -651,7 +787,7 @@ function CompanyRow({
                   setContactCount((n) => n + delta);
                 }}
               />
-            </div>
+            </>
           )}
         </div>
       )}
@@ -762,37 +898,43 @@ function ContactsPanel({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contacts</h3>
-        <div className="flex gap-1">
-          <button
+      <div className="mb-2.5 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Contacts ({contacts.length})
+        </h3>
+        <div className="flex items-center gap-1">
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={() => setCreating((v) => !v)}
-            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            aria-label="Add contact"
+            className="h-7 text-xs"
           >
-            <Plus className="size-3.5" />
-          </button>
-          <button
+            <PlusIcon className="mr-1 size-3" />
+            Add
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={openLinkPicker}
-            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            aria-label="Link existing contact"
+            className="h-7 text-xs"
           >
-            <Link2 className="size-3.5" />
-          </button>
+            <Link2Icon className="mr-1 size-3" />
+            Link
+          </Button>
         </div>
       </div>
 
       {creating && (
-        <form onSubmit={handleCreate} className="mb-2 space-y-2 rounded-lg border border-border p-2">
+        <form onSubmit={handleCreate} className="mb-3 space-y-2 rounded-xl border border-border bg-card p-3 shadow-2xs">
           <Input name="name" required placeholder="Name *" className="h-8 text-sm" />
           <div className="grid grid-cols-2 gap-2">
             <Input name="email" type="email" placeholder="Email" className="h-8 text-sm" />
             <Input name="phone" placeholder="Phone" className="h-8 text-sm" />
           </div>
           <Select value={newRole} onValueChange={(v) => setNewRole(v ?? "other")}>
-            <SelectTrigger className="h-8 w-full text-sm">
+            <SelectTrigger className="h-8 w-full text-xs">
               <SelectValue>{contactRoleLabel(newRole)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -803,29 +945,29 @@ function ContactsPanel({
               ))}
             </SelectContent>
           </Select>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" size="xs" onClick={() => setCreating(false)}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending && <Spinner className="mr-1" />}
-              Add
+            <Button type="submit" size="xs" disabled={pending}>
+              {pending && <Spinner className="mr-1 size-3" />}
+              Save contact
             </Button>
           </div>
         </form>
       )}
 
       {linking && (
-        <div className="mb-2 rounded-lg border border-border p-2">
-          <div className="mb-1 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Unassigned contacts</p>
+        <div className="mb-3 rounded-xl border border-border bg-card p-3 shadow-2xs">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">Link unassigned contact</p>
             <button
               type="button"
               onClick={() => setLinking(false)}
               aria-label="Close"
               className="rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
-              <X className="size-3.5" />
+              <XIcon className="size-3.5" />
             </button>
           </div>
           {orphans === null ? (
@@ -833,28 +975,30 @@ function ContactsPanel({
           ) : orphans.length === 0 ? (
             <p className="text-xs text-muted-foreground">No unassigned contacts.</p>
           ) : (
-            orphans
-              .filter((o) => !contacts.some((c) => c.id === o.id))
-              .map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => handleLink(o)}
-                  className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                >
-                  {o.name}
-                  <span className="text-xs text-muted-foreground">{contactRoleLabel(o.role)}</span>
-                </button>
-              ))
+            <div className="space-y-1">
+              {orphans
+                .filter((o) => !contacts.some((c) => c.id === o.id))
+                .map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => handleLink(o)}
+                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <span className="font-medium text-foreground">{o.name}</span>
+                    <span className="text-xs text-muted-foreground">{contactRoleLabel(o.role)}</span>
+                  </button>
+                ))}
+            </div>
           )}
         </div>
       )}
 
       <div className="space-y-1.5">
         {contacts.map((contact) => (
-          <div key={contact.id} className="rounded-lg border border-border p-2">
+          <div key={contact.id} className="rounded-xl border border-border/60 bg-card p-2.5 transition-colors hover:border-border">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2 min-w-0">
+              <div className="flex items-start gap-2.5 min-w-0">
                 {contact.avatar_url ? (
                   <img
                     src={contact.avatar_url}
@@ -872,7 +1016,7 @@ function ContactsPanel({
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{contact.name}</p>
+                  <p className="truncate text-sm font-medium text-foreground">{contact.name}</p>
                   <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                     {contact.email && (
                       <span className="flex items-center gap-1">
@@ -881,7 +1025,7 @@ function ContactsPanel({
                     )}
                     {contact.phone && (
                       <span className="flex items-center gap-1">
-                        <Phone className="size-3" /> {contact.phone}
+                        <PhoneIcon className="size-3" /> {contact.phone}
                       </span>
                     )}
                   </div>
@@ -891,13 +1035,13 @@ function ContactsPanel({
                 type="button"
                 onClick={() => handleDelete(contact)}
                 aria-label={`Remove ${contact.name}`}
-                className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <Trash2 className="size-3.5" />
               </button>
             </div>
             <Select value={contact.role ?? "other"} onValueChange={(v) => handleRoleChange(contact, v ?? "other")}>
-              <SelectTrigger className="mt-1.5 h-7 w-fit text-xs" size="sm">
+              <SelectTrigger className="mt-2 h-7 w-fit text-xs" size="sm">
                 <SelectValue>{contactRoleLabel(contact.role)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -910,7 +1054,11 @@ function ContactsPanel({
             </Select>
           </div>
         ))}
-        {contacts.length === 0 && <p className="text-xs text-muted-foreground">No contacts at this company yet.</p>}
+        {contacts.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border py-4 text-center">
+            <p className="text-xs text-muted-foreground">No contacts at this company yet.</p>
+          </div>
+        )}
       </div>
       {confirmDialog}
     </div>
@@ -942,6 +1090,7 @@ function CompanyEditDialog({
   const [name, setName] = useState(company?.name ?? "");
   const [website, setWebsite] = useState(company?.website ?? "");
   const [location, setLocation] = useState(company?.location ?? "");
+  const [tier, setTier] = useState<string>(company?.tier ?? "none");
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -949,6 +1098,7 @@ function CompanyEditDialog({
       setName(company.name ?? "");
       setWebsite(company.website ?? "");
       setLocation(company.location ?? "");
+      setTier(company.tier ?? "none");
     }
   }, [company]);
 
@@ -961,6 +1111,7 @@ function CompanyEditDialog({
       formData.append("name", name.trim());
       formData.append("website", website.trim());
       formData.append("location", location.trim());
+      formData.append("tier", tier === "none" ? "" : tier);
       const updated = await updateCompanyDetails(company.id, formData);
       onSaved(updated);
       onOpenChange(false);
@@ -988,6 +1139,20 @@ function CompanyEditDialog({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Google"
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Priority Tier</Label>
+            <Select value={tier} onValueChange={(v) => setTier(v ?? "none")}>
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Select tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No tier</SelectItem>
+                <SelectItem value="1">Tier 1 (Top)</SelectItem>
+                <SelectItem value="2">Tier 2 (Second)</SelectItem>
+                <SelectItem value="3">Tier 3 (Third)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="company-website">Website</Label>
@@ -1108,7 +1273,7 @@ function ManageTagsDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Tag className="size-5 text-primary" />
+            <Tag className="size-5 text-foreground" />
             Manage tags
           </DialogTitle>
         </DialogHeader>
@@ -1127,10 +1292,10 @@ function ManageTagsDialog({
               return (
                 <div
                   key={tag}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card p-2.5 transition-colors"
+                  className="flex items-center justify-between rounded-xl border border-border bg-card p-2.5 transition-colors hover:border-primary/30"
                 >
                   {isEditing ? (
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2 mr-2">
                       <Input
                         autoFocus
                         value={renameValue}
@@ -1139,74 +1304,79 @@ function ManageTagsDialog({
                           if (e.key === "Enter") handleRenameTag(tag);
                           if (e.key === "Escape") setEditingTag(null);
                         }}
-                        className="h-8 text-xs flex-1"
+                        className="h-8 text-sm"
                       />
-                      <Button size="sm" onClick={() => handleRenameTag(tag)} disabled={pending}>
+                      <Button
+                        size="xs"
+                        onClick={() => handleRenameTag(tag)}
+                        disabled={pending}
+                      >
                         Save
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setEditingTag(null)}>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setEditingTag(null)}
+                      >
                         Cancel
                       </Button>
                     </div>
                   ) : isConfirmingDelete ? (
-                    <div className="flex flex-1 items-center justify-between text-xs">
-                      <span className="font-medium text-destructive">
-                        Delete &quot;{tag}&quot;? ({count} contact{count !== 1 ? "s" : ""})
-                      </span>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex flex-1 items-center justify-between mr-2 text-xs">
+                      <span className="text-destructive font-medium">Delete tag from {count} contacts?</span>
+                      <div className="flex gap-1.5">
                         <Button
                           variant="destructive"
-                          size="sm"
-                          className="h-7 text-xs px-2.5"
+                          size="xs"
                           onClick={() => handleDeleteTag(tag)}
                           disabled={pending}
                         >
-                          {pending && <Spinner className="mr-1 size-3" />}
                           Confirm
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setDeletingTag(null)}>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => setDeletingTag(null)}
+                        >
                           Cancel
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Badge
-                          className={cn(
-                            "border font-medium text-xs px-2.5 py-1 rounded-full shrink-0",
-                            getTagColorClass(tag)
-                          )}
-                        >
-                          {tag}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground truncate">
-                          {count === 0 ? "Not assigned" : `${count} contact${count !== 1 ? "s" : ""}`}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 text-xs font-medium text-foreground">
+                        {tag}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {count} {count === 1 ? "contact" : "contacts"}
+                      </span>
+                    </div>
+                  )}
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingTag(tag);
-                            setRenameValue(tag);
-                          }}
-                          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          title="Rename tag"
-                        >
-                          <Pencil className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingTag(tag)}
-                          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                          title="Delete tag"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    </>
+                  {!isEditing && !isConfirmingDelete && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingTag(tag);
+                          setRenameValue(tag);
+                        }}
+                        aria-label={`Rename ${tag}`}
+                        className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        title="Rename tag"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingTag(tag)}
+                        aria-label={`Delete ${tag}`}
+                        className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        title="Delete tag"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
                   )}
                 </div>
               );
@@ -1214,7 +1384,7 @@ function ManageTagsDialog({
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Done
             </Button>
           </DialogFooter>

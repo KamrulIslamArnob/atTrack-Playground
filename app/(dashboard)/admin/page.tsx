@@ -1,14 +1,10 @@
 import { getAdminDashboardStats } from "@/lib/actions/admin";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
-  Users,
-  ShieldCheck,
-  Ban,
-  Briefcase,
-  Send,
-  Cpu,
-  Calendar,
-} from "lucide-react";
+  Users, Ban, Briefcase, Calendar } from "lucide-react";
+import { ShieldCheckIcon } from "@/components/ui/shield-check";
+import { SendIcon } from "@/components/ui/send";
+import { CpuIcon } from "@/components/ui/cpu";
 import {
   UsersTrendChart,
   JobsStageChart,
@@ -63,7 +59,7 @@ export default async function AdminDashboardPage() {
           bgColor="bg-blue-500/10"
         />
         <MetricCard
-          icon={ShieldCheck}
+          icon={ShieldCheckIcon}
           label="Active Users"
           value={stats.activeUsers}
           color="text-emerald-500"
@@ -86,14 +82,14 @@ export default async function AdminDashboardPage() {
           bgColor="bg-purple-500/10"
         />
         <MetricCard
-          icon={Send}
+          icon={SendIcon}
           label="Applications"
           value={stats.totalApplications}
           color="text-amber-500"
           bgColor="bg-amber-500/10"
         />
         <MetricCard
-          icon={Cpu}
+          icon={CpuIcon}
           label="AI Requests"
           value={stats.totalAiRequests}
           color="text-indigo-500"
@@ -123,7 +119,7 @@ export default async function AdminDashboardPage() {
           {stats.aiTrend.length > 0 ? (
             <AiTrendChart data={stats.aiTrend} />
           ) : (
-            <EmptyState icon={Cpu} text="No AI requests yet" />
+            <EmptyState icon={CpuIcon} text="No AI requests yet" />
           )}
         </div>
       </div>

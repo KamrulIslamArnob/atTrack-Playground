@@ -1,24 +1,17 @@
 "use client";
 
 import React from "react";
-import {
-  Mail,
-  Phone,
-  MapPin,
-  Globe,
-  Code,
-  User,
-  Link as LinkIcon,
-  MessageSquare,
-  Send,
-  FileText,
-  Briefcase,
-  Copy,
-  Check,
-  Plus,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { Mail, Globe, Code, Briefcase, Pencil, Trash2 } from "lucide-react";
+import { PhoneIcon } from "@/components/ui/phone";
+import { MapPinIcon } from "@/components/ui/map-pin";
+import { UserIcon } from "@/components/ui/user";
+import { LinkIcon } from "@/components/ui/link";
+import { MessageSquareIcon } from "@/components/ui/message-square";
+import { SendIcon } from "@/components/ui/send";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 
 export function LinkedinIcon({ className = "size-4" }: { className?: string }) {
   return (
@@ -119,11 +112,11 @@ export function RenderShortcutIcon({
       return <Mail className={className} />;
     case "phone":
     case "mobile":
-      return <Phone className={className} />;
+      return <PhoneIcon className={className} />;
     case "map-pin":
     case "address":
     case "location":
-      return <MapPin className={className} />;
+      return <MapPinIcon className={className} />;
     case "globe":
     case "website":
     case "portfolio":
@@ -133,16 +126,16 @@ export function RenderShortcutIcon({
       return <Code className={className} />;
     case "user":
     case "profile":
-      return <User className={className} />;
+      return <UserIcon className={className} />;
     case "message":
     case "discord":
-      return <MessageSquare className={className} />;
+      return <MessageSquareIcon className={className} />;
     case "send":
     case "telegram":
-      return <Send className={className} />;
+      return <SendIcon className={className} />;
     case "file-text":
     case "resume":
-      return <FileText className={className} />;
+      return <FileTextIcon className={className} />;
     case "briefcase":
       return <Briefcase className={className} />;
     default:

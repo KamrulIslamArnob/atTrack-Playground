@@ -7,26 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
-  Search,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Cpu,
-  Coins,
-  Zap,
-  Clock,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+  Search, Loader2, Coins, CheckCircle2, XCircle } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { CpuIcon } from "@/components/ui/cpu";
+import { ZapIcon } from "@/components/ui/zap";
+import { ClockIcon } from "@/components/ui/clock";
 import { formatDistanceToNow } from "date-fns";
 import { formatAiUsageMessage, AI_ACTION_COLORS, AI_ACTION_LABELS } from "@/lib/ai-usage-messages";
 
@@ -121,8 +111,8 @@ export default function AdminAiUsagePage() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <QuickStat icon={Cpu} label="Total Requests" value={total.toLocaleString()} color="text-blue-500" bgColor="bg-blue-500/10" />
-        <QuickStat icon={Zap} label="Total Tokens" value={totalTokens.toLocaleString()} color="text-violet-500" bgColor="bg-violet-500/10" />
+        <QuickStat icon={CpuIcon} label="Total Requests" value={total.toLocaleString()} color="text-blue-500" bgColor="bg-blue-500/10" />
+        <QuickStat icon={ZapIcon} label="Total Tokens" value={totalTokens.toLocaleString()} color="text-violet-500" bgColor="bg-violet-500/10" />
         <QuickStat icon={Coins} label="Estimated Cost" value={`$${totalCost.toFixed(4)}`} color="text-amber-500" bgColor="bg-amber-500/10" />
         <QuickStat icon={CheckCircle2} label="Successful" value={successCount.toLocaleString()} color="text-emerald-500" bgColor="bg-emerald-500/10" />
         <QuickStat icon={XCircle} label="Failed" value={errorCount.toLocaleString()} color="text-rose-500" bgColor="bg-rose-500/10" />
@@ -144,7 +134,7 @@ export default function AdminAiUsagePage() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >
-              <X className="size-4" />
+              <XIcon className="size-4" />
             </button>
           )}
         </div>
@@ -189,7 +179,7 @@ export default function AdminAiUsagePage() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeftIcon className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -198,7 +188,7 @@ export default function AdminAiUsagePage() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRightIcon className="size-4" />
           </Button>
         </div>
       </div>
@@ -210,7 +200,7 @@ export default function AdminAiUsagePage() {
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               User: {search || "filtered"}
               <button onClick={clearSearch} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -221,7 +211,7 @@ export default function AdminAiUsagePage() {
                 onClick={() => { setActionFilter("all"); setPage(1); }}
                 className="ml-0.5 hover:text-foreground"
               >
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -345,7 +335,7 @@ export default function AdminAiUsagePage() {
                       <span className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                         {log.duration_ms != null ? (
                           <>
-                            <Clock className="size-3" />
+                            <ClockIcon className="size-3" />
                             {log.duration_ms < 1000
                               ? `${log.duration_ms}ms`
                               : `${(log.duration_ms / 1000).toFixed(1)}s`}

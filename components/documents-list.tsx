@@ -9,37 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import {
-  FileText,
-  Folder,
-  Download,
-  Trash2,
-  Star,
-  Search,
-  X,
-  ArrowUp,
-  ArrowDown,
-  ChevronsUpDown,
-  GripVertical,
-  MoveLeft,
-  MoveRight,
-  Palette,
-  RotateCcw,
-  Check,
-  Hash,
-  Tag,
-  Calendar,
-  Sparkles,
-  Link2,
-  Code2,
-  ExternalLink,
-} from "lucide-react";
+  FileText, Folder, Trash2, Star, ChevronsUpDown, GripVertical, MoveLeft, MoveRight, Palette, Hash, Tag, Calendar, Code2 } from "lucide-react";
+import { DownloadIcon } from "@/components/ui/download";
+import { SearchIcon } from "@/components/ui/search";
+import { XIcon } from "@/components/ui/x";
+import { ArrowUpIcon } from "@/components/ui/arrow-up";
+import { ArrowDownIcon } from "@/components/ui/arrow-down";
+import { RotateCCWIcon } from "@/components/ui/rotate-ccw";
+import { CheckIcon } from "@/components/ui/check";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { Link2Icon } from "@/components/ui/link-2";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -77,7 +59,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: "name", label: "Name", icon: FileText, className: "min-w-[220px]" },
   { key: "type", label: "Type", icon: Tag, className: "min-w-[120px]" },
   { key: "uploaded", label: "Uploaded", icon: Calendar, className: "min-w-[140px]" },
-  { key: "ai_extracted", label: "AI Extracted", icon: Sparkles, className: "min-w-[180px]" },
+  { key: "ai_extracted", label: "AI Extracted", icon: SparklesIcon, className: "min-w-[180px]" },
 ];
 
 const DEFAULT_COLUMN_KEYS: SortKey[] = ALL_COLUMNS.map((c) => c.key);
@@ -227,9 +209,9 @@ function SortHeader({
           {label ? <span>{label}</span> : null}
           {active ? (
             sortDir === "asc" ? (
-              <ArrowUp className="size-3 shrink-0" aria-hidden="true" />
+              <ArrowUpIcon className="size-3 shrink-0" aria-hidden="true" />
             ) : (
-              <ArrowDown className="size-3 shrink-0" aria-hidden="true" />
+              <ArrowDownIcon className="size-3 shrink-0" aria-hidden="true" />
             )
           ) : (
             <ChevronsUpDown className="size-3 shrink-0 opacity-30 group-hover/btn:opacity-60" aria-hidden="true" />
@@ -263,7 +245,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
   const router = useRouter();
   const { confirm, dialog } = useConfirm();
 
-  // Search and filter state
+  // SearchIcon and filter state
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
@@ -623,11 +605,11 @@ export function DocumentsList({ documents }: DocumentsListProps) {
         return (
           <div className="flex items-center gap-2">
             {doc.generated_kind === "external_link" ? (
-              <Link2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <Link2Icon className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : doc.generated_kind === "latex_raw" ? (
               <Code2 className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
             ) : doc.generated_kind ? (
-              <Sparkles className="size-4 text-purple-500 shrink-0" />
+              <SparklesIcon className="size-4 text-purple-500 shrink-0" />
             ) : (
               <FileText className="size-4 text-muted-foreground shrink-0" />
             )}
@@ -641,7 +623,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                 title={`Open external link: ${doc.file_path}`}
               >
                 <span className="truncate">{doc.name}</span>
-                <ExternalLink className="size-3 text-muted-foreground shrink-0 opacity-70" />
+                <ExternalLinkIcon className="size-3 text-muted-foreground shrink-0 opacity-70" />
               </a>
             ) : (
               <Link
@@ -702,10 +684,10 @@ export function DocumentsList({ documents }: DocumentsListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Search and filters */}
+      {/* SearchIcon and filters */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -737,7 +719,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               <span className="inline-flex items-center gap-1 rounded-2xl bg-lime-100 dark:bg-lime-900/30 px-2.5 py-1 text-xs font-medium text-lime-900 dark:text-lime-300">
                 &quot;{search}&quot;
                 <button onClick={() => setSearch("")} className="ml-0.5">
-                  <X className="size-3" />
+                  <XIcon className="size-3" />
                 </button>
               </span>
             )}
@@ -745,7 +727,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               <span className="inline-flex items-center gap-1 rounded-2xl bg-lime-100 dark:bg-lime-900/30 px-2.5 py-1 text-xs font-medium text-lime-900 dark:text-lime-300 capitalize">
                 {typeLabels[typeFilter] ?? typeFilter}
                 <button onClick={() => setTypeFilter("all")} className="ml-0.5">
-                  <X className="size-3" />
+                  <XIcon className="size-3" />
                 </button>
               </span>
             )}
@@ -770,7 +752,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Reset column widths to default"
             >
-              <RotateCcw className="size-3" />
+              <RotateCCWIcon className="size-3" />
               Reset Widths
             </button>
           )}
@@ -780,7 +762,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
               title="Reset all custom column and row colors"
             >
-              <RotateCcw className="size-3" />
+              <RotateCCWIcon className="size-3" />
               Reset Colors
             </button>
           )}
@@ -790,7 +772,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Reset column order to default"
             >
-              <RotateCcw className="size-3" />
+              <RotateCCWIcon className="size-3" />
               Reset Columns
             </button>
           )}
@@ -909,7 +891,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                                   {pendingId === doc.id ? (
                                     <Spinner className="size-3" />
                                   ) : doc.generated_kind === "external_link" ? (
-                                    <ExternalLink className="size-3.5" />
+                                    <ExternalLinkIcon className="size-3.5" />
                                   ) : (
                                     <Folder className="size-3.5" />
                                   )}
@@ -928,11 +910,11 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                                   className="h-8 gap-1"
                                   onClick={() => handleDownload(doc)}
                                 >
-                                  <Download className="size-3.5" />
+                                  <DownloadIcon className="size-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
-                                Download document
+                                DownloadIcon document
                               </TooltipContent>
                             </Tooltip>
                           </>
@@ -1023,7 +1005,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                         )}
                       >
                         {columnColors[contextMenu.columnKey] === p.value && (
-                          <Check className="size-3 text-foreground" />
+                          <CheckIcon className="size-3 text-foreground" />
                         )}
                       </button>
                     ))}
@@ -1084,7 +1066,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                           )}
                         >
                           {rowColors[contextMenu.docId!] === p.value && (
-                            <Check className="size-3 text-foreground" />
+                            <CheckIcon className="size-3 text-foreground" />
                           )}
                         </button>
                       ))}
@@ -1129,7 +1111,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                   }}
                   className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
                 >
-                  <RotateCcw className="size-3" />
+                  <RotateCCWIcon className="size-3" />
                   Reset Column Order
                 </button>
                 {Object.keys(columnWidths).length > 0 && (
@@ -1140,7 +1122,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                     }}
                     className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
                   >
-                    <RotateCcw className="size-3" />
+                    <RotateCCWIcon className="size-3" />
                     Reset Column Widths
                   </button>
                 )}

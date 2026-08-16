@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   LinkCategory,
@@ -13,11 +13,17 @@ import {
 import { CategoryPanel } from "./category-panel";
 import { LinkDialog } from "./link-dialog";
 import { CategoryManagerDialog } from "./category-manager-dialog";
+import { TagManagerDialog, TagInfo } from "./tag-manager-dialog";
 import { CsvImportDialog } from "./csv-import-dialog";
 import { QuickShortcutsBar } from "./quick-shortcuts-bar";
-import { Search, Plus, Settings2, Link2, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { Search, Settings2, Tag } from "lucide-react";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   createLink,
   updateLink,
@@ -30,6 +36,8 @@ import {
   createQuickShortcut,
   updateQuickShortcut,
   deleteQuickShortcut,
+  renameTag,
+  deleteTag,
 } from "@/lib/actions/links";
 import { toast } from "sonner";
 
@@ -47,7 +55,9 @@ type OptimisticAction =
   | { type: "ADD_CATEGORY"; category: LinkCategory }
   | { type: "UPDATE_CATEGORY"; category: LinkCategory }
   | { type: "DELETE_CATEGORY"; id: string; targetCategoryId?: string }
-  | { type: "REORDER_CATEGORIES"; orderedIds: string[] };
+  | { type: "REORDER_CATEGORIES"; orderedIds: string[] }
+  | { type: "RENAME_TAG"; oldName: string; newName: string }
+  | { type: "DELETE_TAG"; name: string };
 
 export function LinksView({
   initialCategories,
@@ -55,10 +65,24 @@ export function LinksView({
   initialShortcuts = [],
 }: LinksViewProps) {
   const [search, setSearch] = useState("");
-  const [selectedCatFilter, setSelectedCatFilter] = useState("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [shortcuts, setShortcuts] = useState<QuickShortcut[]>(initialShortcuts);
+  const [extraTags, setExtraTags] = useState<string[]>([]);
   const [, startTransition] = useTransition();
   const router = useRouter();
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fixedScrollRef = useRef<HTMLDivElement>(null);
+  const isSyncingScroll = useRef(false);
+  const [panelScrollWidth, setPanelScrollWidth] = useState(0);
+  const pillsScrollRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null);
+
+  const [canScroll, setCanScroll] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const COLUMN_SCROLL_WIDTH = 380;
 
   const handleAddShortcut = async (input: CreateQuickShortcutInput) => {
     const temp: QuickShortcut = {
@@ -102,6 +126,7 @@ export function LinksView({
   // Modals state
   const [addLinkOpen, setAddLinkOpen] = useState(false);
   const [manageCatOpen, setManageCatOpen] = useState(false);
+  const [manageTagsOpen, setManageTagsOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
 
   const [scopedCatId, setScopedCatId] = useState<string | undefined>();
@@ -162,6 +187,32 @@ export function LinksView({
             .filter((c): c is LinkCategory => c !== null);
           return { ...state, categories: reordered };
         }
+        case "RENAME_TAG":
+          return {
+            ...state,
+            links: state.links.map((l) => ({
+              ...l,
+              tags: l.tags
+                ? Array.from(
+                    new Set(
+                      l.tags.map((t) =>
+                        t.toLowerCase() === action.oldName.toLowerCase() ? action.newName : t
+                      )
+                    )
+                  )
+                : [],
+            })),
+          };
+        case "DELETE_TAG":
+          return {
+            ...state,
+            links: state.links.map((l) => ({
+              ...l,
+              tags: l.tags
+                ? l.tags.filter((t) => t.toLowerCase() !== action.name.toLowerCase())
+                : [],
+            })),
+          };
         default:
           return state;
       }
@@ -263,13 +314,43 @@ export function LinksView({
     if (!res.success) toast.error(res.error ?? "Failed to reorder categories");
   };
 
+  // Tag Management Handlers
+  const handleCreateTag = (name: string) => {
+    const clean = name.trim().replace(/^#/, "");
+    if (!clean) return;
+    setExtraTags((prev) => Array.from(new Set([...prev, clean])));
+  };
+
+  const handleRenameTag = async (oldName: string, newName: string) => {
+    startTransition(() => {
+      setOptimisticState({ type: "RENAME_TAG", oldName, newName });
+      setExtraTags((prev) =>
+        prev.map((t) => (t.toLowerCase() === oldName.toLowerCase() ? newName : t))
+      );
+    });
+    const res = await renameTag(oldName, newName);
+    if (!res.success) {
+      toast.error(res.error ?? "Failed to rename tag");
+    }
+  };
+
+  const handleDeleteTag = async (name: string) => {
+    startTransition(() => {
+      setOptimisticState({ type: "DELETE_TAG", name });
+      setExtraTags((prev) =>
+        prev.filter((t) => t.toLowerCase() !== name.toLowerCase())
+      );
+    });
+    const res = await deleteTag(name);
+    if (!res.success) {
+      toast.error(res.error ?? "Failed to delete tag");
+    }
+  };
+
   // Search & Filter Matching
   const query = search.trim().toLowerCase();
 
   const filteredLinks = links.filter((link) => {
-    if (selectedCatFilter !== "all" && link.category_id !== selectedCatFilter) {
-      return false;
-    }
     if (!query) return true;
     const cleanQuery = query.startsWith("#") ? query.slice(1) : query;
     return (
@@ -281,71 +362,221 @@ export function LinksView({
   });
 
   const visibleCategories = categories.filter((cat) => {
-    if (selectedCatFilter !== "all" && cat.id !== selectedCatFilter) {
-      return false;
-    }
-    // If search is active, show category only if it has matching links
     if (query) {
       return filteredLinks.some((l) => l.category_id === cat.id);
     }
     return true;
   });
 
-  // Unique existing tags across all links
-  const existingTags = Array.from(
-    new Set(links.flatMap((l) => l.tags || []))
-  ).sort();
+  // Calculate all unique tags with count
+  const tagCountsMap = new Map<string, number>();
+  for (const link of links) {
+    for (const tag of link.tags || []) {
+      const clean = tag.trim().replace(/^#/, "");
+      if (!clean) continue;
+      tagCountsMap.set(clean, (tagCountsMap.get(clean) || 0) + 1);
+    }
+  }
+  for (const extra of extraTags) {
+    if (!tagCountsMap.has(extra)) {
+      tagCountsMap.set(extra, 0);
+    }
+  }
+  const allTags: TagInfo[] = Array.from(tagCountsMap.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const existingTags = allTags.map((t) => t.name);
+
+  // Horizontal Scroll & Pan Management
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setPanelScrollWidth(el.scrollWidth);
+    const hasOverflow = el.scrollWidth > el.clientWidth + 2;
+    setCanScroll(hasOverflow);
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [categories.length, links.length, search, updateScrollState]);
+
+  const handleMainScroll = () => {
+    if (isSyncingScroll.current) return;
+    if (fixedScrollRef.current && scrollRef.current) {
+      isSyncingScroll.current = true;
+      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    }
+  };
+
+  const handleFixedScroll = () => {
+    if (isSyncingScroll.current) return;
+    if (fixedScrollRef.current && scrollRef.current) {
+      isSyncingScroll.current = true;
+      scrollRef.current.scrollLeft = fixedScrollRef.current.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    }
+  };
+
+  const handlePanStart = (pointerId: number, clientX: number) => {
+    if (!scrollRef.current) return;
+    panRef.current = {
+      pointerId,
+      startX: clientX,
+      startScrollLeft: scrollRef.current.scrollLeft,
+    };
+  };
+
+  const handlePanMove = (pointerId: number, clientX: number) => {
+    if (!panRef.current || panRef.current.pointerId !== pointerId || !scrollRef.current) return;
+    const deltaX = clientX - panRef.current.startX;
+    scrollRef.current.scrollLeft = panRef.current.startScrollLeft - deltaX;
+    if (fixedScrollRef.current) {
+      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+    }
+    updateScrollState();
+  };
+
+  const handlePanEnd = (pointerId: number) => {
+    if (!panRef.current || panRef.current.pointerId !== pointerId) return;
+    panRef.current = null;
+  };
+
+  const scrollByAmount = (direction: "left" | "right") => {
+    if (!scrollRef.current) return;
+    const amount = direction === "left" ? -COLUMN_SCROLL_WIDTH : COLUMN_SCROLL_WIDTH;
+    scrollRef.current.scrollBy({ left: amount, behavior: "smooth" });
+  };
+
+  const handleCategoryClick = (catId: string) => {
+    setActiveCategory(catId);
+    if (catId === "all") {
+      scrollRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+      return;
+    }
+    const targetEl = document.getElementById(`category-panel-${catId}`);
+    if (targetEl && scrollRef.current) {
+      const containerRect = scrollRef.current.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const scrollTarget =
+        scrollRef.current.scrollLeft + (targetRect.left - containerRect.left);
+      scrollRef.current.scrollTo({
+        left: Math.max(0, scrollTarget),
+        behavior: "smooth",
+      });
+    }
+  };
+
+  // Scroll-spy to sync active category indicator with scroll position
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let timeoutId: NodeJS.Timeout;
+    const handleScroll = () => {
+      updateScrollState();
+
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (el.scrollLeft <= 30) {
+          setActiveCategory("all");
+          return;
+        }
+
+        const containerLeft = el.getBoundingClientRect().left;
+        let closestCatId = "";
+        let minDistance = Infinity;
+
+        for (const cat of visibleCategories) {
+          const panel = document.getElementById(`category-panel-${cat.id}`);
+          if (panel) {
+            const distance = Math.abs(panel.getBoundingClientRect().left - containerLeft);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestCatId = cat.id;
+            }
+          }
+        }
+
+        if (closestCatId && minDistance < 350) {
+          setActiveCategory(closestCatId);
+        }
+      }, 80);
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [visibleCategories, updateScrollState]);
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Social Links</h1>
-            <span className="inline-flex items-center rounded-full bg-lime-500/15 border border-lime-500/30 px-2.5 py-0.5 text-xs font-semibold text-lime-950 dark:text-lime-200">
-              <Link2 className="mr-1 size-3 text-lime-700 dark:text-lime-300" />
-              {links.length} Resources
-            </span>
+    <div className="space-y-4">
+      {/* Consistent 2-Layer Page Header */}
+      <PageHeader
+        title="Social Links"
+        subtitle="Organize and quick-launch professional links, career resources, and job portals."
+      >
+        <div className="flex items-center gap-2">
+          {/* Search Input */}
+          <div className="relative w-40 sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search links..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 pl-8 text-xs bg-card border-border"
+            />
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Organize, categorize, and quick-launch your professional links, job portals, and online communities.
-          </p>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+          {/* Manage Categories Button */}
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={() => setManageCatOpen(true)}
-            className="rounded-lg gap-2 text-xs font-medium active:scale-[0.98] transition-transform"
+            className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
           >
             <Settings2 className="size-3.5 text-muted-foreground" />
-            Manage Categories
+            <span className="hidden sm:inline">Categories</span>
           </Button>
 
+          {/* Manage Tags Button */}
           <Button
-            onClick={() => handleOpenAdd()}
-            className="rounded-lg gap-2 bg-gradient-brand text-primary-foreground font-medium text-xs shadow-xs active:scale-[0.98] transition-transform"
+            variant="ghost"
+            size="sm"
+            onClick={() => setManageTagsOpen(true)}
+            className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
           >
-            <Plus className="size-4" />
-            Add Link
+            <Tag className="size-3.5 text-muted-foreground" />
+            <span className="hidden sm:inline">Tags</span>
+          </Button>
+
+          {/* Add Link Button */}
+          <Button
+            size="sm"
+            onClick={() => handleOpenAdd()}
+            className="h-8 gap-1.5 text-xs font-medium"
+          >
+            <PlusIcon className="size-3.5" />
+            <span>Add Link</span>
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
-      {/* Toolbar: Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          placeholder="Search links by title, URL, or notes..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 rounded-lg text-sm bg-card border-border"
-        />
-      </div>
-
-      {/* Quick Copy Shortcuts Bar (Red Spot location) */}
+      {/* Quick Shortcuts Bar */}
       <QuickShortcutsBar
         shortcuts={shortcuts}
         onAddShortcut={handleAddShortcut}
@@ -353,68 +584,130 @@ export function LinksView({
         onDeleteShortcut={handleDeleteShortcut}
       />
 
-      {/* Category Filter Bar: Horizontally scrollable pill container */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
-        <button
-          type="button"
-          onClick={() => setSelectedCatFilter("all")}
-          className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-            selectedCatFilter === "all"
-              ? "bg-primary text-primary-foreground shadow-2xs"
-              : "bg-muted hover:bg-muted/80 text-muted-foreground"
-          }`}
-        >
-          All
-          <span
-            className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
-              selectedCatFilter === "all"
-                ? "bg-primary-foreground/20 text-primary-foreground"
-                : "bg-background/80 text-muted-foreground"
-            }`}
+      {/* Category Filter & Navigation Bar */}
+      {categories.length > 1 && (
+        <div className="flex items-center justify-between gap-2">
+          {/* Category Navigation Pills */}
+          <div
+            ref={pillsScrollRef}
+            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 min-w-0 flex-1"
           >
-            {links.length}
-          </span>
-        </button>
-
-        {categories.map((cat) => {
-          const count = links.filter((l) => l.category_id === cat.id).length;
-          const isActive = selectedCatFilter === cat.id;
-          return (
             <button
-              key={cat.id}
               type="button"
-              onClick={() => {
-                setSelectedCatFilter(cat.id);
-                const el = document.getElementById(`category-panel-${cat.id}`);
-                if (el) {
-                  el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-                }
-              }}
-              className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-2xs"
+              onClick={() => handleCategoryClick("all")}
+              className={cn(
+                "shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer active:scale-95",
+                activeCategory === "all"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
                   : "bg-muted hover:bg-muted/80 text-muted-foreground"
-              }`}
+              )}
             >
-              {cat.name}
+              All
               <span
-                className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
-                  isActive
+                className={cn(
+                  "inline-flex items-center justify-center min-w-5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                  activeCategory === "all"
                     ? "bg-primary-foreground/20 text-primary-foreground"
-                    : "bg-background/80 text-muted-foreground"
-                }`}
+                    : "bg-background/90 text-muted-foreground border border-border/40"
+                )}
               >
-                {count}
+                {links.length}
               </span>
             </button>
-          );
-        })}
-      </div>
 
-      {/* Category View (Slider when "All", Full Width Grid when Single Category) */}
+            {categories.map((cat) => {
+              const count = links.filter((l) => l.category_id === cat.id).length;
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleCategoryClick(cat.id)}
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer active:scale-95",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                  )}
+                >
+                  {cat.name}
+                  <span
+                    className={cn(
+                      "inline-flex items-center justify-center min-w-5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-background/90 text-muted-foreground border border-border/40"
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Horizontal Scroll Navigation Controls */}
+          {canScroll && (
+            <div className="inline-flex h-7 shrink-0 items-center overflow-hidden rounded-lg border border-border bg-card shadow-2xs">
+              <button
+                type="button"
+                aria-label="Scroll categories left"
+                onClick={() => scrollByAmount("left")}
+                disabled={!canScrollLeft}
+                className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+              >
+                <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
+              </button>
+              <span className="w-px h-3.5 bg-border" aria-hidden="true" />
+              <button
+                type="button"
+                aria-label="Scroll categories right"
+                onClick={() => scrollByAmount("right")}
+                disabled={!canScrollRight}
+                className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+              >
+                <ChevronRightIcon className="size-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Category Panels (Horizontal Scrollable Layout) */}
       {visibleCategories.length > 0 ? (
-        selectedCatFilter === "all" ? (
-          <div className="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar scroll-smooth">
+        <>
+          <div
+            ref={scrollRef}
+            onScroll={handleMainScroll}
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                handlePanStart(e.pointerId, e.clientX);
+              }
+            }}
+            onPointerMove={(e) => {
+              if (panRef.current && panRef.current.pointerId === e.pointerId) {
+                handlePanMove(e.pointerId, e.clientX);
+              }
+            }}
+            onPointerUp={(e) => {
+              if (panRef.current && panRef.current.pointerId === e.pointerId) {
+                try {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                } catch {}
+                handlePanEnd(e.pointerId);
+              }
+            }}
+            onPointerCancel={(e) => {
+              if (panRef.current && panRef.current.pointerId === e.pointerId) {
+                handlePanEnd(e.pointerId);
+              }
+            }}
+            className={cn(
+              "flex gap-4 pb-4 items-start no-scrollbar",
+              visibleCategories.length === 1 ? "w-full" : "flex-nowrap overflow-x-auto"
+            )}
+          >
             {visibleCategories.map((cat) => {
               const catLinks = filteredLinks.filter((l) => l.category_id === cat.id);
               return (
@@ -429,38 +722,17 @@ export function LinksView({
                   onMoveLinkCategory={handleMoveLink}
                   onRenameCategory={() => setManageCatOpen(true)}
                   onDeleteCategory={() => setManageCatOpen(true)}
-                  isFullWidth={false}
+                  onPanStart={handlePanStart}
+                  onPanMove={handlePanMove}
+                  onPanEnd={handlePanEnd}
+                  isFullWidth={visibleCategories.length === 1}
                 />
               );
             })}
           </div>
-        ) : (
-          <div className="w-full">
-            {visibleCategories.map((cat) => {
-              const catLinks = filteredLinks.filter((l) => l.category_id === cat.id);
-              return (
-                <CategoryPanel
-                  key={cat.id}
-                  category={cat}
-                  categories={categories}
-                  links={catLinks}
-                  onAddLink={handleOpenAdd}
-                  onEditLink={handleOpenEdit}
-                  onDeleteLink={handleDeleteLink}
-                  onMoveLinkCategory={handleMoveLink}
-                  onRenameCategory={() => setManageCatOpen(true)}
-                  onDeleteCategory={() => setManageCatOpen(true)}
-                  isFullWidth={true}
-                />
-              );
-            })}
-          </div>
-        )
+        </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/50 py-16 text-center">
-          <div className="size-12 rounded-full bg-muted flex items-center justify-center mb-3 text-muted-foreground">
-            <Sparkles className="size-6" />
-          </div>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
           <h3 className="font-semibold text-base text-foreground">No links found</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
             {query
@@ -469,9 +741,11 @@ export function LinksView({
           </p>
           <Button
             onClick={() => handleOpenAdd()}
-            className="rounded-lg gap-2 bg-gradient-brand text-foreground text-xs font-medium active:scale-[0.98] transition-transform"
+            size="sm"
+            className="gap-2 text-xs font-medium"
           >
-            <Plus className="size-4" /> Add Your First Link
+            <PlusIcon className="size-3.5" />
+            Add Your First Link
           </Button>
         </div>
       )}
@@ -509,6 +783,15 @@ export function LinksView({
         onUpdateCategory={handleUpdateCategory}
         onDeleteCategory={handleDeleteCategory}
         onReorderCategories={handleReorderCategories}
+      />
+
+      <TagManagerDialog
+        open={manageTagsOpen}
+        onOpenChange={setManageTagsOpen}
+        tags={allTags}
+        onCreateTag={handleCreateTag}
+        onRenameTag={handleRenameTag}
+        onDeleteTag={handleDeleteTag}
       />
     </div>
   );

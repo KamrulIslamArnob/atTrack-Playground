@@ -5,7 +5,9 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { TextDocumentViewer } from "@/components/text-document-viewer";
 import { getDocumentDetails } from "@/lib/actions/documents";
-import { ArrowLeft, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { SparklesIcon } from "@/components/ui/sparkles";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,9 +53,9 @@ export default async function DocumentPage(props: PageProps) {
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-2xl bg-muted text-primary">
                   {doc.generated_kind ? (
-                    <Sparkles className="size-5 text-purple-500" />
+                    <SparklesIcon className="size-5 text-purple-500" />
                   ) : (
-                    <FileText className="size-5 text-muted-foreground" />
+                    <FileTextIcon className="size-5 text-muted-foreground" />
                   )}
                 </div>
                 <div>
@@ -110,7 +112,7 @@ export default async function DocumentPage(props: PageProps) {
             </Link>
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-2xl bg-muted">
-                <FileText className="size-5 text-muted-foreground" />
+                <FileTextIcon className="size-5 text-muted-foreground" />
               </div>
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">{doc.name}</h1>

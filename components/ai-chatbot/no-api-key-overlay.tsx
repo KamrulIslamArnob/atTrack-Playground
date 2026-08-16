@@ -21,7 +21,7 @@ export function NoApiKeyOverlay({
         className
       )}
     >
-      <div className="flex max-w-sm flex-col items-center gap-3 rounded-2xl border border-border bg-card/95 p-6 text-center shadow-xl shadow-black/20 backdrop-blur-md">
+      <div className="flex max-w-sm flex-col items-center gap-3 rounded-2xl border border-border bg-card/95 p-6 text-center backdrop-blur-md">
         <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <KeyRound className="size-6" />
         </div>

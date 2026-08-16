@@ -4,18 +4,9 @@ import { useState, useEffect, useCallback, useTransition } from "react";
 import { format, addDays, subDays, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import {
-  Clock,
-  Plus,
-  Pin,
-  CheckCircle2,
-  Circle,
-  Trash2,
-  Edit2,
-  Save,
-  X,
-  Hourglass,
-  CalendarClock,
-} from "lucide-react";
+  Clock, Pin, CheckCircle2, Circle, Trash2, Edit2, Save, Hourglass, CalendarClock } from "lucide-react";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { XIcon } from "@/components/ui/x";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -337,7 +328,7 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
             className="h-8 text-xs gap-1.5"
             variant={isAdding ? "outline" : "default"}
           >
-            {isAdding ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+            {isAdding ? <XIcon className="size-3.5" /> : <PlusIcon className="size-3.5" />}
             {isAdding ? "Cancel" : "Add Deadline / Milestone"}
           </Button>
         </div>

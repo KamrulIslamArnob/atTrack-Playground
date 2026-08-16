@@ -5,31 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import {
-  X,
-  ExternalLink,
-  Mail,
-  ArrowUp,
-  ArrowDown,
-  ChevronsUpDown,
-  GripVertical,
-  MoveLeft,
-  MoveRight,
-  Palette,
-  RotateCcw,
-  Trash2,
-  Check,
-  Briefcase,
-  Building2,
-  MapPin,
-  Clock,
-  Laptop,
-  Banknote,
-  Sparkles,
-  CircleDot,
-  Calendar,
-} from "lucide-react";
+  X, Mail, ChevronsUpDown, GripVertical, MoveLeft, MoveRight, Palette, Trash2, Briefcase, Building2, Laptop, Banknote, CircleDot, Calendar } from "lucide-react";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
+import { ArrowUpIcon } from "@/components/ui/arrow-up";
+import { ArrowDownIcon } from "@/components/ui/arrow-down";
+import { RotateCCWIcon } from "@/components/ui/rotate-ccw";
+import { CheckIcon } from "@/components/ui/check";
+import { MapPinIcon } from "@/components/ui/map-pin";
+import { ClockIcon } from "@/components/ui/clock";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { cn } from "@/lib/utils";
-import { JOB_STATUS_LABELS } from "@/lib/types/job";
+import { JOB_STATUS_LABELS, JOB_TIERS, type JobTier } from "@/lib/types/job";
 
 interface JobListItem {
   id: string;
@@ -44,6 +30,7 @@ interface JobListItem {
   application_email: string | null;
   match_score: number | null;
   match_reasoning: string | null;
+  tier?: string | null;
   created_at: string;
   company: {
     name: string;
@@ -157,11 +144,11 @@ interface ColumnDef {
 const ALL_COLUMNS: ColumnDef[] = [
   { key: "title", label: "Title", icon: Briefcase, className: "min-w-[200px]" },
   { key: "company", label: "Company", icon: Building2, className: "min-w-[140px] max-w-[180px] truncate" },
-  { key: "location", label: "Location", icon: MapPin, className: "min-w-[160px] max-w-[200px] truncate" },
-  { key: "employment_type", label: "Type", icon: Clock },
+  { key: "location", label: "Location", icon: MapPinIcon, className: "min-w-[160px] max-w-[200px] truncate" },
+  { key: "employment_type", label: "Type", icon: ClockIcon },
   { key: "work_location", label: "Work", icon: Laptop },
   { key: "salary_range", label: "Salary", icon: Banknote, className: "min-w-[140px]" },
-  { key: "match_score", label: "Match", icon: Sparkles },
+  { key: "match_score", label: "Match", icon: SparklesIcon },
   { key: "status", label: "Status", icon: CircleDot },
   { key: "date", label: "Date", icon: Calendar, className: "min-w-[140px]" },
 ];
@@ -313,9 +300,9 @@ function SortHeader({
           <span>{label}</span>
           {active ? (
             sortDir === "asc" ? (
-              <ArrowUp className="size-3 shrink-0" aria-hidden="true" />
+              <ArrowUpIcon className="size-3 shrink-0" aria-hidden="true" />
             ) : (
-              <ArrowDown className="size-3 shrink-0" aria-hidden="true" />
+              <ArrowDownIcon className="size-3 shrink-0" aria-hidden="true" />
             )
           ) : (
             <ChevronsUpDown className="size-3 shrink-0 opacity-30 group-hover/btn:opacity-60" aria-hidden="true" />
@@ -645,12 +632,29 @@ export function JobsGrid({
     switch (key) {
       case "title":
         return (
-          <Link
-            href={`/jobs/${job.id}`}
-            className="font-semibold hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
-          >
-            {job.title}
-          </Link>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Link
+              href={`/jobs/${job.id}`}
+              className="font-semibold hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
+            >
+              {job.title}
+            </Link>
+            {job.tier && JOB_TIERS[job.tier as JobTier] && (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold tracking-tight shadow-2xs",
+                  JOB_TIERS[job.tier as JobTier].badgeClass
+                )}
+                title={`${JOB_TIERS[job.tier as JobTier].label} · ${JOB_TIERS[job.tier as JobTier].description}`}
+              >
+                <span
+                  className="size-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: JOB_TIERS[job.tier as JobTier].dotColor }}
+                />
+                {JOB_TIERS[job.tier as JobTier].label}
+              </span>
+            )}
+          </div>
         );
       case "company":
         return job.company?.name ?? "Unknown company";
@@ -750,7 +754,7 @@ export function JobsGrid({
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Reset column widths to default"
             >
-              <RotateCcw className="size-3" />
+              <RotateCCWIcon className="size-3" />
               Reset Widths
             </button>
           )}
@@ -760,7 +764,7 @@ export function JobsGrid({
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
               title="Reset all custom column and row colors"
             >
-              <RotateCcw className="size-3" />
+              <RotateCCWIcon className="size-3" />
               Reset Colors
             </button>
           )}
@@ -770,7 +774,7 @@ export function JobsGrid({
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Reset column order to default"
             >
-              <RotateCcw className="size-3" />
+              <RotateCCWIcon className="size-3" />
               Reset Columns
             </button>
           )}
@@ -870,7 +874,7 @@ export function JobsGrid({
                           aria-label="Open application link"
                           className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-green-800 dark:hover:text-lime-400 hover:bg-muted active:scale-95"
                         >
-                          <ExternalLink className="size-3.5 transition-transform duration-150 ease-out group-hover/ext:translate-x-0.5 group-hover/ext:-translate-y-0.5" />
+                          <ExternalLinkIcon className="size-3.5 transition-transform duration-150 ease-out group-hover/ext:translate-x-0.5 group-hover/ext:-translate-y-0.5" />
                         </a>
                       )}
                       {!job.application_url && job.application_email && (
@@ -947,7 +951,7 @@ export function JobsGrid({
                         )}
                       >
                         {columnColors[contextMenu.columnKey] === p.value && (
-                          <Check className="size-3 text-foreground" />
+                          <CheckIcon className="size-3 text-foreground" />
                         )}
                       </button>
                     ))}
@@ -1008,7 +1012,7 @@ export function JobsGrid({
                           )}
                         >
                           {rowColors[contextMenu.jobId!] === p.value && (
-                            <Check className="size-3 text-foreground" />
+                            <CheckIcon className="size-3 text-foreground" />
                           )}
                         </button>
                       ))}
@@ -1053,7 +1057,7 @@ export function JobsGrid({
                   }}
                   className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
                 >
-                  <RotateCcw className="size-3" />
+                  <RotateCCWIcon className="size-3" />
                   Reset Column Order
                 </button>
                 {Object.keys(columnWidths).length > 0 && (
@@ -1064,7 +1068,7 @@ export function JobsGrid({
                     }}
                     className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
                   >
-                    <RotateCcw className="size-3" />
+                    <RotateCCWIcon className="size-3" />
                     Reset Column Widths
                   </button>
                 )}

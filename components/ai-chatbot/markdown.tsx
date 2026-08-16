@@ -3,22 +3,14 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import {
-  Check,
-  Copy,
-  ExternalLink,
-  Code2,
-  Calendar,
-  Briefcase,
-  Database,
-  Loader2,
-  AlertCircle,
-  ArrowUp,
-  Table as TableIcon,
-  Sparkles,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+  Check, Code2, Calendar, Briefcase, Database, Loader2, AlertCircle, Table as TableIcon } from "lucide-react";
+import { CopyIcon } from "@/components/ui/copy";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
+import { ArrowUpIcon } from "@/components/ui/arrow-up";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { ChevronUpIcon } from "@/components/ui/chevron-up";
 import { toast } from "sonner";
 import { executeLocalSqlQuery, type SqlQueryResult } from "@/lib/actions/database-query";
 
@@ -64,7 +56,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
             className="inline-flex items-center gap-0.5 text-blue-600 dark:text-blue-400 font-medium underline underline-offset-4 decoration-blue-500/30 hover:decoration-blue-500 transition-colors"
           >
             {m[1]}
-            <ExternalLink className="size-3 opacity-70" />
+            <ExternalLinkIcon className="size-3 opacity-70" />
           </a>
         );
       }
@@ -136,7 +128,7 @@ function JobApplicationCard({ job, index }: { job: ParsedJobInfo; index: number 
   const fitBadge = fit !== undefined ? (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-2xs border shrink-0",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0",
         fit >= 80
           ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
           : fit >= 60
@@ -149,7 +141,7 @@ function JobApplicationCard({ job, index }: { job: ParsedJobInfo; index: number 
   ) : null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-border/70 bg-card p-3.5 shadow-xs transition-all hover:border-blue-500/40 hover:shadow-sm">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-border/70 bg-card p-3.5 transition-all hover:border-blue-500/40">
       <div className="flex items-start gap-2.5 min-w-0">
         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
           <Briefcase className="size-4" />
@@ -329,7 +321,7 @@ export function Markdown({ content, onOpenCanvas, onApproveQuery, onAskAiSummary
         );
 
         blocks.push(
-          <div key={`table-${blocks.length}`} className="my-3 overflow-x-auto rounded-xl border border-border/60 bg-card shadow-xs">
+          <div key={`table-${blocks.length}`} className="my-3 overflow-x-auto rounded-xl border border-border/60 bg-card">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border/60 bg-muted/50 font-semibold text-foreground">
                 <tr>
@@ -590,7 +582,7 @@ function CodeBlock({ code, lang, onOpenCanvas }: CodeBlockProps) {
               </>
             ) : (
               <>
-                <Copy className="size-3" />
+                <CopyIcon className="size-3" />
                 <span>Copy</span>
               </>
             )}
@@ -726,7 +718,7 @@ function DatabaseQueryBlock({
               className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white active:scale-95 cursor-pointer"
             >
               <span>{isExpanded ? "Hide Details" : "View Query & Data"}</span>
-              {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+              {isExpanded ? <ChevronUpIcon className="size-3" /> : <ChevronDownIcon className="size-3" />}
             </button>
           )}
 
@@ -752,7 +744,7 @@ function DatabaseQueryBlock({
               </>
             ) : (
               <>
-                <Copy className="size-3" />
+                <CopyIcon className="size-3" />
                 <span>Copy</span>
               </>
             )}
@@ -773,7 +765,7 @@ function DatabaseQueryBlock({
             className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-blue-400 hover:text-blue-300 hover:bg-slate-800/80 transition-colors cursor-pointer"
           >
             <span>View Data Table</span>
-            <ChevronDown className="size-3" />
+            <ChevronDownIcon className="size-3" />
           </button>
         </div>
       )}
@@ -802,7 +794,7 @@ function DatabaseQueryBlock({
                 className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
                 title="Copy result as JSON"
               >
-                {copiedJson ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                {copiedJson ? <Check className="size-3 text-emerald-400" /> : <CopyIcon className="size-3" />}
                 <span>{copiedJson ? "Copied JSON" : "Copy JSON"}</span>
               </button>
               {onOpenCanvas && (
@@ -879,7 +871,7 @@ function DatabaseQueryBlock({
                 }}
                 className="flex items-center gap-1.5 rounded-lg bg-blue-600/20 border border-blue-500/40 px-2.5 py-1 text-xs font-semibold text-blue-300 hover:bg-blue-600/30 transition-colors cursor-pointer"
               >
-                <Sparkles className="size-3 text-blue-400" />
+                <SparklesIcon className="size-3 text-blue-400" />
                 Ask AI to analyze results
               </button>
             </div>
@@ -903,7 +895,7 @@ function DatabaseQueryBlock({
               onClick={handleApproveAndExecute}
               className="flex items-center gap-1 rounded-md bg-rose-600/30 border border-rose-500/50 px-2.5 py-1 text-xs font-medium text-rose-200 hover:bg-rose-600/40 transition-colors cursor-pointer"
             >
-              <RefreshCw className="size-3" />
+              <RefreshCWIcon className="size-3" />
               Retry Query
             </button>
           </div>
@@ -930,11 +922,11 @@ function DatabaseQueryBlock({
             <button
               type="button"
               onClick={handleApproveAndExecute}
-              className="micro-press group/approve flex items-center gap-1.5 rounded-lg bg-blue-600 py-1 pl-3 pr-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-500 cursor-pointer"
+              className="micro-press group/approve flex items-center gap-1.5 rounded-lg bg-blue-600 py-1 pl-3 pr-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-500 cursor-pointer"
             >
               Approve &amp; Execute
               <span className="flex size-5 items-center justify-center rounded-md bg-white/15 transition-transform duration-200 group-hover/approve:-translate-y-0.5">
-                <ArrowUp className="size-3" />
+                <ArrowUpIcon className="size-3" />
               </span>
             </button>
           </div>

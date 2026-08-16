@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Pencil, X, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
 
 interface SmtpConfigFormProps {
   config: SmtpConfig | null;
@@ -139,7 +140,7 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
                   onClick={() => { setIsEditing(false); setPassword(""); }}
                   className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  <X className="size-4" />
+                  <XIcon className="size-4" />
                   Cancel
                 </button>
               )}

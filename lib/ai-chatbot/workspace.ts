@@ -68,10 +68,19 @@ export interface WorkspaceContext {
 const CACHE_KEY = "attrack_ai_chat_workspace";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-export async function fetchWorkspace(): Promise<WorkspaceSnapshot | null> {
+export function invalidateWorkspaceCache(): void {
+  if (typeof window === "undefined") return;
   try {
-    const cached = readCache();
-    if (cached) return cached;
+    window.localStorage.removeItem(CACHE_KEY);
+  } catch {}
+}
+
+export async function fetchWorkspace(force = false): Promise<WorkspaceSnapshot | null> {
+  try {
+    if (!force) {
+      const cached = readCache();
+      if (cached) return cached;
+    }
 
     const res = await fetch("/api/chat/workspace", { cache: "no-store" });
     if (!res.ok) return null;

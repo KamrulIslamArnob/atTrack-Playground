@@ -16,7 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin, DollarSign, Sparkles, GraduationCap, Gift, Clock, Calendar, ExternalLink, Building2 } from "lucide-react";
+import { MapPin, GraduationCap, Gift, Calendar, Building2 } from "lucide-react";
+import { DollarSignIcon } from "@/components/ui/dollar-sign";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { ClockIcon } from "@/components/ui/clock";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
 import type { JobDetailData } from "@/lib/types/job-detail";
 
 interface EditTabProps {
@@ -63,9 +67,11 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
     dirty.current = true;
     onDirtyChange?.(true);
   };
+
   const [workLocation, setWorkLocation] = useState(job.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(job.employment_type ?? "Full-time");
-  
+  const [tier, setTier] = useState<string>(job.tier ?? "none");
+
   // Rich structured attributes
   const [skills, setSkills] = useState<string[]>(job.skills ?? []);
   const [benefits, setBenefits] = useState<string[]>(job.benefits ?? []);
@@ -88,6 +94,7 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
       formData.append("job_id", job.id);
       formData.append("work_location", workLocation);
       formData.append("employment_type", employmentType);
+      formData.append("tier", tier === "none" ? "" : tier);
       formData.append("skills", JSON.stringify(skills));
       formData.append("benefits", JSON.stringify(benefits));
       formData.append("is_unpaid", isUnpaid ? "true" : "false");
@@ -200,7 +207,27 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <Label>Priority Tier</Label>
+            <Select
+              value={tier}
+              onValueChange={(v) => {
+                setTier(v ?? "none");
+                markDirty();
+              }}
+            >
+              <SelectTrigger className="h-9 text-xs w-full">
+                <SelectValue placeholder="Select tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No tier</SelectItem>
+                <SelectItem value="1">Tier 1 (Top)</SelectItem>
+                <SelectItem value="2">Tier 2 (Second)</SelectItem>
+                <SelectItem value="3">Tier 3 (Third)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5">
             <Label>Employment type</Label>
             <Select
@@ -261,7 +288,7 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
             onClick={handleOpenGoogleMaps}
             className="gap-1 text-[11px] h-6"
           >
-            <ExternalLink className="size-3 text-cyan-500" /> View on Google Maps
+            <ExternalLinkIcon className="size-3 text-cyan-500" /> View on Google Maps
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -287,7 +314,7 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
       <div className="space-y-4 rounded-2xl border border-border bg-card/60 p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <DollarSign className="size-3.5 text-emerald-500" /> Salary & Compensation
+            <DollarSignIcon className="size-3.5 text-emerald-500" /> Salary & Compensation
           </h3>
           <label className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none">
             <input
@@ -387,12 +414,12 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
       {/* Structured Requirements & Perks */}
       <div className="space-y-4 rounded-2xl border border-border bg-card/60 p-4">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <Sparkles className="size-3.5 text-indigo-500" /> Requirements, Skills & Perks
+          <SparklesIcon className="size-3.5 text-indigo-500" /> Requirements, Skills & Perks
         </h3>
 
         <div className="space-y-1.5">
           <Label className="flex items-center gap-1.5 text-xs font-medium">
-            <Sparkles className="size-3 text-cyan-500" /> Required Tech Skills (Tags)
+            <SparklesIcon className="size-3 text-cyan-500" /> Required Tech Skills (Tags)
           </Label>
           <TagInput
             tags={skills}
@@ -434,7 +461,7 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="work_schedule" className="flex items-center gap-1.5 text-xs font-medium">
-              <Clock className="size-3 text-blue-500" /> Schedule & Working Hours
+              <ClockIcon className="size-3 text-blue-500" /> Schedule & Working Hours
             </Label>
             <Input
               id="work_schedule"

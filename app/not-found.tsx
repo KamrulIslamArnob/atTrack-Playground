@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeLogo } from "@/components/ui/theme-logo";
-import { MapPinOff, ArrowLeft } from "lucide-react";
+import { MapPinOff } from "lucide-react";
+import { ArrowLeftIcon } from "@/components/ui/arrow-left";
 
 export default function NotFound() {
   return (
@@ -41,7 +42,7 @@ export default function NotFound() {
               className: "h-11 rounded-full px-6 shadow-sm transition-all hover:shadow-md active:scale-[0.98]" 
             })}
           >
-            <ArrowLeft className="mr-2 size-4" strokeWidth={2} />
+            <ArrowLeftIcon size={16} className="mr-2 size-4" />
             Back to dashboard
           </Link>
         </div>

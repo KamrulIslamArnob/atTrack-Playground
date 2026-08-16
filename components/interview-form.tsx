@@ -8,13 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { X, Calendar, ExternalLink } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { X, Calendar } from "lucide-react";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { updateInterview, deleteInterview } from "@/lib/actions/interviews";
 import { getCalendarLinkFromInterview } from "@/lib/calendar";
 import type { Interview } from "@/lib/actions/interviews";
@@ -260,7 +256,7 @@ export function InterviewForm({ interview, onClose }: InterviewFormProps) {
               >
                 <Calendar className="size-3" />
                 Open in Google Calendar
-                <ExternalLink className="size-3" />
+                <ExternalLinkIcon className="size-3" />
               </a>
             </div>
           )}

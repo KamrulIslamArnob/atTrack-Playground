@@ -10,30 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
-  Search,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Users,
-  ShieldCheck,
-  Ban,
-  UserCog,
-  Ban as BanIcon,
-  ShieldCheck as ShieldIcon,
-  UserMinus,
-  UserPlus,
-  ShieldAlert,
-  UserCog as UserCogIcon,
-} from "lucide-react";
+  Loader2, Ban, UserCog, Ban as BanIcon, UserMinus, ShieldAlert, UserCog as UserCogIcon } from "lucide-react";
+import { SearchIcon } from "@/components/ui/search";
+import { XIcon } from "@/components/ui/x";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { UsersIcon } from "@/components/ui/users";
+import { ShieldCheckIcon } from "@/components/ui/shield-check";
+import { UserPlusIcon } from "@/components/ui/user-plus";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -166,16 +153,16 @@ export default function AdminUsersPage() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <QuickStat icon={Users} label="Total Users" value={stats.total.toLocaleString()} color="text-blue-500" bgColor="bg-blue-500/10" />
-        <QuickStat icon={ShieldCheck} label="Active" value={stats.active.toLocaleString()} color="text-emerald-500" bgColor="bg-emerald-500/10" />
+        <QuickStat icon={UsersIcon} label="Total Users" value={stats.total.toLocaleString()} color="text-blue-500" bgColor="bg-blue-500/10" />
+        <QuickStat icon={ShieldCheckIcon} label="Active" value={stats.active.toLocaleString()} color="text-emerald-500" bgColor="bg-emerald-500/10" />
         <QuickStat icon={Ban} label="Banned" value={stats.banned.toLocaleString()} color="text-rose-500" bgColor="bg-rose-500/10" />
         <QuickStat icon={UserCog} label="Admins" value={stats.admins.toLocaleString()} color="text-violet-500" bgColor="bg-violet-500/10" />
       </div>
 
       {/* Search, filter, per page, pagination — one row */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -188,7 +175,7 @@ export default function AdminUsersPage() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >
-              <X className="size-4" />
+              <XIcon className="size-4" />
             </button>
           )}
         </div>
@@ -248,7 +235,7 @@ export default function AdminUsersPage() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeftIcon className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -257,7 +244,7 @@ export default function AdminUsersPage() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRightIcon className="size-4" />
           </Button>
         </div>
       </div>
@@ -269,7 +256,7 @@ export default function AdminUsersPage() {
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               &quot;{search}&quot;
               <button onClick={() => setSearch("")} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -277,7 +264,7 @@ export default function AdminUsersPage() {
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
               Role: {roleFilter}
               <button onClick={() => setRoleFilter("all")} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -285,7 +272,7 @@ export default function AdminUsersPage() {
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
               Status: {statusFilter}
               <button onClick={() => setStatusFilter("all")} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -412,7 +399,7 @@ export default function AdminUsersPage() {
                           {actionLoading === user.id ? (
                             <Loader2 className="size-3 animate-spin" />
                           ) : (
-                            <ShieldIcon className="size-3" />
+                            <ShieldCheckIcon className="size-3" />
                           )}
                           <span className="hidden sm:inline ml-1">Unban</span>
                         </Button>
@@ -451,7 +438,7 @@ export default function AdminUsersPage() {
                           onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "promote", user }); }}
                           disabled={actionLoading === user.id}
                         >
-                          <UserPlus className="size-3" />
+                          <UserPlusIcon className="size-3" />
                           <span className="hidden sm:inline ml-1">Promote</span>
                         </Button>
                       )}
@@ -501,7 +488,7 @@ const CONFIRM_CONFIG = {
     description:
       "This will restore access for this user and allow them to sign in again.",
     confirmLabel: "Unban user",
-    icon: ShieldIcon,
+    icon: ShieldCheckIcon,
     iconBg: "bg-emerald-500/10",
     iconColor: "text-emerald-500",
     buttonClass: "",

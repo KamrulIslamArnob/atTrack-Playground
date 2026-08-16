@@ -3,12 +3,14 @@ import type { ChatPersona } from "@/lib/ai-chatbot/types";
 import { assembleChatSystemPrompt } from "@/lib/ai-chatbot/prompt";
 import {
   resolveProviderChain,
+  resolveAllProviders,
   generateTextStream,
   generateTextWithToolsStream,
   type ResolvedProvider,
   type ToolExecutionContext,
   type ToolCallRecord,
 } from "@/lib/ai/providers";
+import { modelSupportsImages, isReasoningModel } from "@/lib/ai/model-capabilities";
 import { classifyIntentAsync, type IntentResult } from "@/lib/ai-chatbot/intent";
 import { retrieveContext } from "@/lib/ai-chatbot/retrieval";
 import { buildGroundedContext, assembleGroundedSystemPrompt } from "@/lib/ai-chatbot/grounded-context";
@@ -53,6 +55,10 @@ export interface LoadedChatContext {
   selectedPersona: ChatPersona;
   baseSystemPrompt: string;
   targetModel?: string;
+  /** Set only when the caller asked for "auto": which capability the turn needs.
+   *  Resolved against the user's real providers in stage 1b, which is the first
+   *  stage that can see them. Absent means the caller named a model outright. */
+  autoRule?: AutoRule;
   chain: ResolvedProvider[];
 }
 
@@ -180,44 +186,35 @@ export function buildChatContextBase(
     webSearchActive: Boolean(input.webSearchActive),
   });
 
-  // 2. Resolve Provider Chain & Target Model
-  let targetModel = input.model;
-  // Which auto-routing branch fired. "explicit" means the caller named a model
-  // and no rule ran — the single field that explains why this turn is served by
-  // the model it is served by.
-  let rule: "images" | "code" | "reasoning" | "default" | "explicit" = "explicit";
-  if (targetModel === "auto" || targetModel === "Auto Hybrid Agent" || !targetModel) {
-    if (hasImages) {
-      targetModel = "gemini-2.0-flash";
-      rule = "images";
-    } else if (
-      userPrompt.includes("```") ||
-      userPrompt.toLowerCase().includes("code") ||
-      userPrompt.toLowerCase().includes("function") ||
-      userPrompt.toLowerCase().includes("typescript") ||
-      userPrompt.toLowerCase().includes("react")
-    ) {
-      targetModel = "claude-3-5-sonnet";
-      rule = "code";
-    } else if (
-      userPrompt.toLowerCase().includes("think") ||
-      userPrompt.toLowerCase().includes("deep") ||
-      userPrompt.toLowerCase().includes("math") ||
-      userPrompt.toLowerCase().includes("algorithm")
-    ) {
-      targetModel = "deepseek-r1";
-      rule = "reasoning";
-    } else {
-      targetModel = "gemini-2.0-flash";
-      rule = "default";
-    }
-  }
+  // 2. Resolve the target model.
+  //
+  // An explicit pick is a model id copied straight off one of the user's own
+  // ai_providers rows, so it names the provider outright. "auto" names a
+  // *capability* instead — which provider serves it depends on what the user
+  // actually has configured, and this stage does no I/O, so the decision is
+  // deferred to stage 1b. It used to resolve here to a hardcoded vendor id
+  // (gemini-2.0-flash / claude-3-5-sonnet / deepseek-r1); on any workspace
+  // without those exact vendors every auto turn fell through to chain[0].
+  const isAuto = !input.model || input.model === "auto" || input.model === "Auto Hybrid Agent";
+  const autoRule: AutoRule | undefined = !isAuto
+    ? undefined
+    : hasImages
+      ? "images"
+      : /```|code|function|typescript|react/i.test(userPrompt)
+        ? "code"
+        : /think|deep|math|algorithm/i.test(userPrompt)
+          ? "reasoning"
+          : "default";
+  const targetModel = isAuto ? undefined : input.model;
 
+  // "explicit" means the caller named a model and no rule ran. Which provider
+  // that lands on is reported separately by routeProvider — the two events
+  // together explain why this turn is served by the model it is served by.
   aiEvent(AI_EVENTS.routeModel, {
     traceId,
     requestedModel: input.model ?? null,
-    resolvedModel: targetModel,
-    rule,
+    resolvedModel: targetModel ?? null,
+    rule: autoRule ?? "explicit",
   });
 
   return {
@@ -232,12 +229,18 @@ export function buildChatContextBase(
     selectedPersona,
     baseSystemPrompt,
     targetModel,
+    autoRule,
   };
 }
 
-/** The auto-router's shorthand ids, each with the vendor that actually serves
- *  it. Without the vendor, a routed id gets stamped onto whatever provider
- *  happens to head the chain and the request 400s. */
+/** Which capability an "auto" turn needs. Resolved against the user's own
+ *  providers, never against a hardcoded vendor id. */
+export type AutoRule = "images" | "code" | "reasoning" | "default";
+
+/** Well-known shorthand ids a caller may still send (older saved sessions store
+ *  them as `chat_sessions.model`), each with the vendor that actually serves it.
+ *  Without the vendor, the id gets stamped onto whatever provider happens to
+ *  head the chain and the request 400s. */
 const MODEL_CATALOG: Record<string, { id: string; providerType: ProviderType }> = {
   "gemini-2.0-flash": { id: "models/gemini-2.0-flash", providerType: "gemini" },
   "gemini-1.5-pro": { id: "models/gemini-1.5-pro", providerType: "gemini" },
@@ -258,18 +261,27 @@ const MODEL_CATALOG: Record<string, { id: string; providerType: ProviderType }> 
 export function selectProviderForModel(
   chain: ResolvedProvider[],
   targetModel?: string,
-  traceId: string = newTraceId()
+  traceId: string = newTraceId(),
+  opts: {
+    /** Every configured provider, not just the ones the "text" task route
+     *  lists. The model picker offers all of them, so the router must be able
+     *  to reach all of them. */
+    owned?: ResolvedProvider[];
+    autoRule?: AutoRule;
+  } = {}
 ): ResolvedProvider[] {
+  const owned = opts.owned ?? [];
   // Provider NAMES only: base_url and api_key live on the same rows.
   const chainBefore = chain.map((p) => p.name);
   const emit = (
-    reason: "exact" | "vendor-catalog" | "unchanged",
+    reason: "exact" | "adopted" | "vendor-catalog" | "auto-capability" | "unchanged",
     promoted: string | null,
     stampedModel: string | null
   ) =>
     aiEvent(AI_EVENTS.routeProvider, {
       traceId,
       targetModel: targetModel ?? null,
+      autoRule: opts.autoRule ?? null,
       chainBefore,
       chainAfter: chain.map((p) => p.name),
       promoted,
@@ -277,7 +289,7 @@ export function selectProviderForModel(
       stampedModel,
     });
 
-  if (!targetModel || chain.length === 0) {
+  if ((!targetModel && !opts.autoRule) || (chain.length === 0 && owned.length === 0)) {
     emit("unchanged", null, null);
     return chain;
   }
@@ -290,6 +302,48 @@ export function selectProviderForModel(
     return chain;
   };
 
+  /** Put a provider the task route does not list at the head, keeping the
+   *  route as the fallback order behind it. The picker is built from every
+   *  configured provider, so a pick outside the route has to run — otherwise
+   *  the dropdown silently no-ops and chain[0] answers every turn. */
+  const adopt = (p: ResolvedProvider) => {
+    chain.unshift(p);
+    return chain;
+  };
+
+  /** The route's own order is the user's stated preference, so it is searched
+   *  before providers the route leaves out. */
+  const preferenceOrder = (): ResolvedProvider[] => [
+    ...chain,
+    ...owned.filter((p) => !chain.some((c) => c.id === p.id)),
+  ];
+
+  /** Head the chain with `p`, whether it is already in the route or not. */
+  const install = (p: ResolvedProvider, reason: "adopted" | "auto-capability") => {
+    const idx = chain.findIndex((c) => c.id === p.id);
+    if (idx !== -1) promote(idx);
+    else adopt(p);
+    emit(reason, chain[0].name, null);
+    return chain;
+  };
+
+  // "auto": pick by capability from what the user actually has. "default" has
+  // no capability to match, so it leaves the user's own chain order alone.
+  if (opts.autoRule) {
+    const pool = preferenceOrder();
+    const picked =
+      opts.autoRule === "images"
+        ? pool.find((p) => modelSupportsImages(p.provider_type, p.model))
+        : opts.autoRule === "reasoning"
+          ? pool.find((p) => isReasoningModel(p.model))
+          : opts.autoRule === "code"
+            ? pool.find((p) => p.provider_type === "anthropic")
+            : undefined;
+    if (picked) return install(picked, "auto-capability");
+    emit("unchanged", null, null);
+    return chain;
+  }
+
   // The model picker is built from the user's own provider rows — each option's
   // id IS that provider's configured model. An exact match therefore names the
   // provider to run outright, with no guessing.
@@ -300,9 +354,16 @@ export function selectProviderForModel(
     return chain;
   }
 
-  // Otherwise this is one of the auto-router's shorthand ids, which name a
-  // specific vendor. Promote a provider that can actually serve it.
-  const known = MODEL_CATALOG[targetModel];
+  // Same match, against a provider the "text" task route does not list. Without
+  // this the pick is silently dropped: the picker offers every configured
+  // provider but the chain only ever held the routed ones, so choosing an
+  // off-route model left chain[0] serving the turn under the wrong name.
+  const offRoute = owned.find((p) => p.model === targetModel);
+  if (offRoute) return install(offRoute, "adopted");
+
+  // Otherwise this is a well-known shorthand id, which names a specific vendor.
+  // Promote a provider that can actually serve it, route first.
+  const known = targetModel ? MODEL_CATALOG[targetModel] : undefined;
   if (known) {
     // "openai_compatible" spans OpenAI, Groq, DeepSeek, OpenRouter, Longcat
     // and local servers — the type alone doesn't say which model a given
@@ -319,6 +380,10 @@ export function selectProviderForModel(
       emit("vendor-catalog", chain[0].name, stamped ?? null);
       return chain;
     }
+    const ownedVendor =
+      owned.find((p) => p.provider_type === known.providerType && p.model === known.id) ??
+      owned.find((p) => p.provider_type === known.providerType);
+    if (ownedVendor) return install(ownedVendor, "adopted");
   }
 
   // Unknown id and no provider claims it. Run the user's configured chain as it
@@ -336,9 +401,11 @@ export function selectProviderForModel(
 export async function resolveChainForModel(
   userId: string,
   targetModel?: string,
-  traceId: string = newTraceId()
+  traceId: string = newTraceId(),
+  autoRule?: AutoRule
 ): Promise<ResolvedProvider[]> {
-  return selectProviderForModel(await resolveProviderChain(userId, "text"), targetModel, traceId);
+  const [chain, owned] = await Promise.all([resolveProviderChain(userId, "text"), resolveAllProviders(userId)]);
+  return selectProviderForModel(chain, targetModel, traceId, { owned, autoRule });
 }
 
 /**
@@ -351,7 +418,7 @@ export async function loadChatContext(
   traceId: string = newTraceId()
 ): Promise<LoadedChatContext> {
   const base = buildChatContextBase(input, traceId);
-  return { ...base, chain: await resolveChainForModel(input.userId, base.targetModel, traceId) };
+  return { ...base, chain: await resolveChainForModel(input.userId, base.targetModel, traceId, base.autoRule) };
 }
 
 /**
@@ -531,7 +598,14 @@ export async function executeAgent(
         },
         // traceId is what joins every provider hop and its cost to this turn.
         // Without it providers.ts mints its own and the hops orphan.
-        { userId: ctx.input.userId, action: "ai_chatbot", traceId, metadata: { model: ctx.targetModel, persona: ctx.input.personaId } }
+        // The head of the resolved chain is what actually serves the turn;
+        // ctx.targetModel is absent on an "auto" turn.
+        {
+          userId: ctx.input.userId,
+          action: "ai_chatbot",
+          traceId,
+          metadata: { model: ctx.chain[0]?.model ?? ctx.targetModel, persona: ctx.input.personaId },
+        }
       );
 
       const approvals = result.toolCalls
@@ -559,7 +633,7 @@ export async function executeAgent(
       action: "ai_chatbot",
       traceId,
       metadata: {
-        model: ctx.targetModel,
+        model: ctx.chain[0]?.model ?? ctx.targetModel,
         persona: ctx.input.personaId,
         messageCount: ctx.messagesArray.length,
       },
@@ -731,7 +805,7 @@ export async function executeChatPipeline(input: ChatPipelineInput): Promise<Res
     // Chain resolution (DB read + key decryption) and retrieval (local SQLite)
     // are independent — retrieval never reads `chain`. Overlap them.
     const [chain, retrieved] = await Promise.all([
-      resolveChainForModel(input.userId, base.targetModel, traceId),
+      resolveChainForModel(input.userId, base.targetModel, traceId, base.autoRule),
       retrieveChatContext({ ...base, chain: [] }, traceId),
     ]);
     chainLength = chain.length;

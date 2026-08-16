@@ -12,7 +12,7 @@ import { moduleLogger } from "@/lib/log";
 import { requestId } from "@/lib/log/request";
 import { logResourceActivity } from "./activity-log";
 import type { ProjectLink } from "@/lib/types/board";
-import type { JobState } from "@/lib/types/job";
+import type { JobState, JobTier } from "@/lib/types/job";
 
 const log = moduleLogger("actions.jobs");
 
@@ -57,6 +57,7 @@ export async function createJob(formData: FormData) {
   const milestoneName = formData.get("milestone_name") as string | null;
   const milestoneDate = formData.get("milestone_date") as string | null;
   const source = formData.get("source") as string | null;
+  const tier = (formData.get("tier") as string | null) || null;
   const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
   const notes = notesRaw ? JSON.parse(notesRaw) : [];
@@ -167,6 +168,7 @@ export async function createJob(formData: FormData) {
       section_deadline: sectionDeadline || null,
       section_deadline_list_id: sectionDeadlineListId || null,
       source: source || null,
+      tier: tier || null,
       // status is overwritten by the sync_job_status_from_list trigger whenever
       // list_id is set (migration 019). Kept for the no-board fallback path.
       status,
@@ -420,6 +422,10 @@ export async function updateJob(formData: FormData) {
   }
   if (formData.has("salary_period")) {
     updateData.salary_period = (formData.get("salary_period") as string | null) || null;
+  }
+  if (formData.has("tier")) {
+    const t = formData.get("tier") as string | null;
+    updateData.tier = t || null;
   }
 
   if (notes !== undefined) {
@@ -983,5 +989,27 @@ export async function updateJobState(
 
   revalidatePath("/board");
   revalidatePath("/jobs");
+  return { success: true };
+}
+
+export async function updateJobTier(
+  jobId: string,
+  tier: JobTier | null
+): Promise<{ success: boolean }> {
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ tier: tier || null, updated_at: new Date().toISOString() })
+    .eq("id", jobId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error("Failed to update job tier.");
+
+  void logResourceActivity(userId, "job.update", "job", jobId, { tier });
+
+  revalidatePath("/board");
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${jobId}`);
   return { success: true };
 }

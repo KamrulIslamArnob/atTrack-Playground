@@ -5,6 +5,7 @@ import { getUser } from "@/lib/auth";
 import { moduleLogger } from "@/lib/log";
 import { requestId } from "@/lib/log/request";
 import { logResourceActivity } from "./activity-log";
+import type { JobTier } from "@/lib/types/job";
 
 const log = moduleLogger("actions.companies");
 
@@ -43,6 +44,7 @@ export interface CrmCompany {
   website: string | null;
   location: string | null;
   color: string | null;
+  tier?: JobTier | null;
   job_count: number;
   contact_count: number;
 }
@@ -59,6 +61,18 @@ export async function updateCompanyColor(companyId: string, color: string | null
   revalidatePath("/crm");
 }
 
+export async function updateCompanyTier(companyId: string, tier: JobTier | null): Promise<void> {
+  const { supabase, userId } = await getUser();
+  const { error } = await supabase
+    .from("companies")
+    .update({ tier })
+    .eq("id", companyId)
+    .eq("user_id", userId);
+  if (error) throw new Error("Failed to update company tier.");
+  void logResourceActivity(userId, "company.update", "company", companyId, { fields: "tier" });
+  revalidatePath("/crm");
+}
+
 /**
  * Every job already resolves to a companies row by exact name match
  * (createJob's find-or-create), and every contact optionally carries the same
@@ -72,7 +86,7 @@ export async function getCrmCompanies(): Promise<CrmCompany[]> {
   const { supabase, userId } = await getUser();
 
   const [{ data: companies }, { data: jobs }, { data: contacts }] = await Promise.all([
-    supabase.from("companies").select("id, name, website, location, color").eq("user_id", userId).order("name", { ascending: true }),
+    supabase.from("companies").select("id, name, website, location, color, tier").eq("user_id", userId).order("name", { ascending: true }),
     supabase.from("jobs").select("company_id").eq("user_id", userId),
     supabase.from("contacts").select("company_id").eq("user_id", userId),
   ]);
@@ -92,6 +106,7 @@ export async function getCrmCompanies(): Promise<CrmCompany[]> {
     website: c.website ?? null,
     location: c.location ?? null,
     color: c.color ?? null,
+    tier: (c.tier as JobTier) ?? null,
     job_count: jobCounts.get(c.id) ?? 0,
     contact_count: contactCounts.get(c.id) ?? 0,
   }));
@@ -167,13 +182,15 @@ export async function updateCompanyDetails(
 
   const website = (formData.get("website") as string)?.trim() || null;
   const location = (formData.get("location") as string)?.trim() || null;
+  const tierRaw = formData.get("tier") as string | null;
+  const tier = tierRaw === "none" || !tierRaw ? null : tierRaw;
 
   const { data: updated, error } = await supabase
     .from("companies")
-    .update({ name, website, location })
+    .update({ name, website, location, tier })
     .eq("id", companyId)
     .eq("user_id", userId)
-    .select("id, name, website, location, color")
+    .select("id, name, website, location, color, tier")
     .single();
 
   if (error) throw new Error("Failed to update company.");
@@ -192,6 +209,7 @@ export async function updateCompanyDetails(
     website: updated.website,
     location: updated.location,
     color: updated.color,
+    tier: (updated.tier as JobTier) ?? null,
     job_count: jobCount ?? 0,
     contact_count: contactCount ?? 0,
   };

@@ -4,8 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import type { AIModel } from "@/lib/ai-chatbot/types";
 import { AI_MODELS } from "@/lib/ai-chatbot/sessions";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Sparkles, Zap, Eye, Brain, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { BrainIcon } from "@/components/ai-chatbot/brain-icon";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { CheckIcon } from "@/components/ui/check";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { EyeIcon } from "@/components/ui/eye";
+import { ZapIcon } from "@/components/ui/zap";
 
 interface ModelSelectorProps {
   selectedModelId: string;
@@ -45,13 +50,13 @@ export function ModelSelector({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted hover:text-foreground active:scale-[0.98]",
-          isOpen && "border-primary/30 bg-primary/5"
+          "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-95 cursor-pointer",
+          isOpen && "bg-muted text-foreground"
         )}
       >
-        <Sparkles className="size-3 text-primary" />
-        <span className="max-w-[100px] truncate">{selectedModel.name}</span>
-        <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+        <BrainIcon size={14} className="size-3.5 text-primary shrink-0" />
+        <span className="max-w-[140px] truncate text-xs">{selectedModel.name}</span>
+        <ChevronDownIcon size={12} className={cn("size-3 text-muted-foreground/70 transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
 
       <AnimatePresence>
@@ -60,69 +65,69 @@ export function ModelSelector({
             initial={{ opacity: 0, scale: 0.96, y: isDown ? -4 : 4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: isDown ? -4 : 4 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
             style={{ transformOrigin: isDown ? "top left" : "bottom left" }}
             className={cn(
-              "absolute z-50 w-72 rounded-xl border border-border/50 bg-popover/95 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md",
-              isDown ? "top-full left-0 mt-2 origin-top-left" : "bottom-full left-0 mb-2 origin-bottom-left"
+              "absolute z-50 w-64 max-w-[280px] rounded-xl border border-border bg-popover/95 p-1 shadow-md backdrop-blur-md",
+              isDown ? "top-full left-0 mt-1.5 origin-top-left" : "bottom-full left-0 mb-1.5 origin-bottom-left"
             )}
           >
-            {modelsList.map((model) => {
-              const isSelected = model.id === selectedModel.id;
+            <div className="flex flex-col gap-0.5 max-h-64 overflow-y-auto">
+              {modelsList.map((model) => {
+                const isSelected = model.id === selectedModel.id;
+                const hasUniqueBadge =
+                  model.badge &&
+                  model.badge.toLowerCase() !== model.name.toLowerCase() &&
+                  model.badge.toLowerCase() !== model.id.toLowerCase();
 
-              return (
-                <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => {
-                    onSelectModel(model);
-                    setIsOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-lg p-2.5 text-left transition-all duration-200",
-                    isSelected
-                      ? "bg-accent/60 text-foreground font-semibold shadow-xs"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                  )}
-                >
-                  <div
+                return (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectModel(model);
+                      setIsOpen(false);
+                    }}
                     className={cn(
-                      "flex size-6 shrink-0 items-center justify-center rounded-md transition-all",
-                      model.id === "auto" || model.provider === "auto"
-                        ? "bg-primary/15 text-primary shadow-xs"
-                        : model.supportsImages
-                        ? "bg-sky-500/15 text-sky-500 shadow-xs"
-                        : model.isReasoning
-                        ? "bg-purple-500/15 text-purple-500 shadow-xs"
-                        : "bg-muted text-muted-foreground shadow-xs"
+                      "group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors active:scale-95 cursor-pointer",
+                      isSelected
+                        ? "bg-muted text-foreground font-medium"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     )}
                   >
-                    {model.id === "auto" || model.provider === "auto" ? (
-                      <Sparkles className="size-3 text-primary" />
-                    ) : model.supportsImages ? (
-                      <Eye className="size-3" />
-                    ) : model.isReasoning ? (
-                      <Brain className="size-3" />
-                    ) : (
-                      <Zap className="size-3" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate text-xs font-medium text-foreground">{model.name}</span>
-                      {model.badge && (
-                        <span className="rounded-full bg-primary/10 px-1.5 py-0.2 text-[9px] font-semibold text-primary">
-                          {model.badge}
-                        </span>
+                    <div className="shrink-0">
+                      {model.id === "auto" || model.provider === "auto" ? (
+                        <SparklesIcon size={14} className="size-3.5 text-primary" />
+                      ) : model.supportsImages ? (
+                        <EyeIcon size={14} className="size-3.5 text-muted-foreground group-hover:text-foreground" />
+                      ) : model.isReasoning ? (
+                        <BrainIcon size={14} className="size-3.5 text-muted-foreground group-hover:text-foreground" />
+                      ) : (
+                        <ZapIcon size={14} className="size-3.5 text-muted-foreground group-hover:text-foreground" />
                       )}
-                      {isSelected && <Check className="size-3 shrink-0 text-primary ml-auto" />}
                     </div>
-                    <p className="truncate text-[10px] text-muted-foreground/80">{model.description}</p>
-                  </div>
-                </button>
-              );
-            })}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-xs font-medium text-foreground">{model.name}</span>
+                        {hasUniqueBadge && (
+                          <span className="rounded-full bg-primary/10 px-1.5 py-0.2 text-[9.5px] font-medium text-primary">
+                            {model.badge}
+                          </span>
+                        )}
+                      </div>
+                      {model.description && (
+                        <p className="truncate text-[10.5px] text-muted-foreground">
+                          {model.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {isSelected && <CheckIcon size={14} className="size-3.5 shrink-0 text-primary ml-1" />}
+                  </button>
+                );
+              })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

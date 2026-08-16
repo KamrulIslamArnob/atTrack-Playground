@@ -34,10 +34,11 @@ export default async function DashboardLayout({
       <DashboardHeader user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} role={profile?.role} showRawDatabase={Boolean(profile?.show_raw_database)} />
 
       <div className="flex flex-1 w-full overflow-hidden pt-3 md:pt-0 gap-3 md:gap-0 min-h-0 min-w-0">
-        <div className="hidden md:block shrink-0 h-full">
+        <div className="hidden md:block shrink-0 h-full relative z-30">
           <Sidebar user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} role={profile?.role} showRawDatabase={Boolean(profile?.show_raw_database)} resizable />
         </div>
 
+        {/* Main Viewing Area */}
         <div className="flex flex-1 flex-col overflow-hidden w-full h-full min-w-0 min-h-0 rounded-2xl border border-border bg-card md:rounded-none md:border-0">
           <DashboardMainContent>{children}</DashboardMainContent>
         </div>

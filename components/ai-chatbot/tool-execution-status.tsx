@@ -3,17 +3,11 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  ChevronDown,
-  Check,
-  Loader2,
-  Sparkles,
-  FileText,
-  Briefcase,
-  Code2,
-  Database,
-  Search,
-  AlertCircle,
-} from "lucide-react";
+  ChevronDown, Loader2, Briefcase, Code2, Database, AlertCircle } from "lucide-react";
+import { CheckIcon } from "@/components/ui/check";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { SearchIcon } from "@/components/ui/search";
 import { useReducedMotion } from "motion/react";
 
 export interface ToolExecutionStep {
@@ -185,7 +179,7 @@ export function ToolExecutionStatus({
         {isRunning ? (
           <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
         ) : (
-          <Sparkles className="size-3.5 shrink-0 text-muted-foreground/70" />
+          <SparklesIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
         )}
 
         <span
@@ -380,16 +374,16 @@ function StepIcon({
 
   switch (iconType) {
     case "resume":
-      return <FileText className={cn(base, "text-muted-foreground")} />;
+      return <FileTextIcon className={cn(base, "text-muted-foreground")} />;
     case "job":
       return <Briefcase className={cn(base, "text-muted-foreground")} />;
     case "github":
       return <Code2 className={cn(base, "text-muted-foreground")} />;
     case "search":
-      return <Search className={cn(base, "text-muted-foreground")} />;
+      return <SearchIcon className={cn(base, "text-muted-foreground")} />;
     case "database":
       return <Database className={cn(base, "text-muted-foreground")} />;
     default:
-      return <Check className={cn(base, "text-muted-foreground")} />;
+      return <CheckIcon className={cn(base, "text-muted-foreground")} />;
   }
 }

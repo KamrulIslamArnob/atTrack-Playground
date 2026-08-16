@@ -1,6 +1,8 @@
 "use client";
 
-import { Users, Folder, FileText } from "lucide-react";
+import { Folder } from "lucide-react";
+import { UsersIcon } from "@/components/ui/users";
+import { FileTextIcon } from "@/components/ui/file-text";
 import { ContactsTab } from "@/components/job-detail/tabs/contacts-tab";
 import { DocumentsTab } from "@/components/job-detail/tabs/documents-tab";
 import { NotesTab } from "@/components/job-detail/tabs/notes-tab";
@@ -21,7 +23,7 @@ export function NetworkTab({ data, onRefresh }: NetworkTabProps) {
     <div className="space-y-6">
       <section className="space-y-3">
         <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/90">
-          <Users className="size-3.5 text-indigo-500" /> Contacts
+          <UsersIcon className="size-3.5 text-indigo-500" /> Contacts
         </h3>
         <ContactsTab data={data} onRefresh={onRefresh} />
       </section>
@@ -35,7 +37,7 @@ export function NetworkTab({ data, onRefresh }: NetworkTabProps) {
 
       <section className="space-y-3 border-t border-border/60 pt-6">
         <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/90">
-          <FileText className="size-3.5 text-sky-500" /> Notes
+          <FileTextIcon className="size-3.5 text-sky-500" /> Notes
         </h3>
         <NotesTab data={data} onRefresh={onRefresh} />
       </section>

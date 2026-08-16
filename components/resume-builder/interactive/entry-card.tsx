@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { GripVertical, ChevronUp, ChevronDown, Trash2, Plus } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
+import { ChevronUpIcon } from "@/components/ui/chevron-up";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { cn } from "@/lib/utils";
 
 interface EntryCardProps {
@@ -114,7 +117,7 @@ export function EntryCard({
           onClick={onMoveUp}
           className="inline-flex items-center justify-center size-6 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <ChevronUp className="size-3.5 text-muted-foreground" />
+          <ChevronUpIcon className="size-3.5 text-muted-foreground" />
         </button>
         <button
           type="button"
@@ -123,7 +126,7 @@ export function EntryCard({
           onClick={onMoveDown}
           className="inline-flex items-center justify-center size-6 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <ChevronDown className="size-3.5 text-muted-foreground" />
+          <ChevronDownIcon className="size-3.5 text-muted-foreground" />
         </button>
         {onAddAfter && (
           <button
@@ -132,7 +135,7 @@ export function EntryCard({
             onClick={onAddAfter}
             className="inline-flex items-center justify-center size-6 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <Plus className="size-3.5 text-muted-foreground" />
+            <PlusIcon className="size-3.5 text-muted-foreground" />
           </button>
         )}
         <button

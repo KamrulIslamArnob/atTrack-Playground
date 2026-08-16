@@ -5,15 +5,13 @@ import type { ChatPersona } from "@/lib/ai-chatbot/types";
 import { CHAT_PERSONAS } from "@/lib/ai-chatbot/sessions";
 import { cn } from "@/lib/utils";
 import {
-  Bot,
-  FileText,
-  UserCheck,
-  Send,
-  Code2,
-  ChevronDown,
-  Check,
-  Sparkles,
-} from "lucide-react";
+  Bot, Code2 } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { UserCheckIcon } from "@/components/ui/user-check";
+import { SendIcon } from "@/components/ui/send";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { CheckIcon } from "@/components/ui/check";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { motion, AnimatePresence } from "motion/react";
 
 interface PersonaSelectorProps {
@@ -25,9 +23,9 @@ interface PersonaSelectorProps {
 
 const PERSONA_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   general: Bot,
-  ats_coach: FileText,
-  interviewer: UserCheck,
-  outreach: Send,
+  ats_coach: FileTextIcon,
+  interviewer: UserCheckIcon,
+  outreach: SendIcon,
   code_architect: Code2,
 };
 
@@ -63,9 +61,9 @@ export function PersonaSelector({
         )}
         title="Switch assistant persona"
       >
-        <Sparkles className="size-3 text-primary" />
+        <SparklesIcon className="size-3 text-primary" />
         <span className="max-w-[120px] truncate">{selected.name}</span>
-        <ChevronDown
+        <ChevronDownIcon
           className={cn("size-3 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")}
         />
       </button>
@@ -79,7 +77,7 @@ export function PersonaSelector({
             transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
             style={{ transformOrigin: isDown ? "top left" : "bottom left" }}
             className={cn(
-              "absolute z-50 w-80 rounded-xl border border-border/50 bg-popover/95 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md",
+              "absolute z-50 w-80 rounded-xl border border-border/50 bg-popover/95 p-1.5 shadow-e3 backdrop-blur-md",
               isDown ? "top-full left-0 mt-2 origin-top-left" : "bottom-full left-0 mb-2 origin-bottom-left"
             )}
           >
@@ -101,7 +99,7 @@ export function PersonaSelector({
                   className={cn(
                     "flex w-full items-start gap-2.5 rounded-lg p-2.5 text-left transition-all duration-200 active:scale-[0.98]",
                     isSelected
-                      ? "bg-accent/60 text-foreground font-semibold shadow-xs"
+                      ? "bg-accent/60 text-foreground font-semibold"
                       : "hover:bg-accent/50"
                   )}
                 >
@@ -119,7 +117,7 @@ export function PersonaSelector({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-medium text-foreground">{persona.name}</span>
-                      {isSelected && <Check className="size-3 shrink-0 text-primary" />}
+                      {isSelected && <CheckIcon className="size-3 shrink-0 text-primary" />}
                     </div>
                     <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground/80">
                       {persona.description}

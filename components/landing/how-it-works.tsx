@@ -3,12 +3,9 @@
 import { Fragment } from "react";
 import { motion } from "motion/react";
 import {
-  Camera,
-  Send,
-  Calendar,
-  CheckCircle2,
-  ArrowRight,
-} from "lucide-react";
+  Camera, Calendar, CheckCircle2 } from "lucide-react";
+import { SendIcon } from "@/components/ui/send";
+import { ArrowRightIcon } from "@/components/ui/arrow-right";
 import { cn } from "@/lib/utils";
 import {
   staggerContainer,
@@ -31,7 +28,7 @@ const steps = [
     title: "Apply to it",
     description:
       "atTrack drafts an application email using your resume and the job details. You edit it, attach your resume, and send it from your own email address.",
-    icon: Send,
+    icon: SendIcon,
     color: "text-violet-500",
     bg: "bg-violet-500/10",
   },
@@ -127,7 +124,7 @@ export function HowItWorks() {
                   {stage}
                 </span>
                 {i < pipeline.length - 1 && (
-                  <ArrowRight className="size-3.5 text-muted-foreground/40" />
+                  <ArrowRightIcon className="size-3.5 text-muted-foreground/40" />
                 )}
               </Fragment>
             ))}

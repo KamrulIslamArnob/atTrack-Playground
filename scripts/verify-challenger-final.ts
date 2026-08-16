@@ -14,7 +14,8 @@ import {
   buildGroundedContext,
   assembleGroundedSystemPrompt,
 } from "../lib/ai-chatbot/grounded-context";
-import { assembleChatSystemPrompt } from "../lib/ai-chatbot/prompt";
+import { assembleChatSystemPrompt, LOCAL_DB_BLOCK_HEADER } from "../lib/ai-chatbot/prompt";
+import { AI_MODELS } from "../lib/ai-chatbot/sessions";
 import { registerAgent, getAgent } from "../lib/ai/agents/registry";
 import { getTool, TOOL_REGISTRY } from "../lib/ai/tools/registry";
 import type { AgentDefinition } from "../lib/ai/agents/types";
@@ -126,11 +127,12 @@ async function main() {
         webSearchActive: true,
       });
 
-      // Verify base prompt contains exactly 1 occurrence of directives
-      const webMatchesBase = baseSystemPrompt.match(/--- WEB SEARCH ACTIVE ---/g);
-      const dbMatchesBase = baseSystemPrompt.match(/--- LOCAL SQLITE TABLES ---/g);
-      assert(webMatchesBase?.length === 1, "Base prompt has 1 web search directive block");
-      assert(dbMatchesBase?.length === 1, "Base prompt has 1 sqlite directive block");
+      // Verify base prompt contains exactly 1 occurrence of directives.
+      // The database marker is imported, not re-spelled: this assertion is
+      // about the block appearing once, not about how it is worded.
+      const countOf = (haystack: string, marker: string) => haystack.split(marker).length - 1;
+      assert(countOf(baseSystemPrompt, "--- WEB SEARCH ACTIVE ---") === 1, "Base prompt has 1 web search directive block");
+      assert(countOf(baseSystemPrompt, LOCAL_DB_BLOCK_HEADER) === 1, "Base prompt has 1 database directive block");
 
       const mockDocs: RetrievedDoc[] = [
         {
@@ -151,15 +153,15 @@ async function main() {
       });
 
       // Verify grounded prompt did NOT duplicate directives
-      const webMatchesGrounded = groundedPrompt.match(/--- WEB SEARCH ACTIVE ---/g);
-      const dbMatchesGrounded = groundedPrompt.match(/--- LOCAL SQLITE TABLES ---/g);
+      const webMatchesGrounded = countOf(groundedPrompt, "--- WEB SEARCH ACTIVE ---");
+      const dbMatchesGrounded = countOf(groundedPrompt, LOCAL_DB_BLOCK_HEADER);
       assert(
-        webMatchesGrounded?.length === 1,
-        `Expected exactly 1 web search directive block in grounded prompt, got ${webMatchesGrounded?.length}`
+        webMatchesGrounded === 1,
+        `Expected exactly 1 web search directive block in grounded prompt, got ${webMatchesGrounded}`
       );
       assert(
-        dbMatchesGrounded?.length === 1,
-        `Expected exactly 1 sqlite directive block in grounded prompt, got ${dbMatchesGrounded?.length}`
+        dbMatchesGrounded === 1,
+        `Expected exactly 1 database directive block in grounded prompt, got ${dbMatchesGrounded}`
       );
 
       // Verify accuracy rules are present
@@ -416,6 +418,47 @@ async function main() {
       assert(selectProviderForModel([mk("a", "gemini", "m")], "nope")[0].model === "m", "Unknown id leaves chain intact");
       assert(selectProviderForModel([], "gpt-4o").length === 0, "Empty chain is safe");
       assert(selectProviderForModel([mk("a", "gemini", "m")], undefined)[0].id === "a", "No target is a no-op");
+
+      // Regression: the picker lists EVERY configured provider, but the chain
+      // only ever held the ones the "text" task route names. Picking an
+      // off-route model used to fall through to "unchanged", so chain[0]
+      // answered every turn under the wrong model's name.
+      const routed = [mk("longcat", "openai_compatible", "LongCat-2.0")];
+      const owned = [mk("longcat", "openai_compatible", "LongCat-2.0"), mk("gem", "gemini", "models/gemini-3.6-flash")];
+      const r5 = selectProviderForModel([...routed], "models/gemini-3.6-flash", undefined, { owned });
+      assert(r5[0].id === "gem", "Off-route explicit pick is adopted at the head of the chain");
+      assert(r5[1]?.id === "longcat", "Task route stays behind the adopted provider as fallback");
+
+      // "auto" resolves against the user's real providers, not a hardcoded
+      // vendor id. Longcat heads the route but cannot take images.
+      const r6 = selectProviderForModel([...routed], undefined, undefined, { owned, autoRule: "images" });
+      assert(r6[0].id === "gem", "Auto/images picks a vision-capable provider the user actually has");
+
+      const r7 = selectProviderForModel([...routed], undefined, undefined, { owned, autoRule: "default" });
+      assert(r7[0].id === "longcat", "Auto/default leaves the user's own chain order alone");
+
+      const reasoners = [mk("longcat", "openai_compatible", "LongCat-2.0"), mk("ds", "openai_compatible", "deepseek-reasoner")];
+      const r8 = selectProviderForModel([...reasoners], undefined, undefined, { owned: reasoners, autoRule: "reasoning" });
+      assert(r8[0].id === "ds", "Auto/reasoning prefers a reasoning model over the chain head");
+
+      const r9 = selectProviderForModel([...routed], undefined, undefined, { owned: routed, autoRule: "reasoning" });
+      assert(r9[0].id === "longcat", "Auto with no capable provider falls back to the chain head");
+    }
+  );
+
+  await runTest(
+    "The model picker offers no model that is not a configured provider",
+    "Item 7: Model Catalog",
+    () => {
+      // AI_MODELS seeds the picker and is its fallback when the provider fetch
+      // has not landed or returns nothing. It used to also carry a hardcoded
+      // vendor catalog, so a workspace without those vendors was offered five
+      // models it had no key for; picking one silently landed the turn on the
+      // head of the fallback chain instead. "auto" is the only legitimate
+      // entry — it names a capability the server resolves against the user's
+      // own ai_providers rows.
+      assert(AI_MODELS.length === 1, "AI_MODELS carries exactly one non-provider option");
+      assert(AI_MODELS[0].id === "auto", "That option is auto, resolved server-side over owned providers");
     }
   );
 

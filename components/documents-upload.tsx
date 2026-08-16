@@ -9,13 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Upload, X, FileText, Check } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Upload } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { CheckIcon } from "@/components/ui/check";
 
 interface DocumentsUploadProps {
   open: boolean;
@@ -123,7 +121,7 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
             onClick={handleClose}
             className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <X className="size-4" />
+            <XIcon className="size-4" />
           </button>
         </div>
 
@@ -144,7 +142,7 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
             />
             {file ? (
               <div className="flex items-center gap-3 rounded-2xl border border-border p-3">
-                <FileText className="size-8 text-muted-foreground" />
+                <FileTextIcon className="size-8 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -156,7 +154,7 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
                   onClick={() => setFile(null)}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <X className="size-4" />
+                  <XIcon className="size-4" />
                 </button>
               </div>
             ) : (
@@ -212,7 +210,7 @@ export function DocumentsUpload({ open, onOpenChange }: DocumentsUploadProps) {
                     : "border-border bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {isDefault && <Check className="size-3" />}
+                {isDefault && <CheckIcon className="size-3" />}
               </button>
               <div>
                 <p className="text-sm font-medium">Set as default resume</p>

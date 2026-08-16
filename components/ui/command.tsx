@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Search, X } from "lucide-react";
 
 interface CommandContextValue {
   value: string;
@@ -34,7 +35,7 @@ const Command = React.forwardRef<HTMLDivElement, CommandProps>(
         <div
           ref={ref}
           className={cn(
-            "flex w-full flex-col overflow-hidden rounded-4xl border border-border bg-card text-card-foreground",
+            "flex w-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card text-card-foreground shadow-2xl shadow-black/15",
             className
           )}
           {...props}
@@ -45,39 +46,38 @@ const Command = React.forwardRef<HTMLDivElement, CommandProps>(
 );
 Command.displayName = "Command";
 
-type CommandInputProps = React.InputHTMLAttributes<HTMLInputElement>;
+interface CommandInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  onClear?: () => void;
+  isLoading?: boolean;
+}
 
 const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps>(
-  ({ className, ...props }, ref) => {
+  ({ className, onClear, isLoading, ...props }, ref) => {
     const { value, onValueChange } = useCommand();
 
     return (
-      <div className="flex items-center border-b border-border px-4">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 size-4 shrink-0 opacity-50"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
+      <div className="flex items-center border-b border-border/70 px-4 py-1">
+        <Search className="mr-3 size-4.5 shrink-0 text-muted-foreground/70" />
         <input
           ref={ref}
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           className={cn(
-            "flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-12 w-full bg-transparent py-3 text-sm font-normal text-foreground outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
           {...props}
         />
+        {value && onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-colors"
+            title="Clear search"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
       </div>
     );
   }
@@ -90,7 +90,7 @@ const CommandList = React.forwardRef<HTMLDivElement, CommandListProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("max-h-[200px] overflow-y-auto overflow-x-hidden py-1", className)}
+      className={cn("max-h-[380px] overflow-y-auto overflow-x-hidden p-1.5 scrollbar-minimal", className)}
       {...props}
     />
   )
@@ -100,10 +100,10 @@ CommandList.displayName = "CommandList";
 type CommandEmptyProps = React.HTMLAttributes<HTMLDivElement>;
 
 const CommandEmpty = React.forwardRef<HTMLDivElement, CommandEmptyProps>(
-  (props, ref) => (
+  ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className="py-6 text-center text-sm text-muted-foreground"
+      className={cn("py-8 text-center text-sm text-muted-foreground", className)}
       {...props}
     />
   )
@@ -119,17 +119,17 @@ const CommandGroup = React.forwardRef<HTMLDivElement, CommandGroupProps>(
     <div
       ref={ref}
       className={cn(
-        "overflow-hidden p-1 text-foreground",
+        "overflow-hidden py-1 text-foreground",
         className
       )}
       {...props}
     >
       {heading && (
-        <div className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+        <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
           {heading}
         </div>
       )}
-      {children}
+      <div className="space-y-0.5">{children}</div>
     </div>
   )
 );
@@ -138,20 +138,22 @@ CommandGroup.displayName = "CommandGroup";
 interface CommandItemProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> {
   value?: string;
   onItemSelect?: (value: string) => void;
+  isActive?: boolean;
 }
 
 const CommandItem = React.forwardRef<HTMLDivElement, CommandItemProps>(
-  ({ className, value: itemValue, onItemSelect, ...props }, ref) => {
+  ({ className, value: itemValue, onItemSelect, isActive, ...props }, ref) => {
     const { value } = useCommand();
-    const isSelected = value === itemValue;
+    const isSelected = isActive || value === itemValue;
 
     return (
       <div
         ref={ref}
         className={cn(
-          "relative flex cursor-pointer select-none items-center rounded-4xl px-3 py-2 text-sm outline-none transition-colors",
-          isSelected && "bg-primary/10 text-primary",
-          "hover:bg-muted hover:text-foreground",
+          "group relative flex cursor-pointer select-none items-center rounded-xl px-2.5 py-2 text-sm outline-none transition-all duration-150",
+          isSelected
+            ? "bg-accent text-accent-foreground font-medium shadow-2xs"
+            : "text-foreground hover:bg-muted/70",
           className
         )}
         onClick={() => onItemSelect?.(itemValue ?? "")}
@@ -168,7 +170,7 @@ const CommandSeparator = React.forwardRef<HTMLDivElement, CommandSeparatorProps>
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("-mx-1 h-px bg-border", className)}
+      className={cn("my-1.5 h-px bg-border/60", className)}
       {...props}
     />
   )

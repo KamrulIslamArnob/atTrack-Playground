@@ -8,20 +8,13 @@ import { parseNoteMentions } from "@/lib/mentions";
 import { getContactAvatarColorClass, getTagColorClass, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Building2,
-  Check,
-  Copy,
-  Globe,
-  Link2,
-  Mail,
-  Palette,
-  Pencil,
-  Phone,
-  Plus,
-  Video,
-  AtSign,
-  X,
-} from "lucide-react";
+  Building2, Globe, Mail, Palette, Pencil, Video, AtSign } from "lucide-react";
+import { CheckIcon } from "@/components/ui/check";
+import { CopyIcon } from "@/components/ui/copy";
+import { Link2Icon } from "@/components/ui/link-2";
+import { PhoneIcon } from "@/components/ui/phone";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { XIcon } from "@/components/ui/x";
 
 export interface SocialLinkItem {
   platform: string;
@@ -60,7 +53,7 @@ function SocialIcon({ platform }: { platform: string }) {
   if (p === "website" || p === "portfolio") return <Globe className="size-3.5" />;
   if (p === "dribbble") return <Palette className="size-3.5" />;
   if (p === "youtube") return <Video className="size-3.5" />;
-  return <Link2 className="size-3.5" />;
+  return <Link2Icon className="size-3.5" />;
 }
 
 export function ContactCard({
@@ -219,7 +212,7 @@ export function ContactCard({
               <Badge
                 key={tag}
                 className={cn(
-                  "border font-medium text-[10px] px-1.5 py-0.2 rounded-full",
+                  "border font-medium text-[10px] px-1.5 py-0.5 rounded-full tabular-nums",
                   getTagColorClass(tag)
                 )}
               >
@@ -302,7 +295,7 @@ export function ContactCard({
             onClick={() => setEditingNote(true)}
             className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
           >
-            <Plus className="size-3" />
+            <PlusIcon className="size-3" />
             <span>Add note...</span>
           </button>
         )}
@@ -318,7 +311,7 @@ export function ContactCard({
                 className="flex items-center gap-1 truncate max-w-[120px]"
                 title={contact.phone}
               >
-                <Phone className="size-3 text-muted-foreground/70" />
+                <PhoneIcon className="size-3 text-muted-foreground/70" />
                 <span className="truncate">{contact.phone}</span>
               </a>
               <button
@@ -328,9 +321,9 @@ export function ContactCard({
                 title="Copy phone"
               >
                 {copiedField === "phone" ? (
-                  <Check className="size-2.5 text-success" />
+                  <CheckIcon className="size-2.5 text-success" />
                 ) : (
-                  <Copy className="size-2.5" />
+                  <CopyIcon className="size-2.5" />
                 )}
               </button>
             </div>
@@ -353,9 +346,9 @@ export function ContactCard({
                 title="Copy email"
               >
                 {copiedField === "email" ? (
-                  <Check className="size-2.5 text-success" />
+                  <CheckIcon className="size-2.5 text-success" />
                 ) : (
-                  <Copy className="size-2.5" />
+                  <CopyIcon className="size-2.5" />
                 )}
               </button>
             </div>
@@ -365,5 +358,3 @@ export function ContactCard({
     </div>
   );
 }
-
-

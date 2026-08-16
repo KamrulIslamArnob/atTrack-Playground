@@ -9,7 +9,7 @@
  * 6. SSE Event Frame parsing & live streaming state accumulation
  */
 
-import { assembleChatSystemPrompt } from "../lib/ai-chatbot/prompt";
+import { assembleChatSystemPrompt, LOCAL_DB_BLOCK_HEADER } from "../lib/ai-chatbot/prompt";
 import { CHAT_PERSONAS } from "../lib/ai-chatbot/sessions";
 import { buildChatContextBase, selectProviderForModel, type ChatPipelineInput } from "../lib/ai-chatbot/pipeline";
 import type { ChatMessage, ToolExecutionStep } from "../lib/ai-chatbot/use-chat";
@@ -559,8 +559,8 @@ Here is your job application status:`;
       "System prompt does NOT forbid or ban <think> tags"
     );
     assert(
-      prompt.includes("--- LOCAL SQLITE TABLES ---"),
-      "System prompt includes local SQLite database instructions"
+      prompt.includes(LOCAL_DB_BLOCK_HEADER),
+      "System prompt includes the local database access block"
     );
     assert(
       prompt.includes("--- WORKSPACE CONTEXT ---"),
@@ -586,8 +586,11 @@ Here is your job application status:`;
       ],
       model: "auto",
     };
+    // "auto" now names a capability, not a vendor id — which provider serves it
+    // is decided in stage 1b against the user's real providers.
     const baseImages = buildChatContextBase(baseImagesInput);
-    assert(baseImages.targetModel === "gemini-2.0-flash", "Auto hybrid routes images to gemini-2.0-flash");
+    assert(baseImages.autoRule === "images", "Auto hybrid classifies an image turn as the images rule");
+    assert(baseImages.targetModel === undefined, "Auto hybrid names no model id in the pure stage");
 
     const baseCodeInput: ChatPipelineInput = {
       userId: "u1",
@@ -596,7 +599,7 @@ Here is your job application status:`;
       model: "auto",
     };
     const baseCode = buildChatContextBase(baseCodeInput);
-    assert(baseCode.targetModel === "claude-3-5-sonnet", "Auto hybrid routes code questions to claude-3-5-sonnet");
+    assert(baseCode.autoRule === "code", "Auto hybrid classifies a code turn as the code rule");
 
     const baseReasoningInput: ChatPipelineInput = {
       userId: "u1",
@@ -605,7 +608,7 @@ Here is your job application status:`;
       model: "auto",
     };
     const baseReasoning = buildChatContextBase(baseReasoningInput);
-    assert(baseReasoning.targetModel === "deepseek-r1", "Auto hybrid routes deep thinking to deepseek-r1");
+    assert(baseReasoning.autoRule === "reasoning", "Auto hybrid classifies a deep-thinking turn as the reasoning rule");
 
     const explicitModelInput: ChatPipelineInput = {
       userId: "u1",
@@ -615,6 +618,7 @@ Here is your job application status:`;
     };
     const explicitModel = buildChatContextBase(explicitModelInput);
     assert(explicitModel.targetModel === "gpt-4o", "Explicit model is respected without override");
+    assert(explicitModel.autoRule === undefined, "Explicit model runs no auto rule");
   }
 
   // 4.3 selectProviderForModel Provider Fallback Chain Reordering

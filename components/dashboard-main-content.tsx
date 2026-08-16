@@ -22,8 +22,8 @@ export function DashboardMainContent({
   }
 
   return (
-    <main className="flex-1 overflow-y-auto">
-      <div className="px-6 py-8">{children}</div>
+    <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
+      <div className="px-6 py-8 flex-1 flex flex-col min-h-full">{children}</div>
     </main>
   );
 }

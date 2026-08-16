@@ -8,6 +8,7 @@ import {
   type ChatSession,
   readCache,
   writeCache,
+  normalizeSessionMessages,
   fetchSessions,
   persistSession,
   deleteSessionRemote,
@@ -30,12 +31,13 @@ import {
   type WorkspaceContext,
   type WorkspaceSnapshot,
 } from "@/lib/ai-chatbot/workspace";
-import { MINI_SCENARIOS } from "@/lib/ai-chatbot/scenarios";
-import type { ContextSource, MiniScenario } from "@/lib/ai-chatbot/types";
+import type { ContextSource } from "@/lib/ai-chatbot/types";
 import { getCustomSources, setSourceConfig, buildSourcePayload } from "@/lib/ai-chatbot/source-permissions";
-import { useAtTrackChat, type ChatMessage, type DbApproval } from "@/lib/ai-chatbot/use-chat";
+import type { ChatMessage, DbApproval } from "@/lib/ai-chatbot/use-chat";
 import DbDeleteApprovalCard from "@/components/ai-chatbot/db-delete-approval-card";
+import { useChatQueue } from "@/lib/ai-chatbot/chat-queue-context";
 import { listProviders, hasAnyProviderConfigured } from "@/lib/actions/ai-providers";
+import { modelSupportsImages, isReasoningModel } from "@/lib/ai/model-capabilities";
 import { executeLocalSqlQuery, type SqlQueryResult } from "@/lib/actions/database-query";
 import { TopNavigation } from "@/components/ai-chatbot/top-navigation";
 import { WorkspaceConnectionDrawer } from "@/components/ai-chatbot/workspace-connection-drawer";
@@ -47,6 +49,9 @@ import { Thread } from "@/components/assistant-ui/thread";
 import {
   AssistantRuntimeProvider,
   useExternalStoreRuntime,
+  CompositeAttachmentAdapter,
+  SimpleImageAttachmentAdapter,
+  SimpleTextAttachmentAdapter,
   type ThreadMessageLike,
 } from "@assistant-ui/react";
 import { toast } from "sonner";
@@ -65,9 +70,6 @@ export default function AIChatbotPage() {
   const [isWebSearchActive, setIsWebSearchActive] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [providerConfigured, setProviderConfigured] = useState(true);
-  // A pending DELETE awaiting the user's Allow/Deny. Set when the server emits
-  // an `approval` frame; cleared once the user decides.
-  const [activeApproval, setActiveApproval] = useState<DbApproval | null>(null);
   // Per-chat connected source ids, kept as its own state (seeded from the
   // active session) so `sessions` isn't read during render for the request body
   // — that avoids a React Compiler manual-memoization skip on this component.
@@ -83,31 +85,89 @@ export default function AIChatbotPage() {
   const systemPersonaPrompt = workspaceAwarePrompt(defaultPersona.systemPrompt, defaultPersona, workspaceCtx);
   const workspaceContextBlock = buildWorkspaceContextBlock(workspace, sources);
 
+  const [input, setInput] = useState("");
   const {
-    messages,
-    input,
-    setInput,
-    handleInputChange,
-    handleSubmit,
-    sendMessage,
-    sendBackgroundQuery,
-    sendApproval,
-    isLoading,
-    stop,
-    setMessages,
-    reload,
-  } = useAtTrackChat({
-    api: "/api/chat",
-    buildBody: () => {
+    enqueueChat,
+    cancelChat,
+    activeStreams,
+    isSessionStreaming,
+    resolveApproval,
+  } = useChatQueue();
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  }, []);
+
+  const isStreamingNow = Boolean(
+    activeSessionId &&
+      (activeStreams[activeSessionId]?.status === "streaming" ||
+        activeStreams[activeSessionId]?.status === "paused_approval")
+  );
+  const isLoading = isStreamingNow;
+  const currentStream = activeSessionId ? activeStreams[activeSessionId] : undefined;
+
+  // Derive messages from active session + live stream overlay
+  const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const rawMessages = normalizeSessionMessages(activeSession?.messages ?? []);
+
+  const messages: ChatMessage[] = useMemo(() => {
+    const list: ChatMessage[] = rawMessages.map((m) => ({
+      id: m.id,
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content || "",
+      createdAt: m.createdAt,
+      experimental_attachments: m.experimental_attachments,
+      feedback: m.feedback ?? null,
+      thinking: m.thinking,
+      sources: m.sources,
+      toolSteps: m.toolSteps,
+      status: "delivered",
+    }));
+
+    if (isStreamingNow && currentStream) {
+      const lastMsg = list[list.length - 1];
+      const needsStreamingBubble = !lastMsg || lastMsg.role === "user";
+
+      if (needsStreamingBubble) {
+        list.push({
+          id: `live-${activeSessionId}`,
+          role: "assistant",
+          content: currentStream.streamText || "",
+          thinking: currentStream.thinking,
+          sources: currentStream.sources,
+          toolSteps: currentStream.toolSteps,
+          status: "sending",
+          createdAt: new Date().toISOString(),
+        });
+      } else if (lastMsg && lastMsg.role === "assistant") {
+        list[list.length - 1] = {
+          ...lastMsg,
+          content: currentStream.streamText || lastMsg.content,
+          thinking: currentStream.thinking || lastMsg.thinking,
+          sources: currentStream.sources.length > 0 ? currentStream.sources : lastMsg.sources,
+          toolSteps: currentStream.toolSteps.length > 0 ? currentStream.toolSteps : lastMsg.toolSteps,
+          status: "sending",
+        };
+      }
+    }
+
+    return list;
+  }, [rawMessages, isStreamingNow, currentStream, activeSessionId]);
+
+  const sendMessage = useCallback(
+    async (text: string, attachments?: { url: string; contentType?: string }[]) => {
+      const currentId = activeSessionId;
+      const value = text.trim();
+      const hasAttachments = Boolean(attachments && attachments.length > 0);
+      if (!currentId || (!value && !hasAttachments)) return;
+
       const { sourceConfig } = buildSourcePayload(sources);
-      // If the active chat has an explicit connected-set, use it. Legacy chats
-      // (created before per-chat workspaces existed) have none — fall back to
-      // the global enabled sources so they don't silently lose retrieval/tools.
       const enabled =
         activeConnectedIds.length > 0
           ? activeConnectedIds
           : sources.filter((s) => s.enabled).map((s) => s.id);
-      return {
+
+      const bodyPayload = {
         model: selectedModel.id,
         persona: defaultPersona.id,
         personaPrompt: systemPersonaPrompt,
@@ -116,121 +176,148 @@ export default function AIChatbotPage() {
         enabledSources: enabled,
         sourceConfig,
       };
-    },
-    onError: (error) => {
-      console.error("Chat error:", error);
-      toast.error(error.message || "Failed to generate AI response.");
-    },
 
-    onApproval: (approval) => {
-      // A DELETE needs the user's sign-off before it can run. Surface it as a
-      // pending card in the UI; cleared once the user allows or denies.
-      setActiveApproval(approval);
+      await enqueueChat(currentId, value, attachments, bodyPayload);
     },
-    onSources: (srcs) => {
-      // Feed real retrieved sources into the latest assistant message so the
-      // SourcesUsedChip renders actual workspace data, not the fallback list.
-      setMessages((prev) => {
-        const idx = [...prev].reverse().findIndex((m) => m.role === "assistant");
-        if (idx === -1) return prev;
-        const realIdx = prev.length - 1 - idx;
-        return prev.map((m, i) => (i === realIdx ? { ...m, sources: srcs } : m));
-      });
+    [
+      activeSessionId,
+      sources,
+      activeConnectedIds,
+      selectedModel.id,
+      defaultPersona.id,
+      systemPersonaPrompt,
+      workspaceContextBlock,
+      isWebSearchActive,
+      enqueueChat,
+    ]
+  );
+
+  const stop = useCallback(() => {
+    if (activeSessionId) {
+      cancelChat(activeSessionId);
+    }
+  }, [activeSessionId, cancelChat]);
+
+  const reload = useCallback(async () => {
+    if (!activeSessionId) return;
+    const active = sessions.find((s) => s.id === activeSessionId);
+    const history = active?.messages ?? [];
+    if (history.length < 2) return;
+    const lastUser = [...history].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    const trimmed = history.slice(0, history.lastIndexOf(lastUser));
+
+    const updated = sessions.map((s) =>
+      s.id === activeSessionId ? { ...s, messages: trimmed, updatedAt: new Date().toISOString() } : s
+    );
+    setSessions(updated);
+    writeCache(updated);
+
+    await sendMessage(lastUser.content, lastUser.experimental_attachments);
+  }, [activeSessionId, sessions, sendMessage]);
+
+  const resubmitMessage = useCallback(
+    async (targetId: string, newContent: string) => {
+      if (!activeSessionId) return;
+      const active = sessions.find((s) => s.id === activeSessionId);
+      const history = active?.messages ?? [];
+      let targetIdx = history.findIndex((m) => m.id === targetId);
+      if (targetIdx === -1) targetIdx = history.length - 1;
+      if (targetIdx >= 0) {
+        const targetMsg = history[targetIdx];
+        const trimmed = history.slice(0, targetIdx);
+        const updated = sessions.map((s) =>
+          s.id === activeSessionId ? { ...s, messages: trimmed, updatedAt: new Date().toISOString() } : s
+        );
+        setSessions(updated);
+        writeCache(updated);
+        await sendMessage(newContent, targetMsg?.experimental_attachments);
+      }
     },
-    onToolSteps: (steps) => {
-      // Feed REAL tool-call records into the latest assistant message so the
-      // ToolExecutionStatus UI shows actual tools the model invoked.
-      setMessages((prev) => {
-        const idx = [...prev].reverse().findIndex((m) => m.role === "assistant");
-        if (idx === -1) return prev;
-        const realIdx = prev.length - 1 - idx;
-        const toolSteps = steps.map((s, i) => {
-          const rec = s as {
-            name?: string;
-            status?: string;
-            args?: Record<string, unknown>;
-            error?: string;
-            result?: { content?: string; citations?: string[] };
-          };
-          return {
-            id: `tool-${i}`,
-            label: rec.name ?? "tool",
-            status: (rec.status === "error" ? "failed" : rec.status === "called" ? "running" : "completed") as
-              | "pending"
-              | "running"
-              | "completed"
-              | "failed",
-            detail: rec.args ? JSON.stringify(rec.args) : undefined,
-            // What the tool actually returned, so the trace can be expanded to
-            // show the evidence rather than just the call.
-            result: rec.result?.content,
-            error: rec.error,
-          };
-        });
-        return prev.map((m, i) => (i === realIdx ? { ...m, toolSteps } : m));
-      });
-    },
-  });
+    [activeSessionId, sessions, sendMessage]
+  );
+
+  // Sync cache changes reactively across components
+  useEffect(() => {
+    const handleCacheUpdated = (e: CustomEvent<ChatSession[]>) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setSessions(e.detail);
+      }
+    };
+    window.addEventListener("attrack-chat-sessions-updated", handleCacheUpdated as EventListener);
+    return () => {
+      window.removeEventListener("attrack-chat-sessions-updated", handleCacheUpdated as EventListener);
+    };
+  }, []);
+
+  /** Rebuild the model list from Settings > AI Providers. One option per
+   *  configured row plus "auto" — a provider that is not a row cannot be
+   *  offered, and a row that is deleted disappears along with any selection
+   *  pointing at it. Returns the list so the caller can seed the selection. */
+  const loadProviderModels = useCallback(async (): Promise<AIModel[]> => {
+    const [configuredProviders, providerAvailable] = await Promise.all([
+      listProviders(),
+      hasAnyProviderConfigured(),
+    ]);
+    setProviderConfigured(providerAvailable);
+
+    const models: AIModel[] = [
+      AI_MODELS[0],
+      ...(configuredProviders ?? []).map((p) => ({
+        id: p.model,
+        name: p.name || p.model,
+        provider: p.provider_type === "gemini" ? "gemini" : p.provider_type === "anthropic" ? "anthropic" : "openai",
+        description: `Configured in Settings (${p.provider_type})`,
+        // Same heuristics the server-side auto-router uses, so the badge
+        // the picker shows and the provider "auto" chooses can't drift.
+        supportsImages: modelSupportsImages(p.provider_type, p.model),
+        isReasoning: isReasoningModel(p.model),
+        badge: p.name || p.provider_type,
+      })),
+    ];
+    setAvailableModels(models);
+    // A selection whose provider row is gone must stop being sent to the
+    // server; the id would no longer match any provider and the turn would be
+    // served by whatever heads the fallback chain, under the deleted name.
+    setSelectedModel((prev) => models.find((m) => m.id === prev.id) ?? models[0]);
+    return models;
+  }, []);
+
+  // Settings is the authority for the model list, so re-read it whenever the
+  // window regains focus. It used to be fetched once at mount and then went
+  // stale for the whole session: a provider added, removed, renamed, or
+  // repointed at another model in Settings was invisible to an open chat tab
+  // until a full reload.
+  useEffect(() => {
+    const onFocus = () => {
+      loadProviderModels().catch((err) => console.error("Couldn't refresh AI providers:", err));
+      fetchWorkspace(true)
+        .then((snap) => {
+          if (snap) {
+            setWorkspace(snap);
+            setWorkspaceCtx(deriveContext(snap));
+            setSources(deriveWorkspaceSources(snap));
+          }
+        })
+        .catch((err) => console.error("Couldn't refresh workspace snapshot:", err));
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadProviderModels]);
 
   // Initialize from LocalStorage & Load User Configured Models + workspace
   useEffect(() => {
     async function init() {
       try {
-        const [configuredProviders, providerAvailable] = await Promise.all([
-          listProviders(),
-          hasAnyProviderConfigured(),
-        ]);
-        setProviderConfigured(providerAvailable);
-        const autoModelObj: AIModel = {
-          id: "auto",
-          name: "Auto Hybrid Agent",
-          provider: "auto",
-          description: "Smart Hybrid: Automatically routes turn to Vision, Code, or Reasoning models per context",
-          supportsImages: true,
-          isReasoning: true,
-          isFast: true,
-          isPopular: true,
-          badge: "Smart Hybrid",
-        };
-
-        if (configuredProviders && configuredProviders.length > 0) {
-          const dynamicModels: AIModel[] = [
-            autoModelObj,
-            ...configuredProviders.map((p) => {
-              const isGemini = p.provider_type === "gemini";
-              const isAnthropic = p.provider_type === "anthropic";
-              const isReasoning = p.model.includes("r1") || p.model.includes("reasoner") || p.model.includes("o1");
-              const supportsImages = isGemini || p.model.includes("vision") || p.model.includes("4o") || p.model.includes("flash");
-
-              return {
-                id: p.model,
-                name: p.name || p.model,
-                provider: isGemini ? "gemini" : isAnthropic ? "anthropic" : "openai",
-                description: `Configured in Settings (${p.provider_type})`,
-                supportsImages,
-                isReasoning,
-                badge: p.name || p.provider_type,
-              };
-            }),
-          ];
-          setAvailableModels(dynamicModels);
-
-          const lastModelId = loadLastSelectedModel();
-          const matched = dynamicModels.find((m) => m.id === lastModelId) || autoModelObj;
-          setSelectedModel(matched);
-        } else {
-          setAvailableModels(AI_MODELS);
-          const lastModelId = loadLastSelectedModel();
-          const matched = AI_MODELS.find((m) => m.id === lastModelId) || AI_MODELS[0];
-          setSelectedModel(matched);
-        }
+        const models = await loadProviderModels();
+        const lastModelId = loadLastSelectedModel();
+        setSelectedModel(models.find((m) => m.id === lastModelId) ?? models[0]);
       } catch (err) {
         console.error("Failed to load configured AI providers:", err);
-        setAvailableModels(AI_MODELS);
       }
 
       // Load workspace snapshot (jobs, resumes, contacts) for grounding.
-      const snap = await fetchWorkspace();
+      const snap = await fetchWorkspace(true);
       setWorkspace(snap);
       setWorkspaceCtx(deriveContext(snap));
       const defaultDerivedSources = deriveWorkspaceSources(snap);
@@ -241,19 +328,13 @@ export default function AIChatbotPage() {
       const cached = readCache();
       if (cached.length > 0) setSessions(cached);
 
-      // SQLite is the authority; whatever it returns replaces the mirror. The
-      // merge this replaces built its map from a `sessions` captured at mount —
-      // always `[]` — so it could never see local state, and every load handed
-      // the database an unopposed win that was then written back over the
-      // mirror. One authority removes the question entirely.
+      // SQLite is the authority; whatever it returns replaces the mirror.
       let known: ChatSession[];
       try {
         known = await fetchSessions();
       } catch (err) {
         console.error(err);
         toast.error("Couldn't load chat history");
-        // Stay on the mirror rather than blanking the sidebar. Nothing is
-        // written back to the database from here, so this cannot resurrect.
         known = cached;
       }
 
@@ -266,29 +347,12 @@ export default function AIChatbotPage() {
         setActiveSessionId(active.id);
         saveActiveSessionId(active.id);
 
-        // Carry every field the message model has.
-        setMessages(
-          (active.messages ?? []).map((m) => ({
-            id: m.id,
-            role: m.role as "user" | "assistant" | "system",
-            content: m.content || "",
-            createdAt: m.createdAt,
-            experimental_attachments: m.experimental_attachments,
-            feedback: m.feedback ?? null,
-            thinking: m.thinking,
-            sources: m.sources,
-            toolSteps: m.toolSteps,
-          }))
-        );
-
         setActiveConnectedIds(
           active.connectedSourceIds && active.connectedSourceIds.length > 0
             ? active.connectedSourceIds
             : defaultEnabledIds
         );
       } else {
-        // First run. This session lives in memory and in the mirror only; it
-        // earns a database row when it gets its first message.
         const first: ChatSession = {
           ...createNewSession(selectedModel.id),
           connectedSourceIds: defaultEnabledIds,
@@ -304,59 +368,9 @@ export default function AIChatbotPage() {
     }
 
     init();
+    // loadProviderModels is stable; the rest of init is a one-shot mount load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const prevMessagesRef = useRef(messages);
-  const prevCountRef = useRef(messages.length);
-  useEffect(() => {
-    if (!mounted || !activeSessionId) return;
-
-    if (messages !== prevMessagesRef.current) {
-      prevMessagesRef.current = messages;
-
-      const countChanged = messages.length !== prevCountRef.current;
-      prevCountRef.current = messages.length;
-      if (isLoading && !countChanged) return;
-
-      setSessions((prevSessions) => {
-        const updated = prevSessions.map((s) => {
-          if (s.id === activeSessionId) {
-            const isFirstUserMsg = s.messages.length === 0 && messages.length > 0;
-            const newTitle =
-              isFirstUserMsg && messages[0]?.content ? generateSessionTitle(messages[0].content) : s.title;
-
-            return {
-              ...s,
-              title: newTitle,
-              messages: messages.map((m) => ({
-                id: m.id,
-                role: m.role,
-                content: m.content || "",
-                createdAt: typeof m.createdAt === "string" ? m.createdAt : new Date().toISOString(),
-                experimental_attachments: m.experimental_attachments,
-                feedback: m.feedback ?? null,
-                thinking: m.thinking,
-                sources: m.sources,
-                toolSteps: m.toolSteps,
-              })),
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return s;
-        });
-
-        writeCache(updated);
-
-        const active = updated.find((s) => s.id === activeSessionId);
-        if (active && active.messages.length > 0) {
-          void persistSession(active).catch((err) => {
-            console.error("Couldn't save chat session:", err);
-          });
-        }
-        return updated;
-      });
-    }
-  }, [messages, isLoading, activeSessionId, mounted]);
 
   const handleSelectSession = useCallback(
     (id: string) => {
@@ -368,19 +382,6 @@ export default function AIChatbotPage() {
 
       const targetSession = sessions.find((s) => s.id === id);
       if (targetSession) {
-        setMessages(
-          (targetSession.messages || []).map((m) => ({
-            id: m.id,
-            role: m.role as "user" | "assistant" | "system",
-            content: m.content || "",
-            createdAt: m.createdAt,
-            experimental_attachments: m.experimental_attachments,
-            feedback: m.feedback ?? null,
-            thinking: m.thinking,
-            sources: m.sources,
-            toolSteps: m.toolSteps,
-          }))
-        );
         const modelObj = availableModels.find((m) => m.id === targetSession.model) || availableModels[0];
         setSelectedModel(modelObj);
         const defaultSources = sources.filter((s) => s.enabled).map((s) => s.id);
@@ -391,7 +392,7 @@ export default function AIChatbotPage() {
         setActiveConnectedIds(sessionSources);
       }
     },
-    [activeSessionId, sessions, availableModels, setMessages, sources]
+    [activeSessionId, sessions, availableModels, sources]
   );
 
   const handleNewChat = useCallback(() => {
@@ -407,9 +408,8 @@ export default function AIChatbotPage() {
     writeCache(next);
     setActiveSessionId(newSession.id);
     setActiveConnectedIds(seedConnected);
-    setMessages([]);
     saveActiveSessionId(newSession.id);
-  }, [selectedModel.id, setMessages, sessions, sources]);
+  }, [selectedModel.id, sessions, sources]);
 
   const handleDeleteSession = useCallback(
     async (id: string) => {
@@ -426,7 +426,6 @@ export default function AIChatbotPage() {
         const newSession = createNewSession(selectedModel.id);
         setSessions([newSession]);
         setActiveSessionId(newSession.id);
-        setMessages([]);
         writeCache([newSession]);
         saveActiveSessionId(newSession.id);
       } else {
@@ -436,24 +435,11 @@ export default function AIChatbotPage() {
           const nextActive = remaining[0].id;
           setActiveSessionId(nextActive);
           saveActiveSessionId(nextActive);
-          setMessages(
-            (remaining[0].messages || []).map((m) => ({
-              id: m.id,
-              role: m.role as "user" | "assistant" | "system",
-              content: m.content || "",
-              createdAt: m.createdAt,
-              experimental_attachments: m.experimental_attachments,
-              feedback: m.feedback ?? null,
-              thinking: m.thinking,
-              sources: m.sources,
-              toolSteps: m.toolSteps,
-            }))
-          );
         }
       }
       toast.success("Chat session deleted");
     },
-    [activeSessionId, selectedModel.id, sessions, setMessages]
+    [activeSessionId, selectedModel.id, sessions]
   );
 
   const handleRenameSession = useCallback(
@@ -576,13 +562,6 @@ export default function AIChatbotPage() {
     []
   );
 
-  const handleSelectScenario = useCallback(
-    (scenario: MiniScenario) => {
-      sendMessage(scenario.starterPrompt);
-    },
-    [sendMessage]
-  );
-
   const handleReplyMessage = useCallback((msg: { id: string; content: string; role: string }) => {
     setReplyTo({
       id: msg.id,
@@ -637,11 +616,10 @@ export default function AIChatbotPage() {
     const newSession = createNewSession(selectedModel.id);
     setSessions([newSession]);
     setActiveSessionId(newSession.id);
-    setMessages([]);
     writeCache([newSession]);
     saveActiveSessionId(newSession.id);
     toast.success("Cleared all chat sessions");
-  }, [selectedModel.id, setMessages]);
+  }, [selectedModel.id]);
 
   const handleOpenCanvas = useCallback((content: string, title?: string) => {
     setCanvasContent({ content, title: title || "Artifact" });
@@ -651,9 +629,9 @@ export default function AIChatbotPage() {
 
   const handleEditMessage = useCallback(
     (id: string, newContent: string) => {
-      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content: newContent } : m)));
+      resubmitMessage(id, newContent);
     },
-    [setMessages]
+    [resubmitMessage]
   );
 
   const handleApproveQuery = useCallback(
@@ -666,14 +644,14 @@ export default function AIChatbotPage() {
       if (res.success && res.rows) {
         const count = res.rowCount ?? res.rows.length;
         const payload = `Query approved and executed on local SQLite database.\n\`\`\`sql\n${queryText.trim()}\n\`\`\`\n\n**Database Results (${count} rows):**\n\`\`\`json\n${JSON.stringify(res.rows, null, 2)}\n\`\`\`\n\nPlease synthesize these real database results to provide a comprehensive, finalized response answering my previous question.`;
-        sendBackgroundQuery(payload);
+        void sendMessage(payload);
       } else {
         const errorMsg = res.error || "Query failed";
         const errorPayload = `Query execution failed on local database:\n\`\`\`sql\n${queryText.trim()}\n\`\`\`\n\n**Error:** ${errorMsg}\n\n*Available tables:* ${(res.availableTables || []).join(", ")}. Please adjust your query or answer using available context.`;
-        sendBackgroundQuery(errorPayload);
+        void sendMessage(errorPayload);
       }
     },
-    [sendBackgroundQuery]
+    [sendMessage]
   );
 
   const handleAskAiSummary = useCallback(
@@ -685,12 +663,6 @@ export default function AIChatbotPage() {
 
   const handleFeedback = useCallback(
     (messageId: string, rating: "up" | "down" | null) => {
-      // 1. Optimistic state update
-      setMessages((prev) =>
-        prev.map((m) => (m.id === messageId ? { ...m, feedback: rating } : m))
-      );
-
-      // 2. Persist to session and schedule SQLite durable flush
       if (activeSessionId) {
         setSessions((prev) => {
           const updated = prev.map((s) => {
@@ -711,7 +683,7 @@ export default function AIChatbotPage() {
           return updated;
         });
 
-        // 3. Fire-and-forget save to SQLite ai_feedback table and chat_messages
+        // Fire-and-forget save to SQLite ai_feedback table
         const msg = messages.find((m) => m.id === messageId);
         fetch("/api/chat/feedback", {
           method: "POST",
@@ -729,7 +701,7 @@ export default function AIChatbotPage() {
         });
       }
     },
-    [activeSessionId, defaultPersona.id, messages, selectedModel.id, setMessages]
+    [activeSessionId, defaultPersona.id, messages, selectedModel.id]
   );
 
   const convertMessage = useCallback((m: ChatMessage): ThreadMessageLike => {
@@ -851,25 +823,45 @@ export default function AIChatbotPage() {
     };
   }, []);
 
-  const suggestions = useMemo(() => {
-    return MINI_SCENARIOS.map((s) => ({
-      text: s.title,
-      prompt: s.starterPrompt,
-    }));
-  }, []);
+  const attachmentAdapter = useMemo(
+    () =>
+      new CompositeAttachmentAdapter([
+        new SimpleImageAttachmentAdapter(),
+        new SimpleTextAttachmentAdapter(),
+      ]),
+    []
+  );
 
   const auiRuntime = useExternalStoreRuntime({
     messages,
     isRunning: isLoading,
     convertMessage,
-    suggestions,
+    adapters: {
+      attachments: attachmentAdapter,
+    },
     onNew: async (msg) => {
       let text = "";
       for (const part of msg.content) {
         if (part.type === "text") text += part.text;
       }
-      if (text.trim()) {
-        await sendMessage(text);
+      const attachmentsPayload: { url: string; contentType?: string }[] = [];
+      if (msg.attachments && msg.attachments.length > 0) {
+        for (const att of msg.attachments) {
+          if (att.type === "image") {
+            const src = att.content?.find((c) => c.type === "image")?.image;
+            if (src) {
+              attachmentsPayload.push({ url: src, contentType: "image/*" });
+            }
+          } else if (att.type === "document" || att.type === "file") {
+            const textContent = att.content?.find((c) => c.type === "text")?.text;
+            if (textContent) {
+              text += `${text ? "\n\n" : ""}[Attached File: ${att.name || "document"}]\n\`\`\`\n${textContent}\n\`\`\``;
+            }
+          }
+        }
+      }
+      if (text.trim() || attachmentsPayload.length > 0) {
+        await sendMessage(text, attachmentsPayload);
       }
     },
     onReload: async () => {
@@ -901,12 +893,10 @@ export default function AIChatbotPage() {
 
   if (!mounted) return null;
 
-  const activeSession = sessions.find((s) => s.id === activeSessionId);
-
   return (
     <AssistantRuntimeProvider runtime={auiRuntime}>
       <ChatCanvasContext.Provider value={canvasContextValue}>
-        <div className="relative flex h-full w-full overflow-hidden bg-white dark:bg-[#09090b] text-foreground">
+        <div className="relative flex h-full w-full overflow-hidden bg-background text-foreground">
           {isMobileSidebarOpen && (
             <div
               className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
@@ -929,7 +919,7 @@ export default function AIChatbotPage() {
             onMobileClose={() => setIsMobileSidebarOpen(false)}
           />
 
-          <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[#09090b]">
+          <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
             <TopNavigation
               title={activeSession?.title || "New Chat"}
               onRenameTitle={(newTitle) => {
@@ -946,22 +936,6 @@ export default function AIChatbotPage() {
 
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
               {!providerConfigured && <NoApiKeyOverlay />}
-              {activeApproval && (
-                <div className="border-b border-border bg-muted/30 px-4 py-3">
-                  <DbDeleteApprovalCard
-                    approval={activeApproval}
-                    disabled={isLoading}
-                    onAllow={() => {
-                      sendApproval(activeApproval.approvalId, "allow");
-                      setActiveApproval(null);
-                    }}
-                    onDeny={() => {
-                      sendApproval(activeApproval.approvalId, "deny");
-                      setActiveApproval(null);
-                    }}
-                  />
-                </div>
-              )}
               <Thread
                 modelSelector={{
                   selectedModel,

@@ -4,13 +4,10 @@ import { useState } from "react";
 import { saveTaskRoute } from "@/lib/actions/ai-providers";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowUp, ArrowDown, X } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { ArrowUp } from "lucide-react";
+import { ArrowDownIcon } from "@/components/ui/arrow-down";
+import { XIcon } from "@/components/ui/x";
 import { toast } from "sonner";
 import { TASK_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
 
@@ -89,14 +86,14 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
                   disabled={i === selected.length - 1}
                   className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30"
                 >
-                  <ArrowDown className="size-3.5" />
+                  <ArrowDownIcon className="size-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => save(selectedIds.filter((id) => id !== p.id))}
                   className="rounded p-1 text-destructive hover:bg-destructive/10"
                 >
-                  <X className="size-3.5" />
+                  <XIcon className="size-3.5" />
                 </button>
               </span>
             </li>

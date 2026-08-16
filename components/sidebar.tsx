@@ -4,8 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
+import { usePathname, useRouter } from "next/navigation";
 import { ThemeLogo } from "@/components/ui/theme-logo";
 import { cn } from "@/lib/utils";
 import { globalSearch, adminGlobalSearch, type SearchResult, type AdminSearchResult } from "@/lib/actions/search";
@@ -51,20 +50,21 @@ import {
   Gauge,
   Link2,
   Bot,
+  Clock,
+  CornerDownLeft,
+  ArrowRight,
+  X,
+  Compass,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const navigation = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
+  { name: "Jobs", href: "/jobs", icon: Briefcase },
 ];
 
 const aiBuilderNavigation = [
-  { name: "Chatbot", href: "/ai-builder/chatbot", icon: Bot },
-];
-
-const pipelineNavigation = [
-  { name: "Board", href: "/board", icon: KanbanSquare },
-  { name: "Jobs", href: "/jobs", icon: Briefcase },
+  { name: "Ask Tracky", href: "/ai-builder/chatbot", icon: Bot },
 ];
 
 const resourceNavigation = [
@@ -95,9 +95,8 @@ const adminMonitoringNavigation = [
 
 const NAV_ITEMS = [
   { name: "Overview", href: "/overview", keywords: "home summary stats" },
-  { name: "Chatbot", href: "/ai-builder/chatbot", keywords: "ai builder chatbot gpt gemini claude assistant prompt chat" },
-  { name: "Board", href: "/board", keywords: "kanban pipeline stages drag" },
-  { name: "Jobs", href: "/jobs", keywords: "job listings saved interested" },
+  { name: "Ask Tracky", href: "/ai-builder/chatbot", keywords: "ai builder chatbot ask tracky tracky gpt gemini claude assistant prompt chat" },
+  { name: "Jobs", href: "/jobs", keywords: "jobs board kanban pipeline stages drag job listings saved interested table list" },
   { name: "Resume/CV", href: "/documents", keywords: "resume cv cover letter" },
   { name: "CRM", href: "/crm", keywords: "contacts companies network" },
   { name: "Social Links", href: "/links", keywords: "social links resources portals bookmarks directory" },
@@ -112,20 +111,134 @@ const ADMIN_NAV_ITEMS = [
 ];
 
 const ADMIN_NAV_ICONS: Record<string, React.ReactNode> = {
-  "/admin": <LayoutDashboard className="mr-2 size-4 shrink-0 text-muted-foreground" />,
-  "/admin/users": <Users className="mr-2 size-4 shrink-0 text-muted-foreground" />,
-  "/admin/ai-usage": <Cpu className="mr-2 size-4 shrink-0 text-muted-foreground" />,
+  "/admin": <LayoutDashboard className="size-4 shrink-0 text-muted-foreground" />,
+  "/admin/users": <Users className="size-4 shrink-0 text-muted-foreground" />,
+  "/admin/ai-usage": <Cpu className="size-4 shrink-0 text-muted-foreground" />,
 };
 
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  page: <File className="size-4 shrink-0 text-muted-foreground" />,
-  job: <Briefcase className="size-4 shrink-0 text-blue-500" />,
-  company: <Building2 className="size-4 shrink-0 text-indigo-500" />,
-  contact: <User className="size-4 shrink-0 text-teal-500" />,
-  application: <Send className="size-4 shrink-0 text-violet-500" />,
-  interview: <Calendar className="size-4 shrink-0 text-emerald-500" />,
-  document: <FileText className="size-4 shrink-0 text-amber-500" />,
+const ENTITY_CONFIG: Record<
+  string,
+  { label: string; icon: React.ComponentType<{ className?: string }>; tone: string; badge: string }
+> = {
+  job: {
+    label: "Job",
+    icon: Briefcase,
+    tone: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    badge: "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  },
+  company: {
+    label: "Company",
+    icon: Building2,
+    tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    badge: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  },
+  contact: {
+    label: "Contact",
+    icon: User,
+    tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+    badge: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
+  application: {
+    label: "Application",
+    icon: Send,
+    tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  },
+  interview: {
+    label: "Interview",
+    icon: Calendar,
+    tone: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  },
+  document: {
+    label: "Document",
+    icon: FileText,
+    tone: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+    badge: "border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+  },
+  deadline: {
+    label: "Deadline",
+    icon: Clock,
+    tone: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
+    badge: "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  },
+  position: {
+    label: "Position",
+    icon: Briefcase,
+    tone: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+    badge: "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+  },
+  page: {
+    label: "Page",
+    icon: LayoutDashboard,
+    tone: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+    badge: "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+  },
+  user: {
+    label: "User",
+    icon: Users,
+    tone: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    badge: "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  },
+  ai_usage: {
+    label: "AI Log",
+    icon: Cpu,
+    tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+    badge: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
 };
+
+function SearchResultItem({
+  result,
+  onSelect,
+}: {
+  result: SearchResult | AdminSearchResult;
+  onSelect: (href: string) => void;
+}) {
+  const cfg = ENTITY_CONFIG[result.type] ?? ENTITY_CONFIG.page;
+  const Icon = cfg.icon;
+
+  return (
+    <CommandItem
+      value={`${result.type}-${result.id}`}
+      onItemSelect={() => onSelect(result.href)}
+      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer"
+    >
+      <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg border", cfg.tone)}>
+        <Icon className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+            {result.title}
+          </p>
+          <span
+            className={cn(
+              "rounded border px-1.5 py-0.2 text-[9px] font-semibold uppercase tracking-wider shrink-0",
+              cfg.badge
+            )}
+          >
+            {cfg.label}
+          </span>
+        </div>
+        {result.subtitle && (
+          <p className="truncate text-xs text-muted-foreground mt-0.5">
+            {result.subtitle}
+          </p>
+        )}
+        {"contentSnippet" in result && result.contentSnippet && (
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground/80 bg-muted/40 rounded-md px-2 py-0.5 border border-border/40">
+            <span className="truncate">{result.contentSnippet}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground shrink-0">
+        <span className="text-[11px] font-medium">Open</span>
+        <CornerDownLeft className="size-3" />
+      </div>
+    </CommandItem>
+  );
+}
 
 export interface SidebarProps {
   user: {
@@ -156,7 +269,7 @@ const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawDatabase, onNavigate, resizable }: SidebarProps) {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const visibleSecondaryNavigation = showRawDatabase
     ? secondaryNavigation
@@ -212,8 +325,18 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clientSearchCache = useRef<Map<string, (SearchResult | AdminSearchResult)[]>>(new Map());
 
   const isAdmin = role === "admin";
+
+  const handleSelectResult = useCallback((href: string) => {
+    setSearchOpen(false);
+    if (href.startsWith("http://") || href.startsWith("https://")) {
+      window.open(href, "_blank");
+    } else {
+      router.push(href);
+    }
+  }, [router]);
 
   useEffect(() => {
     const timeout = setTimeout(() => setMounted(true), 0);
@@ -253,13 +376,22 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
     prevSearchOpen.current = searchOpen;
   }, [searchOpen]);
 
-  // Debounced search
+  // Debounced search with client LRU cache and snappy 120ms debounce
   const handleSearch = useCallback((value: string) => {
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (value.trim().length < 2) {
+    const trimmed = value.trim();
+    if (trimmed.length < 2) {
       setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = `${isAdmin ? "admin" : "user"}:${trimmed.toLowerCase()}`;
+    const cached = clientSearchCache.current.get(cacheKey);
+    if (cached) {
+      setResults(cached);
       setLoading(false);
       return;
     }
@@ -268,13 +400,18 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
     debounceRef.current = setTimeout(async () => {
       try {
         const data = isAdmin ? await adminGlobalSearch(value) : await globalSearch(value);
+        if (clientSearchCache.current.size >= 50) {
+          const oldest = clientSearchCache.current.keys().next().value;
+          if (oldest) clientSearchCache.current.delete(oldest);
+        }
+        clientSearchCache.current.set(cacheKey, data);
         setResults(data);
       } catch {
         setResults([]);
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 120);
   }, [isAdmin]);
 
   const filteredResults = activeTab === "all" ? results : results.filter((r) => r.type === activeTab);
@@ -312,7 +449,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
     <>
       <aside
         className={cn(
-          "relative flex h-full flex-col bg-background transition-[width] duration-300 ease-in-out select-none",
+          "relative z-30 flex h-full flex-col bg-background transition-[width] duration-300 ease-in-out select-none",
           resizable ? "border-r border-border" : "w-full"
         )}
         style={resizable ? { width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : width } : undefined}
@@ -322,7 +459,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
             type="button"
             onClick={toggleCollapse}
             className={cn(
-              "app-no-drag absolute -right-2.5 top-8 z-30 flex h-7 w-4.5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-all duration-200 hover:scale-110 hover:bg-accent hover:text-foreground hover:shadow-md focus:outline-none"
+              "app-no-drag absolute -right-2.5 top-8 z-50 flex h-7 w-4.5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-white hover:border-primary hover:shadow-md focus:outline-none"
             )}
             title={isCollapsed ? "Expand sidebar (⌘B)" : "Minimize sidebar (⌘B)"}
           >
@@ -434,7 +571,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -467,7 +604,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -500,7 +637,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -517,6 +654,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                 {navigation.map((item) => {
                   const isActive =
                     pathname === item.href ||
+                    (item.href === "/board" && (pathname === "/jobs" || pathname.startsWith("/jobs"))) ||
                     (item.href !== "/" && pathname.startsWith(item.href));
                   return (
                     <Link
@@ -528,40 +666,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
-                      {!isCollapsed && <span>{item.name}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-
-              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
-
-              {!isCollapsed && (
-                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                  Job Search
-                </div>
-              )}
-              <div className="space-y-1">
-                {pipelineNavigation.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/" && pathname.startsWith(item.href));
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={onNavigate}
-                      title={isCollapsed ? item.name : undefined}
-                      className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
-                        isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -594,44 +699,11 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5" />
-                      {!isCollapsed && <span>{item.name}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-
-              <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
-
-              {!isCollapsed && (
-                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                  AI Builder
-                </div>
-              )}
-              <div className="space-y-1">
-                {aiBuilderNavigation.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={onNavigate}
-                      title={isCollapsed ? item.name : undefined}
-                      className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
-                        isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <item.icon className="size-4 shrink-0 transition-transform duration-180 ease-out group-hover:scale-110 group-hover:translate-x-0.5 text-emerald-600 dark:text-emerald-400" />
                       {!isCollapsed && <span>{item.name}</span>}
                     </Link>
                   );
@@ -658,7 +730,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
                         isActive
-                          ? "bg-sidebar-primary/25 text-foreground font-semibold border border-sidebar-primary/30"
+                          ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -671,6 +743,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
             </>
           )}
         </nav>
+
+        {/* Ask Tracky Button (Pinned directly above the bottom divider and logo) */}
+        <div className={cn("px-3 pb-2.5", isCollapsed && "px-2 pb-2.5")}>
+          <Link
+            href="/ai-builder/chatbot"
+            onClick={onNavigate}
+            title={isCollapsed ? "Ask Tracky" : undefined}
+            className={cn(
+              "btn-liquid-tracky group flex items-center font-semibold text-sm shadow-xs active:scale-[0.97] select-none",
+              isCollapsed
+                ? "size-10 justify-center mx-auto p-0"
+                : "w-full justify-center gap-2 px-3.5 py-2.5 h-10",
+              (pathname.startsWith("/ai-builder/chatbot") || pathname === "/chatbot") && "active"
+            )}
+          >
+            <Bot className="size-4.5 shrink-0 transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110" />
+
+            {!isCollapsed && (
+              <span className="truncate tracking-tight font-semibold text-sm">
+                Ask Tracky
+              </span>
+            )}
+          </Link>
+        </div>
 
         {/* Bottom Section: atTrack Logo, Search, Notification & Theme */}
         <div className={cn("border-t border-border/50 space-y-2.5", isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3")}>
@@ -707,77 +803,15 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex w-full items-center gap-1.5 justify-start rounded-2xl border border-border px-2.5 text-muted-foreground"
+                className="flex w-full items-center gap-1.5 justify-start rounded-lg border border-border px-2.5 text-muted-foreground"
                 onClick={() => setSearchOpen(true)}
               >
                 <Search className="size-4 shrink-0" />
                 <span className="flex-1 text-left text-xs">Search...</span>
-                <kbd className="pointer-events-none select-none rounded-2xl border border-border bg-muted px-1.5 text-[10px] font-medium">
+                <kbd className="pointer-events-none select-none rounded border border-border bg-muted px-1.5 text-[10px] font-medium">
                   ⌘K
                 </kbd>
               </Button>
-            </div>
-          )}
-
-          {/* Theme Selector */}
-          {isCollapsed ? (
-            mounted && (
-              <button
-                onClick={() => {
-                  const nextTheme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
-                  setTheme(nextTheme);
-                }}
-                className="flex size-8 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
-                title={`Theme: ${theme ?? "system"} (Click to cycle)`}
-              >
-                {theme === "light" ? <Sun className="size-4" /> : theme === "dark" ? <Moon className="size-4" /> : <Monitor className="size-4" />}
-              </button>
-            )
-          ) : (
-            <div className="flex items-center justify-between px-1 pt-0.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                Theme
-              </span>
-              {mounted && (
-                <div className="flex items-center gap-1 rounded-2xl border border-border p-1">
-                  <button
-                    onClick={() => setTheme("light")}
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-2xl transition-colors",
-                      theme === "light"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Light Theme"
-                  >
-                    <Sun className="size-3" />
-                  </button>
-                  <button
-                    onClick={() => setTheme("dark")}
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-2xl transition-colors",
-                      theme === "dark"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Dark Theme"
-                  >
-                    <Moon className="size-3" />
-                  </button>
-                  <button
-                    onClick={() => setTheme("system")}
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-2xl transition-colors",
-                      theme === "system"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="System Theme"
-                  >
-                    <Monitor className="size-3" />
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -795,339 +829,177 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
 
       {mounted && searchOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4 bg-black/60 backdrop-blur-sm animate-in fade-in-0 duration-150"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSearchOpen(false);
           }}
         >
-          <Command value={query} onValueChange={handleSearch} className="w-full max-w-[600px] border border-border shadow-2xl rounded-2xl">
-            <CommandInput placeholder={isAdmin ? "Search users, AI usage..." : "Omni-Search: Search jobs, contacts, documents, interviews..."} />
+          <Command value={query} onValueChange={handleSearch} className="w-full max-w-[660px] rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/25 overflow-hidden ring-1 ring-border/50 animate-in zoom-in-95 duration-150">
+            <CommandInput
+              placeholder={isAdmin ? "Search users, AI usage logs, or navigation..." : "Search jobs, companies, contacts, documents, interviews..."}
+              onClear={() => {
+                setQuery("");
+                setResults([]);
+                setActiveTab("all");
+              }}
+            />
+
             {!loading && hasQuery && results.length > 0 && (
-              <div className="flex items-center gap-1 overflow-x-auto border-b border-border/60 bg-muted/30 px-3 py-1.5 text-xs">
+              <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border/60 bg-muted/25 px-3 py-2 scrollbar-minimal">
                 {[
-                  { id: "all", label: `All (${results.length})` },
-                  { id: "job", label: "Jobs" },
-                  { id: "contact", label: "Contacts" },
-                  { id: "company", label: "Companies" },
-                  { id: "application", label: "Applications" },
-                  { id: "interview", label: "Interviews" },
-                  { id: "document", label: "Documents" },
-                  { id: "deadline", label: "Deadlines" },
-                  { id: "position", label: "Positions" },
-                  { id: "page", label: "Pages" },
-                ].map((tab) => {
-                  const count = tab.id === "all" ? results.length : results.filter((r) => r.type === tab.id).length;
-                  if (tab.id !== "all" && count === 0) return null;
-                  return (
+                  { id: "all", label: "All", count: results.length },
+                  { id: "job", label: "Jobs", count: results.filter((r) => r.type === "job").length },
+                  { id: "company", label: "Companies", count: results.filter((r) => r.type === "company").length },
+                  { id: "contact", label: "Contacts", count: results.filter((r) => r.type === "contact").length },
+                  { id: "application", label: "Applications", count: results.filter((r) => r.type === "application").length },
+                  { id: "interview", label: "Interviews", count: results.filter((r) => r.type === "interview").length },
+                  { id: "document", label: "Documents", count: results.filter((r) => r.type === "document").length },
+                  { id: "deadline", label: "Deadlines", count: results.filter((r) => r.type === "deadline").length },
+                  { id: "position", label: "Positions", count: results.filter((r) => r.type === "position").length },
+                  { id: "page", label: "Pages", count: results.filter((r) => r.type === "page").length },
+                  { id: "user", label: "Users", count: results.filter((r) => r.type === "user").length },
+                  { id: "ai_usage", label: "AI Usage", count: results.filter((r) => r.type === "ai_usage").length },
+                ]
+                  .filter((tab) => tab.id === "all" || tab.count > 0)
+                  .map((tab) => (
                     <button
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
                       className={cn(
-                        "rounded-lg px-2 py-1 font-medium transition-colors shrink-0",
+                        "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all shrink-0",
                         activeTab === tab.id
-                          ? "bg-primary text-primary-foreground shadow-xs"
+                          ? "bg-foreground text-background shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      {tab.label}
+                      <span>{tab.label}</span>
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.2 text-[10px] font-semibold leading-none",
+                          activeTab === tab.id
+                            ? "bg-background/25 text-background"
+                            : "bg-muted-foreground/15 text-muted-foreground"
+                        )}
+                      >
+                        {tab.count}
+                      </span>
                     </button>
-                  );
-                })}
+                  ))}
               </div>
             )}
-            <CommandList className="max-h-[60vh] overflow-y-auto p-2">
+
+            <CommandList className="max-h-[55vh] overflow-y-auto p-2 scrollbar-minimal">
               {loading && (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin text-primary" />
-                  Searching everything...
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                  <Loader2 className="size-5 animate-spin text-primary" />
+                  <span className="text-xs">Searching across your workspace...</span>
                 </div>
               )}
 
               {!loading && hasQuery && filteredResults.length === 0 && (
-                <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
-                  No results found for &ldquo;{query}&rdquo;
-                </CommandEmpty>
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-3">
+                    <Search className="size-5" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">No results for &ldquo;{query}&rdquo;</p>
+                  <p className="mt-1 text-xs text-muted-foreground max-w-xs">
+                    Try searching for a different company name, job role, contact tag, or status.
+                  </p>
+                </div>
               )}
 
               {!loading && !hasQuery && (
-                <CommandGroup heading="Quick Navigation">
-                  {NAV_ITEMS.map((item) => (
-                    <CommandItem
-                      key={item.name}
-                      value={item.name}
-                      onItemSelect={() => {
-                        window.location.href = item.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <File className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                      {item.name}
-                    </CommandItem>
-                  ))}
-                  {isAdmin && ADMIN_NAV_ITEMS.map((item) => (
-                    <CommandItem
-                      key={item.name}
-                      value={`admin-${item.name}`}
-                      onItemSelect={() => {
-                        window.location.href = item.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {ADMIN_NAV_ICONS[item.href] ?? <File className="mr-2 size-4 shrink-0 text-muted-foreground" />}
-                      {item.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                <div className="space-y-3 p-1">
+                  <CommandGroup heading="Quick Navigation">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                      {NAV_ITEMS.map((item) => (
+                        <CommandItem
+                          key={item.name}
+                          value={item.name}
+                          onItemSelect={() => handleSelectResult(item.href)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+                        >
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/60 text-muted-foreground">
+                            <Compass className="size-3.5" />
+                          </div>
+                          <span className="truncate text-xs font-medium text-foreground">{item.name}</span>
+                        </CommandItem>
+                      ))}
+                      {isAdmin && ADMIN_NAV_ITEMS.map((item) => (
+                        <CommandItem
+                          key={item.name}
+                          value={`admin-${item.name}`}
+                          onItemSelect={() => handleSelectResult(item.href)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+                        >
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/60 text-muted-foreground">
+                            {ADMIN_NAV_ICONS[item.href] ?? <Compass className="size-3.5" />}
+                          </div>
+                          <span className="truncate text-xs font-medium text-foreground">{item.name}</span>
+                        </CommandItem>
+                      ))}
+                    </div>
+                  </CommandGroup>
+                </div>
               )}
 
-              {!loading && hasQuery && grouped.page && (
-                <CommandGroup heading="Pages">
-                  {grouped.page.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`page-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.page}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.job && (
-                <CommandGroup heading="Jobs">
-                  {grouped.job.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`job-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.job}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                        {"contentSnippet" in r && r.contentSnippet && (
-                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.company && (
-                <CommandGroup heading="Companies">
-                  {grouped.company.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`company-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.company}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.contact && (
-                <CommandGroup heading="Contacts">
-                  {grouped.contact.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`contact-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.contact}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                        {"contentSnippet" in r && r.contentSnippet && (
-                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.application && (
-                <CommandGroup heading="Applications">
-                  {grouped.application.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`app-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.application}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                        {"contentSnippet" in r && r.contentSnippet && (
-                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.interview && (
-                <CommandGroup heading="Interviews">
-                  {grouped.interview.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`interview-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.interview}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                        {"contentSnippet" in r && r.contentSnippet && (
-                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.document && (
-                <CommandGroup heading="Documents">
-                  {grouped.document.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`doc-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.document}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                        {"contentSnippet" in r && r.contentSnippet && (
-                          <p className="line-clamp-1 text-xs text-muted-foreground/75 font-mono mt-0.5">{r.contentSnippet}</p>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.deadline && (
-                <CommandGroup heading="Deadlines">
-                  {grouped.deadline.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`deadline-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.deadline}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.position && (
-                <CommandGroup heading="Positions">
-                  {grouped.position.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`pos-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      {TYPE_ICONS.position}
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {/* Admin-only groups */}
-              {!loading && hasQuery && grouped.user && (
-                <CommandGroup heading="Users">
-                  {grouped.user.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`user-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <Users className="mr-2 size-4 shrink-0 text-blue-500" />
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-              {!loading && hasQuery && grouped.ai_usage && (
-                <CommandGroup heading="AI Usage">
-                  {grouped.ai_usage.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      value={`ai-${r.id}`}
-                      onItemSelect={() => {
-                        window.location.href = r.href;
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <Cpu className="mr-2 size-4 shrink-0 text-violet-500" />
-                      <div className="ml-2 min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+              {!loading && hasQuery && (
+                <>
+                  {[
+                    { key: "page", heading: "Pages" },
+                    { key: "job", heading: "Jobs" },
+                    { key: "company", heading: "Companies" },
+                    { key: "contact", heading: "Contacts" },
+                    { key: "application", heading: "Applications" },
+                    { key: "interview", heading: "Interviews" },
+                    { key: "document", heading: "Documents" },
+                    { key: "deadline", heading: "Deadlines" },
+                    { key: "position", heading: "Positions" },
+                    { key: "user", heading: "Users" },
+                    { key: "ai_usage", heading: "AI Logs" },
+                  ].map(({ key, heading }) => {
+                    const items = grouped[key];
+                    if (!items || items.length === 0) return null;
+                    return (
+                      <CommandGroup key={key} heading={heading}>
+                        {items.map((r) => (
+                          <SearchResultItem
+                            key={r.id}
+                            result={r}
+                            onSelect={handleSelectResult}
+                          />
+                        ))}
+                      </CommandGroup>
+                    );
+                  })}
+                </>
               )}
             </CommandList>
+
+            {/* Bottom Keyboard Hint Bar */}
+            <div className="flex items-center justify-between border-t border-border/70 bg-muted/20 px-3.5 py-2 text-[11px] text-muted-foreground select-none">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded border border-border bg-muted/80 px-1 py-0.5 text-[10px] font-medium leading-none">↑</kbd>
+                  <kbd className="rounded border border-border bg-muted/80 px-1 py-0.5 text-[10px] font-medium leading-none">↓</kbd>
+                  Navigate
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded border border-border bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium leading-none">↵</kbd>
+                  Select
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded border border-border bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium leading-none">esc</kbd>
+                  Close
+                </span>
+              </div>
+              {hasQuery && (
+                <span className="font-semibold text-foreground/80">
+                  {filteredResults.length} {filteredResults.length === 1 ? "match" : "matches"}
+                </span>
+              )}
+            </div>
           </Command>
         </div>,
         document.body

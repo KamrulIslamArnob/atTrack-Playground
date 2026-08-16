@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Sparkles, ArrowRight, Check } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { ArrowRightIcon } from "@/components/ui/arrow-right";
+import { CheckIcon } from "@/components/ui/check";
 import { Reveal } from "@/components/landing/motion";
 
 export function Cta() {
@@ -55,19 +57,19 @@ export function Cta() {
                   className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
                 >
                   Open atTrack
-                  <ArrowRight className="size-4" />
+                  <ArrowRightIcon className="size-4" />
                 </Link>
               </div>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="flex size-5 items-center justify-center rounded-full bg-primary/15">
-                    <Check className="size-3 text-primary" />
+                    <CheckIcon className="size-3 text-primary" />
                   </span>
                   Free, forever
                 </span>
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="flex size-5 items-center justify-center rounded-full bg-primary/15">
-                    <Check className="size-3 text-primary" />
+                    <CheckIcon className="size-3 text-primary" />
                   </span>
                   No sign-up
                 </span>

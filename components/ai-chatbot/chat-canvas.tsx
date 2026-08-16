@@ -4,13 +4,10 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import {
-  X,
-  Copy,
-  Check,
-  Download,
-  Code2,
-  WrapText,
-} from "lucide-react";
+  X, Code2, WrapText } from "lucide-react";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { DownloadIcon } from "@/components/ui/download";
 import { toast } from "sonner";
 
 export interface ChatCanvasProps {
@@ -84,14 +81,14 @@ export function ChatCanvas({
             exit={{ x: "100%", opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
             className={cn(
-              "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border bg-card shadow-2xl md:w-[45%]",
+              "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border bg-card md:w-[45%]",
               className
             )}
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-foreground">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Code2 className="size-3.5" />
                 </div>
                 <div>
@@ -107,8 +104,8 @@ export function ChatCanvas({
                   type="button"
                   onClick={() => setWrapLines((prev) => !prev)}
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                    wrapLines && "bg-accent text-foreground"
+                    "flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 cursor-pointer",
+                    wrapLines && "bg-muted text-foreground"
                   )}
                   title={wrapLines ? "Unwrap lines" : "Wrap lines"}
                 >
@@ -118,25 +115,25 @@ export function ChatCanvas({
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 cursor-pointer"
                   title="Copy"
                 >
-                  {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
+                  {copied ? <CheckIcon className="size-3.5 text-primary" /> : <CopyIcon className="size-3.5" />}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleDownload}
-                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 cursor-pointer"
                   title="Download"
                 >
-                  <Download className="size-3.5" />
+                  <DownloadIcon className="size-3.5" />
                 </button>
 
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95 cursor-pointer"
                   title="Close"
                 >
                   <X className="size-3.5" />
@@ -151,8 +148,8 @@ export function ChatCanvas({
                   <table className="w-full border-collapse">
                     <tbody>
                       {lines.map((line, idx) => (
-                        <tr key={idx} className="group hover:bg-accent/40">
-                          <td className="w-10 select-none border-r border-border/40 py-1.5 pr-3 text-right font-mono text-[10px] text-muted-foreground/40">
+                        <tr key={idx} className="group hover:bg-muted/40 transition-colors">
+                          <td className="w-10 select-none border-r border-border/40 py-1.5 pr-3 text-right font-mono text-[10px] text-muted-foreground/50">
                             {idx + 1}
                           </td>
                           <td

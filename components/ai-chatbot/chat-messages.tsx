@@ -4,32 +4,23 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
-  Sparkles,
-  User,
-  Copy,
-  Check,
-  RotateCcw,
-  Volume2,
-  VolumeX,
-  ChevronDown,
-  FileText,
-  ArrowDown,
-  Pencil,
-  ThumbsUp,
-  ThumbsDown,
-  X,
-  Send,
-  MessageSquareReply,
-  Clock,
-  CheckCheck,
-  Settings,
-  CornerDownLeft,
-} from "lucide-react";
+  Sparkles, Volume2, VolumeX, Pencil, ThumbsUp, ThumbsDown, MessageSquareReply } from "lucide-react";
+import { UserIcon } from "@/components/ui/user";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { RotateCCWIcon } from "@/components/ui/rotate-ccw";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { ArrowDownIcon } from "@/components/ui/arrow-down";
+import { XIcon } from "@/components/ui/x";
+import { SendIcon } from "@/components/ui/send";
+import { ClockIcon } from "@/components/ui/clock";
+import { CheckCheckIcon } from "@/components/ui/check-check";
+import { SettingsIcon } from "@/components/ui/settings";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { ToolExecutionStatus, type ToolExecutionStep } from "./tool-execution-status";
-import { followUpScenarios } from "@/lib/ai-chatbot/scenarios";
 import type { SqlQueryResult } from "@/lib/actions/database-query";
 
 // Strong custom ease-out: starts fast, settles gracefully.
@@ -69,8 +60,6 @@ interface ChatMessagesProps {
   onFeedback?: (messageId: string, rating: "up" | "down" | null) => void;
   /** Ask AI to analyze or summarize query results */
   onAskAiSummary?: (prompt: string) => void;
-  /** Send a suggested follow-up prompt from the finished answer */
-  onSelectFollowUp?: (prompt: string) => void;
 }
 
 export function ChatMessages({
@@ -84,7 +73,6 @@ export function ChatMessages({
   onApproveQuery,
   onFeedback,
   onAskAiSummary,
-  onSelectFollowUp,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -148,7 +136,6 @@ export function ChatMessages({
                 onReply={onReply ? () => onReply(message) : undefined}
                 onApproveQuery={onApproveQuery}
                 onAskAiSummary={onAskAiSummary}
-                onSelectFollowUp={onSelectFollowUp}
                 feedback={message.feedback}
                 onFeedback={onFeedback}
                 reduceMotion={!!reduceMotion}
@@ -168,10 +155,10 @@ export function ChatMessages({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.18, ease: EASE }}
-            className="absolute bottom-4 left-1/2 z-20 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md shadow-black/10 backdrop-blur-md transition-colors hover:bg-accent hover:text-foreground active:scale-95 cursor-pointer"
+            className="absolute bottom-4 left-1/2 z-20 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground backdrop-blur-md transition-colors hover:bg-accent hover:text-foreground active:scale-95 cursor-pointer"
             title="Scroll to latest"
           >
-            <ArrowDown className="size-4" />
+            <ArrowDownIcon className="size-4" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -198,7 +185,6 @@ interface MessageItemProps {
   onReply?: () => void;
   onApproveQuery?: (queryText: string, result?: SqlQueryResult) => void;
   onAskAiSummary?: (prompt: string) => void;
-  onSelectFollowUp?: (prompt: string) => void;
   feedback?: "up" | "down" | null;
   onFeedback?: (messageId: string, rating: "up" | "down" | null) => void;
   reduceMotion: boolean;
@@ -223,7 +209,6 @@ const MessageItem = React.memo(function MessageItem({
   onReply,
   onApproveQuery,
   onAskAiSummary,
-  onSelectFollowUp,
   feedback,
   onFeedback,
   reduceMotion,
@@ -345,7 +330,7 @@ const MessageItem = React.memo(function MessageItem({
               className="flex size-6 items-center justify-center rounded-md text-muted-foreground/60 transition-all hover:bg-muted hover:text-foreground active:scale-90 cursor-pointer"
               title="Copy"
             >
-              <Copy className="size-3.5" />
+              <CopyIcon className="size-3.5" />
             </button>
             <button
               type="button"
@@ -369,7 +354,7 @@ const MessageItem = React.memo(function MessageItem({
             </div>
           )}
 
-          <div className="rounded-3xl border border-border/70 bg-muted/45 px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-foreground shadow-xs">
+          <div className="rounded-3xl border border-border/70 bg-muted/45 px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-foreground">
             {isEditing ? (
               <div className="flex flex-col gap-2 min-w-[260px]">
                 <textarea
@@ -387,15 +372,15 @@ const MessageItem = React.memo(function MessageItem({
                     }}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
                   >
-                    <X className="size-3" />
+                    <XIcon className="size-3" />
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleSaveEdit}
-                    className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1 text-xs font-semibold text-background shadow-xs hover:opacity-90"
+                    className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1 text-xs font-semibold text-background hover:opacity-90"
                   >
-                    <Send className="size-3" />
+                    <SendIcon className="size-3" />
                     Save & Submit
                   </button>
                 </div>
@@ -465,10 +450,10 @@ const MessageItem = React.memo(function MessageItem({
                 <div className="mt-3.5 pt-1">
                   <Link
                     href="/settings"
-                    className="inline-flex items-center gap-2 rounded-xl bg-foreground px-3.5 py-2 text-xs font-semibold text-background shadow-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                    className="inline-flex items-center gap-2 rounded-xl bg-foreground px-3.5 py-2 text-xs font-semibold text-background hover:opacity-90 active:scale-[0.98] transition-all"
                   >
-                    <Settings className="size-3.5" />
-                    Connect AI Provider in Settings
+                    <SettingsIcon className="size-3.5" />
+                    Connect AI Provider in SettingsIcon
                   </Link>
                 </div>
               )}
@@ -486,20 +471,6 @@ const MessageItem = React.memo(function MessageItem({
 
           {/* Reasoning Accordion if assistant has thinking */}
           {hasReasoning && <ReasoningAccordion text={thinking as string} />}
-
-          {/* Sources are no longer chipped separately here — they are rows in
-              the trace above, alongside the tool calls, so provenance reads as
-              one list instead of two disconnected summaries. */}
-
-          {/* Follow-ups the answer's own evidence supports. Only on the settled
-              last message — mid-stream they would move under the cursor. */}
-          {isAssistant && isLast && !isLoading && onSelectFollowUp && (
-            <FollowUpPrompts
-              sources={activeSources}
-              onSelect={onSelectFollowUp}
-              reduceMotion={reduceMotion}
-            />
-          )}
 
           {/* Grounded Action Bar — fades in on hover (desktop), always visible on mobile */}
           {!isEmptyStreaming && (
@@ -532,7 +503,7 @@ const MessageItem = React.memo(function MessageItem({
                   title="Regenerate response"
                   onClick={onRetry || (() => toast.info("Regenerating response.."))}
                 >
-                  <RotateCcw className="size-3.5" />
+                  <RotateCCWIcon className="size-3.5" />
                 </MessageAction>
               </div>
 
@@ -576,51 +547,6 @@ const MessageItem = React.memo(function MessageItem({
   );
 });
 
-
-/**
- * Suggested next prompts, drawn from the scenarios whose required sources the
- * answer actually used. Renders nothing when no scenario matches — a generic
- * suggestion is worse than none.
- */
-function FollowUpPrompts({
-  sources,
-  onSelect,
-  reduceMotion,
-}: {
-  sources: string[];
-  onSelect: (prompt: string) => void;
-  reduceMotion: boolean;
-}) {
-  const scenarios = useMemo(() => followUpScenarios(sources), [sources]);
-  if (scenarios.length === 0) return null;
-
-  return (
-    <div className="mt-3">
-      <p className="text-[11px] font-medium text-muted-foreground">Follow-ups</p>
-      <div className="mt-0.5 flex flex-col">
-        {scenarios.map((scenario, i) => (
-          <button
-            key={scenario.id}
-            type="button"
-            onClick={() => onSelect(scenario.starterPrompt)}
-            title={scenario.starterPrompt}
-            className={cn(
-              "micro-press -mx-1.5 flex items-center gap-2 rounded-lg border-b border-border/60 px-1.5 py-1.5 text-left text-[12.5px] text-foreground transition-colors last:border-0 hover:bg-muted/60",
-              !reduceMotion && "agent-fade-up"
-            )}
-            style={reduceMotion ? undefined : { animationDelay: `${i * 90}ms` }}
-          >
-            <CornerDownLeft className="size-3 shrink-0 text-muted-foreground/70" />
-            <span className="truncate">{scenario.title}</span>
-            <span className="min-w-0 flex-1 truncate text-[11.5px] text-muted-foreground">
-              {scenario.description}
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** Formats a duration the way a progress line reads best: "47s", "3m 7s". */
 function formatElapsed(ms: number): string {
@@ -719,7 +645,7 @@ function CopyButton({ text }: { text: string }) {
             exit={{ opacity: 0, scale: 0.6 }}
             transition={{ duration: 0.15 }}
           >
-            <Check className="size-3.5 text-foreground" />
+            <CheckIcon className="size-3.5 text-foreground" />
           </motion.span>
         ) : (
           <motion.span
@@ -729,7 +655,7 @@ function CopyButton({ text }: { text: string }) {
             exit={{ opacity: 0, scale: 0.6 }}
             transition={{ duration: 0.15 }}
           >
-            <Copy className="size-3.5" />
+            <CopyIcon className="size-3.5" />
           </motion.span>
         )}
       </AnimatePresence>
@@ -774,9 +700,9 @@ function ReasoningAccordion({ text }: { text: string }) {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground active:scale-[0.99] cursor-pointer"
       >
-        <FileText className="size-3" />
+        <FileTextIcon className="size-3" />
         <span>Reasoning</span>
-        <ChevronDown
+        <ChevronDownIcon
           className={cn("size-3 transition-transform duration-200", open && "rotate-180")}
         />
       </button>
@@ -789,7 +715,7 @@ function ReasoningAccordion({ text }: { text: string }) {
             transition={{ duration: 0.22, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="whitespace-pre-wrap px-3 pb-3 text-[12px] leading-relaxed text-muted-foreground">
+            <div className="whitespace-pre-wrap px-3 pb-3 text-xs leading-relaxed text-muted-foreground">
               {text}
             </div>
           </motion.div>
@@ -805,28 +731,28 @@ function DeliveryStatus({ status }: { status?: "sending" | "sent" | "delivered" 
     // Default state: delivered (double check) or no status
     return (
       <span className="flex items-center text-muted-foreground/70" title="Delivered">
-        <CheckCheck className="size-3" />
+        <CheckCheckIcon className="size-3" />
       </span>
     );
   }
   if (status === "sending") {
     return (
       <span className="flex items-center text-muted-foreground/50 animate-pulse" title="Sending...">
-        <Clock className="size-3" />
+        <ClockIcon className="size-3" />
       </span>
     );
   }
   if (status === "sent") {
     return (
       <span className="flex items-center text-muted-foreground/60" title="Sent">
-        <Check className="size-3" />
+        <CheckIcon className="size-3" />
       </span>
     );
   }
   if (status === "error") {
     return (
       <span className="flex items-center text-destructive/70" title="Failed to send">
-        <X className="size-3" />
+        <XIcon className="size-3" />
       </span>
     );
   }
@@ -837,7 +763,7 @@ function DeliveryStatus({ status }: { status?: "sending" | "sent" | "delivered" 
 function MessageSkeleton() {
   return (
     <div className="space-y-5 animate-pulse">
-      {/* User message skeleton (right-aligned) */}
+      {/* UserIcon message skeleton (right-aligned) */}
       <div className="flex justify-end items-start">
         <div className="flex max-w-[65%] flex-col items-end gap-1.5">
           <div className="h-10 w-52 rounded-2xl bg-blue-100/60 dark:bg-blue-950/30" />

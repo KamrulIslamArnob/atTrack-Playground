@@ -37,10 +37,25 @@ export async function upsertSessionToDb(input: PersistSessionInput): Promise<voi
     connected_source_ids: s.connectedSourceIds ?? [],
   });
 
-  // Upsert each message (idempotent by message id). `seq` is the array index,
-  // not a timestamp: the two messages of a turn are constructed in the same
-  // tick and would share a millisecond, and assistant rows get re-stamped on
-  // every re-save. Position is the only tie-free ordering key here.
+  // 1. Reconcile messages: delete any existing message rows for this session
+  // that are no longer in input.messages (e.g. after edit/trim/fork).
+  const currentIds = new Set(input.messages.map((m) => m.id));
+  const { data: existingRows } = await client
+    .from("chat_messages")
+    .select("id")
+    .eq("session_id", s.id)
+    .eq("user_id", userId);
+
+  if (existingRows && existingRows.length > 0) {
+    for (const row of existingRows) {
+      const rowId = (row as { id: string }).id;
+      if (!currentIds.has(rowId)) {
+        await client.from("chat_messages").delete().eq("id", rowId).eq("user_id", userId);
+      }
+    }
+  }
+
+  // 2. Upsert each current message with its sequential position.
   for (const [index, m] of input.messages.entries()) {
     await client.from("chat_messages").upsert({
       id: m.id,
@@ -73,12 +88,20 @@ export async function loadSessionsFromDb(): Promise<ChatSession[]> {
     .select("id, session_id, role, content, feedback, seq, created_at, thinking, sources, tool_calls")
     .eq("user_id", userId);
 
-  // Ordered once, here — grouping below preserves it. `created_at` is only a
-  // fallback for rows written before the seq migration and never re-saved;
-  // the migration backfill means that set is normally empty.
+  // Order primarily by array position (seq), with chronological and role tiebreakers.
   const ordered = [...(messages ?? [])].sort((a, b) => {
-    if (a.seq != null && b.seq != null) return Number(a.seq) - Number(b.seq);
-    return String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""));
+    if (a.seq != null && b.seq != null && a.seq !== b.seq) {
+      return Number(a.seq) - Number(b.seq);
+    }
+    const timeA = String(a.created_at ?? "");
+    const timeB = String(b.created_at ?? "");
+    if (timeA && timeB && timeA !== timeB) {
+      return timeA.localeCompare(timeB);
+    }
+    if (a.role !== b.role) {
+      return a.role === "user" ? -1 : 1;
+    }
+    return 0;
   });
 
   const bySession = new Map<string, Message[]>();

@@ -72,7 +72,54 @@ export const writeDatabaseTool: ToolDefinition = {
       return { content: 'Update requires an "id" — look the row up first (e.g. with query_database).', citations: [table] };
     }
 
-    const rawValues = args.values && typeof args.values === "object" ? (args.values as Record<string, unknown>) : {};
+    const rawValues = args.values && typeof args.values === "object" ? { ...(args.values as Record<string, unknown>) } : {};
+    const db = getDb();
+
+    // Auto-resolve common human-friendly fields for foreign keys
+    if (table === "jobs") {
+      if (typeof rawValues.company === "string" && rawValues.company.trim() && !rawValues.company_id) {
+        const compName = rawValues.company.trim();
+        const existing = db
+          .prepare("SELECT id FROM companies WHERE user_id = ? AND lower(name) = lower(?) LIMIT 1")
+          .get(ctx.userId, compName) as { id: string } | undefined;
+        if (existing) {
+          rawValues.company_id = existing.id;
+        } else {
+          const newCompId = crypto.randomUUID();
+          db.prepare("INSERT INTO companies (id, user_id, name) VALUES (?, ?, ?)").run(newCompId, ctx.userId, compName);
+          rawValues.company_id = newCompId;
+        }
+        delete rawValues.company;
+      }
+      const stageOrList = (rawValues.stage || rawValues.list) as string | undefined;
+      if (typeof stageOrList === "string" && stageOrList.trim() && !rawValues.list_id) {
+        const target = stageOrList.trim();
+        const listRow = db
+          .prepare("SELECT id FROM board_lists WHERE user_id = ? AND (lower(name) = lower(?) OR lower(kind) = lower(?)) ORDER BY sort_order LIMIT 1")
+          .get(ctx.userId, target, target) as { id: string } | undefined;
+        if (listRow) {
+          rawValues.list_id = listRow.id;
+        }
+        delete rawValues.stage;
+        delete rawValues.list;
+      }
+    } else if (table === "links") {
+      if (typeof rawValues.category === "string" && rawValues.category.trim() && !rawValues.category_id) {
+        const catName = rawValues.category.trim();
+        const existingCat = db
+          .prepare("SELECT id FROM link_categories WHERE user_id = ? AND lower(name) = lower(?) LIMIT 1")
+          .get(ctx.userId, catName) as { id: string } | undefined;
+        if (existingCat) {
+          rawValues.category_id = existingCat.id;
+        } else {
+          const newCatId = crypto.randomUUID();
+          db.prepare("INSERT INTO link_categories (id, user_id, name) VALUES (?, ?, ?)").run(newCatId, ctx.userId, catName);
+          rawValues.category_id = newCatId;
+        }
+        delete rawValues.category;
+      }
+    }
+
     const values: Record<string, unknown> = {};
     const dropped: string[] = [];
     for (const [key, val] of Object.entries(rawValues)) {
@@ -87,8 +134,6 @@ export const writeDatabaseTool: ToolDefinition = {
       }
       values[key] = val;
     }
-
-    const db = getDb();
 
     if (action === "insert") {
       if (Object.keys(values).length === 0) {

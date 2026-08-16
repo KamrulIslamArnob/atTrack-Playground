@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { Upload, X, AlertCircle, Plus, Link2 } from "lucide-react";
+import { Upload, AlertCircle } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { Link2Icon } from "@/components/ui/link-2";
 import {
   uploadScreenshot,
   extractJobImport,
@@ -162,7 +165,7 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
               onClick={handleCancel}
               className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <X className="size-4" />
+              <XIcon className="size-4" />
             </button>
           </div>
 
@@ -173,7 +176,7 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
           <div className="mt-4 space-y-2">
             <Label htmlFor="import-url">Job posting link</Label>
             <div className="relative">
-              <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Link2Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="import-url"
                 type="url"
@@ -205,7 +208,7 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
                         onClick={() => handleRemoveImage(img.id)}
                         className="size-8 rounded-full bg-background/80 flex items-center justify-center text-muted-foreground hover:text-foreground"
                       >
-                        <X className="size-4" />
+                        <XIcon className="size-4" />
                       </button>
                     </div>
                     <div className="absolute bottom-1 left-1 right-1">
@@ -225,7 +228,7 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
                     {uploading ? (
                       <Spinner className="size-6 text-muted-foreground" />
                     ) : (
-                      <Plus className="size-6 text-muted-foreground" />
+                      <PlusIcon className="size-6 text-muted-foreground" />
                     )}
                   </button>
                 )}

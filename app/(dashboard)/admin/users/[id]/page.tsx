@@ -4,46 +4,28 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
-  getAdminUserDetail,
-  getAdminActivityLog,
-  getAdminAiUsage,
-} from "@/lib/actions/admin";
+  getAdminUserDetail, getAdminActivityLog, getAdminAiUsage, } from "@/lib/actions/admin";
 import type {
-  AdminUserDetail,
-  AdminActivityLogEntry,
-  AdminAiUsageEntry,
-} from "@/lib/actions/admin";
+  AdminUserDetail, AdminActivityLogEntry, AdminAiUsageEntry, } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
-  ArrowLeft,
-  Briefcase,
-  FileText,
-  CalendarDays,
-  Activity,
-  Cpu,
-  Mail,
-  Ban,
-  Globe,
-  Clock,
-  Coins,
-  Zap,
-  Search,
-  X,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+  ArrowLeft, Briefcase, Activity, Mail, Ban, Globe, Coins } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { CalendarDaysIcon } from "@/components/ui/calendar-days";
+import { CpuIcon } from "@/components/ui/cpu";
+import { ClockIcon } from "@/components/ui/clock";
+import { ZapIcon } from "@/components/ui/zap";
+import { SearchIcon } from "@/components/ui/search";
+import { XIcon } from "@/components/ui/x";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { formatDistanceToNow } from "date-fns";
 import { formatAiUsageMessage, AI_ACTION_COLORS, AI_ACTION_LABELS } from "@/lib/ai-usage-messages";
 
@@ -233,12 +215,12 @@ export default function AdminUserDetailPage() {
             </div>
             <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground sm:justify-start">
               <span className="flex items-center gap-1.5">
-                <CalendarDays className="size-3.5" />
+                <CalendarDaysIcon className="size-3.5" />
                 Joined {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
               </span>
               {user.last_sign_in && (
                 <span className="flex items-center gap-1.5">
-                  <Clock className="size-3.5" />
+                  <ClockIcon className="size-3.5" />
                   Last sign in {formatDistanceToNow(new Date(user.last_sign_in), { addSuffix: true })}
                 </span>
               )}
@@ -255,10 +237,10 @@ export default function AdminUserDetailPage() {
         {/* Stats row */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
           <StatItem icon={Briefcase} label="Jobs" value={user.job_count} />
-          <StatItem icon={FileText} label="Applications" value={user.application_count} />
-          <StatItem icon={FileText} label="Documents" value={user.document_count} />
-          <StatItem icon={CalendarDays} label="Interviews" value={user.interview_count} />
-          <StatItem icon={Cpu} label="AI Requests" value={user.ai_usage_count} />
+          <StatItem icon={FileTextIcon} label="Applications" value={user.application_count} />
+          <StatItem icon={FileTextIcon} label="Documents" value={user.document_count} />
+          <StatItem icon={CalendarDaysIcon} label="Interviews" value={user.interview_count} />
+          <StatItem icon={CpuIcon} label="AI Requests" value={user.ai_usage_count} />
         </div>
       </div>
 
@@ -273,7 +255,7 @@ export default function AdminUserDetailPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
                 <div className="flex size-10 items-center justify-center rounded-2xl bg-violet-500/10">
-                  <Zap className="size-5 text-violet-500" />
+                  <ZapIcon className="size-5 text-violet-500" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-xl font-bold tracking-tight">
@@ -295,7 +277,7 @@ export default function AdminUserDetailPage() {
               </div>
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
                 <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-500/10">
-                  <Cpu className="size-5 text-blue-500" />
+                  <CpuIcon className="size-5 text-blue-500" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-xl font-bold tracking-tight">
@@ -306,10 +288,10 @@ export default function AdminUserDetailPage() {
               </div>
             </div>
 
-            {/* Search + filters row */}
+            {/* SearchIcon + filters row */}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
               <div className="relative w-full lg:w-72">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={aiSearchInput}
                   onChange={(e) => handleAiSearch(e.target.value)}
@@ -321,7 +303,7 @@ export default function AdminUserDetailPage() {
                     onClick={() => { setAiSearchInput(""); setAiSearch(""); setAiPage(1); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-4" />
+                    <XIcon className="size-4" />
                   </button>
                 )}
               </div>
@@ -379,7 +361,7 @@ export default function AdminUserDetailPage() {
                   onClick={() => setAiPage((p) => Math.max(1, p - 1))}
                   disabled={aiPage <= 1}
                 >
-                  <ChevronLeft className="size-4" />
+                  <ChevronLeftIcon className="size-4" />
                 </Button>
                 <Button
                   variant="outline"
@@ -388,7 +370,7 @@ export default function AdminUserDetailPage() {
                   onClick={() => setAiPage((p) => Math.min(Math.max(1, Math.ceil(aiTotal / aiPerPage)), p + 1))}
                   disabled={aiPage >= Math.max(1, Math.ceil(aiTotal / aiPerPage))}
                 >
-                  <ChevronRight className="size-4" />
+                  <ChevronRightIcon className="size-4" />
                 </Button>
               </div>
             </div>
@@ -400,7 +382,7 @@ export default function AdminUserDetailPage() {
                   <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
                     &quot;{aiSearch}&quot;
                     <button onClick={() => { setAiSearchInput(""); setAiSearch(""); setAiPage(1); }} className="ml-0.5 hover:text-foreground">
-                      <X className="size-3" />
+                      <XIcon className="size-3" />
                     </button>
                   </span>
                 )}
@@ -408,7 +390,7 @@ export default function AdminUserDetailPage() {
                   <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs capitalize">
                     Action: {AI_ACTION_LABELS[aiActionFilter] ?? aiActionFilter}
                     <button onClick={() => { setAiActionFilter("all"); setAiPage(1); }} className="ml-0.5 hover:text-foreground">
-                      <X className="size-3" />
+                      <XIcon className="size-3" />
                     </button>
                   </span>
                 )}
@@ -512,7 +494,7 @@ export default function AdminUserDetailPage() {
                             <span className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                               {log.duration_ms != null ? (
                                 <>
-                                  <Clock className="size-3" />
+                                  <ClockIcon className="size-3" />
                                   {log.duration_ms < 1000
                                     ? `${log.duration_ms}ms`
                                     : `${(log.duration_ms / 1000).toFixed(1)}s`}

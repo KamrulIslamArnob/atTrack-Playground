@@ -34,6 +34,7 @@ export interface JobListItem {
   application_email: string | null;
   match_score: number | null;
   match_reasoning: string | null;
+  tier?: import("@/lib/types/job").JobTier | null;
   created_at: string;
   updated_at: string;
   company: {
@@ -74,6 +75,7 @@ export async function getJobsList(params: JobsListParams = {}): Promise<JobsList
       application_email,
       match_score,
       match_reasoning,
+      tier,
       created_at,
       updated_at,
       company:companies(name, location),

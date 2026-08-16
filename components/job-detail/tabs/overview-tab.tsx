@@ -73,7 +73,7 @@ function Stat({
   label,
   tint,
 }: {
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   value: string;
   label: string;
   tint: string;
@@ -98,7 +98,7 @@ function Section({
   action,
   children,
 }: {
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
@@ -122,7 +122,7 @@ function EmptyState({
   hint,
   action,
 }: {
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   headline: string;
   hint: string;
   action: React.ReactNode;
@@ -166,7 +166,7 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
     job.educational_requirements && { icon: GraduationCap, label: "Education", value: job.educational_requirements },
     job.work_schedule && { icon: Clock, label: "Working schedule", value: job.work_schedule },
     job.holiday_policy && { icon: CalendarDays, label: "Holidays & leave", value: job.holiday_policy },
-  ].filter(Boolean) as { icon: LucideIcon; label: string; value: string }[];
+  ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; value: string }[];
 
   const applyRoutes = [
     job.application_email && {
@@ -177,7 +177,7 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
     },
     job.application_process && { icon: Send, label: "Process", value: job.application_process, href: null },
     job.source && { icon: Globe, label: "Source", value: job.source, href: null },
-  ].filter(Boolean) as { icon: LucideIcon; label: string; value: string; href: string | null }[];
+  ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; value: string; href: string | null }[];
 
   const handleResumeChange = async (value: string | null) => {
     setResumePending(true);

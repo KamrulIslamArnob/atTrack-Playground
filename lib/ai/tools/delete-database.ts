@@ -6,14 +6,14 @@
 // gated database operation; reads and writes execute immediately.
 import type { ToolDefinition } from "./types";
 import { getDb } from "@/lib/db/sqlite";
-import { tableExists, resolveOwnerColumn } from "./db-utils";
+import { tableExists, resolveOwnerColumn, getColumns } from "./db-utils";
 import { createPendingDbDelete } from "@/lib/ai-chatbot/db-approval";
 
 export const deleteDatabaseTool: ToolDefinition = {
   name: "delete_database",
   sourceId: "db_query",
   description:
-    "Deletes rows from ANY table in the user's own workspace database. SAFETY: this NEVER deletes on the call that proposes it. It returns the exact matching rows and the SQL that would run, then the chat pauses for the user's explicit approval (an Allow/Deny card). Call it once with `table` and `ids` — do NOT call it again to confirm; approval happens in the UI. The delete only runs if the user clicks Allow.",
+    "Deletes rows from ANY table in the user's own workspace database. SAFETY: this NEVER deletes on the call that proposes it. It returns the exact matching rows and creates an Allow/Deny confirmation card for the user. Pass `table` and either `ids` (array of ids), `id` (single id), or `title`/`name` to look up matching rows. The delete ONLY runs after the user clicks Allow.",
   parameters: {
     type: "object",
     properties: {
@@ -23,23 +23,47 @@ export const deleteDatabaseTool: ToolDefinition = {
         items: { type: "string" },
         description: "Row ids to delete — get them from query_database or a prior write_database result.",
       },
+      id: { type: "string", description: "Single row id to delete." },
+      title: { type: "string", description: "Optional title to match and delete if id is unknown." },
+      name: { type: "string", description: "Optional name to match and delete if id is unknown." },
     },
-    required: ["table", "ids"],
+    required: ["table"],
   },
   execute: async (args, ctx) => {
     const table = typeof args.table === "string" ? args.table.trim() : "";
     if (!tableExists(table)) {
       return { content: `Table "${table}" does not exist.`, citations: [] };
     }
-    const ids = Array.isArray(args.ids)
-      ? args.ids.filter((v): v is string => typeof v === "string" && v.length > 0)
-      : [];
-    if (ids.length === 0) {
-      return { content: "Provide a non-empty `ids` array of row ids to delete.", citations: [table] };
+
+    let ids: string[] = [];
+    if (Array.isArray(args.ids)) {
+      ids = args.ids.filter((v): v is string => typeof v === "string" && v.length > 0);
+    } else if (typeof args.id === "string" && args.id.trim().length > 0) {
+      ids = [args.id.trim()];
     }
 
     const ownerCol = resolveOwnerColumn(table);
     const db = getDb();
+    const allCols = getColumns(table);
+
+    // Auto-lookup by title or name if no explicit ids provided
+    if (ids.length === 0 && (typeof args.title === "string" || typeof args.name === "string")) {
+      const searchTerm = String(args.title || args.name).trim();
+      if (searchTerm) {
+        const searchCol = allCols.includes("title") ? "title" : allCols.includes("name") ? "name" : null;
+        if (searchCol) {
+          const matching = db
+            .prepare(`SELECT id FROM "${table}" WHERE lower("${searchCol}") LIKE lower(?) ${ownerCol ? `AND "${ownerCol}" = ?` : ""}`)
+            .all(`%${searchTerm}%`, ...(ownerCol ? [ctx.userId] : [])) as { id: string }[];
+          ids = matching.map((m) => String(m.id));
+        }
+      }
+    }
+
+    if (ids.length === 0) {
+      return { content: "Provide row `ids` or a matching `title`/`name` to delete.", citations: [table] };
+    }
+
     const placeholders = ids.map(() => "?").join(",");
     const lookupParams: unknown[] = [...ids];
     let lookupSql = `SELECT * FROM "${table}" WHERE id IN (${placeholders})`;
@@ -78,6 +102,7 @@ export const deleteDatabaseTool: ToolDefinition = {
         label: table,
         preview: summary,
         sql,
+        expiresAt: Date.now() + 60_000,
       },
     };
   },

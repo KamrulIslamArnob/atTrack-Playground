@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { ChevronDown, Eye, EyeOff } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { EyeIcon } from "@/components/ui/eye";
+import { EyeOffIcon } from "@/components/ui/eye-off";
 import { cn } from "@/lib/utils";
 
 interface SectionAccordionProps {
@@ -71,9 +73,9 @@ export function SectionAccordion({
           )}
         >
           {visible ? (
-            <Eye className="size-4 text-muted-foreground" />
+            <EyeIcon className="size-4 text-muted-foreground" />
           ) : (
-            <EyeOff className="size-4 text-muted-foreground/50" />
+            <EyeOffIcon className="size-4 text-muted-foreground/50" />
           )}
         </button>
       </div>

@@ -16,7 +16,8 @@ import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
 import { useAiUnlocked } from "@/lib/hooks/use-ai-unlocked";
 import { NoApiKeyOverlay } from "@/components/ai-chatbot/no-api-key-overlay";
-import { Mail, Save, Sparkles } from "lucide-react";
+import { Mail, Save } from "lucide-react";
+import { SparklesIcon } from "@/components/ui/sparkles";
 
 interface AiToolsTabProps {
   data: JobDetailData;
@@ -150,7 +151,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
 
         <Button onClick={() => handleGenerate(kind)} disabled={generating} size="sm">
           {generating && <Spinner className="mr-2" />}
-          <Sparkles className="mr-1 size-3.5" />
+          <SparklesIcon className="mr-1 size-3.5" />
           {result ? "Regenerate" : "Generate"}
         </Button>
 
@@ -206,7 +207,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
                   "flex items-center gap-2 rounded-2xl border border-border p-3 text-left text-sm transition-colors hover:bg-muted"
                 )}
               >
-                <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
+                <SparklesIcon className="size-3.5 shrink-0 text-muted-foreground" />
                 {k.label}
               </button>
             ))}

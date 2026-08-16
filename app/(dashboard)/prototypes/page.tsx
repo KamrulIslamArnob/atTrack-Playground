@@ -1,10 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles, Building2, Calendar, MapPin, ExternalLink, ArrowRight, Check } from "lucide-react";
+import { Building2, Brain, CheckCircle2, ListTodo, Table, Filter, Loader } from "lucide-react";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { CheckIcon } from "@/components/ui/check";
+import { MessageSquareIcon } from "@/components/ui/message-square";
 import { cn } from "@/lib/utils";
+import {
+  ThinkingState,
+  ApprovalCard,
+  TaskRows,
+  PromptBar,
+  RecordsTable,
+  FilterTable,
+  LoadingState,
+} from "@/components/ui/agent-primitives";
 
 type VariantKey = "quiet" | "apple" | "tactile";
+type PrimitiveKey = "thinking" | "approval" | "tasks" | "prompt" | "records" | "filter" | "loading";
 
 interface VariantOption {
   id: VariantKey;
@@ -23,54 +36,142 @@ const VARIANTS: VariantOption[] = [
   {
     id: "apple",
     name: "Apple Fluid",
-    tradeoff: "Glassmorphism, spring physics, light-catch borders, continuous feedback.",
     axis: "Translucent Materials & Spring Physics",
+    tradeoff: "Glassmorphism, spring physics, light-catch borders, continuous feedback.",
   },
   {
     id: "tactile",
     name: "Tactile Push",
-    tradeoff: "Interactive 3D push states, rich feedback, highly memorable.",
     axis: "3D Physical Press & High Tactility",
+    tradeoff: "Interactive 3D push states, rich feedback, highly memorable.",
   },
+];
+
+const PRIMITIVES: { id: PrimitiveKey; name: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "thinking", name: "Thinking State", icon: Brain },
+  { id: "approval", name: "Approval Card", icon: CheckCircle2 },
+  { id: "tasks", name: "Task Rows", icon: ListTodo },
+  { id: "prompt", name: "Prompt Bar", icon: MessageSquareIcon },
+  { id: "records", name: "Records Table", icon: Table },
+  { id: "filter", name: "Filter Table", icon: Filter },
+  { id: "loading", name: "Loading State", icon: Loader },
 ];
 
 export default function PrototypesPage() {
   const [activeVariant, setActiveVariant] = React.useState<VariantKey>("apple");
+  const [activePrimitive, setActivePrimitive] = React.useState<PrimitiveKey>("thinking");
+  const [thinkingVariant, setThinkingVariant] = React.useState<"Steps" | "Reasoning" | "Search" | "Coding">("Steps");
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-12 font-sans text-foreground">
-      {/* Header & Description */}
-      <div className="mx-auto max-w-4xl space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          <Sparkles className="size-3.5" />
-          <span>Interactive UI Prototype Harness (emi-prototype)</span>
+    <div className="min-h-screen bg-background p-4 sm:p-6 md:p-10 font-sans text-foreground space-y-10">
+      {/* ── Section 1: Agent UI Primitives (10-Tier Impeccable Design) ── */}
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
+            <SparklesIcon className="size-3.5" />
+            <span>Interactive Agent Primitives</span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl text-foreground">
+            AI Agent UI Component Kit
+          </h1>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Polished interactive components built according to 10-Tier craft standards: expandable traces, human approvals, task matrices, and adaptive composers.
+          </p>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl font-heading">
-          UI & Motion Design Variants
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Flip between three genuinely different UI directions live to explore interaction models, translucent depth, and physical press feedback.
-        </p>
+
+        {/* Primitive Switcher Bar */}
+        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-card p-1.5">
+          {PRIMITIVES.map((p) => {
+            const isActive = activePrimitive === p.id;
+            const Icon = p.icon;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setActivePrimitive(p.id)}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium transition-all active:scale-95 cursor-pointer",
+                  isActive
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="size-3.5" />
+                <span>{p.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Primitive Sandbox Stage */}
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-border bg-card/40 p-4 sm:p-8">
+          {activePrimitive === "thinking" && (
+            <div className="w-full max-w-md space-y-4">
+              <div className="flex items-center gap-1.5 border-b border-border pb-3">
+                {(["Steps", "Reasoning", "Search", "Coding"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setThinkingVariant(mode)}
+                    className={cn(
+                      "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                      thinkingVariant === mode
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              <ThinkingState variant={thinkingVariant} />
+            </div>
+          )}
+
+          {activePrimitive === "approval" && <ApprovalCard />}
+          {activePrimitive === "tasks" && <TaskRows variant="Capsules" />}
+          {activePrimitive === "prompt" && <PromptBar variant="Rounded" />}
+          {activePrimitive === "records" && <RecordsTable />}
+          {activePrimitive === "filter" && <FilterTable />}
+          {activePrimitive === "loading" && (
+            <div className="flex flex-col items-center gap-4">
+              <LoadingState label="Analyzing job fits" variant="Drive" />
+              <LoadingState label="Indexing skills" variant="Dots" />
+              <LoadingState label="Syncing database" variant="Orbit" />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Harness Control Switcher Bar */}
-      <div className="mx-auto mt-8 max-w-4xl">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-2 shadow-xs">
+      {/* ── Section 2: Motion Design Variants ── */}
+      <div className="mx-auto max-w-4xl space-y-6 pt-6 border-t border-border">
+        <div className="space-y-1.5">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            UI & Motion Design Variants
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Flip between three UI directions to explore interaction models, translucent depth, and tactile feedback.
+          </p>
+        </div>
+
+        {/* Variant Switcher */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-1.5">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {VARIANTS.map((v) => {
               const isActive = activeVariant === v.id;
               return (
                 <button
                   key={v.id}
+                  type="button"
                   onClick={() => setActiveVariant(v.id)}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-150 ease-out select-none",
+                    "flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium transition-all active:scale-95 cursor-pointer",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-xs"
+                      ? "bg-primary text-primary-foreground font-semibold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  {isActive && <Check className="size-3.5" />}
+                  {isActive && <CheckIcon className="size-3.5" />}
                   <span>{v.name}</span>
                 </button>
               );
@@ -82,7 +183,7 @@ export default function PrototypesPage() {
         </div>
 
         {/* Current Variant Explanation Card */}
-        <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 p-4 text-xs space-y-1">
+        <div className="rounded-xl border border-border/60 bg-muted/30 p-3.5 text-xs space-y-1">
           <div className="font-semibold text-foreground">
             Axis: {VARIANTS.find((v) => v.id === activeVariant)?.axis}
           </div>
@@ -90,20 +191,18 @@ export default function PrototypesPage() {
             {VARIANTS.find((v) => v.id === activeVariant)?.tradeoff}
           </div>
         </div>
-      </div>
 
-      {/* Render Active Variant Component */}
-      <div className="mx-auto mt-8 max-w-4xl">
-        <div className="rounded-3xl border border-border bg-background p-6 md:p-10 shadow-xs flex items-center justify-center min-h-[380px]">
+        {/* Render Variant Showcase */}
+        <div className="rounded-2xl border border-border bg-background p-6 md:p-10 flex items-center justify-center min-h-[340px]">
           {activeVariant === "quiet" && (
-            <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-card p-6 transition-[border-color] duration-140 ease-out hover:border-foreground/30">
+            <div className="w-full max-w-md space-y-3.5 rounded-2xl border border-border bg-card p-5 transition-colors hover:border-foreground/30">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                     Quiet Direction
                   </span>
-                  <h2 className="mt-2 text-lg font-bold text-foreground">Senior Frontend Engineer</h2>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                  <h3 className="mt-2 text-base font-bold text-foreground">Senior Frontend Engineer</h3>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Building2 className="size-3.5" /> Stripe • San Francisco, CA
                   </p>
                 </div>
@@ -113,10 +212,16 @@ export default function PrototypesPage() {
                 Restrained layout with sharp contrast, zero unnecessary animations, and 140ms ease-out transitions for rapid daily productivity.
               </p>
               <div className="pt-2 flex items-center justify-between">
-                <button className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground transition-colors duration-140 hover:bg-muted active:bg-muted/80">
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted active:scale-95 cursor-pointer"
+                >
                   View Details
                 </button>
-                <button className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity duration-140 hover:opacity-90 active:opacity-100">
+                <button
+                  type="button"
+                  className="rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:scale-95 cursor-pointer"
+                >
                   Apply Now
                 </button>
               </div>
@@ -124,31 +229,35 @@ export default function PrototypesPage() {
           )}
 
           {activeVariant === "apple" && (
-            <div className="w-full max-w-md space-y-4 rounded-3xl border border-white/20 dark:border-white/10 bg-card/70 backdrop-blur-xl p-6 shadow-xl transition-[transform,box-shadow] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-2xl">
+            <div className="w-full max-w-md space-y-3.5 rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl p-5 shadow-xs transition-transform duration-200 hover:-translate-y-0.5">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+                  <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
                     Apple Fluid Direction
                   </span>
-                  <h2 className="mt-3 text-xl font-bold tracking-tight text-foreground font-heading">
-                    Design Engineer
-                  </h2>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                  <h3 className="mt-2 text-base font-bold text-foreground">Design Engineer</h3>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Building2 className="size-3.5" /> Apple • Cupertino, CA
                   </p>
                 </div>
-                <span className="rounded-full bg-gradient-to-r from-lime-400 to-lime-500 px-3 py-1 text-xs font-bold text-black shadow-xs">
+                <span className="rounded-full bg-success/15 text-success px-2.5 py-0.5 text-xs font-bold">
                   98% Match
                 </span>
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Translucent glass surfaces with <code className="font-mono text-primary">backdrop-filter</code>, iOS spring dynamics, light-catch top border, and continuous feedback.
+                Translucent glass surfaces with backdrop blur, iOS spring dynamics, light-catch top border, and continuous feedback.
               </p>
               <div className="pt-2 flex items-center justify-between">
-                <button className="rounded-xl border border-border bg-background/50 backdrop-blur-md px-4 py-2.5 text-xs font-semibold text-foreground transition-[transform,background-color] duration-160 ease-out active:scale-[0.96] hover:bg-muted">
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-background/50 backdrop-blur-md px-3.5 py-1.5 text-xs font-semibold text-foreground transition-all active:scale-95 hover:bg-muted cursor-pointer"
+                >
                   View Details
                 </button>
-                <button className="rounded-xl bg-gradient-brand px-5 py-2.5 text-xs font-bold text-black shadow-md transition-[transform,box-shadow] duration-160 ease-out active:scale-[0.96] hover:shadow-lg">
+                <button
+                  type="button"
+                  className="rounded-xl bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-2xs transition-all active:scale-95 hover:bg-primary/90 cursor-pointer"
+                >
                   Apply Now
                 </button>
               </div>
@@ -156,18 +265,18 @@ export default function PrototypesPage() {
           )}
 
           {activeVariant === "tactile" && (
-            <div className="w-full max-w-md space-y-5 rounded-3xl border border-border bg-card p-6 shadow-md transition-all duration-200 hover:border-primary/40">
+            <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 text-[11px] font-bold text-indigo-500">
+                  <span className="rounded-lg bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
                     Tactile Push Direction
                   </span>
-                  <h2 className="mt-3 text-lg font-bold text-foreground">Full Stack Developer</h2>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                  <h3 className="mt-2 text-base font-bold text-foreground">Full Stack Developer</h3>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Building2 className="size-3.5" /> Vercel • Remote
                   </p>
                 </div>
-                <span className="rounded-xl bg-amber-400/20 border border-amber-500/30 px-2.5 py-1 text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                <span className="rounded-lg bg-warning/15 border border-warning/30 px-2 py-0.5 text-xs font-bold text-warning">
                   92% Match
                 </span>
               </div>
@@ -175,15 +284,17 @@ export default function PrototypesPage() {
                 3D depth and physical pushable button states with momentum spring animations. Instant tactile responsiveness on every click.
               </p>
               <div className="pt-2 flex items-center justify-between gap-3">
-                <button className="pushable-status flex-1">
-                  <span className="pushable-shadow" />
-                  <span className="pushable-edge" />
-                  <span className="pushable-front w-full justify-center">Details</span>
+                <button
+                  type="button"
+                  className="flex-1 rounded-xl border border-border bg-muted/60 py-2 text-xs font-semibold text-foreground active:scale-95 transition-transform cursor-pointer"
+                >
+                  Details
                 </button>
-                <button className="pushable-apply flex-1">
-                  <span className="pushable-shadow" />
-                  <span className="pushable-edge" />
-                  <span className="pushable-front w-full justify-center">Apply Now</span>
+                <button
+                  type="button"
+                  className="flex-1 rounded-xl bg-primary py-2 text-xs font-bold text-primary-foreground active:scale-95 transition-transform cursor-pointer"
+                >
+                  Apply Now
                 </button>
               </div>
             </div>

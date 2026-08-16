@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ThemeLogo } from "@/components/ui/theme-logo";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
 import { Sidebar, type SidebarProps } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -72,7 +73,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role, showRawDataba
               className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-[background-color,color,transform] duration-160 ease-out active:scale-[0.96] hover:bg-muted hover:text-foreground"
               aria-label="Close menu"
             >
-              <X className="size-4" />
+              <XIcon className="size-4" />
             </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">

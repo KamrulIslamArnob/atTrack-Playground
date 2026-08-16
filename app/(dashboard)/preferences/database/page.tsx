@@ -3,27 +3,17 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Database,
-  Table2,
-  ChevronRight,
-  ChevronDown,
-  Loader2,
-  Search,
-  Key,
-  Link2,
-  Lock,
-  Pencil,
-  Check,
-  X,
-  Hash,
-  Type,
-  ToggleLeft,
-  AlertCircle,
-  Layers,
-  PanelLeft,
-  PanelLeftClose,
-  Menu,
-} from "lucide-react";
+  Database, Table2, Loader2, Pencil, Hash, Type, ToggleLeft, AlertCircle, PanelLeft, PanelLeftClose } from "lucide-react";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { SearchIcon } from "@/components/ui/search";
+import { KeyIcon } from "@/components/ui/key";
+import { Link2Icon } from "@/components/ui/link-2";
+import { LockIcon } from "@/components/ui/lock";
+import { CheckIcon } from "@/components/ui/check";
+import { XIcon } from "@/components/ui/x";
+import { LayersIcon } from "@/components/ui/layers";
+import { MenuIcon } from "@/components/ui/menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,7 +93,7 @@ function InlineEditor({
           {editValue === "1" ? "1 (true)" : "0 (false)"}
         </button>
         <button onClick={onCancel} className="p-0.5 hover:text-destructive">
-          <X className="size-3" />
+          <XIcon className="size-3" />
         </button>
       </div>
     );
@@ -121,10 +111,10 @@ function InlineEditor({
         className="flex-1 px-1.5 py-0.5 text-xs font-mono border border-primary rounded bg-background outline-none"
       />
       <button onClick={() => onSave(editValue)} className="p-0.5 text-emerald-500 hover:text-emerald-600">
-        <Check className="size-3" />
+        <CheckIcon className="size-3" />
       </button>
       <button onClick={onCancel} className="p-0.5 text-destructive hover:text-destructive/80">
-        <X className="size-3" />
+        <XIcon className="size-3" />
       </button>
     </div>
   );
@@ -376,10 +366,10 @@ export default function DatabasePage() {
         </Badge>
       </div>
 
-      {/* Search */}
+      {/* SearchIcon */}
       <div className="p-2 border-b border-border shrink-0">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
             placeholder="Filter tables..."
             value={searchQuery}
@@ -411,9 +401,9 @@ export default function DatabasePage() {
               >
                 <span className="shrink-0 size-3.5 flex items-center justify-center">
                   {isExpanded ? (
-                    <ChevronDown className="size-3" />
+                    <ChevronDownIcon className="size-3" />
                   ) : (
-                    <ChevronRight className="size-3" />
+                    <ChevronRightIcon className="size-3" />
                   )}
                 </span>
                 <Table2 className="size-3.5 shrink-0 text-cyan-500" />
@@ -436,9 +426,9 @@ export default function DatabasePage() {
                         className="flex items-center gap-1.5 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted/30"
                       >
                         {col.pk > 0 ? (
-                          <Key className="size-3 shrink-0 text-amber-500" />
+                          <KeyIcon className="size-3 shrink-0 text-amber-500" />
                         ) : hasFK ? (
-                          <Link2 className="size-3 shrink-0 text-blue-400" />
+                          <Link2Icon className="size-3 shrink-0 text-blue-400" />
                         ) : (
                           <span className="size-3 shrink-0 inline-flex items-center justify-center">
                             <span className="size-1.5 rounded-full bg-muted-foreground/40" />
@@ -476,7 +466,7 @@ export default function DatabasePage() {
                 size="icon-xs"
                 onClick={() => setShowMobileTables(false)}
               >
-                <X className="size-4" />
+                <XIcon className="size-4" />
               </Button>
             </div>
             <div className="flex-1 overflow-hidden">{renderTablesList()}</div>
@@ -512,7 +502,7 @@ export default function DatabasePage() {
               </Button>
             </div>
             <div className="text-center space-y-3">
-              <Layers className="size-12 mx-auto text-muted-foreground/30" />
+              <LayersIcon className="size-12 mx-auto text-muted-foreground/30" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Select a table to view its data
@@ -567,7 +557,7 @@ export default function DatabasePage() {
               </div>
 
               <div className="w-full sm:w-56 shrink-0 relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Filter rows..."
                   value={filterText}
@@ -579,13 +569,13 @@ export default function DatabasePage() {
 
             {/* Column legend */}
             <div className="px-3 py-1.5 border-b border-border flex items-center gap-2 bg-muted/20 text-[10px] text-muted-foreground overflow-x-auto whitespace-nowrap shrink-0">
-              <Key className="size-3 text-amber-500 shrink-0" /> Primary key (read-only)
+              <KeyIcon className="size-3 text-amber-500 shrink-0" /> Primary key (read-only)
               <span className="mx-1">·</span>
-              <Link2 className="size-3 text-blue-400 shrink-0" /> Foreign key
+              <Link2Icon className="size-3 text-blue-400 shrink-0" /> Foreign key
               {readOnlyCols.size > 0 && (
                 <>
                   <span className="mx-1">·</span>
-                  <Lock className="size-3 text-orange-400 shrink-0" /> Cascading FK (read-only)
+                  <LockIcon className="size-3 text-orange-400 shrink-0" /> Cascading FK (read-only)
                 </>
               )}
             </div>
@@ -613,17 +603,17 @@ export default function DatabasePage() {
                           >
                             <span className="flex items-center gap-1.5">
                               {col.pk > 0 && (
-                                <Key className="size-3 text-amber-500" />
+                                <KeyIcon className="size-3 text-amber-500" />
                               )}
                               {readOnlyCols.has(col.name) && !col.pk && (
-                                <Lock className="size-3 text-orange-400" />
+                                <LockIcon className="size-3 text-orange-400" />
                               )}
                               {activeTable.foreignKeys.some(
                                 (fk) => fk.from === col.name
                               ) &&
                                 !col.pk &&
                                 !readOnlyCols.has(col.name) && (
-                                  <Link2 className="size-3 text-blue-400" />
+                                  <Link2Icon className="size-3 text-blue-400" />
                                 )}
                               <span className="truncate max-w-[200px]">
                                 {col.name}
@@ -739,7 +729,7 @@ export default function DatabasePage() {
               </span>
               {readOnlyCols.size > 0 && (
                 <span className="flex items-center gap-1">
-                  <Lock className="size-3 text-orange-400" />
+                  <LockIcon className="size-3 text-orange-400" />
                   {readOnlyCols.size} cascading FK column{readOnlyCols.size > 1 ? "s" : ""} locked
                 </span>
               )}

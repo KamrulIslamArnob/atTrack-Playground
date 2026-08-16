@@ -80,6 +80,20 @@ export const CHAT_PERSONAS: ChatPersona[] = [
   },
 ];
 
+/**
+ * The one model option that is not an `ai_providers` row. "auto" names a
+ * capability, not a vendor — the server resolves it against the user's own
+ * configured providers, so it can never route somewhere the user has no key
+ * for. Every other option in the picker is built at runtime from
+ * `listProviders()`.
+ *
+ * This list used to also carry a hardcoded vendor catalog (Gemini 2.0 Flash,
+ * Gemini 1.5 Pro, Claude 3.5 Sonnet, GPT-4o, DeepSeek R1). It is the picker's
+ * seed and its fallback, so on a workspace configured with none of those
+ * vendors the dropdown offered five models that could not be served, and
+ * picking one landed the turn on whatever headed the fallback chain. Settings >
+ * AI Providers is the only place a model may come from.
+ */
 export const AI_MODELS: AIModel[] = [
   {
     id: "auto",
@@ -91,53 +105,6 @@ export const AI_MODELS: AIModel[] = [
     isFast: true,
     isPopular: true,
     badge: "Smart Hybrid",
-  },
-  {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
-    provider: "gemini",
-    description: "Multimodal, ultra-fast responses for general career & technical tasks",
-    supportsImages: true,
-    isReasoning: false,
-    isFast: true,
-    isPopular: true,
-    badge: "Recommended",
-  },
-  {
-    id: "gemini-1.5-pro",
-    name: "Gemini 1.5 Pro",
-    provider: "gemini",
-    description: "High intelligence with deep understanding for complex documents",
-    supportsImages: true,
-    isReasoning: false,
-    badge: "High IQ",
-  },
-  {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "anthropic",
-    description: "Superior coding, structural analysis & resume drafting",
-    supportsImages: true,
-    isReasoning: false,
-    badge: "Code & Logic",
-  },
-  {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    provider: "openai",
-    description: "Versatile flagship model with image reasoning capabilities",
-    supportsImages: true,
-    isReasoning: false,
-    badge: "Versatile",
-  },
-  {
-    id: "deepseek-r1",
-    name: "DeepSeek R1",
-    provider: "deepseek",
-    description: "Chain-of-thought reasoning engine for math, architecture & logic",
-    supportsImages: false,
-    isReasoning: true,
-    badge: "Reasoning",
   },
 ];
 
@@ -167,11 +134,30 @@ const LAST_MODEL_KEY = "attrack_ai_chat_selected_model";
 // previous two-authority merge had no way to express "deleted", so a delete
 // always lost to a row that still existed.
 
+export function normalizeSessionMessages(messages: Message[]): Message[] {
+  return [...(messages ?? [])].sort((a, b) => {
+    const timeA = String(a.createdAt ?? "");
+    const timeB = String(b.createdAt ?? "");
+    if (timeA && timeB && timeA !== timeB) {
+      return timeA.localeCompare(timeB);
+    }
+    if (a.role !== b.role) {
+      return a.role === "user" ? -1 : 1;
+    }
+    return 0;
+  });
+}
+
 export function readCache(): ChatSession[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ChatSession[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ChatSession[];
+    return parsed.map((s) => ({
+      ...s,
+      messages: normalizeSessionMessages(s.messages),
+    }));
   } catch (err) {
     console.error("Couldn't read cached chat sessions:", err);
     return [];
@@ -181,7 +167,12 @@ export function readCache(): ChatSession[] {
 export function writeCache(sessions: ChatSession[]): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    const normalized = sessions.map((s) => ({
+      ...s,
+      messages: normalizeSessionMessages(s.messages),
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent("attrack-chat-sessions-updated", { detail: normalized }));
   } catch (err) {
     console.error("Couldn't cache chat sessions:", err);
   }

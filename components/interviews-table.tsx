@@ -6,24 +6,15 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import {
-  Search,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  MapPin,
-  Video,
-  User,
-  ExternalLink,
-  Pencil,
-} from "lucide-react";
+  Search, Calendar, Video, Pencil } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { MapPinIcon } from "@/components/ui/map-pin";
+import { UserIcon } from "@/components/ui/user";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
 import type { Interview } from "@/lib/actions/interviews";
 import { getCalendarLinkFromInterview } from "@/lib/calendar";
 import { InterviewForm } from "@/components/interview-form";
@@ -202,7 +193,7 @@ export function InterviewsTable({
             onClick={() => updateParams("page", String(Math.max(1, page - 1)))}
             disabled={page <= 1}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeftIcon className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -211,7 +202,7 @@ export function InterviewsTable({
             onClick={() => updateParams("page", String(Math.min(totalPages, page + 1)))}
             disabled={page >= totalPages}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRightIcon className="size-4" />
           </Button>
         </div>
       </div>
@@ -223,7 +214,7 @@ export function InterviewsTable({
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               Search: {initialSearch}
               <button onClick={() => updateParams("search", "")} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -231,7 +222,7 @@ export function InterviewsTable({
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               Status: {statusLabels[initialStatus]}
               <button onClick={() => updateParams("status", "all")} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -239,7 +230,7 @@ export function InterviewsTable({
             <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs">
               Sort: {initialSort}
               <button onClick={() => updateParams("sort", "newest")} className="ml-0.5 hover:text-foreground">
-                <X className="size-3" />
+                <XIcon className="size-3" />
               </button>
             </span>
           )}
@@ -320,7 +311,7 @@ export function InterviewsTable({
                     </td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <User className="size-3.5 shrink-0" />
+                        <UserIcon className="size-3.5 shrink-0" />
                         {interview.interviewer_name ?? "-"}
                       </span>
                     </td>
@@ -333,7 +324,7 @@ export function InterviewsTable({
                           </>
                         ) : interview.location ? (
                           <>
-                            <MapPin className="size-3.5 shrink-0" />
+                            <MapPinIcon className="size-3.5 shrink-0" />
                             <span>{interview.location}</span>
                           </>
                         ) : (
@@ -357,7 +348,7 @@ export function InterviewsTable({
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-green-800 dark:hover:text-lime-400 transition-colors"
                           >
-                            <ExternalLink className="size-3.5" />
+                            <ExternalLinkIcon className="size-3.5" />
                             Calendar
                           </a>
                         )}

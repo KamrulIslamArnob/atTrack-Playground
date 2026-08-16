@@ -8,7 +8,8 @@ import {
   type FC,
   type PropsWithChildren,
 } from "react";
-import { ChevronDownIcon, LoaderIcon } from "lucide-react";
+import { ChevronDownIcon, Loader2Icon } from "lucide-react";
+import { HammerIcon } from "@/components/ai-chatbot/hammer-icon";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useScrollLock } from "@assistant-ui/react";
 import {
@@ -23,9 +24,9 @@ const ANIMATION_DURATION = 200;
 const toolGroupVariants = cva("aui-tool-group-root group/tool-group w-full", {
   variants: {
     variant: {
-      outline: "rounded-lg border py-3",
+      outline: "rounded-xl border border-border py-3",
       ghost: "",
-      muted: "border-muted-foreground/30 bg-muted/30 rounded-lg border py-3",
+      muted: "rounded-xl border border-border bg-muted/40 py-3",
     },
   },
   defaultVariants: { variant: "outline" },
@@ -107,50 +108,18 @@ function ToolGroupTrigger({
     <CollapsibleTrigger
       data-slot="tool-group-trigger"
       className={cn(
-        "aui-tool-group-trigger group/trigger flex origin-left items-center gap-2 text-sm transition-[color,scale] active:scale-[0.98]",
-        "group-data-[variant=ghost]/tool-group-root:text-muted-foreground group-data-[variant=ghost]/tool-group-root:hover:text-foreground group-data-[variant=ghost]/tool-group-root:py-1.5",
-        "group-data-[variant=outline]/tool-group-root:w-full group-data-[variant=outline]/tool-group-root:px-4",
-        "group-data-[variant=muted]/tool-group-root:w-full group-data-[variant=muted]/tool-group-root:px-4",
-        className,
+        "aui-tool-group-trigger group/trigger -mx-1.5 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer active:scale-95 my-0.5",
+        className
       )}
       {...props}
     >
-      {active && (
-        <LoaderIcon
-          data-slot="tool-group-trigger-loader"
-          className="aui-tool-group-trigger-loader size-3 shrink-0 animate-spin [animation-duration:0.6s]"
-        />
+      {active ? (
+        <Loader2Icon className="size-3.5 shrink-0 animate-spin text-primary" />
+      ) : (
+        <HammerIcon size={14} className="size-3.5 shrink-0 text-primary inline-flex" />
       )}
-      <span
-        data-slot="tool-group-trigger-label"
-        className={cn(
-          "aui-tool-group-trigger-label-wrapper relative inline-block text-start leading-none font-medium",
-          "group-data-[variant=ghost]/tool-group-root:font-normal",
-          "group-data-[variant=outline]/tool-group-root:grow",
-          "group-data-[variant=muted]/tool-group-root:grow",
-        )}
-      >
-        <span className="text-xs">{label}</span>
-        {active && (
-          <span
-            aria-hidden
-            data-slot="tool-group-trigger-shimmer"
-            className="aui-tool-group-trigger-shimmer shimmer pointer-events-none absolute inset-0 text-xs motion-reduce:animate-none"
-          >
-            {label}
-          </span>
-        )}
-      </span>
-      <ChevronDownIcon
-        data-slot="tool-group-trigger-chevron"
-        className={cn(
-          "aui-tool-group-trigger-chevron size-3 shrink-0",
-          "transition-transform duration-(--animation-duration) ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
-          "-rotate-90",
-          "group-data-open/trigger:rotate-0",
-          "group-data-panel-open/trigger:rotate-0",
-        )}
-      />
+      <span className="text-xs">{label}</span>
+      <ChevronDownIcon className="size-3.5 text-muted-foreground/70 transition-transform duration-200 -rotate-90 group-data-open/trigger:rotate-0 group-data-panel-open/trigger:rotate-0" />
     </CollapsibleTrigger>
   );
 }
@@ -164,7 +133,7 @@ function ToolGroupContent({
     <CollapsibleContent
       data-slot="tool-group-content"
       className={cn(
-        "aui-tool-group-content relative overflow-hidden text-sm outline-none",
+        "aui-tool-group-content relative overflow-hidden text-xs outline-none",
         "group/collapsible-content ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:animate-none",
         "data-closed:animate-collapsible-up",
         "data-open:animate-collapsible-down",
@@ -217,12 +186,6 @@ const ToolGroupImpl: FC<
   );
 };
 
-/**
- * @deprecated This wrapper targets the legacy `components.ToolGroup` prop
- * on `<MessagePrimitive.Parts>`. Use `<MessagePrimitive.GroupedParts>` with
- * a `groupBy` returning `"group-tool"` and compose `ToolGroupRoot` /
- * `ToolGroupTrigger` / `ToolGroupContent` directly. See `thread.tsx`.
- */
 const ToolGroup = memo(ToolGroupImpl) as unknown as ToolGroupComponent;
 
 ToolGroup.displayName = "ToolGroup";

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { ArrowRightIcon } from "@/components/ui/arrow-right";
 import ShinyText from "@/components/ShinyText";
 import { Avatar, AvatarImage, AvatarGroup } from "@/components/ui/avatar";
 import {
@@ -85,7 +86,7 @@ export function Hero() {
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
           >
             Open atTrack
-            <ArrowRight className="size-4" />
+            <ArrowRightIcon className="size-4" />
           </Link>
         </motion.div>
 

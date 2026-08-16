@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Geist_Mono, Inter, Cormorant_Garamond, Bricolage_Grotesque, Crimson_Text } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
@@ -16,18 +16,6 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-const cormorant = Cormorant_Garamond({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const crimsonText = Crimson_Text({
-  variable: "--font--crimson",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
 });
 
 const bricolage = Bricolage_Grotesque({
@@ -52,16 +40,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-        className={cn(
-          "h-full",
-          "antialiased",
-          geistSans.variable,
-          geistMono.variable,
-          "font-sans",
-          inter.variable,
-          cormorant.variable,
-          bricolage.variable
-        )}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+        bricolage.variable
+      )}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>

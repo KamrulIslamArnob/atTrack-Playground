@@ -3,17 +3,16 @@
 import { useState } from "react";
 import { LinkCategory, SocialLink } from "@/lib/types/links";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ArrowUp, ArrowDown, Edit2, Trash2, Check, X, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowUpIcon } from "@/components/ui/arrow-up";
+import { ArrowDownIcon } from "@/components/ui/arrow-down";
+import { CheckIcon } from "@/components/ui/check";
+import { XIcon } from "@/components/ui/x";
 import { toast } from "sonner";
 
 interface CategoryManagerDialogProps {
@@ -219,7 +218,7 @@ export function CategoryManagerDialog({
                         className="size-7 rounded-lg text-emerald-500 hover:text-emerald-600"
                         onClick={() => handleSaveEdit(cat.id)}
                       >
-                        <Check className="size-3.5" />
+                        <CheckIcon className="size-3.5" />
                       </Button>
                       <Button
                         size="icon"
@@ -227,7 +226,7 @@ export function CategoryManagerDialog({
                         className="size-7 rounded-lg text-muted-foreground"
                         onClick={() => setEditingId(null)}
                       >
-                        <X className="size-3.5" />
+                        <XIcon className="size-3.5" />
                       </Button>
                     </div>
                   ) : (
@@ -247,7 +246,7 @@ export function CategoryManagerDialog({
                           onClick={() => handleMove(idx, "up")}
                           className="size-6 rounded-md text-muted-foreground hover:text-foreground"
                         >
-                          <ArrowUp className="size-3" />
+                          <ArrowUpIcon className="size-3" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -256,7 +255,7 @@ export function CategoryManagerDialog({
                           onClick={() => handleMove(idx, "down")}
                           className="size-6 rounded-md text-muted-foreground hover:text-foreground"
                         >
-                          <ArrowDown className="size-3" />
+                          <ArrowDownIcon className="size-3" />
                         </Button>
                         <Button
                           variant="ghost"

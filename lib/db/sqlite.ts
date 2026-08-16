@@ -309,6 +309,8 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "chat_messages", column: "thinking", ddl: "ALTER TABLE chat_messages ADD COLUMN thinking TEXT" },
   { table: "chat_messages", column: "sources", ddl: "ALTER TABLE chat_messages ADD COLUMN sources TEXT" },
   { table: "chat_messages", column: "tool_calls", ddl: "ALTER TABLE chat_messages ADD COLUMN tool_calls TEXT" },
+  { table: "jobs", column: "tier", ddl: "ALTER TABLE jobs ADD COLUMN tier TEXT" },
+  { table: "companies", column: "tier", ddl: "ALTER TABLE companies ADD COLUMN tier TEXT" },
 ];
 
 /** Returns how many COLUMN_MIGRATIONS actually landed — zero on an
@@ -488,22 +490,20 @@ function addMissingColumns(db: DatabaseSync): number {
     }
   }
 
-  // One-time repair of chat history written before `seq` existed. Ordered by
-  // rowid, not created_at: assistant rows were re-stamped with the save time on
-  // every upsert, so created_at no longer reflects turn order. Naturally
-  // idempotent — once every row has a seq, this matches nothing.
-  //
-  // ponytail: correlated subquery, O(n^2) per session. Chat sessions hold tens
-  // of messages, so this is milliseconds. Switch to a window function if a
-  // session ever holds thousands.
+  // One-time repair of chat history sequence order.
+  // Re-indexes seq chronologically per session with deterministic user-before-assistant ordering.
   db.exec(`
+    WITH ordered AS (
+      SELECT id, (
+        ROW_NUMBER() OVER (
+          PARTITION BY session_id 
+          ORDER BY created_at ASC, (CASE WHEN role = 'user' THEN 0 ELSE 1 END), rowid ASC
+        ) - 1
+      ) AS new_seq
+      FROM chat_messages
+    )
     UPDATE chat_messages
-    SET seq = (
-      SELECT COUNT(*) FROM chat_messages AS m2
-      WHERE m2.session_id = chat_messages.session_id
-        AND m2.rowid <= chat_messages.rowid
-    ) - 1
-    WHERE seq IS NULL
+    SET seq = (SELECT new_seq FROM ordered WHERE ordered.id = chat_messages.id);
   `);
 
   return applied;

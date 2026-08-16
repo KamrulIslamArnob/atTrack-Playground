@@ -13,19 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  FileText,
-  Copy,
-  Check,
-  Download,
-  Printer,
-  Pencil,
-  Save,
-  X,
-  Briefcase,
-  Sparkles,
-  ExternalLink,
-  Mail,
-} from "lucide-react";
+  FileText, Printer, Pencil, Save, Briefcase, Mail } from "lucide-react";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { DownloadIcon } from "@/components/ui/download";
+import { XIcon } from "@/components/ui/x";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
 
 interface TextDocumentViewerProps {
   doc: Document;
@@ -134,7 +128,7 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
                   {name}
                 </h2>
                 <Badge variant="secondary" className="capitalize text-xs gap-1">
-                  <Sparkles className="size-3 text-purple-500" />
+                  <SparklesIcon className="size-3 text-purple-500" />
                   {generatedLabel}
                 </Badge>
               </div>
@@ -149,7 +143,7 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
                   className="font-medium text-primary hover:underline flex items-center gap-1"
                 >
                   {job.title} {job.company_name ? `at ${job.company_name}` : ""}
-                  <ExternalLink className="size-3 opacity-70" />
+                  <ExternalLinkIcon className="size-3 opacity-70" />
                 </Link>
               </div>
             )}
@@ -160,7 +154,7 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
             {isEditing ? (
               <>
                 <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} disabled={saving}>
-                  <X className="mr-1.5 size-3.5" />
+                  <XIcon className="mr-1.5 size-3.5" />
                   Cancel
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={saving}>
@@ -175,15 +169,15 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
                   Edit Text
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleDownloadTxt}>
-                  <Download className="mr-1.5 size-3.5 text-muted-foreground" />
-                  Download .txt
+                  <DownloadIcon className="mr-1.5 size-3.5 text-muted-foreground" />
+                  DownloadIcon .txt
                 </Button>
                 <Button variant="outline" size="sm" onClick={handlePrintPdf}>
                   <Printer className="mr-1.5 size-3.5 text-muted-foreground" />
                   Print / PDF
                 </Button>
                 <Button variant="default" size="sm" onClick={handleCopyAll}>
-                  {copiedAll ? <Check className="mr-1.5 size-3.5" /> : <Copy className="mr-1.5 size-3.5" />}
+                  {copiedAll ? <CheckIcon className="mr-1.5 size-3.5" /> : <CopyIcon className="mr-1.5 size-3.5" />}
                   {copiedAll ? "Copied All" : "Copy Full Text"}
                 </Button>
               </>
@@ -216,7 +210,7 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
                     onClick={handleCopySubject}
                     className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                   >
-                    {copiedSubject ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                    {copiedSubject ? <CheckIcon className="size-3 text-emerald-500" /> : <CopyIcon className="size-3" />}
                     <span>{copiedSubject ? "Copied" : "Copy Subject"}</span>
                   </button>
                 </div>
@@ -236,7 +230,7 @@ export function TextDocumentViewer({ doc, job }: TextDocumentViewerProps) {
                   onClick={handleCopyBody}
                   className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 >
-                  {copiedBody ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                  {copiedBody ? <CheckIcon className="size-3 text-emerald-500" /> : <CopyIcon className="size-3" />}
                   <span>{copiedBody ? "Copied" : "Copy Body"}</span>
                 </button>
               </div>

@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS companies (
   founded_year INTEGER,
   company_type TEXT,
   country TEXT,
+  color TEXT,
+  tier TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -179,6 +181,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   resume_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
   project_links TEXT,           -- JSON: ProjectLink[]
   color TEXT,                   -- job-detail-sheet: per-job accent override; falls back to list color when NULL
+  tier TEXT,                    -- '1', '2', '3' priority tier
   section_deadline TEXT,        -- ISO date/time for section target deadline
   section_deadline_list_id TEXT REFERENCES board_lists(id) ON DELETE SET NULL,
   skills TEXT,                  -- JSON: string[]

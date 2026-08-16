@@ -8,21 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import type { SystemPerformanceData } from "@/lib/types/electron";
 import {
-  Cpu,
-  HardDrive,
-  Folder,
-  Server,
-  RefreshCw,
-  Copy,
-  Check,
-  CheckCircle2,
-  Monitor,
-  Terminal,
-  Zap,
-  Database,
-  Radio,
-  FileCode,
-} from "lucide-react";
+  Cpu, HardDrive, Folder, Server, CheckCircle2, Monitor, Database, Radio, FileCode } from "lucide-react";
+import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { TerminalIcon } from "@/components/ui/terminal";
+import { ZapIcon } from "@/components/ui/zap";
 import { toast } from "sonner";
 
 export default function PerformancePreferencesPage() {
@@ -152,7 +143,7 @@ export default function PerformancePreferencesPage() {
               disabled={refreshing}
               className="gap-2 text-xs shrink-0"
             >
-              <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCWIcon className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
               Refresh
             </Button>
 
@@ -162,7 +153,7 @@ export default function PerformancePreferencesPage() {
               onClick={handleCopyFullReport}
               className="gap-2 text-xs flex-1 sm:flex-initial justify-center"
             >
-              <Copy className="size-3.5" />
+              <CopyIcon className="size-3.5" />
               <span className="truncate">Copy Diagnostic Log</span>
             </Button>
           </div>
@@ -328,7 +319,7 @@ export default function PerformancePreferencesPage() {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               App Version & Mode
             </CardTitle>
-            <Zap className="size-4 text-amber-500 shrink-0" />
+            <ZapIcon className="size-4 text-amber-500 shrink-0" />
           </CardHeader>
           <CardContent className="space-y-2.5">
             <div className="flex flex-wrap items-baseline justify-between gap-1.5">
@@ -399,9 +390,9 @@ export default function PerformancePreferencesPage() {
                   title="Copy path"
                 >
                   {copiedKey === "Root Directory" ? (
-                    <Check className="size-3 text-emerald-500" />
+                    <CheckIcon className="size-3 text-emerald-500" />
                   ) : (
-                    <Copy className="size-3 text-muted-foreground" />
+                    <CopyIcon className="size-3 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -425,9 +416,9 @@ export default function PerformancePreferencesPage() {
                   title="Copy path"
                 >
                   {copiedKey === "Data Folder" ? (
-                    <Check className="size-3 text-emerald-500" />
+                    <CheckIcon className="size-3 text-emerald-500" />
                   ) : (
-                    <Copy className="size-3 text-muted-foreground" />
+                    <CopyIcon className="size-3 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -451,9 +442,9 @@ export default function PerformancePreferencesPage() {
                   title="Copy path"
                 >
                   {copiedKey === "UserData Path" ? (
-                    <Check className="size-3 text-emerald-500" />
+                    <CheckIcon className="size-3 text-emerald-500" />
                   ) : (
-                    <Copy className="size-3 text-muted-foreground" />
+                    <CopyIcon className="size-3 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -466,7 +457,7 @@ export default function PerformancePreferencesPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Terminal className="size-3.5 text-violet-500 shrink-0" />
+                  <TerminalIcon className="size-3.5 text-violet-500 shrink-0" />
                   Executable Bin Location
                 </span>
                 <Button
@@ -477,9 +468,9 @@ export default function PerformancePreferencesPage() {
                   title="Copy path"
                 >
                   {copiedKey === "Executable Path" ? (
-                    <Check className="size-3 text-emerald-500" />
+                    <CheckIcon className="size-3 text-emerald-500" />
                   ) : (
-                    <Copy className="size-3 text-muted-foreground" />
+                    <CopyIcon className="size-3 text-muted-foreground" />
                   )}
                 </Button>
               </div>

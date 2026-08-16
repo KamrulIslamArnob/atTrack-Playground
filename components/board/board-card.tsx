@@ -1,35 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { motion, useReducedMotion } from "motion/react";
 import {
   Building2,
-  CalendarClock,
-  Hourglass,
-  FileText,
-  Link2,
-  MoveRight,
   Tag,
-  Sparkles,
 } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { Link2Icon } from "@/components/ui/link-2";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { HourglassIcon } from "@/components/ui/hourglass";
+import { CalendarClockIcon } from "@/components/ui/calendar-clock";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { toast } from "sonner";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoveToMenu } from "@/components/board/move-to-menu";
-import { updateJobState } from "@/lib/actions/jobs";
-import type { JobState } from "@/lib/types/job";
 import {
   matchScoreBand,
   getEffectiveDeadlineInfo,
   type BoardCard,
   type BoardList,
 } from "@/lib/types/board";
+import { JOB_TIERS } from "@/lib/types/job";
 import { cn, parseLocalDate } from "@/lib/utils";
 
 interface BoardCardProps {
@@ -39,53 +28,41 @@ interface BoardCardProps {
   isDragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
-  onMoveTo: (listId: string) => void;
+  onMoveTo?: (listId: string) => void;
   onOpen: () => void;
 }
 
 export function BoardCardItem({
   card,
   lists,
-  accent,
+  accent: _accent,
   isDragging,
   onDragStart,
   onDragEnd,
-  onMoveTo,
+  onMoveTo: _onMoveTo,
   onOpen,
 }: BoardCardProps) {
-  const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const band = card.match_score !== null ? matchScoreBand(card.match_score) : null;
   const linkCount = card.project_links?.length ?? 0;
   const deadlineInfo = getEffectiveDeadlineInfo(card, lists);
 
-  const handleStateChange = async (newState: JobState) => {
-    if (card.state === newState) return;
-    try {
-      await updateJobState(card.id, newState);
-      const labelMap: Record<JobState, string> = {
-        active: "Active",
-        on_hold: "On Hold",
-        archived: "Archived",
-      };
-      toast.success(`Job state changed to ${labelMap[newState]}`);
-      router.refresh();
-    } catch (err) {
-      console.error("Failed to update job state:", err);
-      toast.error("Couldn't update job state");
-    }
-  };
-
   const isInactive = card.state === "archived" || card.state === "on_hold";
 
   return (
-    <div
+    <motion.div
+      layout={!shouldReduceMotion}
+      initial={shouldReduceMotion ? undefined : { opacity: 0 }}
+      animate={{ opacity: isDragging ? 0.35 : 1 }}
+      exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+      transition={{ duration: 0.15 }}
       draggable
-      onDragStart={(e) => {
+      onDragStartCapture={(e) => {
         e.dataTransfer.setData("text/plain", card.id);
         e.dataTransfer.effectAllowed = "move";
         onDragStart?.();
       }}
-      onDragEnd={onDragEnd}
+      onDragEndCapture={onDragEnd}
       onClick={onOpen}
       role="button"
       tabIndex={0}
@@ -95,36 +72,42 @@ export function BoardCardItem({
           onOpen?.();
         }
       }}
-      style={{ borderLeftColor: accent }}
       className={cn(
-        "group cursor-grab rounded-2xl border border-l-4 border-border bg-card p-3 transition-[border-color,box-shadow,transform] duration-160 ease-out active:scale-[0.98] active:cursor-grabbing [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-md overflow-hidden",
-        "hover:border-primary/60 focus-within:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-        isDragging && "opacity-40",
+        "group relative cursor-pointer overflow-hidden rounded-xl border border-border bg-card p-3.5 transition-colors duration-150",
+        "hover:border-border focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-none",
         isInactive &&
-          "grayscale contrast-90 opacity-75 [@media(hover:hover)]:hover:grayscale-0 [@media(hover:hover)]:hover:opacity-100 transition-all duration-300"
+          "grayscale contrast-90 opacity-75 hover:grayscale-0 hover:opacity-100 transition-all duration-200"
       )}
     >
-      {/* Top Section Deadline / Job Deadline Banner */}
+      {/* Top Section Deadline / Job Deadline Banner covering the whole top */}
       {deadlineInfo && (
         <div
           className={cn(
-            "-mx-3 -mt-3 mb-2.5 flex items-center justify-between border-b px-3 py-1.5 text-[11px] font-semibold tracking-tight transition-colors",
+            "-mx-3.5 -mt-3.5 mb-2.5 flex items-center justify-between px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-colors",
             deadlineInfo.bannerClassName
           )}
         >
           <div className="flex items-center gap-1.5 min-w-0">
             {deadlineInfo.kind === "milestone" ? (
-              <Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
+              <HourglassIcon
+                size={14}
+                className="size-3.5 shrink-0 text-purple-600 dark:text-purple-400"
+                aria-hidden="true"
+              />
             ) : (
-              <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+              <CalendarClockIcon
+                size={14}
+                className="size-3.5 shrink-0 text-current"
+                aria-hidden="true"
+              />
             )}
-            <span className="truncate text-[11px] font-semibold tracking-tight">
+            <span className="truncate text-xs font-semibold tracking-tight">
               {deadlineInfo.title}
             </span>
           </div>
           <span
             className={cn(
-              "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+              "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
               deadlineInfo.badgeClassName
             )}
           >
@@ -133,100 +116,69 @@ export function BoardCardItem({
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-1.5">
-        <p className="flex-1 min-w-0 text-sm font-semibold leading-tight break-words">{card.title}</p>
-
-        {/* The whole card opens the sheet — stop this menu's click from bubbling
-            up to that onClick before it navigates the dropdown. */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <MoveToMenu
-            lists={lists}
-            currentListId={card.list_id}
-            onMoveTo={onMoveTo}
-            renderTrigger={
-              <button
-                aria-label={`Move ${card.title} to another list`}
-                className="flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary group-hover:opacity-100"
-              />
-            }
-            extraItems={
-              <>
-                <DropdownMenuItem onClick={() => router.push(`/jobs/${card.id}`)}>
-                  Open job details
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Change state</DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem
-                      disabled={!card.state || card.state === "active"}
-                      onClick={() => handleStateChange("active")}
-                    >
-                      🟢 Active
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={card.state === "on_hold"}
-                      onClick={() => handleStateChange("on_hold")}
-                    >
-                      ⏸️ On Hold
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={card.state === "archived"}
-                      onClick={() => handleStateChange("archived")}
-                    >
-                      📦 Archive
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </>
-            }
+      {/* Card Title & Priority Tier */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors flex-1 min-w-0">
+          {card.title}
+        </p>
+        {card.tier && JOB_TIERS[card.tier] && (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold tracking-tight shadow-2xs",
+              JOB_TIERS[card.tier].badgeClass
+            )}
+            title={`${JOB_TIERS[card.tier].label} · ${JOB_TIERS[card.tier].description}`}
           >
-            <MoveRight className="size-3.5" />
-          </MoveToMenu>
-        </div>
+            <span
+              className="size-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: JOB_TIERS[card.tier].dotColor }}
+            />
+            {JOB_TIERS[card.tier].label}
+          </span>
+        )}
       </div>
 
-      {/* Company + tags share one row — cuts a full line versus stacking them. */}
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-        <span className="flex min-w-0 items-center gap-1">
-          <Building2 className="size-3 shrink-0" aria-hidden="true" />
+      {/* Company Name & Metadata Tags */}
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="flex min-w-0 items-center gap-1 font-medium text-foreground/80">
+          <Building2 className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="truncate">{card.company_name ?? "Unknown company"}</span>
         </span>
         {card.position_name && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 font-medium">
-            <Tag className="size-2.5" aria-hidden="true" />
-            {card.position_name}
+          <span className="inline-flex items-center gap-1 rounded-md bg-muted/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <Tag className="size-3" aria-hidden="true" />
+            <span className="truncate max-w-[7rem]">{card.position_name}</span>
           </span>
         )}
         {card.resume_name && (
-          <span className="inline-flex max-w-[8.5rem] items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 font-medium">
-            <FileText className="size-2.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">{card.resume_name}</span>
+          <span className="inline-flex items-center gap-1 rounded-md bg-muted/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <FileTextIcon size={12} className="size-3 shrink-0" aria-hidden="true" />
+            <span className="truncate max-w-[7rem]">{card.resume_name}</span>
           </span>
+        )}
+        {linkCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="inline-flex items-center gap-1 rounded-md bg-muted/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-help">
+                <Link2Icon size={12} className="size-3 shrink-0" aria-hidden="true" />
+                <span>{linkCount}</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs font-medium py-1 px-2">
+              {linkCount} attached project link{linkCount === 1 ? "" : "s"}
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-        <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
-          {formatDistanceToNow(new Date(card.created_at), { addSuffix: true })}
-        </span>
+      {/* Footer: Date / Time ago & Score Badge */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-t border-border/40 pt-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="tabular-nums whitespace-nowrap">
+            {formatDistanceToNow(new Date(card.created_at), { addSuffix: true })}
+          </span>
 
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0" onClick={(e) => e.stopPropagation()}>
-          {linkCount > 0 && (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap shrink-0 cursor-help">
-                  <Link2 className="size-3 shrink-0" aria-hidden="true" />
-                  {linkCount}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
-                {linkCount} attached project link{linkCount === 1 ? "" : "s"}
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {card.deadline && (() => {
+          {!deadlineInfo && card.deadline && (() => {
             const norm = card.deadline.trim().toLowerCase();
             const isAsap = norm === "asap";
             const isUnknown = norm === "unknown";
@@ -238,27 +190,32 @@ export function BoardCardItem({
             return (
               <Tooltip>
                 <TooltipTrigger>
-                  <span className={cn(
-                    "inline-flex items-center gap-0.5 text-[10px] whitespace-nowrap shrink-0 cursor-help",
-                    isAsap ? "text-rose-600 dark:text-rose-400 font-semibold" : "text-muted-foreground"
-                  )}>
-                    <CalendarClock className="size-3 shrink-0" aria-hidden="true" />
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-help",
+                      isAsap ? "text-destructive font-semibold" : "hover:text-foreground transition-colors"
+                    )}
+                  >
+                    <span className="opacity-40">·</span>
+                    <CalendarClockIcon size={12} className="size-3 shrink-0" aria-hidden="true" />
                     {shortLabel}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                <TooltipContent side="top" className="text-xs font-medium py-1 px-2">
                   {fullLabel}
                 </TooltipContent>
               </Tooltip>
             );
           })()}
+        </div>
 
-          {band && (
+        {band && (
+          <div className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
             <Tooltip>
               <TooltipTrigger>
                 <span
                   className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums whitespace-nowrap shrink-0 cursor-help",
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap shrink-0 cursor-help border",
                     band.className
                   )}
                 >
@@ -267,17 +224,17 @@ export function BoardCardItem({
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs p-2.5 text-left">
                 <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
-                  <Sparkles className="size-3 text-amber-500" />
+                  <SparklesIcon size={14} className="size-3.5 text-warning" />
                   <span>Match Score: {Math.round(card.match_score!)}%</span>
                 </div>
-                <p className="text-[10.5px] text-muted-foreground mt-0.5 leading-snug">
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
                   Evaluated resume relevance for {card.company_name ?? "this position"}.
                 </p>
               </TooltipContent>
             </Tooltip>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    </div>
+    </motion.div>
   );
 }

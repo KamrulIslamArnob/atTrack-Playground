@@ -23,6 +23,7 @@
   },
   "registries": {
     "@react-bits": "https://reactbits.dev/r/{name}.json",
-    "@assistant-ui": "https://r.assistant-ui.com/styles/{style}/{name}.json"
+    "@assistant-ui": "https://r.assistant-ui.com/styles/{style}/{name}.json",
+    "@lucide-animated": "https://lucide-animated.com/r/{name}.json"
   }
 }

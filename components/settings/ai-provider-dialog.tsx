@@ -2,24 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  createProvider,
-  updateProvider,
-  testProviderConnection,
-  fetchProviderModels,
-  type FetchedModel,
-} from "@/lib/actions/ai-providers";
+  createProvider, updateProvider, testProviderConnection, fetchProviderModels, type FetchedModel, } from "@/lib/actions/ai-providers";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { X, RefreshCw, Plug, CheckCircle2, AlertCircle, Search, ChevronDown } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { X, Plug, CheckCircle2, AlertCircle } from "lucide-react";
+import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { SearchIcon } from "@/components/ui/search";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
 import { toast } from "sonner";
 import {
   PROVIDER_TYPES,
@@ -263,7 +256,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                 disabled={isFetchingModels}
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-green-800 dark:text-lime-400 hover:underline disabled:opacity-50"
               >
-                {isFetchingModels ? <Spinner className="size-3" /> : <RefreshCw className="size-3" />}
+                {isFetchingModels ? <Spinner className="size-3" /> : <RefreshCWIcon className="size-3" />}
                 Fetch Models
               </button>
             </div>
@@ -294,7 +287,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
                 title="Toggle models dropdown"
               >
-                <ChevronDown className="size-4" />
+                <ChevronDownIcon className="size-4" />
               </button>
             </div>
 
@@ -302,7 +295,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
               <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 rounded-2xl border border-border bg-card p-2 overflow-hidden space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                     <input
                       type="text"
                       value={modelSearch}

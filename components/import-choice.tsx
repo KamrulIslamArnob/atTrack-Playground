@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles, X } from "lucide-react";
+import { Plus } from "lucide-react";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { XIcon } from "@/components/ui/x";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import { AiImport } from "@/components/job-import/ai-import";
 import type { BoardList } from "@/lib/types/board";
@@ -36,7 +38,7 @@ export function ImportChoice({ lists = [] }: ImportChoiceProps) {
                 onClick={() => setOpen(false)}
                 className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <X className="size-4" />
+                <XIcon className="size-4" />
               </button>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -64,7 +66,7 @@ export function ImportChoice({ lists = [] }: ImportChoiceProps) {
                 className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
-                  <Sparkles className="size-5 text-muted-foreground" />
+                  <SparklesIcon className="size-5 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-medium">Import with AI</p>

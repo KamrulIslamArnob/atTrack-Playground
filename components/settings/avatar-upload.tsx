@@ -2,7 +2,9 @@
 
 import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { Camera, Upload, X, FileImage, Loader2 } from "lucide-react";
+import { Camera, FileImage, Loader2 } from "lucide-react";
+import { UploadIcon } from "@/components/ui/upload";
+import { XIcon } from "@/components/ui/x";
 import { uploadAvatar } from "@/lib/actions/auth";
 import { toast } from "sonner";
 
@@ -162,7 +164,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
             onClick={() => setDialogOpen(true)}
             className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            <Upload className="size-4" />
+            <UploadIcon className="size-4" />
             Upload
           </button>
         )}
@@ -188,7 +190,7 @@ export function AvatarUpload({ avatarUrl, fullName }: AvatarUploadProps) {
                 onClick={() => setDialogOpen(false)}
                 className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <X className="size-4" />
+                <XIcon className="size-4" />
               </button>
             </div>
 

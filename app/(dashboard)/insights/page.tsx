@@ -1,14 +1,8 @@
 import { getInsights } from "@/lib/actions/insights";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
-  Briefcase,
-  FileText,
-  Calendar,
-  Target,
-  Building2,
-  Globe,
-  BookOpen,
-} from "lucide-react";
+  Briefcase, Calendar, Target, Building2, Globe, BookOpen } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
 
 const jobPipelineLabels: Record<string, string> = {
   saved: "Saved",
@@ -75,7 +69,7 @@ export default async function InsightsPage() {
           color="bg-blue-500"
         />
         <StatCard
-          icon={FileText}
+          icon={FileTextIcon}
           label="Applications Sent"
           value={insights.totalApplications}
           color="bg-violet-500"
@@ -177,7 +171,7 @@ export default async function InsightsPage() {
               })}
             {appStatusEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <FileText className="size-8 text-muted-foreground/30 mb-2" />
+                <FileTextIcon className="size-8 text-muted-foreground/30 mb-2" />
                 <p className="text-sm text-muted-foreground">Apply to jobs to see your progress</p>
               </div>
             )}

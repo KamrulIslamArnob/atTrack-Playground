@@ -2,13 +2,10 @@
 
 import { motion } from "motion/react";
 import {
-  ShieldCheck,
-  Database,
-  Lock,
-  Mail,
-  Check,
-  EyeOff,
-} from "lucide-react";
+  ShieldCheck, Database, Mail } from "lucide-react";
+import { LockIcon } from "@/components/ui/lock";
+import { CheckIcon } from "@/components/ui/check";
+import { EyeOffIcon } from "@/components/ui/eye-off";
 import {
   staggerContainer,
   staggerItem,
@@ -55,7 +52,7 @@ export function Privacy() {
                 <ShieldCheck className="size-5 text-emerald-500" />
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-medium text-emerald-600">
-                <EyeOff className="size-3" />
+                <EyeOffIcon className="size-3" />
                 Visible only to you
               </span>
             </div>
@@ -78,7 +75,7 @@ export function Privacy() {
                     <div className="h-2 w-2 rounded-full bg-emerald-500" />
                     <span className="text-xs font-medium">{row}</span>
                     <span className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground/60">
-                      <Lock className="size-3" />
+                      <LockIcon className="size-3" />
                       {i === 0 ? "Locked" : "Private"}
                     </span>
                   </div>
@@ -110,7 +107,7 @@ export function Privacy() {
           >
             <div className="absolute -top-16 -right-16 size-40 rounded-full bg-pink-500/10 opacity-0 blur-3xl transition-opacity duration-300 group-hover:opacity-100" />
             <div className="relative flex size-11 items-center justify-center rounded-2xl bg-pink-500/10">
-              <Lock className="size-5 text-pink-500" />
+              <LockIcon className="size-5 text-pink-500" />
             </div>
             <h3 className="relative mt-5 font-heading text-base font-semibold">
               Encrypted email credentials
@@ -152,7 +149,7 @@ export function Privacy() {
               <span className="text-muted-foreground/40">&rarr;</span>
               <div className="flex flex-1 items-center gap-2 rounded-2xl border border-border/60 bg-background px-3 py-2.5">
                 <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500/10">
-                  <Check className="size-3.5 text-emerald-500" />
+                  <CheckIcon className="size-3.5 text-emerald-500" />
                 </div>
                 <span className="text-xs font-medium">Recruiter</span>
               </div>
@@ -169,7 +166,7 @@ export function Privacy() {
                 key={item}
                 className="flex items-center gap-2 text-sm text-muted-foreground"
               >
-                <Check className="size-4 text-emerald-500" />
+                <CheckIcon className="size-4 text-emerald-500" />
                 {item}
               </span>
             )

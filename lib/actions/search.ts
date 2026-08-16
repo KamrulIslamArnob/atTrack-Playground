@@ -3,6 +3,7 @@
 import { getUser } from "@/lib/auth";
 import { getDb } from "@/lib/db/sqlite";
 import { moduleLogger } from "@/lib/log";
+import type { StatementSync } from "node:sqlite";
 
 const log = moduleLogger("actions.search");
 
@@ -39,18 +40,58 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Performance", href: "/preferences", keywords: "performance ram memory cpu system ports root path connection process status details preferences" },
 ];
 
+// In-memory query cache for instant backspace / repeated searches
+const searchCache = new Map<string, { timestamp: number; data: SearchResult[] }>();
+const CACHE_TTL_MS = 20_000;
+const CACHE_MAX_SIZE = 60;
+
+// Prepared statement cache
+let cachedFtsStmt: StatementSync | null = null;
+let cachedLikeStmt: StatementSync | null = null;
+let lastDbInstance: unknown = null;
+
+function getStatements() {
+  const db = getDb();
+  if (db !== lastDbInstance) {
+    lastDbInstance = db;
+    cachedFtsStmt = db.prepare(`
+      SELECT entity_type, entity_id, title, subtitle, content, href, icon,
+             snippet(omni_search_index, 5, '', '', '...', 12) AS fts_snippet
+      FROM omni_search_index
+      WHERE user_id = ? AND omni_search_index MATCH ?
+      ORDER BY bm25(omni_search_index, 10.0, 5.0, 2.0)
+      LIMIT 100
+    `);
+    cachedLikeStmt = db.prepare(`
+      SELECT entity_type, entity_id, title, subtitle, content, href, icon, '' AS fts_snippet
+      FROM omni_search_index
+      WHERE user_id = ? AND (title LIKE ? OR subtitle LIKE ? OR content LIKE ?)
+      LIMIT 100
+    `);
+  }
+  return { ftsStmt: cachedFtsStmt!, likeStmt: cachedLikeStmt! };
+}
+
 export async function globalSearch(query: string): Promise<SearchResult[]> {
   if (!query || query.trim().length < 2) return [];
 
   const { userId } = await getUser();
   const q = query.trim();
-  const results: SearchResult[] = [];
+  const cacheKey = `${userId}:${q.toLowerCase()}`;
 
-  // 1. Pages & Navigation
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  const results: SearchResult[] = [];
+  const qLower = q.toLowerCase();
+
+  // 1. Instant Navigation Matches
   for (const page of PAGE_RESULTS) {
     if (
-      page.title.toLowerCase().includes(q.toLowerCase()) ||
-      page.keywords.toLowerCase().includes(q.toLowerCase())
+      page.title.toLowerCase().includes(qLower) ||
+      page.keywords.toLowerCase().includes(qLower)
     ) {
       results.push({
         type: "page",
@@ -65,7 +106,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
 
   // 2. Omni-Search FTS5 Single Query (O(1) inverted index term lookup time complexity)
   try {
-    const db = getDb();
+    const { ftsStmt, likeStmt } = getStatements();
     const sanitized = q.replace(/[^a-zA-Z0-9\s]/g, "").trim();
     let ftsRows: Array<{
       entity_type: string;
@@ -75,48 +116,33 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       content: string;
       href: string;
       icon: string;
+      fts_snippet?: string;
     }> = [];
 
     if (sanitized.length > 0) {
       const ftsQuery = sanitized.split(/\s+/).filter(Boolean).map((term) => `"${term}"*`).join(" ");
       try {
-        ftsRows = db.prepare(`
-          SELECT entity_type, entity_id, title, subtitle, content, href, icon
-          FROM omni_search_index
-          WHERE user_id = ? AND omni_search_index MATCH ?
-          ORDER BY bm25(omni_search_index, 10.0, 5.0, 2.0)
-          LIMIT 150
-        `).all(userId, ftsQuery) as typeof ftsRows;
+        ftsRows = ftsStmt.all(userId, ftsQuery) as typeof ftsRows;
       } catch {
         const like = `%${q}%`;
-        ftsRows = db.prepare(`
-          SELECT entity_type, entity_id, title, subtitle, content, href, icon
-          FROM omni_search_index
-          WHERE user_id = ? AND (title LIKE ? OR subtitle LIKE ? OR content LIKE ?)
-          LIMIT 150
-        `).all(userId, like, like, like) as typeof ftsRows;
+        ftsRows = likeStmt.all(userId, like, like, like) as typeof ftsRows;
       }
     } else {
       const like = `%${q}%`;
-      ftsRows = db.prepare(`
-        SELECT entity_type, entity_id, title, subtitle, content, href, icon
-        FROM omni_search_index
-        WHERE user_id = ? AND (title LIKE ? OR subtitle LIKE ? OR content LIKE ?)
-        LIMIT 150
-      `).all(userId, like, like, like) as typeof ftsRows;
+      ftsRows = likeStmt.all(userId, like, like, like) as typeof ftsRows;
     }
 
     for (const r of ftsRows) {
-      let snippet: string | undefined = undefined;
-      if (r.content && r.content.trim().length > 0) {
+      let snippet: string | undefined = r.fts_snippet?.trim() || undefined;
+      if (!snippet && r.content && r.content.trim().length > 0) {
         const cleanContent = r.content.trim();
-        const matchIdx = cleanContent.toLowerCase().indexOf(q.toLowerCase());
+        const matchIdx = cleanContent.toLowerCase().indexOf(qLower);
         if (matchIdx >= 0) {
           const start = Math.max(0, matchIdx - 30);
           const end = Math.min(cleanContent.length, matchIdx + q.length + 50);
           snippet = (start > 0 ? "..." : "") + cleanContent.slice(start, end) + (end < cleanContent.length ? "..." : "");
-        } else if (cleanContent.length > 100) {
-          snippet = cleanContent.slice(0, 100) + "...";
+        } else if (cleanContent.length > 80) {
+          snippet = cleanContent.slice(0, 80) + "...";
         } else {
           snippet = cleanContent;
         }
@@ -135,6 +161,13 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
   } catch (err) {
     log.error({ err }, "Omni search query failed:");
   }
+
+  // Manage Cache Size
+  if (searchCache.size >= CACHE_MAX_SIZE) {
+    const oldestKey = searchCache.keys().next().value;
+    if (oldestKey) searchCache.delete(oldestKey);
+  }
+  searchCache.set(cacheKey, { timestamp: Date.now(), data: results });
 
   return results;
 }

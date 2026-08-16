@@ -1,14 +1,10 @@
 "use client";
 
-import {
-  Sparkles,
-  FileText,
-  UserCheck,
-  Send,
-  Code2,
-  Bot,
-  Database,
-} from "lucide-react";
+import { Code2, Bot, Database } from "lucide-react";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { UserCheckIcon } from "@/components/ui/user-check";
+import { SendIcon } from "@/components/ui/send";
 import { motion } from "motion/react";
 import { CHAT_PERSONAS, type ChatPersona } from "@/lib/ai-chatbot/sessions";
 import { MINI_SCENARIOS } from "@/lib/ai-chatbot/scenarios";
@@ -28,16 +24,16 @@ export interface EmptyChatStateProps {
 
 const PERSONA_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   general: Bot,
-  ats_coach: FileText,
-  interviewer: UserCheck,
-  outreach: Send,
+  ats_coach: FileTextIcon,
+  interviewer: UserCheckIcon,
+  outreach: SendIcon,
   code_architect: Code2,
 };
 
 const SCENARIO_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  FileText,
-  UserCheck,
-  Send,
+  FileText: FileTextIcon,
+  UserCheck: UserCheckIcon,
+  Send: SendIcon,
   Code2,
 };
 
@@ -70,8 +66,8 @@ export function EmptyChatState({
       >
         {/* Icon */}
         <div className="relative">
-          <div className="flex size-14 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 shadow-sm">
-            <Sparkles className="size-7" />
+          <div className="flex size-14 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <SparklesIcon className="size-7" />
           </div>
         </div>
 
@@ -89,7 +85,7 @@ export function EmptyChatState({
             type="button"
             onClick={onOpenWorkspaceDrawer}
             className={cn(
-              "mt-4 flex items-center gap-2.5 rounded-full border border-border/80 bg-gradient-brand-tint px-3.5 py-1.75 text-xs font-medium text-foreground shadow-e1 transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]",
+              "mt-4 flex items-center gap-2.5 rounded-full border border-border/80 bg-muted/40 px-3.5 py-1.75 text-xs font-medium text-foreground transition-all duration-200 hover:border-primary/30 hover:bg-muted active:scale-[0.98]",
               onOpenWorkspaceDrawer && "cursor-pointer"
             )}
           >
@@ -97,7 +93,7 @@ export function EmptyChatState({
               <Database className="size-3" />
             </span>
             <span className="min-w-0 max-w-[380px] truncate">
-              Connected to workspace: {workspace.jobCount ?? 11} jobs, {workspace.resumeCount ?? 5} resumes
+              Connected to workspace: {workspace.jobCount ?? 0} jobs, {workspace.resumeCount ?? 0} resumes
             </span>
           </button>
         )}
@@ -106,7 +102,7 @@ export function EmptyChatState({
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {CHAT_PERSONAS.map((persona, index) => {
             const isSelected = activePersona.id === persona.id;
-            const Icon = PERSONA_ICONS[persona.id] || Sparkles;
+            const Icon = PERSONA_ICONS[persona.id] || SparklesIcon;
 
             return (
               <motion.button
@@ -125,7 +121,7 @@ export function EmptyChatState({
                 className={cn(
                   "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all duration-150 cursor-pointer",
                   isSelected
-                    ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium shadow-2xs"
+                    ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
                     : "border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
                 )}
               >
@@ -139,7 +135,7 @@ export function EmptyChatState({
         {/* Mini-scenario Cards */}
         <div className="mt-8 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
           {MINI_SCENARIOS.map((scenario, index) => {
-            const Icon = SCENARIO_ICONS[scenario.iconName] || Sparkles;
+            const Icon = SCENARIO_ICONS[scenario.iconName] || SparklesIcon;
 
             return (
               <motion.button
@@ -161,7 +157,7 @@ export function EmptyChatState({
                 }}
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card p-4 text-left transition-all duration-150 hover:border-blue-500/40 hover:shadow-sm cursor-pointer"
+                className="group flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card p-4 text-left transition-all duration-150 hover:border-blue-500/40 cursor-pointer"
               >
                 <div className="flex items-center gap-2.5 w-full">
                   <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-all duration-150 group-hover:scale-105">

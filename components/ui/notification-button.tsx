@@ -24,7 +24,7 @@ export function NotificationButton({
     <button
       type="button"
       className={cn(
-        "notification-btn size-9 shrink-0 rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        "notification-btn size-9 shrink-0 rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
         className
       )}
       aria-label={props["aria-label"] || "Notifications"}

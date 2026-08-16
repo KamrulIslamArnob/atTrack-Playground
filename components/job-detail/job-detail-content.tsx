@@ -5,16 +5,16 @@ import Link from "next/link";
 import {
   ExternalLink,
   Building2,
-  ChevronDown,
-  ArrowLeft,
-  Copy,
-  Sparkles,
   CalendarClock,
   Bot,
-  Users,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { ArrowLeftIcon } from "@/components/ui/arrow-left";
+import { CopyIcon } from "@/components/ui/copy";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { UsersIcon } from "@/components/ui/users";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,13 +24,25 @@ import { AiToolsTab } from "@/components/job-detail/tabs/ai-tools-tab";
 import { NetworkTab } from "@/components/job-detail/tabs/network-tab";
 import { EditDrawer } from "@/components/job-detail/edit-drawer";
 import { CompanyEditDialog } from "@/components/job-detail/company-edit-dialog";
-import { JOB_STATUS_LABELS, type JobStatus, type JobState } from "@/lib/types/job";
-import { updateJobState, deleteJobWithSmartCascade } from "@/lib/actions/jobs";
+import {
+  JOB_STATUS_LABELS,
+  JOB_TIERS,
+  type JobStatus,
+  type JobState,
+  type JobTier,
+} from "@/lib/types/job";
+import {
+  updateJobState,
+  updateJobTier,
+  deleteJobWithSmartCascade,
+} from "@/lib/actions/jobs";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { matchScoreBand, type BoardList } from "@/lib/types/board";
@@ -38,10 +50,10 @@ import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
 
 const TAB_ITEMS = [
-  { id: "overview", label: "Overview", icon: Sparkles },
+  { id: "overview", label: "Overview", icon: SparklesIcon },
   { id: "timeline", label: "Timeline", icon: CalendarClock },
   { id: "ai-studio", label: "AI studio", icon: Bot },
-  { id: "network", label: "Network", icon: Users },
+  { id: "network", label: "Network", icon: UsersIcon },
 ];
 
 interface JobDetailContentProps {
@@ -57,6 +69,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   const [tab, setTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [tierPending, setTierPending] = useState(false);
   const { confirm, dialog } = useConfirm();
   const band = matchScoreBand(job.match_score);
 
@@ -106,6 +119,23 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
     }
   };
 
+  const handleTierChange = async (newTier: JobTier | null) => {
+    if (job.tier === newTier) return;
+    setTierPending(true);
+    try {
+      await updateJobTier(job.id, newTier);
+      toast.success(newTier ? `Job set to ${JOB_TIERS[newTier].label}` : "Job tier cleared");
+      onRefresh();
+    } catch (err) {
+      console.error("Failed to update job tier:", err);
+      toast.error("Couldn't update job tier");
+    } finally {
+      setTierPending(false);
+    }
+  };
+
+  const currentTierConfig = job.tier && JOB_TIERS[job.tier as JobTier] ? JOB_TIERS[job.tier as JobTier] : null;
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -145,6 +175,78 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Tier Selector Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={tierPending}
+                    className={cn(
+                      "h-8 gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors",
+                      currentTierConfig
+                        ? currentTierConfig.badgeClass
+                        : "border-border/80 text-foreground hover:bg-accent/60 hover:text-foreground"
+                    )}
+                  >
+                    {currentTierConfig ? (
+                      <>
+                        <span
+                          className="size-2 rounded-full shrink-0"
+                          style={{ backgroundColor: currentTierConfig.dotColor }}
+                        />
+                        <span>{currentTierConfig.label}</span>
+                      </>
+                    ) : (
+                      <span>Tier: None</span>
+                    )}
+                    <ChevronDownIcon className="size-3 opacity-70" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                  Select Priority Tier
+                </DropdownMenuLabel>
+                {(["1", "2", "3"] as JobTier[]).map((t) => {
+                  const cfg = JOB_TIERS[t];
+                  const isSelected = job.tier === t;
+                  return (
+                    <DropdownMenuItem
+                      key={t}
+                      disabled={isSelected}
+                      onClick={() => handleTierChange(t)}
+                      className={cn(
+                        "flex items-center justify-between cursor-pointer",
+                        isSelected && "font-semibold bg-accent"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="size-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: cfg.dotColor }}
+                        />
+                        <span>{cfg.label}</span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">{cfg.description}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                {job.tier && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleTierChange(null)}
+                      className="text-xs text-muted-foreground cursor-pointer"
+                    >
+                      Remove tier
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* Status & Fit metadata chips */}
             <span className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-muted/70 px-3 text-xs font-medium text-foreground">
               {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
@@ -183,7 +285,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                           : job.state.charAt(0).toUpperCase() + job.state.slice(1)
                         : "Active"}
                     </span>
-                    <ChevronDown className="size-3 opacity-70" />
+                    <ChevronDownIcon className="size-3 opacity-70" />
                   </Button>
                 }
               />
@@ -219,7 +321,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 render={<Link href="/jobs" />}
               >
                 Back to jobs
-                <ArrowLeft className="size-3.5" />
+                <ArrowLeftIcon className="size-3.5" />
               </Button>
             )}
 
@@ -241,7 +343,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={handleCopyJson}>
-                  <Copy className="mr-2 size-3.5" />
+                  <CopyIcon className="mr-2 size-3.5" />
                   Copy details as JSON
                 </DropdownMenuItem>
                 {company && (
@@ -256,7 +358,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
         </div>
       </div>
 
-      {/* Four domains, one underlined strip — no legacy .radio-* decoration. */}
+      {/* Four domains, one underlined strip */}
       <Tabs
         value={tab}
         onValueChange={(v) => setTab(v ?? "overview")}

@@ -57,15 +57,15 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean
 }) {
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "px-3 py-2.5 text-xs text-muted-foreground data-inset:pl-9.5",
+        "px-3 py-2 text-xs font-semibold text-muted-foreground data-inset:pl-9.5",
         className
       )}
       {...props}
@@ -88,7 +88,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "group/dropdown-menu-item relative flex cursor-default items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium outline-hidden select-none transition-all duration-120 ease-out active:scale-[0.98] focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-9.5 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
+        "group/dropdown-menu-item relative flex cursor-default items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium outline-hidden select-none transition-all duration-120 ease-out active:scale-[0.98] text-popover-foreground not-data-[variant=destructive]:hover:bg-primary not-data-[variant=destructive]:hover:text-primary-foreground not-data-[variant=destructive]:hover:[&_svg]:text-primary-foreground not-data-[variant=destructive]:focus:bg-primary not-data-[variant=destructive]:focus:text-primary-foreground not-data-[variant=destructive]:focus:[&_svg]:text-primary-foreground not-data-[variant=destructive]:data-[highlighted]:bg-primary not-data-[variant=destructive]:data-[highlighted]:text-primary-foreground not-data-[variant=destructive]:data-[highlighted]:[&_svg]:text-primary-foreground data-inset:pl-9.5 data-[variant=destructive]:text-destructive data-[variant=destructive]:hover:bg-destructive data-[variant=destructive]:hover:text-destructive-foreground data-[variant=destructive]:hover:[&_svg]:text-destructive-foreground data-[variant=destructive]:focus:bg-destructive data-[variant=destructive]:focus:text-destructive-foreground data-[variant=destructive]:focus:[&_svg]:text-destructive-foreground data-[variant=destructive]:data-[highlighted]:bg-destructive data-[variant=destructive]:data-[highlighted]:text-destructive-foreground data-[variant=destructive]:data-[highlighted]:[&_svg]:text-destructive-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -113,7 +113,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-9.5 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-hidden select-none text-popover-foreground hover:bg-primary hover:text-primary-foreground hover:[&_svg]:text-primary-foreground focus:bg-primary focus:text-primary-foreground focus:[&_svg]:text-primary-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[highlighted]:[&_svg]:text-primary-foreground data-inset:pl-9.5 data-popup-open:bg-primary data-popup-open:text-primary-foreground data-open:bg-primary data-open:text-primary-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -159,7 +159,7 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "relative flex cursor-default items-center gap-2.5 rounded-lg py-2 pr-8 pl-3 text-sm font-medium outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-9.5 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default items-center gap-2.5 rounded-lg py-2 pr-8 pl-3 text-sm font-medium outline-hidden select-none text-popover-foreground hover:bg-primary hover:text-primary-foreground hover:[&_svg]:text-primary-foreground focus:bg-primary focus:text-primary-foreground focus:[&_svg]:text-primary-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[highlighted]:[&_svg]:text-primary-foreground data-inset:pl-9.5 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       checked={checked}
@@ -201,7 +201,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "relative flex cursor-default items-center gap-2.5 rounded-lg py-2 pr-8 pl-3 text-sm font-medium outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-9.5 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default items-center gap-2.5 rounded-lg py-2 pr-8 pl-3 text-sm font-medium outline-hidden select-none text-popover-foreground hover:bg-primary hover:text-primary-foreground hover:[&_svg]:text-primary-foreground focus:bg-primary focus:text-primary-foreground focus:[&_svg]:text-primary-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[highlighted]:[&_svg]:text-primary-foreground data-inset:pl-9.5 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

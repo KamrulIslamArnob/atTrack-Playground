@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  memo,
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-  type ComponentType,
-  type DragEvent,
-} from "react";
+import { memo, useState, useRef, useEffect, useCallback, useMemo, type ComponentType, type DragEvent, } from "react";
 import type { AIModel, ChatPersona } from "@/lib/ai-chatbot/types";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelSelector } from "@/components/ai-chatbot/model-selector";
@@ -17,25 +8,16 @@ import { PersonaSelector } from "@/components/ai-chatbot/persona-selector";
 import { GlidingHighlight } from "@/components/ai-chatbot/gliding-highlight";
 import { cn } from "@/lib/utils";
 import {
-  ArrowUp,
-  Plus,
-  X,
-  Square,
-  Menu,
-  Slash,
-  FileText,
-  Mail,
-  UserCheck,
-  Send,
-  Code2,
-  Briefcase,
-  Users,
-  Globe,
-  Upload,
-  MessageSquareReply,
-  Brain,
-  Mic,
-} from "lucide-react";
+  ArrowUp, Square, Slash, Mail, Code2, Briefcase, Globe, MessageSquareReply, Brain } from "lucide-react";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { XIcon } from "@/components/ui/x";
+import { MenuIcon } from "@/components/ui/menu";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { UserCheckIcon } from "@/components/ui/user-check";
+import { SendIcon } from "@/components/ui/send";
+import { UsersIcon } from "@/components/ui/users";
+import { UploadIcon } from "@/components/ui/upload";
+import { MicIcon } from "@/components/ui/mic";
 import { toast } from "sonner";
 import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
@@ -128,7 +110,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
     command: "/resume",
     label: "Resume Review",
     description: "Analyze my resume for ATS & impact",
-    icon: FileText,
+    icon: FileTextIcon,
     template: "Review my resume and suggest ATS optimizations and stronger bullet points.",
   },
   {
@@ -142,14 +124,14 @@ const SLASH_COMMANDS: SlashCommand[] = [
     command: "/interview",
     label: "Interview Prep",
     description: "Run a STAR-method mock interview",
-    icon: UserCheck,
+    icon: UserCheckIcon,
     template: "Run a mock interview question using the STAR method and give me feedback.",
   },
   {
     command: "/outreach",
     label: "Cold Outreach",
     description: "Draft a recruiter outreach message",
-    icon: Send,
+    icon: SendIcon,
     template: "Draft a concise cold outreach message to a hiring manager or recruiter.",
   },
   {
@@ -170,7 +152,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
     command: "/contact",
     label: "Networking",
     description: "Plan my CRM outreach",
-    icon: Users,
+    icon: UsersIcon,
     template: "Help me plan outreach to my CRM contacts for referrals and networking.",
   },
 ];
@@ -612,7 +594,7 @@ function ChatInput({
                   className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-600 bg-background/95 backdrop-blur-md"
                 >
                   <div className="flex size-10 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
-                    <Upload className="size-5" />
+                    <UploadIcon className="size-5" />
                   </div>
                   <p className="text-xs font-medium text-foreground">Drop images or files here to attach</p>
                   <p className="text-[10px] text-muted-foreground">Release to upload to chat</p>
@@ -629,7 +611,7 @@ function ChatInput({
                   exit={{ opacity: 0, scale: 0.97, y: 6 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   style={{ transformOrigin: "bottom center" }}
-                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/70 bg-popover/98 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md"
+                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/70 bg-popover/98 p-1.5 shadow-e3 backdrop-blur-md"
                 >
                   <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
                     <Brain className="size-3.5 text-blue-500" />
@@ -689,7 +671,7 @@ function ChatInput({
                   exit={{ opacity: 0, scale: 0.97, y: 6 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   style={{ transformOrigin: "bottom center" }}
-                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/60 bg-popover/95 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md"
+                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/60 bg-popover/95 p-1.5 shadow-e3 backdrop-blur-md"
                 >
                   <GlidingHighlight
                     rowRefs={slashRowRefs}
@@ -744,15 +726,15 @@ function ChatInput({
                     {attachments.map((att, i) => (
                       <div
                         key={i}
-                        className="group/att relative size-12 overflow-hidden rounded-lg border border-border/50 bg-muted/50 shadow-sm transition-transform active:scale-95"
+                        className="group/att relative size-12 overflow-hidden rounded-lg border border-border/50 bg-muted/50 transition-transform active:scale-95"
                       >
                         <Image src={att.url} alt="Attachment" fill className="object-cover" unoptimized />
                         <button
                           type="button"
                           onClick={() => removeAttachment(i)}
-                          className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 text-foreground opacity-0 shadow-sm transition-opacity group-hover/att:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+                          className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 text-foreground opacity-0 transition-opacity group-hover/att:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
                         >
-                          <X className="size-3" />
+                          <XIcon className="size-3" />
                         </button>
                       </div>
                     ))}
@@ -792,7 +774,7 @@ function ChatInput({
                         className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                         title="Cancel reply"
                       >
-                        <X className="size-3" />
+                        <XIcon className="size-3" />
                       </button>
                     )}
                   </div>
@@ -825,7 +807,7 @@ function ChatInput({
                     className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-[0.96] md:hidden"
                     title="Open menu"
                   >
-                    <Menu className="size-4" />
+                    <MenuIcon className="size-4" />
                   </button>
                 )}
 
@@ -867,7 +849,7 @@ function ChatInput({
                   )}
                   title={model.supportsImages ? "Attach image" : "Model doesn't support images"}
                 >
-                  <Plus className="size-4" />
+                  <PlusIcon className="size-4" />
                 </button>
 
                 <input
@@ -904,14 +886,14 @@ function ChatInput({
                         ))}
                       </span>
                     ) : (
-                      <Mic className="size-4" />
+                      <MicIcon className="size-4" />
                     )}
                   </button>
                 )}
 
               </div>
 
-              {/* Send / Stop button aligned to the right */}
+              {/* SendIcon / Stop button aligned to the right */}
               {isLoading ? (
                 <motion.button
                   type="button"
@@ -920,7 +902,7 @@ function ChatInput({
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   whileTap={{ scale: 0.94 }}
-                  className="flex size-8 items-center justify-center rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-xs shadow-blue-500/20 transition-colors cursor-pointer shrink-0"
+                  className="flex size-8 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-xs hover:opacity-90 transition-all cursor-pointer shrink-0"
                   title="Stop generation"
                 >
                   <Square className="size-3.5 fill-current" />
@@ -934,9 +916,9 @@ function ChatInput({
                   transition={{ duration: 0.16, ease: EASE }}
                   whileTap={{ scale: hasValue ? 0.94 : 1 }}
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-lg shadow-xs transition-all shrink-0",
+                    "flex size-8 items-center justify-center rounded-lg transition-all shrink-0",
                     hasValue
-                      ? "bg-[#2563EB] hover:bg-[#1d4ed8] text-white cursor-pointer shadow-blue-500/20"
+                      ? "bg-gradient-brand text-white shadow-xs hover:opacity-90 cursor-pointer"
                       : "cursor-not-allowed bg-muted text-muted-foreground/40"
                   )}
                   title="Send message"

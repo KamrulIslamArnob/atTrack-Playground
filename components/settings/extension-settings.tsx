@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Puzzle, CheckCircle2, XCircle, Copy, Check, ExternalLink, RefreshCw, Flame, Key, Save, ShieldCheck } from "lucide-react";
+import { Puzzle, CheckCircle2, XCircle, Flame, Save } from "lucide-react";
+import { CopyIcon } from "@/components/ui/copy";
+import { CheckIcon } from "@/components/ui/check";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
+import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { KeyIcon } from "@/components/ui/key";
+import { ShieldCheckIcon } from "@/components/ui/shield-check";
 import { toast } from "sonner";
 
 export function ExtensionSettings({ secret }: { secret: string }) {
@@ -51,7 +57,7 @@ export function ExtensionSettings({ secret }: { secret: string }) {
     setSavingKey(true);
     try {
       localStorage.setItem("firecrawl_api_key", firecrawlKey.trim());
-      toast.success("Firecrawl API Key saved");
+      toast.success("Firecrawl API KeyIcon saved");
     } catch {
       toast.error("Couldn't save Firecrawl API key");
     } finally {
@@ -114,13 +120,13 @@ export function ExtensionSettings({ secret }: { secret: string }) {
               className="gap-2 shrink-0"
             >
               {testing ? (
-                <RefreshCw className="size-3.5 animate-spin" />
+                <RefreshCWIcon className="size-3.5 animate-spin" />
               ) : status === "connected" ? (
                 <CheckCircle2 className="size-3.5 text-emerald-500" />
               ) : status === "failed" ? (
                 <XCircle className="size-3.5 text-destructive" />
               ) : (
-                <RefreshCw className="size-3.5" />
+                <RefreshCWIcon className="size-3.5" />
               )}
               {testing ? "Testing..." : status === "connected" ? "Connected" : "Test Connection"}
             </Button>
@@ -148,7 +154,7 @@ export function ExtensionSettings({ secret }: { secret: string }) {
           {/* Extension Secret */}
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <ShieldCheck className="size-3.5 text-primary" />
+              <ShieldCheckIcon className="size-3.5 text-primary" />
               Extension Secret
             </label>
             <div className="flex items-center gap-2">
@@ -160,7 +166,7 @@ export function ExtensionSettings({ secret }: { secret: string }) {
                 className="font-mono text-xs"
               />
               <Button variant="secondary" size="sm" onClick={handleCopySecret} className="gap-1.5 shrink-0">
-                {secretCopied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                {secretCopied ? <CheckIcon className="size-3.5 text-emerald-500" /> : <CopyIcon className="size-3.5" />}
                 {secretCopied ? "Copied" : "Copy"}
               </Button>
             </div>
@@ -172,7 +178,7 @@ export function ExtensionSettings({ secret }: { secret: string }) {
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button variant="secondary" size="sm" onClick={handleCopyPath} className="gap-2">
-              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+              {copied ? <CheckIcon className="size-3.5 text-emerald-500" /> : <CopyIcon className="size-3.5" />}
               {copied ? "Copied 'extension'" : "Copy Folder Name"}
             </Button>
             <a
@@ -182,7 +188,7 @@ export function ExtensionSettings({ secret }: { secret: string }) {
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
             >
               Chrome Docs
-              <ExternalLink className="size-3" />
+              <ExternalLinkIcon className="size-3" />
             </a>
           </div>
         </CardContent>
@@ -207,8 +213,8 @@ export function ExtensionSettings({ secret }: { secret: string }) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Key className="size-3.5 text-amber-500" />
-              Firecrawl API Key
+              <KeyIcon className="size-3.5 text-amber-500" />
+              Firecrawl API KeyIcon
             </label>
             <div className="flex items-center gap-2">
               <Input
@@ -220,7 +226,7 @@ export function ExtensionSettings({ secret }: { secret: string }) {
               />
               <Button size="sm" onClick={handleSaveFirecrawlKey} disabled={savingKey} className="gap-1.5 shrink-0">
                 <Save className="size-3.5" />
-                Save Key
+                Save KeyIcon
               </Button>
             </div>
             <p className="text-xs text-muted-foreground pt-1">

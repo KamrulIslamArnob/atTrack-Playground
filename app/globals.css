@@ -126,7 +126,7 @@
   --card-foreground: #09090b;
   --popover: #ffffff;
   --popover-foreground: #09090b;
-  --primary: oklch(0.53 0.19 252);
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
   --assistant-border: #0284c7;
   --user-bubble: #eff6fb;
@@ -134,36 +134,36 @@
   --status-online: #0ea5e9;
   --urgency: #f59e0b;
   --urgency-overdue: #ef4444;
-  --secondary: #f0f9ff;
-  --secondary-foreground: #0369a1;
+  --secondary: #eff6ff;
+  --secondary-foreground: #1d4ed8;
   --muted: #f4f4f5;
   --muted-foreground: #64748b;
-  --accent: #e0f2fe;
-  --accent-foreground: #0369a1;
+  --accent: #dbeafe;
+  --accent-foreground: #1d4ed8;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #e4e4e7;
   --input: #e4e4e7;
-  --ring: oklch(0.53 0.19 252);
-  --chart-1: #0ea5e9;
-  --chart-2: #38bdf8;
-  --chart-3: #7dd3fc;
+  --ring: #2563eb;
+  --chart-1: #2563eb;
+  --chart-2: #3b82f6;
+  --chart-3: #60a5fa;
   --chart-4: #0284c7;
-  --chart-5: #0369a1;
+  --chart-5: #1d4ed8;
   --radius: 0.5rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #09090b;
-  --sidebar-primary: #0ea5e9;
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #09090b;
   --sidebar-border: #e4e4e7;
-  --sidebar-ring: #0ea5e9;
+  --sidebar-ring: #2563eb;
 
-  --gradient-brand-from: oklch(0.46 0.19 262);
-  --gradient-brand-via: oklch(0.58 0.21 254);
-  --gradient-brand-to: oklch(0.70 0.16 230);
-  --gradient-brand-tint: #f0f9ff;
-  --gradient-brand-tint-strong: #e0f2fe;
+  --gradient-brand-from: #1d4ed8;
+  --gradient-brand-via: #2563eb;
+  --gradient-brand-to: #0ea5e9;
+  --gradient-brand-tint: #eff6ff;
+  --gradient-brand-tint-strong: #dbeafe;
 
   /* Semantic status (light) */
   --success: #16a34a;
@@ -181,6 +181,31 @@
   --destructive-foreground: #ffffff;
   --destructive-surface: #fef2f2;
   --destructive-border: #fecaca;
+
+  /* Agent UI Primitives Design Tokens (Exact) */
+  --ink: #111827;
+  --ink-2: #4b5563;
+  --ink-3: #9ca3af;
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --field: #f3f4f6;
+  --line: #e5e7eb;
+  --line-strong: #d1d5db;
+  --hover: #f3f4f6;
+  --hover-2: #f9fafb;
+  --inset: #f3f4f6;
+  --green: #10b981;
+  --green-tint: #ecfdf5;
+  --red: #ef4444;
+  --red-tint: #fef2f2;
+  --orange: #f59e0b;
+  --accent: #2563eb;
+  --accent-ink: #1d4ed8;
+  --accent-tint: #eff6ff;
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-btn: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-raised: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-hairline: inset 0 0 0 1px var(--line);
 
   /* Pipeline stage hues — keep in sync with DEFAULT_LIST_COLORS (lib/types/board.ts). */
   --stage-wishlist: #38bdf8;
@@ -212,46 +237,49 @@
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #f8fafc;
-  --card: #121215;
+  --background: #18181b;
+  --foreground: #f1f5f9;
+  --card: #222226;
   --card-foreground: #f8fafc;
-  --popover: #121215;
+  --popover: #232429;
   --popover-foreground: #f8fafc;
-  --primary: oklch(0.72 0.17 252);
-  --primary-foreground: oklch(0.18 0.04 252);
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
   --assistant-border: #38bdf8;
-  --user-bubble: #1e293b;
+  --user-bubble: #263042;
   --user-bubble-foreground: #f8fafc;
   --status-online: #38bdf8;
   --urgency: #f59e0b;
   --urgency-overdue: #ef4444;
-  --secondary: #0c4a6e;
+  --secondary: #1e293b;
   --secondary-foreground: #e0f2fe;
-  --muted: #18181b;
-  --muted-foreground: #94a3b8;
-  --accent: #0c4a6e;
+  --muted: #262730;
+  --muted-foreground: #9ca3af;
+  --accent: #1e293b;
   --accent-foreground: #f0f9ff;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: #27272a;
-  --input: #27272a;
-  --ring: oklch(0.72 0.17 252);
+  --border: #2e2f38;
+  --input: #2a2b34;
+  --ring: #3b82f6;
   --chart-1: #38bdf8;
   --chart-2: #0ea5e9;
   --chart-3: #7dd3fc;
   --chart-4: #0284c7;
   --chart-5: #e0f2fe;
-  --sidebar: #09090b;
+  --sidebar: #1a1a1e;
   --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #38bdf8;
-  --sidebar-primary-foreground: #082f49;
-  --sidebar-accent: #18181b;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #262730;
   --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #27272a;
-  --sidebar-ring: #38bdf8;
+  --sidebar-border: #2e2f38;
+  --sidebar-ring: #3b82f6;
 
-  --gradient-brand-tint: #0c4a6e33;
-  --gradient-brand-tint-strong: #0ea5e944;
+  --gradient-brand-from: #1d4ed8;
+  --gradient-brand-via: #2563eb;
+  --gradient-brand-to: #38bdf8;
+  --gradient-brand-tint: rgba(37, 99, 235, 0.25);
+  --gradient-brand-tint-strong: rgba(59, 130, 246, 0.35);
 
   /* Semantic status (dark) — the solid fills lighten so they stay legible on a
      dark page; the surfaces become low-alpha washes instead of bright blocks. */
@@ -270,6 +298,136 @@
   --destructive-foreground: #450a0a;
   --destructive-surface: #7f1d1d33;
   --destructive-border: #dc262655;
+
+  /* Agent UI Primitives Design Tokens (Dark) */
+  --ink: #f9fafb;
+  --ink-2: #9ca3af;
+  --ink-3: #6b7280;
+  --canvas: #18181b;
+  --surface: #222226;
+  --field: #2a2b34;
+  --line: #2e2f38;
+  --line-strong: #3a3c48;
+  --hover: #2a2b34;
+  --hover-2: #222226;
+  --inset: #1e1e22;
+  --green: #10b981;
+  --green-tint: rgba(16, 185, 129, 0.15);
+  --red: #ef4444;
+  --red-tint: rgba(239, 68, 68, 0.15);
+  --orange: #f59e0b;
+  --accent: #38bdf8;
+  --accent-ink: #38bdf8;
+  --accent-tint: rgba(56, 189, 248, 0.15);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-btn: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-raised: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  --shadow-hairline: inset 0 0 0 1px var(--line);
+}
+
+/* ─────────────────────────────────────────────────────────
+ * Primitive Component Classes & Keyframes
+ * ───────────────────────────────────────────────────────── */
+.bg-surface { background-color: var(--surface); }
+.bg-canvas { background-color: var(--canvas); }
+.bg-field { background-color: var(--field); }
+.bg-hover { background-color: var(--hover); }
+.bg-hover-2 { background-color: var(--hover-2); }
+.bg-inset { background-color: var(--inset); }
+.bg-green { background-color: var(--green); }
+.bg-green-tint { background-color: var(--green-tint); }
+.text-green { color: var(--green); }
+.bg-red { background-color: var(--red); }
+.bg-red-tint { background-color: var(--red-tint); }
+.text-red { color: var(--red); }
+.bg-orange { background-color: var(--orange); }
+.text-orange { color: var(--orange); }
+.bg-accent-tint { background-color: var(--accent-tint); }
+.text-accent-ink { color: var(--accent-ink); }
+.text-ink { color: var(--ink); }
+.text-ink-2 { color: var(--ink-2); }
+.text-ink-3 { color: var(--ink-3); }
+.border-line { border-color: var(--line); }
+.border-line-strong { border-color: var(--line-strong); }
+.rounded-card { border-radius: 14px; }
+.rounded-control { border-radius: 8px; }
+.rounded-chip { border-radius: 6px; }
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-btn { box-shadow: var(--shadow-btn); }
+.shadow-raised { box-shadow: var(--shadow-raised); }
+.shadow-hairline { box-shadow: var(--shadow-hairline); }
+
+.primitive-card-pad { padding: 12px 14px; }
+.primitive-card-footer { padding: 8px 12px; border-top: 1px solid var(--line); background: var(--hover-2); }
+.primitive-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; }
+
+.filter-status-todo { background: rgba(240, 154, 47, 0.15); color: #f09a2f; }
+.filter-status-progress { background: rgba(22, 166, 199, 0.15); color: #16a6c7; }
+.filter-status-done { background: rgba(37, 168, 120, 0.15); color: #25a878; }
+
+.records-shell { width: 100%; overflow: hidden; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-card); }
+.records-scroll { overflow-x: auto; outline: none; }
+.records-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12.5px; }
+.records-header-cell { padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--field); font-size: 11.5px; font-weight: 500; color: var(--ink-3); white-space: nowrap; }
+.records-sticky-cell { position: sticky; left: 0; z-index: 2; background: inherit; }
+.records-company-header { display: flex; items-center: center; gap: 8px; font-weight: 600; color: var(--ink); }
+.records-header-button { display: flex; align-items: center; gap: 6px; width: 100%; color: inherit; background: none; border: none; cursor: pointer; text-align: left; }
+.records-header-icon { display: flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.records-sort { display: inline-flex; opacity: 0; transition: opacity 150ms ease, transform 150ms ease; }
+.records-sort.is-visible { opacity: 1; }
+.records-row { border-bottom: 1px solid var(--line); transition: background-color 100ms ease; }
+.records-row:last-child { border-bottom: none; }
+.records-row:hover { background-color: var(--hover); }
+.records-row.is-selected { background-color: var(--hover); }
+.records-cell { padding: 8px 12px; vertical-align: middle; }
+.records-company-cell { display: flex; align-items: center; gap: 8px; }
+.records-checkbox { display: inline-flex; align-items: center; cursor: pointer; }
+.records-checkbox input { position: absolute; opacity: 0; width: 0; height: 0; }
+.records-checkbox-box { display: flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--line-strong); background: var(--surface); color: transparent; transition: all 150ms ease; }
+.records-checkbox-box.is-active { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.records-checkbox-dash { width: 7px; height: 2px; background: currentColor; border-radius: 1px; }
+.records-company-mark { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--field); font-weight: 700; font-size: 11px; color: var(--ink); }
+.records-company-name { font-weight: 500; color: var(--ink); text-decoration: none; }
+.records-company-name.has-link:hover { text-decoration: underline; }
+.records-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.records-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 9999px; font-size: 11px; font-weight: 500; color: var(--tag-color); background: color-mix(in srgb, var(--tag-color) 12%, transparent); }
+.records-tag-dot { width: 5px; height: 5px; border-radius: 50%; }
+.records-more-tag { font-size: 11px; color: var(--ink-3); }
+.records-strength { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+.records-strength-dot { width: 7px; height: 7px; border-radius: 50%; }
+.records-link { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-ink); text-decoration: none; font-size: 12px; }
+.records-link:hover { text-decoration: underline; }
+.records-muted { color: var(--ink-3); }
+.records-calculation-row { border-top: 1px solid var(--line); background: var(--hover-2); font-size: 11.5px; color: var(--ink-2); }
+.records-calculation-label { font-weight: 500; }
+.records-calculation-number { font-weight: 700; color: var(--ink); }
+.records-add-calculation { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-ink); background: none; border: none; font-size: 11.5px; font-weight: 500; cursor: pointer; }
+.records-add-calculation:hover { text-decoration: underline; }
+.records-average { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; }
+
+@keyframes shimmer-text {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes pixel-on {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fade-up {
+  0% { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
 }
 
 @layer base {
@@ -318,41 +476,85 @@
   opacity: 0.8;
 }
 
-/* Custom thin scrollbar for chat interfaces */
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 9999px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
-  border-radius: 9999px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.5);
-}
-
-/* Hide scrollbars globally across all browsers/Electron while keeping scroll functionality */
+/* Hide scrollbars globally across elements by default */
 * {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 *::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Custom thin scrollbar for chat interfaces */
+.scrollbar-thin {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 9999px !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35) !important;
+  border-radius: 9999px !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6) !important;
+}
+
+/* Minimal subtle horizontal/vertical scrollbar matching design system */
+.scrollbar-minimal,
+[data-scrollbar="minimal"] {
+  scrollbar-width: thin !important;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 25%, transparent) color-mix(in srgb, var(--foreground) 4%, transparent) !important;
+  -ms-overflow-style: auto !important;
+}
+
+.scrollbar-minimal::-webkit-scrollbar,
+[data-scrollbar="minimal"]::-webkit-scrollbar {
+  display: block !important;
+  height: 7px !important;
+  width: 7px !important;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-track,
+[data-scrollbar="minimal"]::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent) !important;
+  border-radius: 9999px !important;
+  margin: 0 4px !important;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-thumb,
+[data-scrollbar="minimal"]::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 25%, transparent) !important;
+  border-radius: 9999px !important;
+  border: 1.5px solid transparent !important;
+  background-clip: padding-box !important;
+  transition: background-color 0.15s ease;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-thumb:hover,
+[data-scrollbar="minimal"]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 45%, transparent) !important;
+  border: 1.5px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-corner,
+[data-scrollbar="minimal"]::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
 @keyframes shimmer-icon {
@@ -367,17 +569,18 @@
 /* Hides the scrollbar on a scrollable element while keeping it scrollable
    (native scroll, drag-to-pan, and the edge chevrons on /board rely on it). */
 .no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }
 
 /* Brand gradient utilities — see DESIGN.md for where these are allowed. */
 .bg-gradient-brand {
   background-image: linear-gradient(135deg, var(--gradient-brand-from) 0%, var(--gradient-brand-via) 55%, var(--gradient-brand-to) 100%);
+  color: #ffffff;
 }
 
 .bg-gradient-brand-tint {
@@ -1278,3 +1481,54 @@
 @custom-variant data-open (&:where([data-state="open"], [data-open]:not([data-open="false"])));
 
 @custom-variant data-closed (&:where([data-state="closed"], [data-closed]:not([data-closed="false"])));
+
+/* Liquid expansion fill button for Ask Tracky */
+.btn-liquid-tracky {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-lg, 0.5rem);
+  background-color: var(--card);
+  color: var(--foreground);
+  border: 1.5px solid var(--border);
+  transition: color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+  z-index: 1;
+}
+
+.btn-liquid-tracky::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -60%;
+  width: 120%;
+  height: 0;
+  padding-bottom: 120%;
+  border-radius: 50%;
+  background-image: linear-gradient(135deg, var(--gradient-brand-from) 0%, var(--gradient-brand-via) 55%, var(--gradient-brand-to) 100%);
+  transform: translate(-50%, -50%) scale(0.05);
+  transition: transform 1.05s cubic-bezier(0.25, 0.8, 0.25, 1), left 1.05s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.btn-liquid-tracky:hover {
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 14px -2px rgba(14, 165, 233, 0.45);
+}
+
+.btn-liquid-tracky:hover::before {
+  left: 50%;
+  transform: translate(-50%, -50%) scale(3.4);
+}
+
+.btn-liquid-tracky.active {
+  background-image: linear-gradient(135deg, var(--gradient-brand-from) 0%, var(--gradient-brand-via) 55%, var(--gradient-brand-to) 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px -2px rgba(14, 165, 233, 0.45);
+}
+
+
+
+

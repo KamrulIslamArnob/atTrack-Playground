@@ -4,27 +4,14 @@ import { getBoard } from "@/lib/actions/board";
 import { buttonVariants } from "@/components/ui/button";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import {
-  PipelineStages,
-  BreakdownBar,
-  ApplicationTrendChart,
-  MatchScoreDistributionChart,
-  McqScoreChart,
-  type PipelineStage,
-  type BreakdownItem,
-  type MatchScoreBand,
-} from "@/components/overview-charts";
+  PipelineStages, BreakdownBar, ApplicationTrendChart, MatchScoreDistributionChart, McqScoreChart, type PipelineStage, type BreakdownItem, type MatchScoreBand, } from "@/components/overview-charts";
 import { DEFAULT_LIST_COLORS, matchScoreBand } from "@/lib/types/board";
 import {
-  Briefcase,
-  Calendar,
-  Target,
-  ArrowRight,
-  Plus,
-  Camera,
-  TrendingUp,
-  Activity,
-  Send,
-} from "lucide-react";
+  Briefcase, Calendar, Target, Camera, Activity } from "lucide-react";
+import { ArrowRightIcon } from "@/components/ui/arrow-right";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { TrendingUpIcon } from "@/components/ui/trending-up";
+import { SendIcon } from "@/components/ui/send";
 
 /**
  * Importers write this field free-form, so the same mode arrives as "onsite",
@@ -236,7 +223,7 @@ export default async function OverviewPage() {
           <AddJobDialog
             trigger={
               <button className={buttonVariants({ size: "sm", className: "gap-1.5" })}>
-                <Plus className="size-4" />
+                <PlusIcon className="size-4" />
                 Add job
               </button>
             }
@@ -255,22 +242,25 @@ export default async function OverviewPage() {
       {/* Quick Metrics Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <QuickStat icon={Briefcase} label="Total Jobs" value={totalJobs ?? 0} tone="primary" />
-        <QuickStat icon={Send} label="Applied" value={totalApplications ?? 0} tone="chart-2" />
+        <QuickStat icon={SendIcon} label="Applied" value={totalApplications ?? 0} tone="chart-2" />
         <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} tone="chart-3" />
         <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} tone="chart-4" />
-        <QuickStat icon={TrendingUp} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
+        <QuickStat icon={TrendingUpIcon} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
         <QuickStat icon={Activity} label="Response Rate" value={responseRate != null ? `${responseRate}%` : "—"} tone="chart-5" />
       </div>
 
       {/* Primary Zone: Connected Pipeline Stepper */}
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="font-heading text-base font-semibold sm:text-lg">Pipeline</h2>
+            <h2 className="text-sm font-semibold sm:text-base text-foreground">Pipeline</h2>
             <p className="text-xs text-muted-foreground">Current distribution across hiring stages</p>
           </div>
-          <Link href="/jobs" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-            View board <ArrowRight className="size-3" />
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-colors cursor-pointer"
+          >
+            View board <ArrowRightIcon className="size-3.5" />
           </Link>
         </div>
         {allJobs.length > 0 ? (
@@ -314,7 +304,7 @@ export default async function OverviewPage() {
                 <p className="text-xs text-muted-foreground">Next scheduled meetings and technical rounds</p>
               </div>
               <Link href="/interviews" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-                Schedule <ArrowRight className="size-3" />
+                Schedule <ArrowRightIcon className="size-3" />
               </Link>
             </div>
             {upcomingInterviews.length > 0 ? (
@@ -385,7 +375,7 @@ export default async function OverviewPage() {
                   <p className="text-[11px] text-muted-foreground">Recent technical assessment scores</p>
                 </div>
                 <Link href="/interviews" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-                  Practice <ArrowRight className="size-3" />
+                  Practice <ArrowRightIcon className="size-3" />
                 </Link>
               </div>
               <div className="flex items-center gap-6 mb-3">

@@ -62,6 +62,7 @@ export interface BoardCard {
   deadline: string | null;
   section_deadline: string | null;
   section_deadline_list_id: string | null;
+  tier?: import("./job").JobTier | null;
   deadlines?: JobDeadline[];
   created_at: string;
   application_id: string | null; // null => surfaces in the Application Inbox
@@ -171,7 +172,7 @@ export function getEffectiveDeadlineInfo(
       daysRemaining: 0,
       label: "Apply ASAP",
       urgency: "red",
-      bannerClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40",
+      bannerClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-b border-rose-500/40",
       badgeClassName: "bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold",
     };
   }
@@ -186,7 +187,7 @@ export function getEffectiveDeadlineInfo(
       daysRemaining: 999,
       label: "Unknown",
       urgency: "gray",
-      bannerClassName: "bg-muted/60 text-muted-foreground border-border",
+      bannerClassName: "bg-muted/60 text-muted-foreground border-b border-border",
       badgeClassName: "bg-muted text-muted-foreground",
     };
   }
@@ -245,28 +246,28 @@ export function getEffectiveDeadlineInfo(
 
   switch (urgency) {
     case "overdue":
-      bannerClassName = "bg-red-950/20 text-red-700 dark:text-red-300 border-red-500/50";
-      badgeClassName = "bg-red-500/20 text-red-700 dark:text-red-300";
+      bannerClassName = "bg-destructive-surface text-destructive border-b border-destructive-border";
+      badgeClassName = "bg-destructive text-destructive-foreground font-semibold";
       break;
     case "red":
-      bannerClassName = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40";
-      badgeClassName = "bg-rose-500/20 text-rose-700 dark:text-rose-300";
+      bannerClassName = "bg-destructive-surface text-destructive border-b border-destructive-border";
+      badgeClassName = "bg-destructive/15 text-destructive font-semibold";
       break;
     case "yellow":
-      bannerClassName = "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40";
-      badgeClassName = "bg-amber-500/20 text-amber-700 dark:text-amber-300";
+      bannerClassName = "bg-warning-surface text-warning border-b border-warning-border";
+      badgeClassName = "bg-warning/15 text-warning font-semibold";
       break;
     case "blue":
-      bannerClassName = "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40";
-      badgeClassName = "bg-blue-500/20 text-blue-700 dark:text-blue-300";
+      bannerClassName = "bg-info-surface text-info border-b border-info-border";
+      badgeClassName = "bg-info/15 text-info font-semibold";
       break;
     case "purple":
-      bannerClassName = "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/40";
-      badgeClassName = "bg-purple-500/20 text-purple-700 dark:text-purple-300";
+      bannerClassName = "bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border-b border-purple-200 dark:border-purple-800/50";
+      badgeClassName = "bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 font-semibold";
       break;
     case "gray":
     default:
-      bannerClassName = "bg-muted/60 text-muted-foreground border-border";
+      bannerClassName = "bg-muted/70 text-muted-foreground border-b border-border";
       badgeClassName = "bg-muted text-muted-foreground";
       break;
   }
@@ -340,17 +341,17 @@ export function matchScoreBand(score: number | null): {
     return {
       label: "Strong",
       className:
-        "bg-lime-400/25 border border-lime-500/50 text-lime-950 dark:bg-lime-500/20 dark:border-lime-400/40 dark:text-lime-200",
+        "bg-success-surface border border-success-border text-success",
     };
   if (score >= 50)
     return {
       label: "Fair",
       className:
-        "bg-amber-400/25 border border-amber-500/50 text-amber-950 dark:bg-amber-500/20 dark:border-amber-400/40 dark:text-amber-200",
+        "bg-warning-surface border border-warning-border text-warning",
     };
   return {
     label: "Weak",
     className:
-      "bg-rose-400/25 border border-rose-500/50 text-rose-950 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-200",
+      "bg-destructive-surface border border-destructive-border text-destructive",
   };
 }

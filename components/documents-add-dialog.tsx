@@ -11,13 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Upload, X, FileText, Check, Link2, Code2, Maximize2, Minimize2, Sparkles, FileCode } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Upload, Code2, Minimize2, FileCode } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { CheckIcon } from "@/components/ui/check";
+import { Link2Icon } from "@/components/ui/link-2";
+import { Maximize2Icon } from "@/components/ui/maximize-2";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { InfoTooltip } from "@/components/ui/tooltip";
 
 interface DocumentsAddDialogProps {
@@ -243,7 +244,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
             onClick={handleClose}
             className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <X className="size-4" />
+            <XIcon className="size-4" />
           </button>
         </div>
 
@@ -271,7 +272,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Link2 className="size-3.5" />
+            <Link2Icon className="size-3.5" />
             External Link
           </button>
 
@@ -303,7 +304,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
               />
               {file ? (
                 <div className="flex items-center gap-3 rounded-2xl border border-border p-3 bg-muted/20">
-                  <FileText className="size-8 text-primary shrink-0" />
+                  <FileTextIcon className="size-8 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{file.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -315,7 +316,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                     onClick={() => setFile(null)}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-4" />
+                    <XIcon className="size-4" />
                   </button>
                 </div>
               ) : (
@@ -369,7 +370,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                         : "border-border bg-background text-muted-foreground"
                     }`}
                   >
-                    {isDefault && <Check className="size-3" />}
+                    {isDefault && <CheckIcon className="size-3" />}
                   </button>
                   <span className="text-xs font-medium text-muted-foreground">Set as default</span>
                 </div>
@@ -446,7 +447,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                         : "border-border bg-background text-muted-foreground"
                     }`}
                   >
-                    {isDefault && <Check className="size-3" />}
+                    {isDefault && <CheckIcon className="size-3" />}
                   </button>
                   <span className="text-xs font-medium text-muted-foreground">Set as default</span>
                 </div>
@@ -501,7 +502,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                       }}
                       className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 active:scale-95 transition-all"
                     >
-                      <Sparkles className="size-3" />
+                      <SparklesIcon className="size-3" />
                       <span>Insert Sample Template</span>
                     </button>
                   )}
@@ -518,7 +519,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                       </>
                     ) : (
                       <>
-                        <Maximize2 className="size-3 text-amber-500" />
+                        <Maximize2Icon className="size-3 text-amber-500" />
                         <span>Larger TEX Workspace</span>
                       </>
                     )}
@@ -575,7 +576,7 @@ export function DocumentsAddDialog({ open, onOpenChange, defaultTab = "upload" }
                         : "border-border bg-background text-muted-foreground"
                     }`}
                   >
-                    {isDefault && <Check className="size-3" />}
+                    {isDefault && <CheckIcon className="size-3" />}
                   </button>
                   <span className="text-xs font-medium text-muted-foreground">Set as default</span>
                 </div>

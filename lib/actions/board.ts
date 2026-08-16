@@ -37,6 +37,7 @@ interface RawJobRow {
   deadline: string | null;
   section_deadline: string | null;
   section_deadline_list_id: string | null;
+  tier?: string | null;
   created_at: string;
   company: { name: string } | null;
   position: { name: string } | null;
@@ -109,6 +110,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       deadline,
       section_deadline,
       section_deadline_list_id,
+      tier,
       created_at,
       company:companies(name),
       position:positions(name),
@@ -160,6 +162,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
         deadline: j.deadline,
         section_deadline: j.section_deadline,
         section_deadline_list_id: j.section_deadline_list_id,
+        tier: (j.tier as import("@/lib/types/job").JobTier) ?? null,
         deadlines,
         created_at: j.created_at,
         application_id: application?.id ?? null,
@@ -365,6 +368,7 @@ export async function createList(name: string): Promise<{ id: string }> {
   }
 
   revalidatePath("/board");
+  revalidatePath("/jobs");
   return { id: data.id };
 }
 
@@ -387,6 +391,7 @@ export async function renameList(id: string, name: string) {
   }
 
   revalidatePath("/board");
+  revalidatePath("/jobs");
 }
 
 /**
@@ -446,6 +451,7 @@ export async function reorderLists(orderedIds: string[]) {
 
   if (orderedIds.length === 0) {
     revalidatePath("/board");
+    revalidatePath("/jobs");
     return;
   }
 
@@ -463,4 +469,5 @@ export async function reorderLists(orderedIds: string[]) {
   ).run(...([...params, ...orderedIds, userId] as never[]));
 
   revalidatePath("/board");
+  revalidatePath("/jobs");
 }

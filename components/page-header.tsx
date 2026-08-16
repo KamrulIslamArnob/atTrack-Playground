@@ -1,8 +1,8 @@
 import { Breadcrumbs } from "@/components/breadcrumbs";
 
 interface PageHeaderProps {
-  title: string;
-  subtitle: string;
+  title: React.ReactNode;
+  subtitle?: string;
   /** Toolbar items rendered to the right of the breadcrumbs in Layer 2. */
   children?: React.ReactNode;
   /** Optional element rendered beside the title (e.g. InfoTooltip) */
@@ -38,9 +38,11 @@ export function PageHeader({
             </h1>
             {titleExtra}
           </div>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            {subtitle}
-          </p>
+          {subtitle && (
+            <p className="text-sm text-muted-foreground sm:text-base">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 

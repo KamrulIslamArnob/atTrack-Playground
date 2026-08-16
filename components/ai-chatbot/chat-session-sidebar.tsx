@@ -3,29 +3,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  type ChatSession,
-  exportSessionToMarkdown,
-} from "@/lib/ai-chatbot/sessions";
+  type ChatSession, exportSessionToMarkdown, } from "@/lib/ai-chatbot/sessions";
 import { cn } from "@/lib/utils";
 import {
-  Plus,
-  MessageSquare,
-  Search,
-  Trash2,
-  Check,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Pin,
-  PinOff,
-  Settings,
-  FolderOpen,
-  Sparkles,
-  MoreHorizontal,
-  FileText,
-} from "lucide-react";
+  MessageSquare, Trash2, Pin, PinOff, MoreHorizontal, Loader2, AlertTriangle } from "lucide-react";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { SearchIcon } from "@/components/ui/search";
+import { CheckIcon } from "@/components/ui/check";
+import { XIcon } from "@/components/ui/x";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,23 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-
-function MarkdownIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        fillRule="evenodd"
-        d="M14.85 3H1.15C.52 3 0 3.52 0 4.15v7.7c0 .63.52 1.15 1.15 1.15h13.7c.63 0 1.15-.52 1.15-1.15V4.15C16 3.52 15.48 3 14.85 3zM9 11H7V8L5.5 9.5 4 8v3H2V5h2l1.5 2L7 5h2v6zm2.99.5L9.5 8H11V5h2v3h1.5l-2.51 3.5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
+import { useChatQueue } from "@/lib/ai-chatbot/chat-queue-context";
 
 export interface ChatSessionSidebarProps {
   sessions: ChatSession[];
@@ -124,6 +94,7 @@ export function ChatSessionSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const { isSessionStreaming, activeStreams } = useChatQueue();
 
   const filteredSessions = sessions.filter((s) =>
     s.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -168,7 +139,6 @@ export function ChatSessionSidebar({
     }
   }
 
-  // Desktop closed view: completely closed so full window is free for chatting
   if (isCollapsed) {
     return null;
   }
@@ -176,42 +146,42 @@ export function ChatSessionSidebar({
   return (
     <aside
       className={cn(
-        "relative fixed inset-y-0 left-0 z-40 flex h-full w-[280px] shrink-0 flex-col border-r border-border/70 bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:transition-none md:w-[280px]",
-        isMobileOpen ? "translate-x-0 shadow-e3" : "-translate-x-full md:translate-x-0"
+        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] shrink-0 flex-col border-r border-border bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:z-10 md:transition-none md:w-[280px]",
+        isMobileOpen ? "translate-x-0 shadow-lg" : "-translate-x-full md:translate-x-0"
       )}
     >
-      <div className="flex items-center justify-end px-3.5 pb-2 pt-2.5 shrink-0 md:hidden">
+      <div className="flex items-center justify-end px-3 py-2 shrink-0 md:hidden">
         {onMobileClose && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onMobileClose}
-            className="size-7 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="size-7 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-all cursor-pointer"
             title="Close sidebar"
           >
-            <X className="size-3.5" />
+            <XIcon size={14} className="size-3.5" />
           </Button>
         )}
       </div>
 
-      <div className="space-y-2.5 p-3.5 pb-3 pt-3 shrink-0">
+      <div className="space-y-2 p-3 pb-2 pt-2 shrink-0">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon size={14} className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats..."
-            className="w-full rounded-xl border border-border/80 bg-background py-2.5 pl-9 pr-9 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
+            className="w-full rounded-xl border border-border bg-background py-2 pl-8.5 pr-8.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 cursor-pointer"
               title="Clear search"
             >
-              <X className="size-3" />
+              <XIcon size={12} className="size-3" />
             </button>
           )}
         </div>
@@ -221,18 +191,18 @@ export function ChatSessionSidebar({
             onNewChat();
             if (isMobileOpen && onMobileClose) onMobileClose();
           }}
-          className="w-full h-10 rounded-xl bg-gradient-brand text-primary-foreground shadow-e1 hover:opacity-95"
+          className="w-full h-9 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all text-xs font-medium cursor-pointer"
         >
-          <Plus className="size-4" />
+          <PlusIcon size={14} className="size-3.5 mr-1" />
           New chat
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-3.5 scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto px-2 py-1 space-y-3">
         {pinnedSessions.length > 0 && (
           <div>
-            <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              PINNED
+            <div className="px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
+              Pinned
             </div>
             <div className="space-y-0.5 mt-0.5">
               <AnimatePresence initial={false}>
@@ -241,6 +211,11 @@ export function ChatSessionSidebar({
                     key={session.id}
                     session={session}
                     isActive={session.id === activeSessionId}
+                    isStreaming={isSessionStreaming(session.id)}
+                    isPausedApproval={
+                      activeStreams[session.id]?.status === "paused_approval" ||
+                      Boolean(activeStreams[session.id]?.approval)
+                    }
                     isEditing={editingId === session.id}
                     editTitle={editTitle}
                     onSelect={() => {
@@ -263,13 +238,13 @@ export function ChatSessionSidebar({
 
         {recentSessions.length === 0 && pinnedSessions.length === 0 ? (
           <div className="px-3 py-8 text-center text-xs text-muted-foreground/60 flex flex-col items-center gap-2">
-            <MessageSquare className="size-6 text-muted-foreground/40" />
+            <MessageSquare className="size-5 text-muted-foreground/40" />
             <span>{searchQuery ? "No matching conversations" : "No chat history yet"}</span>
           </div>
         ) : (
           dateGroups.map((group) => (
             <div key={group.title}>
-              <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <div className="px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
                 {group.title}
               </div>
               <div className="space-y-0.5 mt-0.5">
@@ -279,6 +254,11 @@ export function ChatSessionSidebar({
                       key={session.id}
                       session={session}
                       isActive={session.id === activeSessionId}
+                      isStreaming={isSessionStreaming(session.id)}
+                      isPausedApproval={
+                        activeStreams[session.id]?.status === "paused_approval" ||
+                        Boolean(activeStreams[session.id]?.approval)
+                      }
                       isEditing={editingId === session.id}
                       editTitle={editTitle}
                       onSelect={() => {
@@ -308,6 +288,8 @@ interface SessionRowProps {
   session: ChatSession;
   isActive: boolean;
   isEditing: boolean;
+  isStreaming?: boolean;
+  isPausedApproval?: boolean;
   editTitle: string;
   onSelect: () => void;
   onEdit: () => void;
@@ -323,6 +305,8 @@ function SessionRow({
   session,
   isActive,
   isEditing,
+  isStreaming,
+  isPausedApproval,
   editTitle,
   onSelect,
   onEdit,
@@ -337,10 +321,11 @@ function SessionRow({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 2 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -2 }}
-      transition={{ duration: 0.15 }}
+      exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", bounce: 0, duration: 0.35 }}
+      whileTap={{ scale: 0.98 }}
       role="button"
       tabIndex={0}
       onClick={onSelect}
@@ -357,16 +342,30 @@ function SessionRow({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl border px-2.5 py-3.5 text-left transition-none cursor-pointer focus:outline-none focus:ring-0",
+        "group relative flex w-full items-center gap-2 overflow-hidden rounded-lg px-2.5 py-2 text-left cursor-pointer focus:outline-none focus:ring-0",
         isActive
-          ? "border-primary/20 bg-gradient-brand-tint text-foreground shadow-e1"
-          : "border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/60 hover:text-foreground"
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
       )}
       title="Double click to rename"
     >
-      <div className="min-w-0 w-full overflow-hidden">
+      {isActive && (
+        <motion.div
+          layoutId="active-session-indicator"
+          className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-foreground"
+          transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+        />
+      )}
+
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+        {isStreaming && (
+          <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
+        )}
+        {isPausedApproval && (
+          <AlertTriangle className="size-3 shrink-0 animate-bounce text-amber-500" />
+        )}
         {isEditing ? (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex w-full items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <input
               type="text"
               value={editTitle}
@@ -382,18 +381,18 @@ function SessionRow({
             <button
               type="button"
               onClick={onSaveEdit}
-              className="p-1 rounded text-foreground hover:bg-muted cursor-pointer"
+              className="p-1 rounded-md text-foreground hover:bg-muted active:scale-95 cursor-pointer"
               title="Save"
             >
-              <Check className="size-3" />
+              <CheckIcon size={12} className="size-3" />
             </button>
             <button
               type="button"
               onClick={onCancelEdit}
-              className="p-1 rounded text-muted-foreground hover:bg-muted cursor-pointer"
+              className="p-1 rounded-md text-muted-foreground hover:bg-muted active:scale-95 cursor-pointer"
               title="Cancel"
             >
-              <X className="size-3" />
+              <XIcon size={12} className="size-3" />
             </button>
           </div>
         ) : (
@@ -403,7 +402,7 @@ function SessionRow({
               onEdit();
             }}
             className={cn(
-              "block w-full truncate text-xs transition-colors select-none",
+              "block w-full truncate text-xs select-none",
               isActive ? "font-medium text-foreground" : "font-normal text-muted-foreground group-hover:text-foreground"
             )}
           >
@@ -412,13 +411,19 @@ function SessionRow({
         )}
       </div>
 
-      {!isEditing && isHovered && (
-        <div className="flex w-[54px] shrink-0 items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {!isEditing && (
+        <motion.div
+          initial={false}
+          animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 4 }}
+          transition={{ duration: 0.15 }}
+          className="flex w-[54px] shrink-0 items-center justify-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             type="button"
             onClick={onTogglePin}
             className={cn(
-              "flex size-5 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors duration-150 cursor-pointer hover:text-foreground",
+              "flex size-5 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors duration-150 cursor-pointer hover:text-foreground active:scale-95",
               session.isPinned && "text-foreground"
             )}
             title={session.isPinned ? "Unpin session" : "Pin session"}
@@ -427,40 +432,40 @@ function SessionRow({
           </button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex size-5 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors duration-150 hover:text-foreground focus:outline-none cursor-pointer"
+            <DropdownMenuTrigger
+              className="flex size-5 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors duration-150 hover:text-foreground focus:outline-none cursor-pointer active:scale-95"
               title="Session actions"
               aria-label="Session actions"
             >
               <MoreHorizontal className="size-3" />
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent side="bottom" align="end" className="w-44 p-1.5">
+            <DropdownMenuContent side="bottom" align="end" className="w-44 p-1.5 rounded-xl border border-border">
               <DropdownMenuItem
                 onClick={onTogglePin}
-                className="gap-2.5"
+                className="gap-2.5 text-xs rounded-lg cursor-pointer"
               >
                 {session.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
                 {session.isPinned ? "Unpin chat" : "Pin chat"}
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={onExport} className="gap-2.5">
-                <FileText className="size-3.5" />
+              <DropdownMenuItem onClick={onExport} className="gap-2.5 text-xs rounded-lg cursor-pointer">
+                <FileTextIcon className="size-3.5" />
                 Export markdown
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 variant="destructive"
                 onClick={onDelete}
-                className="gap-2.5"
+                className="gap-2.5 text-xs rounded-lg cursor-pointer"
               >
                 <Trash2 className="size-3.5" />
                 Delete chat
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );
 }
-

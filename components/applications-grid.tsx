@@ -6,13 +6,15 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, X, ChevronLeft, ChevronRight, MapPin, DollarSign, Building2, ExternalLink, Mail, Sparkles } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Search, Building2, Mail } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { MapPinIcon } from "@/components/ui/map-pin";
+import { DollarSignIcon } from "@/components/ui/dollar-sign";
+import { ExternalLinkIcon } from "@/components/ui/external-link";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { APPLICATION_STATUS_LABELS } from "@/lib/types/job";
 
@@ -219,7 +221,7 @@ export function ApplicationsGrid({
             }}
             disabled={page <= 1}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeftIcon className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -232,7 +234,7 @@ export function ApplicationsGrid({
             }}
             disabled={page >= totalPages}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRightIcon className="size-4" />
           </Button>
         </div>
       </div>
@@ -244,7 +246,7 @@ export function ApplicationsGrid({
             <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               &quot;{initialSearch}&quot;
               <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
-                <X className="size-3 text-lime-900 dark:text-lime-300" />
+                <XIcon className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
           )}
@@ -252,7 +254,7 @@ export function ApplicationsGrid({
             <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 capitalize dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               {statusLabels[initialStatus] ?? initialStatus}
               <button onClick={() => handleStatusChange("all")} className="ml-0.5">
-                <X className="size-3 text-lime-900 dark:text-lime-300" />
+                <XIcon className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
           )}
@@ -260,7 +262,7 @@ export function ApplicationsGrid({
             <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               {initialSort === "applied_oldest" ? "Oldest applied" : initialSort === "deadline_earliest" ? "Deadline ↑" : initialSort === "deadline_latest" ? "Deadline ↓" : initialSort === "company_az" ? "Company A→Z" : initialSort === "company_za" ? "Company Z→A" : initialSort}
               <button onClick={() => handleSortChange("applied_newest")} className="ml-0.5">
-                <X className="size-3 text-lime-900 dark:text-lime-300" />
+                <XIcon className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
           )}
@@ -319,7 +321,7 @@ export function ApplicationsGrid({
                       <TooltipContent side="top" className="max-w-xs p-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
-                            <Sparkles className="size-3.5 text-amber-500" />
+                            <SparklesIcon className="size-3.5 text-amber-500" />
                             <span>AI Match Analysis ({app.job.match_score}%)</span>
                           </div>
                           <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -338,12 +340,12 @@ export function ApplicationsGrid({
               <div className="mt-1 space-y-1.5">
                 {app.job?.location && (
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <MapPin className="size-3.5 shrink-0" />
+                    <MapPinIcon className="size-3.5 shrink-0" />
                     <span>{app.job.location}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <DollarSign className="size-3.5 shrink-0" />
+                  <DollarSignIcon className="size-3.5 shrink-0" />
                   <span className={app.job?.salary_range ? "" : "text-muted-foreground/50"}>
                     {app.job?.salary_range || "Unspecified"}
                   </span>
@@ -375,7 +377,7 @@ export function ApplicationsGrid({
                       : "No deadline"}
                 </span>
                 {app.job?.application_url && (
-                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
+                  <ExternalLinkIcon className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
                 )}
                 {!app.job?.application_url && app.job?.application_email && (
                   <Mail className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />

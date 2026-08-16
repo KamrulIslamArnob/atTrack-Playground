@@ -8,24 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import {
-  createContact,
-  getContacts,
-  linkContact,
-  unlinkContact,
-  type Contact,
-} from "@/lib/actions/contacts";
+  createContact, getContacts, linkContact, unlinkContact, type Contact, } from "@/lib/actions/contacts";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { parseNoteMentions } from "@/lib/mentions";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { getContactAvatarColorClass, cn } from "@/lib/utils";
-import { Mail, Phone, Plus, Trash2, UserRound, X } from "lucide-react";
+import { Mail, Trash2, UserRound } from "lucide-react";
+import { PhoneIcon } from "@/components/ui/phone";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { XIcon } from "@/components/ui/x";
 
 interface ContactsTabProps {
   data: JobDetailData;
@@ -89,7 +82,7 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
     <div className="space-y-4">
       <div className="flex gap-2">
         <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setCreating((v) => !v)}>
-          <Plus className="mr-1 size-3.5" />
+          <PlusIcon className="mr-1 size-3.5" />
           Create contact
         </Button>
         <Button type="button" variant="outline" size="sm" className="flex-1" onClick={openLinkPicker}>
@@ -135,7 +128,7 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-muted-foreground">Pick a contact to link</p>
             <button onClick={() => setLinking(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="size-3.5" />
+              <XIcon className="size-3.5" />
             </button>
           </div>
           {library === null ? (
@@ -200,7 +193,7 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
                     )}
                     {c.phone && (
                       <span className="flex items-center gap-1">
-                        <Phone className="size-3" /> {c.phone}
+                        <PhoneIcon className="size-3" /> {c.phone}
                       </span>
                     )}
                   </div>

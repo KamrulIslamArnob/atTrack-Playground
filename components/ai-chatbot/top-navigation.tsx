@@ -1,10 +1,15 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { PanelLeft, ChevronRight, MessageSquare, ChevronLeft, Edit2, Check, X, Database } from "lucide-react";
+import { PanelLeft } from "lucide-react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import type { ContextSource } from "@/lib/ai-chatbot/types";
+import { DatabaseBackupIcon } from "@/components/ai-chatbot/database-backup-icon";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { CheckIcon } from "@/components/ui/check";
+import { XIcon } from "@/components/ui/x";
 
 interface TopNavigationProps {
   title?: string;
@@ -64,7 +69,7 @@ export function TopNavigation({
 
   const summaryText = useMemo(() => {
     if (!sources || sources.length === 0) {
-      return "Connected to workspace: 11 jobs, 5 resumes";
+      return "Connected to workspace";
     }
 
     const isConnected = (id: string) =>
@@ -79,15 +84,18 @@ export function TopNavigation({
     const parts: string[] = [];
 
     if (jobsSource && isConnected("jobs")) {
-      parts.push(`${jobsSource.recordCount || 11} jobs`);
+      const count = typeof jobsSource.recordCount === "number" ? jobsSource.recordCount : 0;
+      parts.push(`${count} ${count === 1 ? "job" : "jobs"}`);
     }
 
     if (resumesSource && isConnected("resume")) {
-      parts.push(`${resumesSource.recordCount || 5} resumes`);
+      const count = typeof resumesSource.recordCount === "number" ? resumesSource.recordCount : 0;
+      parts.push(`${count} ${count === 1 ? "resume" : "resumes"}`);
     }
 
     if (contactsSource && isConnected("contacts") && parts.length < 2) {
-      parts.push(`${contactsSource.recordCount || 4} CRM`);
+      const count = typeof contactsSource.recordCount === "number" ? contactsSource.recordCount : 0;
+      parts.push(`${count} CRM`);
     }
 
     if (parts.length > 0) {
@@ -103,48 +111,42 @@ export function TopNavigation({
       return "No sources connected";
     }
 
-    return `Connected to workspace: ${totalActive} sources`;
+    return "Connected to workspace";
   }, [sources, connectedSourceIds]);
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border/70 bg-background/85 px-3 backdrop-blur-xl md:px-4",
+        "sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-border bg-background/80 px-3 backdrop-blur-xl md:px-5",
         className
       )}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2">
         {showBackButton && onBack ? (
-          <Button
+          <motion.button
             type="button"
-            variant="ghost"
-            size="icon"
+            whileTap={{ scale: 0.95 }}
             onClick={onBack}
-            className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors cursor-pointer md:hidden"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 cursor-pointer md:hidden"
             title="Back to chats"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeftIcon size={16} className="size-4" />
             <span className="sr-only">Back to chats</span>
-          </Button>
+          </motion.button>
         ) : onToggleSidebar ? (
-          <Button
+          <motion.button
             type="button"
-            variant="ghost"
-            size="icon"
+            whileTap={{ scale: 0.95 }}
             onClick={onToggleSidebar}
-            className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors cursor-pointer"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 cursor-pointer"
             title="Toggle sidebar"
           >
             <PanelLeft className="size-4" />
             <span className="sr-only">Toggle sidebar</span>
-          </Button>
+          </motion.button>
         ) : null}
 
-        <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/70 bg-muted/[0.35] px-2 py-1.5">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-foreground shadow-e1">
-            <MessageSquare className="size-3.5" />
-          </div>
-
+        <div className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/40 px-2 py-1.5">
           {isEditing ? (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <input
@@ -157,24 +159,24 @@ export function TopNavigation({
                   if (e.key === "Escape") handleCancel();
                 }}
                 onBlur={handleSave}
-                className="h-7 w-[160px] sm:w-[220px] md:w-[280px] rounded-md border border-border bg-background px-2 py-0.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
+                className="h-7 w-[160px] sm:w-[220px] md:w-[280px] rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20 transition-all"
                 placeholder="Chat title..."
               />
               <button
                 type="button"
                 onClick={handleSave}
-                className="flex size-6 items-center justify-center rounded text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+                className="flex size-6 items-center justify-center rounded text-foreground hover:bg-muted active:scale-95 transition-colors cursor-pointer"
                 title="Save (Enter)"
               >
-                <Check className="size-3.5" />
+                <CheckIcon size={14} className="size-3.5" />
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
-                className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+                className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted active:scale-95 transition-colors cursor-pointer"
                 title="Cancel (Esc)"
               >
-                <X className="size-3.5" />
+                <XIcon size={14} className="size-3.5" />
               </button>
             </div>
           ) : (
@@ -183,35 +185,35 @@ export function TopNavigation({
                 setEditTitle(title);
                 setIsEditing(true);
               }}
-              className="group/title flex min-w-0 items-center gap-1.5 max-w-[180px] sm:max-w-[260px] md:max-w-[340px] cursor-pointer rounded-lg px-1.5 py-1 transition-colors hover:bg-muted/70"
+              className="group/title flex min-w-0 items-center gap-1 max-w-[180px] sm:max-w-[260px] md:max-w-[340px] cursor-pointer rounded-md px-1.5 py-1 transition-colors hover:bg-muted/60"
               title="Double click to rename"
             >
-              <h1 className="truncate text-sm font-semibold text-foreground tracking-tight select-none">
+              <h1 className="truncate text-sm font-medium text-foreground select-none">
                 {title}
               </h1>
-              <Edit2 className="size-3 text-muted-foreground/0 group-hover/title:text-muted-foreground/60 transition-opacity shrink-0" />
+              <span className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground/0 group-hover/title:text-muted-foreground/50 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path></svg>
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex min-w-0 items-center justify-center px-2">
-        <button
+      <div className="flex min-w-0 items-center">
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.95 }}
           onClick={onOpenDrawer}
-          className="flex min-w-0 items-center gap-2 rounded-full border border-border/80 bg-gradient-brand-tint px-3 py-1.5 text-xs font-medium text-foreground shadow-e1 transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98] cursor-pointer"
+          className="flex min-w-0 items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted active:scale-95 cursor-pointer"
           title="Manage workspace connections"
         >
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-success-border bg-success-surface text-success">
-            <Database className="size-3" />
-          </span>
-          <span className="hidden min-w-0 max-w-[170px] truncate sm:inline md:max-w-[260px]">{summaryText}</span>
-          <span className="min-w-0 max-w-[120px] truncate sm:hidden">11 jobs, 5 resumes</span>
-          <ChevronRight className="size-3 shrink-0 text-muted-foreground" />
-        </button>
+          <DatabaseBackupIcon size={14} className="size-3.5 shrink-0 text-primary inline-flex" />
+          <span className="hidden min-w-0 max-w-[170px] truncate sm:inline md:max-w-[260px] text-xs">{summaryText}</span>
+          <span className="min-w-0 max-w-[120px] truncate sm:hidden text-xs">11 jobs, 5 resumes</span>
+          <ChevronRightIcon size={14} className="size-3.5 shrink-0 text-muted-foreground" />
+        </motion.button>
       </div>
 
-      {/* Right side: Clean minimal spacer */}
       <div className="hidden w-8 shrink-0 sm:block" />
     </header>
   );

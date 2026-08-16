@@ -22,6 +22,8 @@ export interface ToolApproval {
   preview: string;
   /** The literal SQL that would run on approval. */
   sql: string;
+  /** Epoch millisecond timestamp when this approval auto-expires (default 60 seconds). */
+  expiresAt?: number;
 }
 
 export interface ToolResult {

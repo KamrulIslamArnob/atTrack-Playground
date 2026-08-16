@@ -3,11 +3,10 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-} from "lucide-react";
+  Search } from "lucide-react";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
 import { Input } from "@/components/ui/input";
 import { ImportChoice } from "@/components/import-choice";
 import {
@@ -100,7 +99,7 @@ export function JobsToolbar({
       <DropdownMenu>
         <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground">
           Status: <span className="text-foreground">{statusLabel}</span>
-          <ChevronDown className="size-3" aria-hidden="true" />
+          <ChevronDownIcon className="size-3" aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuRadioGroup
@@ -123,7 +122,7 @@ export function JobsToolbar({
       <DropdownMenu>
         <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground">
           Per page: <span className="text-foreground">{perPageLabel}</span>
-          <ChevronDown className="size-3" aria-hidden="true" />
+          <ChevronDownIcon className="size-3" aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuRadioGroup
@@ -157,7 +156,7 @@ export function JobsToolbar({
           }}
           className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <ChevronLeft className="size-3.5" aria-hidden="true" />
+          <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
         </button>
         <span className="w-px bg-border" aria-hidden="true" />
         <button
@@ -171,7 +170,7 @@ export function JobsToolbar({
           }}
           className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <ChevronRight className="size-3.5" aria-hidden="true" />
+          <ChevronRightIcon className="size-3.5" aria-hidden="true" />
         </button>
       </div>
 

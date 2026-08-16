@@ -7,12 +7,14 @@ import { ProfileForm, type Profile } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { AiProvidersSettings } from "@/components/settings/ai-providers-settings";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { Mail, Sparkles } from "lucide-react";
-
+import { Mail } from "lucide-react";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { UpdateChecker } from "@/components/settings/update-checker";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
 import { getExtensionSecret } from "@/lib/actions/extension";
 import { RawDatabaseToggle } from "@/components/settings/raw-database-toggle";
+import { ThemeSettings } from "@/components/settings/theme-settings";
+import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -35,15 +37,17 @@ export default async function SettingsPage() {
       <div className="-mx-6 border-b border-border pb-6">
         <div className="px-6">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              Your profile, your email settings, your data.
-            </p>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Your profile, your email settings, your data.
+          </p>
         </div>
       </div>
 
       <Breadcrumbs />
 
       <UpdateChecker />
+
+      <ThemeSettings />
 
       <ExtensionSettings secret={extensionSecret} />
 
@@ -80,7 +84,7 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Sparkles className="size-4" />
+            <SparklesIcon className="size-4" />
             AI Providers
           </CardTitle>
         </CardHeader>
@@ -115,5 +119,3 @@ export default async function SettingsPage() {
 function SmtpConfigCard({ config }: { config: Awaited<ReturnType<typeof getSmtpConfig>> }) {
   return <SmtpConfigFormWrapper config={config} />;
 }
-
-import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";

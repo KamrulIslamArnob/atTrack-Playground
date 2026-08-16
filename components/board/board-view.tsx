@@ -2,15 +2,14 @@
 
 import { Fragment, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowUpDown,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Layers,
-  Plus,
-  X,
-} from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { ArrowUpDown } from "lucide-react";
+import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { ChevronLeftIcon } from "@/components/ui/chevron-left";
+import { ChevronRightIcon } from "@/components/ui/chevron-right";
+import { LayersIcon } from "@/components/ui/layers";
+import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { XIcon } from "@/components/ui/x";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +21,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AddJobDialog } from "@/components/add-job-dialog";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { JobViewHeader } from "@/components/board/board-view-header";
 import { ImportChoice } from "@/components/import-choice";
 import { BoardColumn, type GroupOption } from "@/components/board/board-column";
 import { JobDetailSheet } from "@/components/job-detail/job-detail-sheet";
+import { ElasticJogScroller } from "@/components/ui/elastic-jog-scroller";
 import {
   createList,
   deleteList,
@@ -39,12 +39,14 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 interface BoardViewProps {
   lists: BoardList[];
   cards: BoardCard[];
+  onViewChange?: (view: "board" | "list") => void;
 }
 
-type SortOption = "recent" | "fit" | "deadline" | "title" | "company" | "oldest";
+type SortOption = "recent" | "tier" | "fit" | "deadline" | "title" | "company" | "oldest";
 
 const SORT_LABELS: Record<SortOption, string> = {
   recent: "Recent",
+  tier: "Priority Tier",
   fit: "Fit score",
   deadline: "Deadline",
   title: "Title (A–Z)",
@@ -59,22 +61,18 @@ const GROUP_LABELS: Record<GroupOption, string> = {
   resume: "Resume",
 };
 
-export function BoardView({ lists, cards }: BoardViewProps) {
+export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const { confirm, dialog } = useConfirm();
+  const shouldReduceMotion = useReducedMotion();
 
-  // A drag paints immediately, then React discards the optimistic layer when the
-  // transition settles — reverting on failure and picking up server truth on
-  // success without mirroring props into state.
   const [optimisticCards, applyMove] = useOptimistic(
     cards,
     (state: BoardCard[], move: { jobId: string; listId: string }) =>
       state.map((c) => (c.id === move.jobId ? { ...c, list_id: move.listId } : c))
   );
 
-  // Same optimistic-then-reconcile pattern as card moves, keyed by the full
-  // ordered id list rather than a single field.
   const [optimisticLists, applyReorder] = useOptimistic(
     lists,
     (state: BoardList[], orderedIds: string[]) =>
@@ -89,13 +87,17 @@ export function BoardView({ lists, cards }: BoardViewProps) {
   const [newListName, setNewListName] = useState("");
   const [addJobListId, setAddJobListId] = useState<string | null>(null);
   const [openJobId, setOpenJobId] = useState<string | null>(null);
-  // Client-only, not persisted. "recent" is each list's own drag order
-  // (board_position, already how cards arrive) — every other option re-sorts.
   const [sort, setSort] = useState<SortOption>("recent");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
   const sortedCards = (() => {
     switch (sort) {
+      case "tier":
+        return [...optimisticCards].sort((a, b) => {
+          const tierA = a.tier ? parseInt(a.tier, 10) : 999;
+          const tierB = b.tier ? parseInt(b.tier, 10) : 999;
+          return tierA - tierB;
+        });
       case "fit":
         return [...optimisticCards].sort((a, b) => (b.match_score ?? -1) - (a.match_score ?? -1));
       case "deadline":
@@ -126,9 +128,11 @@ export function BoardView({ lists, cards }: BoardViewProps) {
     }
   })();
 
-  // Horizontal panning + edge affordances for once the board overflows
-  // (the scrollbar itself is hidden via .no-scrollbar).
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fixedScrollRef = useRef<HTMLDivElement>(null);
+  const isSyncingScroll = useRef(false);
+  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
+
   const panRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(
     null
   );
@@ -138,16 +142,38 @@ export function BoardView({ lists, cards }: BoardViewProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const checkOverflow = () => setCanScroll(el.scrollWidth > el.clientWidth + 1);
+    const checkOverflow = () => {
+      setBoardScrollWidth(el.scrollWidth);
+      setCanScroll(el.scrollWidth > el.clientWidth + 1);
+    };
     checkOverflow();
     const observer = new ResizeObserver(checkOverflow);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [lists.length]);
+  }, [lists.length, cards.length]);
 
-  // Guard every handler on the pointerId captured at drag start — with two
-  // simultaneous touch points, a second pointer's move/up must not touch the
-  // first pointer's pan baseline.
+  const handleMainScroll = () => {
+    if (isSyncingScroll.current) return;
+    if (fixedScrollRef.current && scrollRef.current) {
+      isSyncingScroll.current = true;
+      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    }
+  };
+
+  const handleFixedScroll = () => {
+    if (isSyncingScroll.current) return;
+    if (fixedScrollRef.current && scrollRef.current) {
+      isSyncingScroll.current = true;
+      scrollRef.current.scrollLeft = fixedScrollRef.current.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    }
+  };
+
   const handlePanStart = (pointerId: number, clientX: number) => {
     if (!scrollRef.current) return;
     panRef.current = { pointerId, startX: clientX, startScrollLeft: scrollRef.current.scrollLeft };
@@ -155,6 +181,9 @@ export function BoardView({ lists, cards }: BoardViewProps) {
   const handlePanMove = (pointerId: number, clientX: number) => {
     if (!panRef.current || panRef.current.pointerId !== pointerId || !scrollRef.current) return;
     scrollRef.current.scrollLeft = panRef.current.startScrollLeft - (clientX - panRef.current.startX);
+    if (fixedScrollRef.current) {
+      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+    }
   };
   const handlePanEnd = (pointerId: number) => {
     if (!panRef.current || panRef.current.pointerId !== pointerId) return;
@@ -180,7 +209,6 @@ export function BoardView({ lists, cards }: BoardViewProps) {
     });
   };
 
-  // targetId null = drop past the last column (the "Add list" slot).
   const handleReorderList = (draggedId: string, targetId: string | null) => {
     if (draggedId === targetId) return;
     const ids = optimisticLists.map((l) => l.id).filter((id) => id !== draggedId);
@@ -255,20 +283,14 @@ export function BoardView({ lists, cards }: BoardViewProps) {
   };
 
   return (
-    <>
-      {/* One row: breadcrumb on the left, group/sort/pager/Add Job on the right — the
-          reference board keeps these together instead of a standalone breadcrumb
-          row plus a separate pager row. Bordered like every other page's header,
-          just carrying the toolbar instead of the title block. */}
-      <div className="-mx-6 mb-4 flex items-center gap-3 border-b border-border px-6 pb-4">
-        <Breadcrumbs />
-        <div className="flex-1" />
+    <div className="space-y-4 flex-1 flex flex-col min-h-full">
+      <JobViewHeader currentView="board" onViewChange={onViewChange}>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="hidden items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 h-7 text-xs font-medium text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground sm:inline-flex">
-            <Layers className="size-3.5" aria-hidden="true" />
+          <DropdownMenuTrigger className="hidden h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer sm:inline-flex">
+            <LayersIcon className="size-3.5" aria-hidden="true" />
             Group: <span className="text-foreground">{GROUP_LABELS[groupBy]}</span>
-            <ChevronDown className="size-3" aria-hidden="true" />
+            <ChevronDownIcon className="size-3.5" aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuRadioGroup
@@ -285,10 +307,10 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground">
+          <DropdownMenuTrigger className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer">
             <ArrowUpDown className="size-3.5" aria-hidden="true" />
             Sort: <span className="text-foreground">{SORT_LABELS[sort]}</span>
-            <ChevronDown className="size-3" aria-hidden="true" />
+            <ChevronDownIcon className="size-3.5" aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortOption)}>
@@ -300,19 +322,18 @@ export function BoardView({ lists, cards }: BoardViewProps) {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {/* Pager sits in this row, not floating over a column's own header — that
-            collided with its title/count text once boards had 6+ columns. */}
+
         {canScroll && (
-          <div className="inline-flex overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+          <div className="inline-flex h-8 overflow-hidden rounded-lg border border-border bg-card">
             <button
               type="button"
               aria-label="Scroll board left"
               onClick={() =>
                 scrollRef.current?.scrollBy({ left: -COLUMN_SCROLL_WIDTH, behavior: "smooth" })
               }
-              className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer"
             >
-              <ChevronLeft className="size-3.5" aria-hidden="true" />
+              <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
             </button>
             <span className="w-px bg-border" aria-hidden="true" />
             <button
@@ -321,20 +342,24 @@ export function BoardView({ lists, cards }: BoardViewProps) {
               onClick={() =>
                 scrollRef.current?.scrollBy({ left: COLUMN_SCROLL_WIDTH, behavior: "smooth" })
               }
-              className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer"
             >
-              <ChevronRight className="size-3.5" aria-hidden="true" />
+              <ChevronRightIcon className="size-3.5" aria-hidden="true" />
             </button>
           </div>
         )}
         <ImportChoice lists={optimisticLists} />
-      </div>
+      </JobViewHeader>
 
-      {/* The board owns its horizontal scroll; the dashboard <main> only scrolls vertically. */}
-      <div ref={scrollRef} className="no-scrollbar -mx-6 overflow-x-auto px-6 pb-4">
-          <div className="flex items-start gap-3">
-            {optimisticLists.map((list) => (
-              <Fragment key={list.id}>
+      {/* Board Scroll Container */}
+      <div
+        ref={scrollRef}
+        onScroll={handleMainScroll}
+        className="no-scrollbar -mx-6 overflow-x-auto px-6 pb-20"
+      >
+        <div className="flex items-start gap-3">
+          {optimisticLists.map((list) => (
+            <Fragment key={list.id}>
               <BoardColumn
                 list={list}
                 lists={optimisticLists}
@@ -381,79 +406,103 @@ export function BoardView({ lists, cards }: BoardViewProps) {
                   setListDropTarget(null);
                 }}
               />
-              {/* Dotted rung between each column, and before "Add list" — matches the
-                  row's tallest column since self-stretch ignores the parent's
-                  items-start on the flex cross axis. */}
               <span
                 aria-hidden="true"
-                className="w-px shrink-0 self-stretch border-l-2 border-dotted border-border"
+                className="w-px shrink-0 self-stretch border-l border-dashed border-border"
               />
-              </Fragment>
-            ))}
+            </Fragment>
+          ))}
 
-            {/* Add list — also the drop target for "move this column to the end". */}
-            <div
-              className="min-w-[240px] flex-1 basis-0"
-              onDragOver={(e) => {
-                if (!e.dataTransfer.types.includes("application/x-board-list")) return;
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-              }}
-              onDrop={(e) => {
-                if (!e.dataTransfer.types.includes("application/x-board-list")) return;
-                e.preventDefault();
-                if (draggingListId) handleReorderList(draggingListId, null);
-                setDraggingListId(null);
-                setListDropTarget(null);
-              }}
-            >
-                {addingList ? (
-                  <div className="rounded-2xl border border-border bg-card p-3">
-                    <Input
-                      autoFocus
-                      value={newListName}
-                      onChange={(e) => setNewListName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCreateList();
-                        if (e.key === "Escape") {
-                          setNewListName("");
-                          setAddingList(false);
-                        }
+          {/* Add list column */}
+          <div
+            className="min-w-[240px] flex-1 basis-0"
+            onDragOver={(e) => {
+              if (!e.dataTransfer.types.includes("application/x-board-list")) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={(e) => {
+              if (!e.dataTransfer.types.includes("application/x-board-list")) return;
+              e.preventDefault();
+              if (draggingListId) handleReorderList(draggingListId, null);
+              setDraggingListId(null);
+              setListDropTarget(null);
+            }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {addingList ? (
+                <motion.div
+                  key="form"
+                  initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+                  className="rounded-2xl border border-border bg-card p-3"
+                >
+                  <Input
+                    autoFocus
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreateList();
+                      if (e.key === "Escape") {
+                        setNewListName("");
+                        setAddingList(false);
+                      }
+                    }}
+                    placeholder="List name"
+                    aria-label="New list name"
+                    className="h-8 text-xs"
+                  />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setNewListName("");
+                        setAddingList(false);
                       }}
-                      placeholder="List name"
-                      aria-label="New list name"
-                      className="h-9 text-sm"
-                    />
-                    <div className="mt-2 flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setNewListName("");
-                          setAddingList(false);
-                        }}
-                      >
-                        <X className="size-3.5" />
-                        Cancel
-                      </Button>
-                      <Button size="sm" onClick={handleCreateList}>
-                        Add list
-                      </Button>
-                    </div>
+                      className="cursor-pointer active:scale-95"
+                    >
+                      <XIcon className="size-3.5" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleCreateList}
+                      className="cursor-pointer active:scale-95"
+                    >
+                      Add list
+                    </Button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAddingList(true)}
-                    className="flex h-12 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-xs font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  >
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    Add list
-                  </button>
-                )}
-              </div>
-            </div>
+                </motion.div>
+              ) : (
+                <motion.button
+                  key="btn"
+                  type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                  onClick={() => setAddingList(true)}
+                  className="flex h-12 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-xs font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer"
+                >
+                  <PlusIcon className="size-3.5" aria-hidden="true" />
+                  Add list
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
+        </div>
+      </div>
+
+      {/* Interactive Spinny Elastic Jog Scroller Widget */}
+      <ElasticJogScroller
+        scrollRef={scrollRef}
+        stages={optimisticLists.map((l) => ({
+          id: l.id,
+          name: l.name,
+          count: sortedCards.filter((c) => c.list_id === l.id).length,
+          color: l.color,
+        }))}
+      />
 
       <AddJobDialog
         open={addJobListId !== null}
@@ -469,6 +518,6 @@ export function BoardView({ lists, cards }: BoardViewProps) {
         onMoveTo={handleMove}
       />
       {dialog}
-    </>
+    </div>
   );
 }

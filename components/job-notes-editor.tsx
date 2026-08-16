@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
 
 export interface JobNote {
   id: string;
@@ -110,7 +111,7 @@ export function JobNotesEditor({ notes, onChange, label = "Notes" }: JobNotesEdi
                     onClick={() => removeBullet(index)}
                     className="flex size-6 shrink-0 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                   >
-                    <X className="size-3" />
+                    <XIcon className="size-3" />
                   </button>
                 )}
               </div>

@@ -12,10 +12,9 @@ import {
   Handshake,
   GraduationCap,
   HeartHandshake,
-  FileText,
-  ChevronRight,
-  type LucideIcon,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import { FileTextIcon } from "@/components/ui/file-text";
 import {
   XAxis,
   YAxis,
@@ -40,8 +39,7 @@ const tooltipStyle = {
   fontSize: "12px",
 };
 
-/** Recharts axis/grid ink — same job as text-muted-foreground and border, just
-    read as CSS var strings since these props take plain color values, not classes. */
+/** Recharts axis/grid ink — read as CSS var strings since recharts props take color values */
 const axisTick = { fontSize: 11, fill: "var(--muted-foreground)" };
 const gridStroke = "var(--border)";
 
@@ -65,100 +63,102 @@ export interface PipelineStage {
 }
 
 /**
- * The pipeline reads board lists, not jobs.status — that column is written by a
- * trigger that only ever stores 'saved' or 'preparing', so it cannot represent
- * a job that has been applied to. Stage order and membership follow the board,
- * which is why a custom list shows up here the moment a user creates one.
+ * Pipeline stages connected stepper with proportion bar and interactive stage cards.
  */
 export function PipelineStages({ stages, total }: { stages: PipelineStage[]; total: number }) {
   const [active, setActive] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+
+  if (stages.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="w-full">
-      {/* High-contrast compact pipeline flow */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none sm:gap-2">
+    <div className="w-full space-y-3">
+      {/* Proportion bar showing visual flow across stages */}
+      {total > 0 && (
+        <div className="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted">
+          {stages.map((stage) => {
+            const share = (stage.count / total) * 100;
+            if (stage.count === 0) return null;
+            const isHovered = active === stage.id;
+            const isDimmed = active !== null && !isHovered;
+
+            return (
+              <div
+                key={stage.id}
+                role="presentation"
+                title={`${stage.name}: ${stage.count} (${Math.round(share)}%)`}
+                onMouseEnter={() => setActive(stage.id)}
+                onMouseLeave={() => setActive(null)}
+                className="h-full rounded-full transition-opacity duration-200 cursor-pointer"
+                style={{
+                  width: `${share}%`,
+                  backgroundColor: stage.color,
+                  opacity: isDimmed ? 0.35 : 1,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Stage Cards Grid */}
+      <div className="flex items-stretch gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none sm:gap-2.5">
         {stages.map((stage, i) => {
-          const isLast = i === stages.length - 1;
           const share = total > 0 ? Math.round((stage.count / total) * 100) : 0;
           const isDim = stage.count === 0;
           const isActive = active === stage.id;
 
           return (
-            <div key={stage.id} className="flex min-w-[115px] flex-1 shrink-0 items-center gap-1.5 sm:gap-2">
-              {/* Stage Node Card */}
-              <div
-                onMouseEnter={() => setActive(stage.id)}
-                onMouseLeave={() => setActive(null)}
-                className={`group relative flex-1 overflow-hidden rounded-xl border p-2.5 sm:p-3 transition-all duration-200 cursor-default ${
-                  isActive
-                    ? "border-border shadow-md -translate-y-0.5 bg-card"
-                    : isDim
-                      ? "border-border/50 bg-muted/20 opacity-50 hover:opacity-100 hover:bg-card hover:border-border"
-                      : "border-border/80 bg-card shadow-2xs hover:-translate-y-0.5 hover:shadow-sm"
-                }`}
-                style={{
-                  backgroundColor: !isDim
-                    ? `color-mix(in oklch, ${stage.color}, var(--card) 96%)`
-                    : undefined,
-                  borderColor: isActive ? stage.color : undefined,
-                  animationDelay: `${i * 35}ms`,
-                }}
-              >
-                {/* Top Colored Stage Accent Bar */}
-                <div
-                  className="absolute inset-x-0 top-0 h-[3px] transition-all duration-200 group-hover:h-[4px]"
-                  style={{
-                    backgroundColor: stage.color,
-                    opacity: isDim ? 0.35 : 1,
-                  }}
-                />
-
-                {/* Stage Header */}
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className="size-2 shrink-0 rounded-full ring-2 ring-background transition-transform duration-200 group-hover:scale-125"
-                      style={{ backgroundColor: stage.color }}
-                    />
-                    <span className="truncate text-xs font-semibold text-foreground/90 group-hover:text-foreground">
-                      {stage.name}
-                    </span>
-                  </div>
+            <motion.div
+              key={stage.id}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                type: "spring",
+                bounce: 0,
+                duration: 0.3,
+                delay: shouldReduceMotion ? 0 : i * 0.03,
+              }}
+              whileHover={shouldReduceMotion ? undefined : { y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onMouseEnter={() => setActive(stage.id)}
+              onMouseLeave={() => setActive(null)}
+              className={`flex min-w-[125px] flex-1 flex-col justify-between rounded-xl border p-2.5 sm:p-3 transition-colors cursor-pointer select-none ${
+                isActive
+                  ? "border-primary bg-muted/60"
+                  : isDim
+                    ? "border-border/60 bg-muted/20 opacity-60 hover:opacity-100 hover:border-border hover:bg-muted/40"
+                    : "border-border bg-card hover:bg-muted/40 hover:border-border"
+              }`}
+            >
+              {/* Header: Stage Dot + Stage Name + Share Pill */}
+              <div className="flex items-center justify-between gap-1.5 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <span
-                    className="shrink-0 rounded-full px-1.5 py-0.2 text-[10px] font-medium tabular-nums border"
-                    style={{
-                      backgroundColor: `color-mix(in oklch, ${stage.color}, transparent 92%)`,
-                      borderColor: `color-mix(in oklch, ${stage.color}, transparent 80%)`,
-                      color: isDim ? "var(--muted-foreground)" : "var(--foreground)",
-                    }}
-                  >
-                    {share}%
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: stage.color }}
+                  />
+                  <span className="truncate text-xs font-medium text-foreground">
+                    {stage.name}
                   </span>
                 </div>
-
-                {/* Stage Metrics */}
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-xl font-extrabold tabular-nums tracking-tight text-foreground sm:text-2xl leading-none">
-                    {stage.count}
-                  </span>
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {stage.count === 1 ? "job" : "jobs"}
-                  </span>
-                </div>
+                <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                  {share}%
+                </span>
               </div>
 
-              {/* High-Contrast Directional Arrow */}
-              {!isLast && (
-                <div
-                  className={`flex shrink-0 items-center justify-center transition-colors ${
-                    !isDim ? "text-foreground/40" : "text-muted-foreground/20"
-                  }`}
-                  aria-hidden="true"
-                >
-                  <ChevronRight className="size-4 stroke-[2.5]" />
-                </div>
-              )}
-            </div>
+              {/* Metric: Count + Label */}
+              <div className="mt-2 flex items-baseline justify-between gap-1">
+                <span className="text-xl font-bold tracking-tight text-foreground tabular-nums sm:text-2xl leading-none">
+                  {stage.count}
+                </span>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {stage.count === 1 ? "job" : "jobs"}
+                </span>
+              </div>
+            </motion.div>
           );
         })}
       </div>
@@ -176,14 +176,14 @@ export interface BreakdownItem {
  * cross the RSC boundary — the server page sends labels and counts only.
  * Work-location and employment-type labels don't collide, so one map serves both.
  */
-const breakdownIcons: Record<string, LucideIcon> = {
+const breakdownIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   Remote: House,
   Hybrid: Blend,
   "On-site": Building2,
   Unspecified: CircleHelp,
   "Full-time": Briefcase,
   "Part-time": Clock3,
-  Contract: FileText,
+  Contract: FileTextIcon,
   Freelance: Handshake,
   Internship: GraduationCap,
   Temporary: CalendarClock,
@@ -193,8 +193,6 @@ const breakdownIcons: Record<string, LucideIcon> = {
 
 /**
  * A category split in one bar plus a legend, sized for a half-width card.
- * Hovering either half highlights the other so the colour mapping never has to
- * be memorised.
  */
 export function BreakdownBar({ items, total }: { items: BreakdownItem[]; total: number }) {
   const [active, setActive] = useState<string | null>(null);
@@ -204,8 +202,8 @@ export function BreakdownBar({ items, total }: { items: BreakdownItem[]; total: 
   }
 
   return (
-    <div>
-      <div className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-muted">
+    <div className="space-y-3">
+      <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-muted">
         {items.map((item, i) => (
           <div
             key={item.label}
@@ -213,35 +211,37 @@ export function BreakdownBar({ items, total }: { items: BreakdownItem[]; total: 
             title={`${item.label}: ${item.count}`}
             onMouseEnter={() => setActive(item.label)}
             onMouseLeave={() => setActive(null)}
-            className="stat-bar-grow h-full rounded-full transition-opacity duration-200"
+            className="h-full rounded-full transition-opacity duration-200 cursor-pointer"
             style={{
               width: `${(item.count / total) * 100}%`,
               backgroundColor: `var(--chart-${(i % 5) + 1})`,
-              animationDelay: `${i * 60}ms`,
-              opacity: active && active !== item.label ? 0.3 : 1,
+              opacity: active && active !== item.label ? 0.35 : 1,
             }}
           />
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {items.map((item, i) => {
           const Icon = breakdownIcons[item.label] ?? CircleHelp;
+          const isHovered = active === item.label;
+
           return (
             <div
               key={item.label}
               onMouseEnter={() => setActive(item.label)}
               onMouseLeave={() => setActive(null)}
-              className="agent-fade-up flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors border-border"
-              style={{ animationDelay: `${i * 45}ms` }}
+              className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors cursor-pointer ${
+                isHovered ? "border-border bg-muted text-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              }`}
             >
               <Icon
-                className="size-3 shrink-0"
+                className="size-3.5 shrink-0"
                 style={{ color: `var(--chart-${(i % 5) + 1})` }}
                 aria-hidden="true"
               />
-              <span className="text-[11px] text-muted-foreground">{item.label}</span>
-              <span className="text-[11px] font-semibold tabular-nums">{item.count}</span>
+              <span className="text-[11px]">{item.label}</span>
+              <span className="text-[11px] font-semibold tabular-nums text-foreground">{item.count}</span>
               <span className="text-[10px] text-muted-foreground">
                 {Math.round((item.count / total) * 100)}%
               </span>
@@ -259,12 +259,6 @@ export interface MatchScoreBand {
   count: number;
 }
 
-/**
- * Score bands are a status signal (good/fair/weak fit), not a category, so
- * they get the reserved status tokens — same mapping job-detail's overview
- * tab uses for its ring (components/job-detail/tabs/overview-tab.tsx
- * scoreTone()), not a chart-* categorical color.
- */
 const scoreBandColor: Record<string, string> = {
   Strong: "var(--success)",
   Fair: "var(--warning)",
@@ -305,7 +299,7 @@ export function MatchScoreDistributionChart({ data }: { data: MatchScoreBand[] }
           <div key={entry.label} className="flex items-center gap-1.5">
             <div className="size-2 rounded-full" style={{ backgroundColor: scoreBandColor[entry.label] }} />
             <span className="text-muted-foreground">{entry.label}</span>
-            <span className="font-medium tabular-nums">{entry.count}</span>
+            <span className="font-medium tabular-nums text-foreground">{entry.count}</span>
           </div>
         ))}
       </div>

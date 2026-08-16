@@ -398,3 +398,89 @@ export async function deleteQuickShortcut(id: string): Promise<{ success: boolea
   return { success: true };
 }
 
+export async function renameTag(
+  oldTag: string,
+  newTag: string
+): Promise<{ success: boolean; error?: string }> {
+  const userId = getOrCreateLocalUser().id;
+  const cleanOld = oldTag.trim().replace(/^#/, "");
+  const cleanNew = newTag.trim().replace(/^#/, "");
+
+  if (!cleanOld || !cleanNew) {
+    return { success: false, error: "Tag name cannot be empty." };
+  }
+
+  if (cleanOld.toLowerCase() === cleanNew.toLowerCase()) {
+    return { success: true };
+  }
+
+  const { data: rawLinks, error: fetchError } = await from("links")
+    .select("id, tags")
+    .eq("user_id", userId);
+
+  if (fetchError) {
+    log.error({ err: fetchError }, "Error fetching links for tag rename:");
+    return { success: false, error: "Failed to rename tag." };
+  }
+
+  const links = (rawLinks as unknown as Array<{ id: string; tags?: string[] | null }>) ?? [];
+
+  for (const link of links) {
+    const currentTags = link.tags ?? [];
+    if (currentTags.some((t) => t.toLowerCase() === cleanOld.toLowerCase())) {
+      const updatedTags = Array.from(
+        new Set(
+          currentTags.map((t) =>
+            t.toLowerCase() === cleanOld.toLowerCase() ? cleanNew : t
+          )
+        )
+      );
+      await from("links")
+        .update({ tags: updatedTags, updated_at: new Date().toISOString() })
+        .eq("id", link.id)
+        .eq("user_id", userId);
+    }
+  }
+
+  revalidatePath("/links");
+  return { success: true };
+}
+
+export async function deleteTag(
+  tag: string
+): Promise<{ success: boolean; error?: string }> {
+  const userId = getOrCreateLocalUser().id;
+  const cleanTag = tag.trim().replace(/^#/, "");
+
+  if (!cleanTag) {
+    return { success: false, error: "Tag name cannot be empty." };
+  }
+
+  const { data: rawLinks, error: fetchError } = await from("links")
+    .select("id, tags")
+    .eq("user_id", userId);
+
+  if (fetchError) {
+    log.error({ err: fetchError }, "Error fetching links for tag deletion:");
+    return { success: false, error: "Failed to delete tag." };
+  }
+
+  const links = (rawLinks as unknown as Array<{ id: string; tags?: string[] | null }>) ?? [];
+
+  for (const link of links) {
+    const currentTags = link.tags ?? [];
+    if (currentTags.some((t) => t.toLowerCase() === cleanTag.toLowerCase())) {
+      const updatedTags = currentTags.filter(
+        (t) => t.toLowerCase() !== cleanTag.toLowerCase()
+      );
+      await from("links")
+        .update({ tags: updatedTags, updated_at: new Date().toISOString() })
+        .eq("id", link.id)
+        .eq("user_id", userId);
+    }
+  }
+
+  revalidatePath("/links");
+  return { success: true };
+}
+

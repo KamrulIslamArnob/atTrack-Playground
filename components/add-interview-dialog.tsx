@@ -8,13 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, X } from "lucide-react";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Plus } from "lucide-react";
+import { XIcon } from "@/components/ui/x";
 import { toast } from "sonner";
 import { createInterview } from "@/lib/actions/interviews";
 
@@ -120,7 +116,7 @@ export function AddInterviewDialog({ jobs, trigger, lockedJobId, onCreated }: Ad
                 onClick={() => setOpen(false)}
                 className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <X className="size-4" />
+                <XIcon className="size-4" />
               </button>
             </div>
 

@@ -2,14 +2,10 @@
 
 import { motion } from "motion/react";
 import {
-  Camera,
-  Send,
-  Target,
-  Sparkles,
-  ImagePlus,
-  WandSparkles,
-  Check,
-} from "lucide-react";
+  Camera, Target, ImagePlus, WandSparkles } from "lucide-react";
+import { SendIcon } from "@/components/ui/send";
+import { SparklesIcon } from "@/components/ui/sparkles";
+import { CheckIcon } from "@/components/ui/check";
 import { cn } from "@/lib/utils";
 import {
   slideInLeft,
@@ -28,7 +24,7 @@ const capabilities = [
     bg: "bg-pink-500/10",
   },
   {
-    icon: Send,
+    icon: SendIcon,
     title: "Application drafts",
     description:
       "atTrack writes a first draft of your application email using the job details and your resume.",
@@ -43,7 +39,7 @@ const capabilities = [
     bg: "bg-amber-500/10",
   },
   {
-    icon: Sparkles,
+    icon: SparklesIcon,
     title: "Practice tests",
     description:
       "Generate interview questions for a specific role, take the test, and see where to improve.",
@@ -78,7 +74,7 @@ export function AiHighlight() {
             viewport={{ once: true, margin: "-80px", amount: 0.2 }}
           >
             <div className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-              <Sparkles className="size-3" />
+              <SparklesIcon className="size-3" />
               AI that does the boring parts
             </div>
             <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -153,7 +149,7 @@ export function AiHighlight() {
                     job_posting.png · 3 images
                   </p>
                 </div>
-                <Check className="size-4 shrink-0 text-emerald-500" />
+                <CheckIcon className="size-4 shrink-0 text-emerald-500" />
               </div>
 
               <div className="mx-auto h-4 w-px bg-linear-to-b from-border to-transparent" />
