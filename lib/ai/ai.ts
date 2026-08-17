@@ -2,7 +2,14 @@ import { extractionSchema, type ExtractionResult } from "./schema";
 import { EXTRACTION_PROMPT } from "./prompts";
 import { logAiUsage } from "@/lib/actions/ai-usage";
 import { GoogleGenAI } from "@google/genai";
-import { resolveProviderChain, generateText, fetchUrlAsText, type ResolvedProvider } from "./providers";
+import {
+  resolveProviderChain,
+  resolveAllProviders,
+  generateText,
+  fetchUrlAsText,
+  type ResolvedProvider,
+} from "./providers";
+import { cleanAiErrorMessage } from "./error-formatter";
 
 type ImagePart = { type: "image"; mime_type: string; data: string };
 type TextPart = { type: "text"; text: string };
@@ -92,7 +99,17 @@ export async function extractJob(
   const startedAt = Date.now();
   const metadata = { screenshots: imagesBase64.length, hasText: !!trimmedText, hasUrl: !!trimmedUrl };
 
-  const chain = userId ? await resolveProviderChain(userId, "scraping") : [];
+  const configuredChain = userId ? await resolveProviderChain(userId, "scraping") : [];
+  const allProviders = userId ? await resolveAllProviders(userId) : [];
+
+  // Start with the specific scraping chain, then seamlessly fallback to any other configured providers
+  const chain = [...configuredChain];
+  for (const p of allProviders) {
+    if (!chain.some((existing) => existing.id === p.id)) {
+      chain.push(p);
+    }
+  }
+
   if (chain.length === 0) {
     const message = "No AI provider configured. Please add an API key in Settings > AI Providers.";
     if (userId) {
@@ -178,9 +195,10 @@ export async function extractJob(
     }
   }
 
-  const message = `All providers failed: ${errors.join("; ")}`;
+  const rawMessage = `All providers failed: ${errors.join("; ")}`;
+  const cleanMessage = cleanAiErrorMessage(rawMessage);
   if (userId) {
-    await logAiUsage({ userId, action: "extract_job", durationMs: Date.now() - startedAt, status: "error", error: message, metadata });
+    await logAiUsage({ userId, action: "extract_job", durationMs: Date.now() - startedAt, status: "error", error: cleanMessage, metadata });
   }
-  throw new Error(message);
+  throw new Error(cleanMessage);
 }

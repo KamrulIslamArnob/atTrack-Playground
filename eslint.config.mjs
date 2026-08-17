@@ -7,13 +7,12 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      // Experimental React Compiler lint rules (set-state-in-effect, purity)
-      // fire on the standard fetch-then-setState data-loading pattern used
-      // throughout the admin screens. The pattern is intentional and works;
-      // these rules are noisy here, so they're switched off at the config
-      // level rather than sprinkled with per-line disables.
+      // Experimental React Compiler lint rules (set-state-in-effect, purity, preserve-manual-memoization)
+      // fire on data-loading or manual memoization patterns. The patterns are intentional
+      // and work; these rules are noisy here, so they're switched off at config level.
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/purity": "off",
+      "react-hooks/preserve-manual-memoization": "off",
     },
   },
   {

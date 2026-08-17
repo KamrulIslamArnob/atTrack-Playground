@@ -20,7 +20,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AddJobDialog } from "@/components/add-job-dialog";
 import { JobViewHeader } from "@/components/board/board-view-header";
 import { ImportChoice } from "@/components/import-choice";
 import { BoardColumn, type GroupOption } from "@/components/board/board-column";
@@ -69,8 +68,21 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
 
   const [optimisticCards, applyMove] = useOptimistic(
     cards,
-    (state: BoardCard[], move: { jobId: string; listId: string }) =>
-      state.map((c) => (c.id === move.jobId ? { ...c, list_id: move.listId } : c))
+    (state: BoardCard[], move: { jobId: string; listId: string; targetIndex?: number }) => {
+      const card = state.find((c) => c.id === move.jobId);
+      if (!card) return state;
+      const withoutCard = state.filter((c) => c.id !== move.jobId);
+      const updatedCard = { ...card, list_id: move.listId };
+
+      if (move.targetIndex !== undefined) {
+        const listCards = withoutCard.filter((c) => c.list_id === move.listId);
+        const otherCards = withoutCard.filter((c) => c.list_id !== move.listId);
+        const clampedIndex = Math.max(0, Math.min(move.targetIndex, listCards.length));
+        listCards.splice(clampedIndex, 0, updatedCard);
+        return [...otherCards, ...listCards];
+      }
+      return [...withoutCard, updatedCard];
+    }
   );
 
   const [optimisticLists, applyReorder] = useOptimistic(
@@ -89,6 +101,63 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("recent");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
+
+  // Dual-axis smooth edge auto-scrolling during card or column drag
+  useEffect(() => {
+    if (!draggingId && !draggingListId) return;
+
+    let animId: number | null = null;
+    let pointerY = 0;
+    let pointerX = 0;
+
+    const EDGE_SIZE = 90;
+    const MAX_SPEED = 18;
+
+    const handleDragOver = (e: DragEvent) => {
+      pointerY = e.clientY;
+      pointerX = e.clientX;
+    };
+
+    const scrollLoop = () => {
+      // 1. Vertical auto-scroll (window / page)
+      const windowHeight = window.innerHeight;
+      if (pointerY > 0 && pointerY < EDGE_SIZE) {
+        const factor = (EDGE_SIZE - pointerY) / EDGE_SIZE;
+        window.scrollBy(0, -Math.round(factor * MAX_SPEED));
+      } else if (pointerY > windowHeight - EDGE_SIZE && pointerY <= windowHeight) {
+        const factor = (pointerY - (windowHeight - EDGE_SIZE)) / EDGE_SIZE;
+        window.scrollBy(0, Math.round(factor * MAX_SPEED));
+      }
+
+      // 2. Horizontal auto-scroll (board scroll container)
+      if (scrollRef.current) {
+        const boardRect = scrollRef.current.getBoundingClientRect();
+        if (pointerX >= boardRect.left && pointerX < boardRect.left + EDGE_SIZE) {
+          const factor = (boardRect.left + EDGE_SIZE - pointerX) / EDGE_SIZE;
+          scrollRef.current.scrollLeft -= Math.round(factor * MAX_SPEED);
+          if (fixedScrollRef.current) {
+            fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+          }
+        } else if (pointerX > boardRect.right - EDGE_SIZE && pointerX <= boardRect.right) {
+          const factor = (pointerX - (boardRect.right - EDGE_SIZE)) / EDGE_SIZE;
+          scrollRef.current.scrollLeft += Math.round(factor * MAX_SPEED);
+          if (fixedScrollRef.current) {
+            fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+          }
+        }
+      }
+
+      animId = requestAnimationFrame(scrollLoop);
+    };
+
+    window.addEventListener("dragover", handleDragOver, { passive: true });
+    animId = requestAnimationFrame(scrollLoop);
+
+    return () => {
+      window.removeEventListener("dragover", handleDragOver);
+      if (animId !== null) cancelAnimationFrame(animId);
+    };
+  }, [draggingId, draggingListId]);
 
   const sortedCards = (() => {
     switch (sort) {
@@ -190,16 +259,20 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
     panRef.current = null;
   };
 
-  const handleMove = (jobId: string, listId: string) => {
+  const handleMove = (jobId: string, listId: string, targetIndex?: number) => {
     const card = optimisticCards.find((c) => c.id === jobId);
-    if (!card || card.list_id === listId) return;
+    if (!card) return;
 
-    const targetIndex = optimisticCards.filter((c) => c.list_id === listId).length;
+    const listSiblings = optimisticCards.filter((c) => c.list_id === listId && c.id !== jobId);
+    const resolvedTargetIndex =
+      targetIndex !== undefined
+        ? Math.max(0, Math.min(targetIndex, listSiblings.length))
+        : listSiblings.length;
 
     startTransition(async () => {
-      applyMove({ jobId, listId });
+      applyMove({ jobId, listId, targetIndex: resolvedTargetIndex });
       try {
-        await moveCard(jobId, listId, targetIndex);
+        await moveCard(jobId, listId, resolvedTargetIndex);
         router.refresh();
       } catch {
         toast.error("Couldn't move that card", {
@@ -283,7 +356,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   };
 
   return (
-    <div className="space-y-4 flex-1 flex flex-col min-h-full">
+    <div className="flex flex-col flex-1 min-h-full w-full px-6 pt-4 pb-0">
       <JobViewHeader currentView="board" onViewChange={onViewChange}>
 
         <DropdownMenu>
@@ -355,9 +428,9 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
       <div
         ref={scrollRef}
         onScroll={handleMainScroll}
-        className="no-scrollbar -mx-6 overflow-x-auto px-6 pb-20"
+        className="no-scrollbar -mx-6 overflow-x-auto px-6 w-[calc(100%+3rem)] pt-3"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-stretch gap-3 w-max min-w-full pb-8 pr-6">
           {optimisticLists.map((list) => (
             <Fragment key={list.id}>
               <BoardColumn
@@ -415,7 +488,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
 
           {/* Add list column */}
           <div
-            className="min-w-[240px] flex-1 basis-0"
+            className="min-w-[270px] w-[270px] shrink-0 self-stretch flex flex-col justify-start"
             onDragOver={(e) => {
               if (!e.dataTransfer.types.includes("application/x-board-list")) return;
               e.preventDefault();
@@ -490,6 +563,9 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Spacer for horizontal scroll end clearance */}
+          <div className="w-4 shrink-0 pointer-events-none" aria-hidden="true" />
         </div>
       </div>
 
@@ -504,7 +580,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
         }))}
       />
 
-      <AddJobDialog
+      <ImportChoice
         open={addJobListId !== null}
         onOpenChange={(open) => setAddJobListId(open ? addJobListId : null)}
         listId={addJobListId ?? undefined}

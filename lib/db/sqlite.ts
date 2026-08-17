@@ -42,48 +42,41 @@ function open(): DatabaseSync {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
   const db = new DatabaseSync(DB_PATH, { allowExtension: true });
-  loadSqliteVec(db);
 
+  // Set busy timeout FIRST before anything else so concurrent workers wait rather than throw SQLITE_BUSY
+  db.exec("PRAGMA busy_timeout = 60000");
   // WAL survives across connections; setting it every open is harmless.
   db.exec("PRAGMA journal_mode = WAL");
   // NORMAL mode avoids fsync latency on every write in WAL mode while remaining crash-safe.
   db.exec("PRAGMA synchronous = NORMAL");
   // OFF by default in SQLite — without this, ON DELETE CASCADE silently does nothing.
   db.exec("PRAGMA foreign_keys = ON");
-  // Wait rather than throw SQLITE_BUSY when another handler holds the write lock.
-  db.exec("PRAGMA busy_timeout = 5000");
   // Performance PRAGMAs: 64MB memory cache, RAM temp tables, 256MB memory mapping, multi-threading.
   db.exec("PRAGMA cache_size = -64000");
   db.exec("PRAGMA temp_store = MEMORY");
   db.exec("PRAGMA mmap_size = 268435456");
   db.exec("PRAGMA threads = 4");
 
-  // One line so a slow first launch is explainable. A fresh database runs the
-  // whole of schema.sql plus every column migration and takes seconds; an
-  // up-to-date one applies nothing and takes milliseconds — same code path,
-  // and without this there is no way to tell which one just happened.
-  const migrateStartedAt = Date.now();
-
-  // Always apply forward-only column migrations so new schema columns land idempotently on existing DBs
-  const applied = addMissingColumns(db);
+  loadSqliteVec(db);
 
   const versionRow = db.prepare("PRAGMA user_version").get() as { user_version: number } | undefined;
   const currentVersion = versionRow?.user_version ?? 0;
 
   if (currentVersion < CURRENT_SCHEMA_VERSION) {
+    const migrateStartedAt = Date.now();
     const schema = readFileSync(
       path.join(process.cwd(), "lib", "db", "schema.sql"),
       "utf8"
     );
     db.exec(schema);
+    const applied = addMissingColumns(db);
     dropDeadTables(db);
     fixOwnerForeignKeys(db);
     dropDeadColumns(db);
     rebuildOmniSearchIndex(db);
     db.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION}`);
+    dbLog.info({ event: "db.migrate", applied, durationMs: Date.now() - migrateStartedAt });
   }
-
-  dbLog.info({ event: "db.migrate", applied, durationMs: Date.now() - migrateStartedAt });
 
   return db;
 }
@@ -492,33 +485,31 @@ function addMissingColumns(db: DatabaseSync): number {
 
   // One-time repair of chat history sequence order.
   // Re-indexes seq chronologically per session with deterministic user-before-assistant ordering.
-  db.exec(`
-    WITH ordered AS (
-      SELECT id, (
-        ROW_NUMBER() OVER (
-          PARTITION BY session_id 
-          ORDER BY created_at ASC, (CASE WHEN role = 'user' THEN 0 ELSE 1 END), rowid ASC
-        ) - 1
-      ) AS new_seq
-      FROM chat_messages
-    )
-    UPDATE chat_messages
-    SET seq = (SELECT new_seq FROM ordered WHERE ordered.id = chat_messages.id);
-  `);
+  try {
+    db.exec(`
+      WITH ordered AS (
+        SELECT id, (
+          ROW_NUMBER() OVER (
+            PARTITION BY session_id 
+            ORDER BY created_at ASC, (CASE WHEN role = 'user' THEN 0 ELSE 1 END), rowid ASC
+          ) - 1
+        ) AS new_seq
+        FROM chat_messages
+      )
+      UPDATE chat_messages
+      SET seq = (SELECT new_seq FROM ordered WHERE ordered.id = chat_messages.id);
+    `);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/no such table/i.test(message)) throw err;
+  }
 
   return applied;
 }
 
-let hasRunMissingColumns = false;
-
 export function getDb(): DatabaseSync {
   if (!globalThis.__attrackDb) {
     globalThis.__attrackDb = open();
-    hasRunMissingColumns = true;
-  } else if (!hasRunMissingColumns) {
-    hasRunMissingColumns = true;
-    loadSqliteVec(globalThis.__attrackDb);
-    addMissingColumns(globalThis.__attrackDb);
   }
   return globalThis.__attrackDb;
 }

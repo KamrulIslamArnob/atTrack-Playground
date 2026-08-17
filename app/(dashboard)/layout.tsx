@@ -6,6 +6,8 @@ import { Sidebar } from "@/components/sidebar";
 import { WindowTitlebar } from "@/components/window-titlebar";
 import { DashboardMainContent } from "@/components/dashboard-main-content";
 
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -27,6 +29,8 @@ export default async function DashboardLayout({
     redirect("/admin");
   }
 
+  const showOnboarding = !profile?.onboarded_at && profile?.role !== "admin";
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background p-3 md:p-0">
       <WindowTitlebar />
@@ -43,6 +47,14 @@ export default async function DashboardLayout({
           <DashboardMainContent>{children}</DashboardMainContent>
         </div>
       </div>
+
+      {showOnboarding && (
+        <OnboardingWizard
+          isOpen={true}
+          profileName={profile?.full_name}
+          userEmail={user.email}
+        />
+      )}
     </div>
   );
 }

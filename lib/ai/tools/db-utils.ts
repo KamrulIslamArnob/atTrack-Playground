@@ -7,6 +7,14 @@
 // Uses the @/ alias like the rest of lib/ai/tools.
 import { getDb } from "@/lib/db/sqlite";
 
+/** Tables storing secrets/credentials never exposed to AI tools. */
+export const RESTRICTED_AI_TABLES = new Set([
+  "users",
+  "smtp_config",
+  "ai_providers",
+  "extension_config",
+]);
+
 /** A SQL identifier is safe iff it matches this — never interpolate raw input
  *  into SQL without it. Applies to table and column names. */
 export function isValidIdentifier(name: string): boolean {
@@ -15,6 +23,7 @@ export function isValidIdentifier(name: string): boolean {
 
 export function tableExists(table: string): boolean {
   if (!isValidIdentifier(table)) return false;
+  if (RESTRICTED_AI_TABLES.has(table.toLowerCase())) return false;
   const row = getDb()
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
     .get(table) as { name: string } | undefined;

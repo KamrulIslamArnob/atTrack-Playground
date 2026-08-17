@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Archive,
@@ -239,8 +239,8 @@ export function BoardColumn({
         }
       }}
       className={cn(
-        "flex min-h-40 min-w-[240px] flex-1 basis-0 flex-col rounded-2xl p-2 transition-colors duration-200",
-        (isDropTarget || isListDropTarget) && "border-2 border-solid border-primary/50 bg-primary/5",
+        "flex min-w-[270px] w-[270px] shrink-0 self-stretch flex-col rounded-2xl p-2.5 transition-all duration-200 min-h-[420px]",
+        (isDropTarget || isListDropTarget) && "ring-2 ring-primary/60 bg-primary/10",
         isListDragging && "opacity-40"
       )}
       style={{
@@ -249,7 +249,7 @@ export function BoardColumn({
     >
       {/* Column Header */}
       <header
-        className="mb-2 flex items-center gap-1.5 rounded-xl border p-1.5 transition-all"
+        className="mb-2 flex items-center gap-1.5 rounded-xl border p-1.5 transition-all shrink-0"
         style={{
           backgroundColor: list.kind === "interview" ? "#bef26470" : `${accent}25`,
           borderColor: list.kind === "interview" ? "#84cc16" : `${accent}45`,

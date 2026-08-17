@@ -223,7 +223,7 @@ export function ElasticJogScroller({
     <aside
       aria-label="Horizontal board scroller"
       className={cn(
-        "sticky bottom-3 z-30 mt-auto flex justify-center pointer-events-none px-4 select-none",
+        "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex justify-center select-none",
         className
       )}
     >

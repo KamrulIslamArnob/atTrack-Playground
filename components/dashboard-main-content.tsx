@@ -11,11 +11,13 @@ export function DashboardMainContent({
   const isFullBleed =
     pathname.startsWith("/preferences/database") ||
     pathname.startsWith("/chatbot") ||
-    pathname.startsWith("/ai-builder");
+    pathname.startsWith("/ai-builder") ||
+    pathname.startsWith("/jobs") ||
+    pathname === "/";
 
   if (isFullBleed) {
     return (
-      <main className="flex-1 overflow-hidden h-full w-full flex flex-col min-w-0 min-h-0">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden h-full w-full flex flex-col min-w-0 min-h-0">
         {children}
       </main>
     );

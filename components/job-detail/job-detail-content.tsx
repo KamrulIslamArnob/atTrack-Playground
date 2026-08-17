@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { matchScoreBand, type BoardList } from "@/lib/types/board";
+import { moveCard } from "@/lib/actions/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
 
@@ -134,7 +135,33 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
     }
   };
 
+  const [stagePending, setStagePending] = useState(false);
   const currentTierConfig = job.tier && JOB_TIERS[job.tier as JobTier] ? JOB_TIERS[job.tier as JobTier] : null;
+
+  const availableLists = (data.boardLists && data.boardLists.length > 0 ? data.boardLists : (lists ?? []));
+  const currentList =
+    availableLists.find((l) => l.id === job.list_id) ||
+    (job.status ? availableLists.find((l) => l.kind === job.status) : null) ||
+    availableLists[0];
+
+  const handleMoveStage = async (listId: string) => {
+    if (job.list_id === listId) return;
+    const targetList = availableLists.find((l) => l.id === listId);
+    setStagePending(true);
+    try {
+      await moveCard(job.id, listId);
+      if (onMoveTo) {
+        onMoveTo(listId);
+      }
+      toast.success(targetList ? `Moved to ${targetList.name}` : "Stage updated");
+      onRefresh();
+    } catch (err) {
+      console.error("Failed to move job stage:", err);
+      toast.error("Couldn't update job stage");
+    } finally {
+      setStagePending(false);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -184,7 +211,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                     size="sm"
                     disabled={tierPending}
                     className={cn(
-                      "h-8 gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors",
+                      "h-8 gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors cursor-pointer",
                       currentTierConfig
                         ? currentTierConfig.badgeClass
                         : "border-border/80 text-foreground hover:bg-accent/60 hover:text-foreground"
@@ -247,10 +274,64 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Status & Fit metadata chips */}
-            <span className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-muted/70 px-3 text-xs font-medium text-foreground">
-              {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
-            </span>
+            {/* Board Stage Selector Dropdown */}
+            {availableLists.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={stagePending}
+                      className="h-8 gap-1.5 rounded-xl border border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer"
+                    >
+                      <span
+                        className="size-2 rounded-full shrink-0"
+                        style={{ backgroundColor: currentList?.color || "var(--primary)" }}
+                      />
+                      <span>{currentList?.name ?? JOB_STATUS_LABELS[job.status as JobStatus] ?? "Stage"}</span>
+                      <ChevronDownIcon className="size-3 opacity-70" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                  <DropdownMenuLabel className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                    Move to Stage
+                  </DropdownMenuLabel>
+                  {availableLists.map((l) => {
+                    const isSelected = job.list_id ? job.list_id === l.id : currentList?.id === l.id;
+                    return (
+                      <DropdownMenuItem
+                        key={l.id}
+                        disabled={isSelected || stagePending}
+                        onClick={() => handleMoveStage(l.id)}
+                        className={cn(
+                          "flex items-center justify-between cursor-pointer py-1.5",
+                          isSelected && "font-semibold bg-accent"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="size-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: l.color || "var(--primary)" }}
+                          />
+                          <span>{l.name}</span>
+                        </div>
+                        {isSelected && (
+                          <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">
+                            Current
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-muted/70 px-3 text-xs font-medium text-foreground">
+                {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
+              </span>
+            )}
 
             {band && (
               <span className={cn("inline-flex h-8 items-center rounded-xl px-3 text-xs font-medium", band.className)}>

@@ -4,6 +4,7 @@ import { getUser } from "@/lib/auth";
 import { isSmtpConfigured } from "@/lib/actions/smtp";
 import { getJobDocuments } from "@/lib/actions/documents";
 import { getJobContacts } from "@/lib/actions/contacts";
+import { getBoardLists } from "@/lib/actions/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import type { JobState, JobTier } from "@/lib/types/job";
 
@@ -36,6 +37,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     documents,
     smtpReady,
     { data: profile },
+    boardLists,
     { data: resumeDoc },
   ] = await Promise.all([
     supabase
@@ -62,6 +64,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     getJobDocuments(jobId),
     isSmtpConfigured(),
     supabase.from("profiles").select("full_name, headline").eq("id", userId).maybeSingle(),
+    getBoardLists().catch(() => []),
     // Resume content for AI Tools — fetched in parallel instead of sequentially.
     job.resume_id
       ? supabase
@@ -137,6 +140,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     contacts,
     documents,
     resumeOptions: (resumes ?? []) as unknown as JobDetailData["resumeOptions"],
+    boardLists: (boardLists ?? []) as unknown as import("@/lib/types/board").BoardList[],
     smtpReady,
     applicantName: profile?.full_name ?? "",
     applicantHeadline: profile?.headline ?? null,

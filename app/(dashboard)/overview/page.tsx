@@ -2,16 +2,25 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { getBoard } from "@/lib/actions/board";
 import { buttonVariants } from "@/components/ui/button";
-import { AddJobDialog } from "@/components/add-job-dialog";
+import { ImportChoice } from "@/components/import-choice";
 import {
-  PipelineStages, BreakdownBar, ApplicationTrendChart, MatchScoreDistributionChart, McqScoreChart, type PipelineStage, type BreakdownItem, type MatchScoreBand, } from "@/components/overview-charts";
+  PipelineStages,
+  BreakdownBar,
+  ApplicationTrendChart,
+  MatchScoreDistributionChart,
+  McqScoreChart,
+  type PipelineStage,
+  type BreakdownItem,
+  type MatchScoreBand,
+} from "@/components/overview-charts";
 import { DEFAULT_LIST_COLORS, matchScoreBand } from "@/lib/types/board";
-import {
-  Briefcase, Calendar, Target, Camera, Activity } from "lucide-react";
+import { Briefcase, Calendar, Target, Camera, Activity } from "lucide-react";
 import { ArrowRightIcon } from "@/components/ui/arrow-right";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { TrendingUpIcon } from "@/components/ui/trending-up";
 import { SendIcon } from "@/components/ui/send";
+import { GettingStartedWidget } from "@/components/onboarding/getting-started-widget";
+import { getOnboardingStatus } from "@/lib/actions/onboarding";
 
 /**
  * Importers write this field free-form, so the same mode arrives as "onsite",
@@ -30,25 +39,27 @@ export default async function OverviewPage() {
   const { supabase, userId } = await getUser();
   const { lists: boardLists } = await getBoard();
 
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select(`
-      id, title, list_id, match_score, source, employment_type, work_location,
-      created_at, updated_at,
-      company:companies(name),
-      applications(id, status, applied_at, created_at),
-      interviews(id, scheduled_at, type, status)
-    `)
-    .eq("user_id", userId);
-
   const [
+    { data: jobs },
     { count: totalJobs },
     { count: totalApplications },
     { count: totalInterviews },
+    onboardingStatus,
   ] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select(`
+        id, title, list_id, match_score, source, employment_type, work_location,
+        created_at, updated_at,
+        company:companies(name),
+        applications(id, status, applied_at, created_at),
+        interviews(id, scheduled_at, type, status)
+      `)
+      .eq("user_id", userId),
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("applications").select("*", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("interviews").select("*", { count: "exact", head: true }).eq("user_id", userId),
+    getOnboardingStatus(),
   ]);
 
   const { data: mcqResults } = await supabase
@@ -111,9 +122,7 @@ export default async function OverviewPage() {
   }
   const averageMatchScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
 
-  // Match score distribution — same Strong/Fair/Weak bands as matchScoreBand()
-  // (lib/types/board.ts), so this never disagrees with the board card or
-  // /insights, which share the same 80/50 thresholds.
+  // Match score distribution
   const scoreBandCounts: Record<string, number> = { Strong: 0, Fair: 0, Weak: 0 };
   for (const job of allJobs) {
     if (job.match_score == null) continue;
@@ -220,24 +229,19 @@ export default async function OverviewPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AddJobDialog
-            trigger={
-              <button className={buttonVariants({ size: "sm", className: "gap-1.5" })}>
-                <PlusIcon className="size-4" />
-                Add job
-              </button>
-            }
-            lists={boardLists}
-          />
-          <Link
-            href="/jobs?import=screenshot"
-            className={buttonVariants({ variant: "outline", size: "sm", className: "gap-1.5" })}
-          >
-            <Camera className="size-4" />
-            Import
-          </Link>
+          <ImportChoice lists={boardLists} />
         </div>
       </div>
+
+      {/* Ambient Getting Started Checklist */}
+      <GettingStartedWidget
+        primaryPositionName={onboardingStatus.primaryPositionName}
+        hasResume={onboardingStatus.hasResume}
+        hasAiProvider={onboardingStatus.hasAiProvider}
+        hasChatted={onboardingStatus.hasChatted}
+        jobCount={totalJobs ?? 0}
+        hasDemoData={onboardingStatus.hasDemoData}
+      />
 
       {/* Quick Metrics Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

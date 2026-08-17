@@ -93,6 +93,7 @@ export interface JobDetailData {
   contacts: Contact[];
   documents: JobDocument[];
   resumeOptions: JobDetailResumeOption[];
+  boardLists?: import("@/lib/types/board").BoardList[];
   smtpReady: boolean;
   applicantName: string;
   applicantHeadline: string | null;

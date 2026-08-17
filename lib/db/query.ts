@@ -169,6 +169,13 @@ function quoteIdent(name: string): string {
   return `"${name}"`;
 }
 
+function normalizeFilterParam(val: unknown): unknown {
+  if (val === undefined || val === null) return null;
+  if (typeof val === "boolean") return val ? 1 : 0;
+  if (val instanceof Date) return val.toISOString();
+  return val;
+}
+
 function buildWhere(filters: Filter[]): { sql: string; params: unknown[] } {
   const clauses: string[] = [];
   const params: unknown[] = [];
@@ -185,11 +192,11 @@ function buildWhere(filters: Filter[]): { sql: string; params: unknown[] } {
         const sqlOp = { eq: "=", neq: "!=", gt: ">", gte: ">=", lt: "<", lte: "<=", like: "LIKE" }[
           f.op
         ];
-        if (f.value === null) {
+        if (f.value === null || f.value === undefined) {
           clauses.push(`${quoteIdent(f.column)} IS ${f.op === "neq" ? "NOT " : ""}NULL`);
         } else {
           clauses.push(`${quoteIdent(f.column)} ${sqlOp} ?`);
-          params.push(f.value);
+          params.push(normalizeFilterParam(f.value));
         }
         break;
       }
@@ -199,7 +206,7 @@ function buildWhere(filters: Filter[]): { sql: string; params: unknown[] } {
           break;
         }
         clauses.push(`${quoteIdent(f.column)} IN (${f.value.map(() => "?").join(",")})`);
-        params.push(...f.value);
+        params.push(...f.value.map(normalizeFilterParam));
         break;
       }
       case "isNull": {
@@ -208,7 +215,7 @@ function buildWhere(filters: Filter[]): { sql: string; params: unknown[] } {
       }
       case "or": {
         const ors = f.clauses.map((c) => {
-          params.push(c.value);
+          params.push(normalizeFilterParam(c.value));
           return `${quoteIdent(c.column)} ${c.op === "like" ? "LIKE" : "="} ?`;
         });
         clauses.push(`(${ors.join(" OR ")})`);

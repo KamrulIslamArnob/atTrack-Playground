@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 // Duplicated (not imported) in app/api/database/update/route.ts: route.ts
 // files may only export recognized handler/config names, so a plain `const`
 // export here fails Next's generated route-type check.
-const RESTRICTED_TABLES = new Set(["users", "smtp_config", "ai_providers"]);
+const RESTRICTED_TABLES = new Set(["users", "smtp_config", "ai_providers", "extension_config"]);
 
 export interface ColumnInfo {
   name: string;

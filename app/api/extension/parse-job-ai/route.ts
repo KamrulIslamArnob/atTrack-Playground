@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
-import { resolveProviderChain, generateText } from "@/lib/ai/providers";
+import { resolveProviderChain, resolveAllProviders, generateText } from "@/lib/ai/providers";
+import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import { scrapeWithFirecrawl } from "@/lib/services/firecrawl";
 import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
@@ -58,8 +59,16 @@ export const POST = withRoute("/api/extension/parse-job-ai", async (req: Request
       log.warn(`[AI Scraper API] Firecrawl scrape failed or unconfigured. Falling back to local LLM provider chain...`);
     }
 
-    // --- 2. Fallback to Local LLM Provider Chain (Gemini / OpenRouter) ---
-    const chain = await resolveProviderChain(userId, "text");
+    // --- 2. Fallback to Local LLM Provider Chain (Gemini / OpenRouter / OpenAI / Anthropic) ---
+    const configuredChain = await resolveProviderChain(userId, "scraping");
+    const allProviders = await resolveAllProviders(userId);
+    const chain = [...configuredChain];
+    for (const p of allProviders) {
+      if (!chain.some((existing) => existing.id === p.id)) {
+        chain.push(p);
+      }
+    }
+
     if (!chain || chain.length === 0) {
       log.warn(`[AI Scraper API] ⚠️ No active LLM provider chain found for user. Layer 1 offline DOM data will be used.`);
       return NextResponse.json(
@@ -168,7 +177,7 @@ IMPORTANT: Output ONLY the raw JSON object, no markdown commentary.`;
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Internal AI parse error",
+        error: error instanceof Error ? cleanAiErrorMessage(error.message) : "Internal AI parse error",
       },
       { status: 500, headers: corsHeaders }
     );

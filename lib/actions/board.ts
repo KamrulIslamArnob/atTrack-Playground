@@ -56,13 +56,7 @@ interface RawJobRow {
   }[] | null;
 }
 
-/**
- * Reads the whole board in two queries (lists, then jobs+embeds) and joins in
- * memory. The jobs query embeds company, position, resume, applications, and
- * job_deadlines — the query builder resolves each embed with a single batched
- * IN() query, so the total is ~7 queries regardless of card count.
- */
-export async function getBoard(params: { positionId?: string } = {}): Promise<BoardData> {
+export async function getBoardLists(): Promise<BoardList[]> {
   const { supabase, userId } = await getUser();
 
   const { data: initialLists, error: listsError } = await supabase
@@ -90,8 +84,21 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       .select("id, name, kind, color, sort_order")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true });
-    lists = reread.data ?? [];
+    lists = (reread.data ?? []) as unknown as BoardList[];
   }
+
+  return lists as unknown as BoardList[];
+}
+
+/**
+ * Reads the whole board in two queries (lists, then jobs+embeds) and joins in
+ * memory. The jobs query embeds company, position, resume, applications, and
+ * job_deadlines — the query builder resolves each embed with a single batched
+ * IN() query, so the total is ~7 queries regardless of card count.
+ */
+export async function getBoard(params: { positionId?: string } = {}): Promise<BoardData> {
+  const { supabase, userId } = await getUser();
+  const lists = await getBoardLists();
 
   let query = supabase
     .from("jobs")
@@ -184,7 +191,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
  * for a single card update. If precision collapses below 1e-6, it performs an
  * automatic single-pass rebalance.
  */
-export async function moveCard(jobId: string, listId: string, targetIndex: number) {
+export async function moveCard(jobId: string, listId: string, targetIndex: number = 0) {
   const { supabase, userId } = await getUser();
 
   // Verify the destination list belongs to the caller and learn its semantics.

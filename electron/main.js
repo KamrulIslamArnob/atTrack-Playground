@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, Menu } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
 const crypto = require("node:crypto");
 const path = require("node:path");
 const os = require("node:os");
@@ -117,6 +117,31 @@ async function main() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Open external links in user's default OS browser rather than spawning child Electron windows
+  mainWindow.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (targetUrl.startsWith("https:") || targetUrl.startsWith("http:") || targetUrl.startsWith("mailto:")) {
+      shell.openExternal(targetUrl);
+    }
+    return { action: "deny" };
+  });
+
+  mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    try {
+      const parsed = new URL(targetUrl);
+      const isLocal =
+        (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") &&
+        Number(parsed.port) === currentPort;
+      if (!isLocal) {
+        event.preventDefault();
+        if (targetUrl.startsWith("https:") || targetUrl.startsWith("http:") || targetUrl.startsWith("mailto:")) {
+          shell.openExternal(targetUrl);
+        }
+      }
+    } catch {
+      event.preventDefault();
+    }
   });
 
   mainWindow.on("maximize", () => {

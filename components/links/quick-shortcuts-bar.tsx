@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Pencil } from "lucide-react";
 import { CheckIcon } from "@/components/ui/check";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
+import { cn } from "@/lib/utils";
 
 interface QuickShortcutsBarProps {
   shortcuts: QuickShortcut[];
@@ -73,25 +74,26 @@ export function QuickShortcutsBar({
                   ? `Click to copy ${sc.title}: ${sc.value}`
                   : `Click to set ${sc.title} value`
               }
-              className={`group relative h-8 inline-flex items-center justify-center gap-2 rounded-xl border px-3 text-xs font-medium transition-all duration-150 ease-out cursor-pointer select-none active:scale-[0.97] ${
+              className={cn(
+                "group relative h-8 inline-flex items-center justify-center gap-2 rounded-xl border px-3 text-xs font-medium transition-all duration-150 ease-out cursor-pointer select-none active:scale-[0.97]",
                 isCopied
                   ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/30"
                   : hasValue
-                  ? "border-border bg-background hover:bg-accent text-foreground shadow-2xs"
+                  ? "border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary text-foreground shadow-2xs"
                   : "border-dashed border-border bg-muted/40 hover:bg-muted text-muted-foreground"
-              }`}
+              )}
             >
               {/* Platform Icon */}
-              <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors">
+              <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground group-hover:text-primary-foreground transition-colors">
                 {isCopied ? (
                   <CheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-150" />
                 ) : (
-                  <RenderShortcutIcon icon={sc.icon} className="size-3.5" />
+                  <RenderShortcutIcon icon={sc.icon} className="size-3.5 text-inherit" />
                 )}
               </span>
 
               {/* Title */}
-              <span className="font-medium tracking-tight truncate max-w-[120px] leading-none">
+              <span className="font-medium tracking-tight truncate max-w-[120px] leading-none text-foreground group-hover:text-primary-foreground transition-colors">
                 {sc.title}
               </span>
 
@@ -102,7 +104,7 @@ export function QuickShortcutsBar({
                   e.stopPropagation();
                   handleOpenEdit(sc);
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted active:scale-90 inline-flex items-center justify-center shrink-0 -mr-0.5"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-primary-foreground/75 hover:!text-primary-foreground rounded-md hover:bg-white/20 active:scale-90 inline-flex items-center justify-center shrink-0 -mr-0.5"
                 title="Edit Shortcut"
               >
                 <Pencil className="size-2.5" />

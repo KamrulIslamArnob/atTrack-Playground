@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { SparklesIcon } from "@/components/ui/sparkles";
@@ -9,34 +9,96 @@ import { AddJobDialog } from "@/components/add-job-dialog";
 import { AiImport } from "@/components/job-import/ai-import";
 import type { BoardList } from "@/lib/types/board";
 
-interface ImportChoiceProps {
+export interface ImportChoiceProps {
   /** User's board lists, for the section-deadline target picker. */
   lists?: BoardList[];
+  /** Preselected board list/column ID */
+  listId?: string;
+  /** Custom trigger element */
+  trigger?: React.ReactNode;
+  /** Controlled open state */
+  open?: boolean;
+  /** Controlled open change handler */
+  onOpenChange?: (open: boolean) => void;
+  /** Optional button styling when using default trigger */
+  className?: string;
+  variant?: "default" | "outline" | "ghost" | "secondary" | "destructive" | "link";
+  size?: "default" | "sm" | "lg" | "icon";
 }
 
-export function ImportChoice({ lists = [] }: ImportChoiceProps) {
-  const [open, setOpen] = useState(false);
+export function ImportChoice({
+  lists = [],
+  listId,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  className,
+  variant,
+  size = "sm",
+}: ImportChoiceProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [choice, setChoice] = useState<"manual" | "ai" | null>(null);
 
-  if (choice === "ai") {
-    return <AiImport lists={lists} onClose={() => { setChoice(null); setOpen(false); }} />;
-  }
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setChoice(null);
+    }
+    if (isControlled) {
+      onOpenChange?.(nextOpen);
+    } else {
+      setInternalOpen(nextOpen);
+    }
+  };
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen || choice !== null) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleOpenChange(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, choice]);
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="mr-1 size-4" />
-        Add Job
-      </Button>
+      {trigger ? (
+        React.isValidElement(trigger) ? (
+          React.cloneElement(trigger as React.ReactElement<{ onClick?: () => void }>, {
+            onClick: () => handleOpenChange(true),
+          })
+        ) : (
+          <span onClick={() => handleOpenChange(true)} className="cursor-pointer">
+            {trigger}
+          </span>
+        )
+      ) : !isControlled ? (
+        <Button variant={variant} size={size} className={className} onClick={() => handleOpenChange(true)}>
+          <Plus className="mr-1 size-4" />
+          Add Job
+        </Button>
+      ) : null}
 
-      {open && choice !== "manual" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-md">
+      {/* Choice Modal */}
+      {isOpen && choice === null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleOpenChange(false);
+          }}
+        >
+          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between">
-              <h2 className="font-heading text-lg font-semibold">Add Job</h2>
+              <h2 className="font-heading text-lg font-semibold text-foreground">Add Job</h2>
               <button
-                onClick={() => setOpen(false)}
-                className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                type="button"
+                onClick={() => handleOpenChange(false)}
+                className="flex size-8 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
               >
                 <XIcon className="size-4" />
               </button>
@@ -47,31 +109,33 @@ export function ImportChoice({ lists = [] }: ImportChoiceProps) {
 
             <div className="mt-4 space-y-3">
               <button
+                type="button"
                 onClick={() => setChoice("manual")}
-                className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
+                className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-4 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
-                  <Plus className="size-5 text-muted-foreground" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <Plus className="size-5" />
                 </div>
                 <div>
-                  <p className="font-medium">Enter it yourself</p>
-                  <p className="text-xs text-muted-foreground">
-                    Type in the title, company, and details
+                  <p className="font-medium text-sm text-foreground">Enter it yourself</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Type in the title, company, and details manually
                   </p>
                 </div>
               </button>
 
               <button
+                type="button"
                 onClick={() => setChoice("ai")}
-                className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
+                className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-4 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
-                  <SparklesIcon className="size-5 text-muted-foreground" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <SparklesIcon className="size-5" />
                 </div>
                 <div>
-                  <p className="font-medium">Import with AI</p>
-                  <p className="text-xs text-muted-foreground">
-                    Screenshot or paste text — atTrack reads it and fills in the details
+                  <p className="font-medium text-sm text-foreground">Import with AI</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Screenshot or paste text — atTrack reads and fills in details
                   </p>
                 </div>
               </button>
@@ -80,8 +144,8 @@ export function ImportChoice({ lists = [] }: ImportChoiceProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="mt-4 w-full"
-              onClick={() => setOpen(false)}
+              className="mt-4 w-full cursor-pointer"
+              onClick={() => handleOpenChange(false)}
             >
               Cancel
             </Button>
@@ -89,17 +153,29 @@ export function ImportChoice({ lists = [] }: ImportChoiceProps) {
         </div>
       )}
 
+      {/* Manual Entry Flow */}
       <AddJobDialog
         trigger={<span className="hidden" />}
-        open={choice === "manual"}
+        open={isOpen && choice === "manual"}
         onOpenChange={(o) => {
           if (!o) {
-            setChoice(null);
-            setOpen(false);
+            handleOpenChange(false);
           }
         }}
+        listId={listId}
         lists={lists}
       />
+
+      {/* AI Import Flow */}
+      {isOpen && choice === "ai" && (
+        <AiImport
+          lists={lists}
+          listId={listId}
+          onClose={() => {
+            handleOpenChange(false);
+          }}
+        />
+      )}
     </>
   );
 }

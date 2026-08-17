@@ -16,6 +16,7 @@ import {
   extractJobImport,
   deleteScreenshots,
 } from "@/lib/actions/job-imports";
+import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import type { ExtractionResult } from "@/lib/ai/schema";
 import type { BoardList } from "@/lib/types/board";
@@ -24,6 +25,8 @@ interface AiImportProps {
   onClose: () => void;
   /** User's board lists, for the section-deadline target picker. */
   lists?: BoardList[];
+  /** Optional target board list to preselect */
+  listId?: string;
 }
 
 interface UploadedImage {
@@ -32,7 +35,7 @@ interface UploadedImage {
   name: string;
 }
 
-export function AiImport({ onClose, lists = [] }: AiImportProps) {
+export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -128,7 +131,8 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
       setExtractionResult(result);
       setJobDialogOpen(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Extraction failed. Please try again.");
+      const raw = err instanceof Error ? err.message : "Extraction failed. Please try again.";
+      setError(cleanAiErrorMessage(raw));
     } finally {
       setExtracting(false);
     }
@@ -282,9 +286,14 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
           </div>
 
           {error && (
-            <div className="mt-3 flex items-center gap-2 rounded-2xl bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertCircle className="size-4 shrink-0" />
-              {error}
+            <div className="mt-3 rounded-2xl bg-destructive/10 p-3.5 text-xs text-destructive border border-destructive/20 overflow-hidden">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-1 overflow-hidden break-words leading-relaxed">
+                  <p className="font-semibold text-xs sm:text-sm">Extraction Failed</p>
+                  <p className="whitespace-pre-line text-destructive/90">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -306,6 +315,7 @@ export function AiImport({ onClose, lists = [] }: AiImportProps) {
           open={jobDialogOpen}
           onOpenChange={handleJobDialogClose}
           lists={lists}
+          listId={listId}
         />
       )}
     </>

@@ -15,6 +15,7 @@ import { getExtensionSecret } from "@/lib/actions/extension";
 import { RawDatabaseToggle } from "@/components/settings/raw-database-toggle";
 import { ThemeSettings } from "@/components/settings/theme-settings";
 import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";
+import { OnboardingSettingsCard } from "@/components/settings/onboarding-settings-card";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -94,6 +95,8 @@ export default async function SettingsPage() {
       </Card>
 
       <RawDatabaseToggle initialEnabled={Boolean(profile?.show_raw_database)} />
+
+      <OnboardingSettingsCard />
 
       <Card className="border-destructive/20">
         <CardHeader>

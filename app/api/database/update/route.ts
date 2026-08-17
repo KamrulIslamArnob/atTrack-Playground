@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 // definition in app/api/database/route.ts (not imported: route.ts files may
 // only export recognized handler/config names, so a plain `const` export
 // there fails Next's generated route-type check).
-const RESTRICTED_TABLES = new Set(["users", "smtp_config", "ai_providers"]);
+const RESTRICTED_TABLES = new Set(["users", "smtp_config", "ai_providers", "extension_config"]);
 
 type SQLiteInputValue = string | number | bigint | Uint8Array | null;
 
