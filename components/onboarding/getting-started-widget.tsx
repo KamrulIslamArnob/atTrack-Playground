@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clearSampleDataAction } from "@/lib/actions/onboarding";
@@ -49,6 +49,11 @@ export function GettingStartedWidget({
   const [localChatted, setLocalChatted] = useState(hasChatted);
   const [celebrating, setCelebrating] = useState(false);
 
+  // The card must stay reachable until the two hard-required items are done —
+  // resume for match scoring, AI provider for Ask Tracky chat. Jobs/chat stay
+  // freely dismissible, they were never part of that requirement.
+  const isDismissible = hasResume && hasAiProvider;
+
   // Check client-side mirror cache as fast fallback for chat messages
   useEffect(() => {
     if (localChatted) return;
@@ -63,8 +68,8 @@ export function GettingStartedWidget({
 
   useEffect(() => {
     const isDismissed = localStorage.getItem(DISMISS_KEY) === "true";
-    setDismissed(isDismissed);
-  }, []);
+    setDismissed(isDismissed && isDismissible);
+  }, [isDismissible]);
 
   const isChatCompleted = hasChatted || localChatted;
 
@@ -118,6 +123,12 @@ export function GettingStartedWidget({
   const isAllComplete = completedCount === items.length;
   const progressPercent = Math.round((completedCount / items.length) * 100);
 
+  const handleDismiss = useCallback(() => {
+    if (!isDismissible) return;
+    localStorage.setItem(DISMISS_KEY, "true");
+    setDismissed(true);
+  }, [isDismissible]);
+
   // Trigger celebration animation when all 5 steps are complete
   useEffect(() => {
     if (isAllComplete && !dismissed) {
@@ -127,12 +138,7 @@ export function GettingStartedWidget({
       }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [isAllComplete, dismissed]);
-
-  const handleDismiss = () => {
-    localStorage.setItem(DISMISS_KEY, "true");
-    setDismissed(true);
-  };
+  }, [isAllComplete, dismissed, handleDismiss]);
 
   const handleClearDemoData = async () => {
     setClearing(true);
@@ -252,13 +258,15 @@ export function GettingStartedWidget({
                   >
                     {collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
                   </button>
-                  <button
-                    onClick={handleDismiss}
-                    className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
-                    title="Dismiss guide"
-                  >
-                    <X className="size-4" />
-                  </button>
+                  {isDismissible && (
+                    <button
+                      onClick={handleDismiss}
+                      className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
+                      title="Dismiss guide"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 

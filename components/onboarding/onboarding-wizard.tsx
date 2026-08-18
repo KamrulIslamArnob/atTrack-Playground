@@ -2,9 +2,11 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import { ThemeLogo } from "@/components/ui/theme-logo";
-import { completeOnboarding, skipOnboarding } from "@/lib/actions/onboarding";
+import { completeOnboarding } from "@/lib/actions/onboarding";
 import { testProviderConnection } from "@/lib/actions/ai-providers";
+import { saveAvatar } from "@/lib/actions/auth";
 import { extractTextFromPDF } from "@/lib/utils/pdf-extract";
 import type { ProviderType } from "@/lib/types/ai-providers";
 import {
@@ -22,6 +24,7 @@ import {
   ShieldCheck,
   Loader2,
   AlertCircle,
+  Camera,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -113,10 +116,14 @@ export function OnboardingWizard({
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
 
+  const isPlaceholderEmail = (value: string) => value.trim().toLowerCase().endsWith("@attrack.local");
+
   // Step 1: Profile & Target Role
   const [fullName, setFullName] = useState(profileName || "");
+  const [email, setEmail] = useState(userEmail && !isPlaceholderEmail(userEmail) ? userEmail : "");
   const [targetRole, setTargetRole] = useState("");
   const [experienceLevel, setExperienceLevel] = useState<"entry" | "mid" | "senior">("mid");
+  const [step1Touched, setStep1Touched] = useState(false);
 
   // Step 2: Master Resume
   const [resumeMode, setResumeMode] = useState<"upload" | "paste">("upload");
@@ -140,6 +147,58 @@ export function OnboardingWizard({
   const [seedDemoData, setSeedDemoData] = useState(true);
 
   const selectedPreset = AI_PRESETS.find((p) => p.id === selectedPresetId) ?? AI_PRESETS[0];
+
+  const isValidEmailFormat = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const step1Errors = {
+    fullName: fullName.trim() ? null : "Enter your name",
+    email: !email.trim()
+      ? "Enter your email"
+      : isPlaceholderEmail(email) || !isValidEmailFormat(email)
+      ? "Enter a valid email address"
+      : null,
+    targetRole: targetRole.trim() ? null : "Enter your target role",
+  };
+  const isStep1Valid = !step1Errors.fullName && !step1Errors.email && !step1Errors.targetRole;
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarJustUploaded, setAvatarJustUploaded] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/gif"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please select a JPG, PNG, or GIF image");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      toast.error("File size must be less than 500KB");
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const result = await saveAvatar(formData);
+      if (result.success && result.avatarUrl) {
+        setAvatarPreview(`${result.avatarUrl}?t=${Date.now()}`);
+        setAvatarJustUploaded(true);
+        setTimeout(() => setAvatarJustUploaded(false), 700);
+      } else {
+        toast.error(result.error || "Couldn't upload avatar");
+      }
+    } catch {
+      toast.error("Couldn't upload avatar");
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -258,6 +317,7 @@ export function OnboardingWizard({
 
       const res = await completeOnboarding({
         fullName: fullName.trim() || undefined,
+        email: email.trim() || undefined,
         targetRole: targetRole.trim() || undefined,
         experienceLevel,
         resumeText: resumeText.trim() || undefined,
@@ -289,11 +349,20 @@ export function OnboardingWizard({
   const handleSkipAll = async () => {
     setSubmitting(true);
     try {
-      await skipOnboarding();
-      toast.info("Skipped onboarding");
-      setOpen(false);
-      onFinished?.();
-      router.refresh();
+      const res = await completeOnboarding({
+        fullName: fullName.trim() || undefined,
+        email: email.trim() || undefined,
+        targetRole: targetRole.trim() || undefined,
+        experienceLevel,
+      });
+      if (res.success) {
+        toast.info("Skipped setup");
+        setOpen(false);
+        onFinished?.();
+        router.refresh();
+      } else {
+        toast.error(res.error || "Couldn't skip setup");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Couldn't skip setup");
@@ -316,13 +385,15 @@ export function OnboardingWizard({
               <p className="text-xs text-muted-foreground">Local-first career workspace</p>
             </div>
           </div>
-          <button
-            onClick={handleSkipAll}
-            disabled={submitting}
-            className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors px-2 py-1 rounded-md hover:bg-muted"
-          >
-            Skip setup
-          </button>
+          {step > 1 && (
+            <button
+              onClick={handleSkipAll}
+              disabled={submitting}
+              className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors px-2 py-1 rounded-md hover:bg-muted"
+            >
+              Skip setup
+            </button>
+          )}
         </div>
 
         {/* Step Progress Stepper */}
@@ -375,6 +446,67 @@ export function OnboardingWizard({
                 </p>
               </div>
 
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="relative flex size-16 items-center justify-center overflow-hidden rounded-full bg-primary text-lg font-medium text-primary-foreground ring-4 ring-background">
+                    <AnimatePresence>
+                      {avatarPreview ? (
+                        <motion.img
+                          key="photo"
+                          src={avatarPreview}
+                          alt="Your avatar"
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <motion.span
+                          key="initials"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          {(fullName || "U").trim().charAt(0).toUpperCase()}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  {avatarJustUploaded && (
+                    <motion.span
+                      initial={{ scale: 1, opacity: 0.6 }}
+                      animate={{ scale: 1.4, opacity: 0 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                      className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-primary"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    title="Upload profile photo"
+                    className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full bg-card text-foreground ring-2 ring-background transition-colors hover:bg-muted disabled:opacity-50"
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Camera className="size-3.5" />
+                    )}
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarSelect}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-foreground">Profile photo</p>
+                  <p className="text-[11px] text-muted-foreground">Optional — JPG, PNG or GIF, max 500KB</p>
+                </div>
+              </div>
+
               <div className="space-y-3.5 pt-1">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1.5">
@@ -385,8 +517,33 @@ export function OnboardingWizard({
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Kamrul Islam"
-                    className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    aria-invalid={step1Touched && Boolean(step1Errors.fullName)}
+                    className={`w-full h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                      step1Touched && step1Errors.fullName ? "border-destructive" : "border-border"
+                    }`}
                   />
+                  {step1Touched && step1Errors.fullName && (
+                    <p className="mt-1 text-xs text-destructive">{step1Errors.fullName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Your email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. kamrul@example.com"
+                    aria-invalid={step1Touched && Boolean(step1Errors.email)}
+                    className={`w-full h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                      step1Touched && step1Errors.email ? "border-destructive" : "border-border"
+                    }`}
+                  />
+                  {step1Touched && step1Errors.email && (
+                    <p className="mt-1 text-xs text-destructive">{step1Errors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -398,8 +555,14 @@ export function OnboardingWizard({
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
                     placeholder="e.g. Senior Full Stack Engineer, Product Designer"
-                    className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    aria-invalid={step1Touched && Boolean(step1Errors.targetRole)}
+                    className={`w-full h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                      step1Touched && step1Errors.targetRole ? "border-destructive" : "border-border"
+                    }`}
                   />
+                  {step1Touched && step1Errors.targetRole && (
+                    <p className="mt-1 text-xs text-destructive">{step1Errors.targetRole}</p>
+                  )}
                 </div>
 
                 <div>
@@ -902,7 +1065,13 @@ export function OnboardingWizard({
             {step < 4 ? (
               <button
                 type="button"
-                onClick={() => setStep((s) => (s + 1) as Step)}
+                onClick={() => {
+                  if (step === 1 && !isStep1Valid) {
+                    setStep1Touched(true);
+                    return;
+                  }
+                  setStep((s) => (s + 1) as Step);
+                }}
                 className="flex items-center gap-1 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-4 py-2 rounded-lg shadow-xs"
               >
                 <span>Continue</span>

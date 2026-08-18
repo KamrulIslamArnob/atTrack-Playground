@@ -60,17 +60,27 @@ export async function updateProfile(formData: FormData) {
   redirect("/settings?message=" + encodeURIComponent("Profile updated successfully."));
 }
 
-export async function uploadAvatar(formData: FormData) {
+export interface SaveAvatarResult {
+  success: boolean;
+  avatarUrl?: string;
+  error?: string;
+}
+
+/** Validates, stores, and links an avatar file to the current user's profile
+ *  without redirecting — shared by the Settings form (`uploadAvatar` below,
+ *  which redirects) and the onboarding wizard (which stays in its own modal
+ *  and animates the result instead of navigating away). */
+export async function saveAvatar(formData: FormData): Promise<SaveAvatarResult> {
   const { supabase, userId } = await getUser();
 
   const file = formData.get("avatar") as File;
 
   if (!file || file.size === 0) {
-    redirect("/settings?error=" + encodeURIComponent("No file selected."));
+    return { success: false, error: "No file selected." };
   }
 
   if (file.size > 500 * 1024) {
-    redirect("/settings?error=" + encodeURIComponent("File size must be less than 500KB."));
+    return { success: false, error: "File size must be less than 500KB." };
   }
 
   const fileExt = file.name.split(".").pop();
@@ -81,7 +91,7 @@ export async function uploadAvatar(formData: FormData) {
     .upload(filePath, file, { upsert: true });
 
   if (uploadError) {
-    redirect("/settings?error=" + encodeURIComponent("Failed to upload avatar."));
+    return { success: false, error: "Failed to upload avatar." };
   }
 
   const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(filePath);
@@ -91,13 +101,28 @@ export async function uploadAvatar(formData: FormData) {
     .upsert({ id: userId, avatar_url: urlData.publicUrl }, { onConflict: "id" });
 
   if (updateError) {
-    redirect("/settings?error=" + encodeURIComponent("Failed to update profile with avatar."));
+    return { success: false, error: "Failed to update profile with avatar." };
   }
 
+  try {
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    revalidatePath("/overview");
+  } catch {
+    // revalidatePath requires Next.js request context; fails in test environments.
+    // The core function still succeeds — cache invalidation is a nice-to-have.
+  }
 
-  revalidatePath("/", "layout");
-  revalidatePath("/settings");
-  revalidatePath("/overview");
+  return { success: true, avatarUrl: urlData.publicUrl };
+}
+
+export async function uploadAvatar(formData: FormData) {
+  const result = await saveAvatar(formData);
+
+  if (!result.success) {
+    redirect("/settings?error=" + encodeURIComponent(result.error ?? "Failed to upload avatar."));
+  }
+
   redirect("/settings?message=" + encodeURIComponent("Avatar uploaded successfully."));
 }
 
