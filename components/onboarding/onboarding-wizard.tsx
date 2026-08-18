@@ -357,12 +357,12 @@ export function OnboardingWizard({
       });
       if (res.success) {
         toast.info("Skipped setup");
+        setOpen(false);
+        onFinished?.();
+        router.refresh();
       } else {
         toast.error(res.error || "Couldn't skip setup");
       }
-      setOpen(false);
-      onFinished?.();
-      router.refresh();
     } catch (err) {
       console.error(err);
       toast.error("Couldn't skip setup");
