@@ -11,6 +11,7 @@ import { scheduleResumeExtract } from "@/lib/ai/background";
 
 export interface OnboardingPayload {
   fullName?: string;
+  email?: string;
   targetRole?: string;
   experienceLevel?: "entry" | "mid" | "senior";
   resumeText?: string;
@@ -45,6 +46,13 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<{
       db.prepare(
         "UPDATE profiles SET onboarded_at = ?, updated_at = ? WHERE id = ?"
       ).run(now, now, userId);
+    }
+
+    // 1b. Update email — lives on `users`, not `profiles` (see lib/db/local-user.ts).
+    // Same pattern updateProfile() already uses in lib/actions/auth.ts.
+    const trimmedEmail = (payload.email || "").trim();
+    if (trimmedEmail) {
+      db.prepare("UPDATE users SET email = ? WHERE id = ?").run(trimmedEmail, userId);
     }
 
     // 2. Create/Update Primary Position (Target Role)
