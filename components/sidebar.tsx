@@ -14,7 +14,6 @@ import {
   CommandList,
   CommandGroup,
   CommandItem,
-  CommandEmpty,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { NotificationButton } from "@/components/ui/notification-button";
@@ -26,23 +25,14 @@ import {
   FileText,
   Settings,
   Sparkles,
-  Sun,
-  Moon,
-  Monitor,
   Users,
   Activity,
   Cpu,
-  KanbanSquare,
   Search,
-  Bell,
-  File,
   Loader2,
   Copy,
   Check,
-  PanelLeftClose,
-  PanelLeftOpen,
   MoreVertical,
-  ChevronLeft,
   ChevronRight,
   Building2,
   User,
@@ -52,8 +42,6 @@ import {
   Bot,
   Clock,
   CornerDownLeft,
-  ArrowRight,
-  X,
   Compass,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -63,19 +51,15 @@ const navigation = [
   { name: "Jobs", href: "/jobs", icon: Briefcase },
 ];
 
-const aiBuilderNavigation = [
-  { name: "Ask Tracky", href: "/ai-builder/chatbot", icon: Bot },
-];
-
 const resourceNavigation = [
-  { name: "Resume/CV", href: "/documents", icon: FileText },
-  { name: "CRM", href: "/crm", icon: Users },
-  { name: "Social Links", href: "/links", icon: Link2 },
+  { name: "Document", href: "/documents", icon: FileText },
+  { name: "Network", href: "/crm", icon: Users },
+  { name: "Resources", href: "/links", icon: Link2 },
+  { name: "Prompts & Memory", href: "/preferences/ai-prompts", icon: Sparkles },
 ];
 
 const secondaryNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
-  { name: "AI Prompts", href: "/preferences/ai-prompts", icon: Sparkles },
   { name: "Database", href: "/preferences/database", icon: Database },
   { name: "Performance", href: "/preferences", icon: Gauge },
 ];
@@ -97,10 +81,11 @@ const NAV_ITEMS = [
   { name: "Overview", href: "/overview", keywords: "home summary stats" },
   { name: "Ask Tracky", href: "/ai-builder/chatbot", keywords: "ai builder chatbot ask tracky tracky gpt gemini claude assistant prompt chat" },
   { name: "Jobs", href: "/jobs", keywords: "jobs board kanban pipeline stages drag job listings saved interested table list" },
-  { name: "Resume/CV", href: "/documents", keywords: "resume cv cover letter" },
-  { name: "CRM", href: "/crm", keywords: "contacts companies network" },
-  { name: "Social Links", href: "/links", keywords: "social links resources portals bookmarks directory" },
+  { name: "Document", href: "/documents", keywords: "document resume cv cover letter" },
+  { name: "Network", href: "/crm", keywords: "contacts companies network crm" },
+  { name: "Resources", href: "/links", keywords: "social links resources portals bookmarks directory" },
   { name: "Settings", href: "/settings", keywords: "profile preferences email" },
+  { name: "Prompts & Memory", href: "/preferences/ai-prompts", keywords: "ai prompts memory custom instructions" },
   { name: "Performance", href: "/preferences", keywords: "performance ram cpu memory port system root path version" },
 ];
 
@@ -679,11 +664,6 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
 
               <div className={cn("my-3 h-px bg-border/50", isCollapsed && "mx-1")} />
 
-              {!isCollapsed && (
-                <div className="text-xs font-medium text-muted-foreground/80 px-3 mb-2">
-                  Network
-                </div>
-              )}
               <div className="space-y-1">
                 {resourceNavigation.map((item) => {
                   const isActive =

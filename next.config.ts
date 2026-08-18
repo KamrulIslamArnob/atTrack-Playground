@@ -35,6 +35,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  allowedDevOrigins: [
+    "localhost:3308",
+    "127.0.0.1:3308",
+    "192.168.0.154:3308",
+    "192.168.0.154",
+  ],
   async headers() {
     return [
       {
@@ -51,7 +57,14 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
-      allowedOrigins: ["localhost:3308", "127.0.0.1:3308", "localhost:3000", "localhost:3147"],
+      allowedOrigins: [
+        "localhost:3308",
+        "127.0.0.1:3308",
+        "localhost:3000",
+        "localhost:3147",
+        "192.168.0.154:3308",
+        "192.168.0.154",
+      ],
     },
   },
 };
