@@ -182,9 +182,9 @@ export function PipelineViewportNavigator({
     const rect = trackRef.current.getBoundingClientRect();
     const maxScroll = Math.max(0, scrollRef.current.scrollWidth - scrollRef.current.clientWidth);
     if (maxScroll > 0) {
-      const thumbPx = (rect.width * thumbWidthPercent) / 100;
-      const usableTrack = Math.max(1, rect.width - thumbPx);
-      const clickThumbCenter = e.clientX - rect.left - thumbPx / 2;
+      const BALL_SIZE = 14;
+      const usableTrack = Math.max(1, rect.width - BALL_SIZE);
+      const clickThumbCenter = e.clientX - rect.left - BALL_SIZE / 2;
       const ratio = Math.max(0, Math.min(1, clickThumbCenter / usableTrack));
       const exactScroll = ratio * maxScroll;
 
@@ -207,9 +207,9 @@ export function PipelineViewportNavigator({
     const maxScroll = Math.max(0, scrollRef.current.scrollWidth - scrollRef.current.clientWidth);
     if (maxScroll <= 0) return;
 
-    const thumbPx = (rect.width * thumbWidthPercent) / 100;
-    const usableTrack = Math.max(1, rect.width - thumbPx);
-    const pointerOffset = e.clientX - rect.left - thumbPx / 2;
+    const BALL_SIZE = 14;
+    const usableTrack = Math.max(1, rect.width - BALL_SIZE);
+    const pointerOffset = e.clientX - rect.left - BALL_SIZE / 2;
 
     // Elastic rubber-band displacement
     if (pointerOffset < 0) {
@@ -262,8 +262,8 @@ export function PipelineViewportNavigator({
 
         if (Math.abs(velocityPxPerSec) > 80) {
           const rect = trackRef.current.getBoundingClientRect();
-          const thumbPx = (rect.width * thumbWidthPercent) / 100;
-          const usableTrack = Math.max(1, rect.width - thumbPx);
+          const BALL_SIZE = 14;
+          const usableTrack = Math.max(1, rect.width - BALL_SIZE);
           const scrubRatio = maxScroll / usableTrack;
 
           // Momentum fling projection with natural damping
@@ -306,8 +306,7 @@ export function PipelineViewportNavigator({
 
   if (!canScroll && stages.length <= 1) return null;
 
-  const maxThumbLeft = 100 - thumbWidthPercent;
-  const thumbLeftPercent = Math.max(0, Math.min(maxThumbLeft, scrollProgress * maxThumbLeft));
+  const BALL_SIZE = 14;
 
   return (
     <div
@@ -329,11 +328,11 @@ export function PipelineViewportNavigator({
         aria-controls="board-scroll-container"
         onKeyDown={handleKeyDown}
         className={cn(
-          "group relative flex items-center h-8 px-1.5 rounded-xl border border-border/80 bg-card shadow-2xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          "group relative flex items-center h-7 px-2 rounded-full border border-border/70 bg-card shadow-2xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-primary/40",
           (isDragging || isHovered) && "border-primary/40 shadow-xs"
         )}
       >
-        {/* Elastic Scrollbar Track & Draggable Thumb */}
+        {/* Elastic Scrollbar Track Rail */}
         <div
           ref={trackRef}
           onPointerDown={handleTrackPointerDown}
@@ -341,19 +340,23 @@ export function PipelineViewportNavigator({
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           className={cn(
-            "relative flex items-center h-4.5 w-[150px] sm:w-[190px] md:w-[230px] rounded-full bg-muted/80 cursor-pointer touch-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] transition-all duration-200 overflow-hidden",
-            (isHovered || isDragging) && "bg-muted"
+            "relative flex items-center h-1.5 w-[85px] sm:w-[120px] md:w-[150px] rounded-full bg-muted cursor-pointer touch-none shadow-[inset_0_1px_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200",
+            (isHovered || isDragging) && "bg-muted/90"
           )}
           title="Drag or click to scroll pipeline"
         >
-          {/* Scrollbar Draggable Thumb with Elastic Spring Physics */}
+          {/* Active progress fill */}
+          <div
+            className="absolute left-0 top-0 bottom-0 rounded-full bg-primary/20 transition-all duration-75"
+            style={{ width: `calc(${scrollProgress * 100}% - ${scrollProgress * BALL_SIZE}px + ${BALL_SIZE / 2}px)` }}
+          />
+
+          {/* Draggable Blue Ball with Elastic Spring Physics */}
           <motion.div
             animate={{
-              left: `${thumbLeftPercent}%`,
-              width: `${thumbWidthPercent}%`,
+              left: `calc(${scrollProgress * 100}% - ${scrollProgress * BALL_SIZE}px)`,
               x: elasticOffset,
-              scaleY: isDragging ? 1.08 : isHovered ? 1.04 : 1,
-              scaleX: isDragging ? 0.98 : 1,
+              scale: isDragging ? 1.25 : isHovered ? 1.15 : 1,
             }}
             transition={
               shouldReduceMotion
@@ -361,34 +364,22 @@ export function PipelineViewportNavigator({
                 : isDragging
                 ? {
                     left: { duration: 0 },
-                    width: { duration: 0 },
                     x: { type: "spring", stiffness: 700, damping: 32 },
-                    scaleY: { duration: 0.08 },
-                    scaleX: { duration: 0.08 },
+                    scale: { duration: 0.08 },
                   }
                 : {
                     left: { type: "spring", stiffness: 450, damping: 36 },
-                    width: { type: "spring", stiffness: 450, damping: 36 },
                     x: { type: "spring", stiffness: 500, damping: 26 },
-                    scaleY: { type: "spring", stiffness: 400, damping: 25 },
-                    scaleX: { type: "spring", stiffness: 400, damping: 25 },
+                    scale: { type: "spring", stiffness: 400, damping: 25 },
                   }
             }
             className={cn(
-              "absolute top-0.5 bottom-0.5 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center select-none will-change-transform shadow-xs transition-colors duration-150",
-              isDragging
-                ? "bg-primary shadow-md"
-                : isHovered
-                ? "bg-primary/90 text-primary-foreground shadow-xs"
-                : "bg-muted-foreground/45 hover:bg-primary/80"
+              "absolute top-1/2 -translate-y-1/2 size-3.5 rounded-full bg-blue-500 dark:bg-blue-400 cursor-grab active:cursor-grabbing flex items-center justify-center select-none will-change-transform shadow-[0_1px_3px_rgba(37,99,235,0.4),0_0_6px_rgba(59,130,246,0.35)] transition-shadow duration-150",
+              isDragging && "bg-blue-600 shadow-[0_2px_6px_rgba(37,99,235,0.5),0_0_10px_rgba(59,130,246,0.5)]"
             )}
           >
-            {/* Micro grip ridges on thumb */}
-            <div className="flex items-center gap-[3px] opacity-75 pointer-events-none transition-opacity group-hover:opacity-90">
-              <span className="h-2.5 w-[2px] rounded-full bg-background/90" />
-              <span className="h-2.5 w-[2px] rounded-full bg-background/90" />
-              <span className="h-2.5 w-[2px] rounded-full bg-background/90" />
-            </div>
+            {/* Inner specular highlight reflection */}
+            <div className="size-1 rounded-full bg-white/70 -translate-y-0.5 -translate-x-0.5 pointer-events-none" />
           </motion.div>
         </div>
       </div>

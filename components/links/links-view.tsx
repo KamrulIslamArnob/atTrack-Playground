@@ -384,13 +384,17 @@ export function LinksView({
 
   // O(L) Set building for O(1) category membership checks (O(C + L) instead of O(C * L))
   const visibleCategories = useMemo(() => {
-    if (!query) return categories;
+    let base = categories;
+    if (activeCategory !== "all") {
+      base = base.filter((cat) => cat.id === activeCategory);
+    }
+    if (!query) return base;
     const matchingCatIds = new Set<string>();
     for (const link of filteredLinks) {
       if (link.category_id) matchingCatIds.add(link.category_id);
     }
-    return categories.filter((cat) => matchingCatIds.has(cat.id));
-  }, [categories, filteredLinks, query]);
+    return base.filter((cat) => matchingCatIds.has(cat.id));
+  }, [categories, filteredLinks, query, activeCategory]);
 
   // Memoized unique tags calculation
   const allTags = useMemo(() => {
@@ -432,9 +436,10 @@ export function LinksView({
     const observer = new ResizeObserver(updateScrollState);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [categories.length, links.length, search, updateScrollState]);
+  }, [categories.length, links.length, search, activeCategory, updateScrollState]);
 
   const handleMainScroll = () => {
+    updateScrollState();
     if (isSyncingScroll.current) return;
     if (fixedScrollRef.current && scrollRef.current) {
       isSyncingScroll.current = true;
@@ -488,66 +493,10 @@ export function LinksView({
 
   const handleCategoryClick = (catId: string) => {
     setActiveCategory(catId);
-    if (catId === "all") {
-      scrollRef.current?.scrollTo({ left: 0, behavior: "smooth" });
-      return;
-    }
-    const targetEl = document.getElementById(`category-panel-${catId}`);
-    if (targetEl && scrollRef.current) {
-      const containerRect = scrollRef.current.getBoundingClientRect();
-      const targetRect = targetEl.getBoundingClientRect();
-      const scrollTarget =
-        scrollRef.current.scrollLeft + (targetRect.left - containerRect.left);
-      scrollRef.current.scrollTo({
-        left: Math.max(0, scrollTarget),
-        behavior: "smooth",
-      });
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = 0;
     }
   };
-
-  // Scroll-spy to sync active category indicator with scroll position
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    let timeoutId: NodeJS.Timeout;
-    const handleScroll = () => {
-      updateScrollState();
-
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (el.scrollLeft <= 30) {
-          setActiveCategory("all");
-          return;
-        }
-
-        const containerLeft = el.getBoundingClientRect().left;
-        let closestCatId = "";
-        let minDistance = Infinity;
-
-        for (const cat of visibleCategories) {
-          const panel = document.getElementById(`category-panel-${cat.id}`);
-          if (panel) {
-            const distance = Math.abs(panel.getBoundingClientRect().left - containerLeft);
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestCatId = cat.id;
-            }
-          }
-        }
-
-        if (closestCatId && minDistance < 350) {
-          setActiveCategory(closestCatId);
-        }
-      }, 80);
-    };
-
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      el.removeEventListener("scroll", handleScroll);
-      clearTimeout(timeoutId);
-    };
-  }, [visibleCategories, updateScrollState]);
 
   return (
     <div className="space-y-4">
@@ -686,7 +635,7 @@ export function LinksView({
           </div>
 
           {/* Horizontal Scroll Navigation Controls */}
-          {canScroll && (
+          {canScroll && activeCategory === "all" && (
             <div className="inline-flex h-7 shrink-0 items-center overflow-hidden rounded-lg border border-border bg-card shadow-2xs">
               <button
                 type="button"
