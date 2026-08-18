@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { ThemeLogo } from "@/components/ui/theme-logo";
-import { completeOnboarding, skipOnboarding } from "@/lib/actions/onboarding";
+import { completeOnboarding } from "@/lib/actions/onboarding";
 import { testProviderConnection } from "@/lib/actions/ai-providers";
 import { saveAvatar } from "@/lib/actions/auth";
 import { extractTextFromPDF } from "@/lib/utils/pdf-extract";
@@ -116,9 +116,11 @@ export function OnboardingWizard({
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
 
+  const isPlaceholderEmail = (value: string) => value.trim().toLowerCase().endsWith("@attrack.local");
+
   // Step 1: Profile & Target Role
   const [fullName, setFullName] = useState(profileName || "");
-  const [email, setEmail] = useState(userEmail || "");
+  const [email, setEmail] = useState(userEmail && !isPlaceholderEmail(userEmail) ? userEmail : "");
   const [targetRole, setTargetRole] = useState("");
   const [experienceLevel, setExperienceLevel] = useState<"entry" | "mid" | "senior">("mid");
   const [step1Touched, setStep1Touched] = useState(false);
@@ -146,7 +148,6 @@ export function OnboardingWizard({
 
   const selectedPreset = AI_PRESETS.find((p) => p.id === selectedPresetId) ?? AI_PRESETS[0];
 
-  const isPlaceholderEmail = (value: string) => value.trim().toLowerCase().endsWith("@attrack.local");
   const isValidEmailFormat = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
   const step1Errors = {
@@ -185,7 +186,7 @@ export function OnboardingWizard({
       formData.append("avatar", file);
       const result = await saveAvatar(formData);
       if (result.success && result.avatarUrl) {
-        setAvatarPreview(result.avatarUrl);
+        setAvatarPreview(`${result.avatarUrl}?t=${Date.now()}`);
         setAvatarJustUploaded(true);
         setTimeout(() => setAvatarJustUploaded(false), 700);
       } else {
@@ -348,8 +349,17 @@ export function OnboardingWizard({
   const handleSkipAll = async () => {
     setSubmitting(true);
     try {
-      await skipOnboarding();
-      toast.info("Skipped onboarding");
+      const res = await completeOnboarding({
+        fullName: fullName.trim() || undefined,
+        email: email.trim() || undefined,
+        targetRole: targetRole.trim() || undefined,
+        experienceLevel,
+      });
+      if (res.success) {
+        toast.info("Skipped setup");
+      } else {
+        toast.error(res.error || "Couldn't skip setup");
+      }
       setOpen(false);
       onFinished?.();
       router.refresh();
@@ -439,7 +449,7 @@ export function OnboardingWizard({
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className="relative flex size-16 items-center justify-center overflow-hidden rounded-full bg-primary text-lg font-medium text-primary-foreground ring-4 ring-background">
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {avatarPreview ? (
                         <motion.img
                           key="photo"
@@ -474,6 +484,7 @@ export function OnboardingWizard({
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={avatarUploading}
+                    title="Upload profile photo"
                     className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full bg-card text-foreground ring-2 ring-background transition-colors hover:bg-muted disabled:opacity-50"
                   >
                     {avatarUploading ? (
