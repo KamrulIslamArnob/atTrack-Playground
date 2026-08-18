@@ -115,8 +115,10 @@ export function OnboardingWizard({
 
   // Step 1: Profile & Target Role
   const [fullName, setFullName] = useState(profileName || "");
+  const [email, setEmail] = useState(userEmail || "");
   const [targetRole, setTargetRole] = useState("");
   const [experienceLevel, setExperienceLevel] = useState<"entry" | "mid" | "senior">("mid");
+  const [step1Touched, setStep1Touched] = useState(false);
 
   // Step 2: Master Resume
   const [resumeMode, setResumeMode] = useState<"upload" | "paste">("upload");
@@ -140,6 +142,20 @@ export function OnboardingWizard({
   const [seedDemoData, setSeedDemoData] = useState(true);
 
   const selectedPreset = AI_PRESETS.find((p) => p.id === selectedPresetId) ?? AI_PRESETS[0];
+
+  const isPlaceholderEmail = (value: string) => value.trim().toLowerCase().endsWith("@attrack.local");
+  const isValidEmailFormat = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const step1Errors = {
+    fullName: fullName.trim() ? null : "Enter your name",
+    email: !email.trim()
+      ? "Enter your email"
+      : isPlaceholderEmail(email) || !isValidEmailFormat(email)
+      ? "Enter a valid email address"
+      : null,
+    targetRole: targetRole.trim() ? null : "Enter your target role",
+  };
+  const isStep1Valid = !step1Errors.fullName && !step1Errors.email && !step1Errors.targetRole;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -258,6 +274,7 @@ export function OnboardingWizard({
 
       const res = await completeOnboarding({
         fullName: fullName.trim() || undefined,
+        email: email.trim() || undefined,
         targetRole: targetRole.trim() || undefined,
         experienceLevel,
         resumeText: resumeText.trim() || undefined,
@@ -316,13 +333,15 @@ export function OnboardingWizard({
               <p className="text-xs text-muted-foreground">Local-first career workspace</p>
             </div>
           </div>
-          <button
-            onClick={handleSkipAll}
-            disabled={submitting}
-            className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors px-2 py-1 rounded-md hover:bg-muted"
-          >
-            Skip setup
-          </button>
+          {step > 1 && (
+            <button
+              onClick={handleSkipAll}
+              disabled={submitting}
+              className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors px-2 py-1 rounded-md hover:bg-muted"
+            >
+              Skip setup
+            </button>
+          )}
         </div>
 
         {/* Step Progress Stepper */}
@@ -385,8 +404,33 @@ export function OnboardingWizard({
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Kamrul Islam"
-                    className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    aria-invalid={step1Touched && Boolean(step1Errors.fullName)}
+                    className={`w-full h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                      step1Touched && step1Errors.fullName ? "border-destructive" : "border-border"
+                    }`}
                   />
+                  {step1Touched && step1Errors.fullName && (
+                    <p className="mt-1 text-xs text-destructive">{step1Errors.fullName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Your email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. kamrul@example.com"
+                    aria-invalid={step1Touched && Boolean(step1Errors.email)}
+                    className={`w-full h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                      step1Touched && step1Errors.email ? "border-destructive" : "border-border"
+                    }`}
+                  />
+                  {step1Touched && step1Errors.email && (
+                    <p className="mt-1 text-xs text-destructive">{step1Errors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -398,8 +442,14 @@ export function OnboardingWizard({
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
                     placeholder="e.g. Senior Full Stack Engineer, Product Designer"
-                    className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    aria-invalid={step1Touched && Boolean(step1Errors.targetRole)}
+                    className={`w-full h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                      step1Touched && step1Errors.targetRole ? "border-destructive" : "border-border"
+                    }`}
                   />
+                  {step1Touched && step1Errors.targetRole && (
+                    <p className="mt-1 text-xs text-destructive">{step1Errors.targetRole}</p>
+                  )}
                 </div>
 
                 <div>
@@ -902,7 +952,13 @@ export function OnboardingWizard({
             {step < 4 ? (
               <button
                 type="button"
-                onClick={() => setStep((s) => (s + 1) as Step)}
+                onClick={() => {
+                  if (step === 1 && !isStep1Valid) {
+                    setStep1Touched(true);
+                    return;
+                  }
+                  setStep((s) => (s + 1) as Step);
+                }}
                 className="flex items-center gap-1 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-4 py-2 rounded-lg shadow-xs"
               >
                 <span>Continue</span>
