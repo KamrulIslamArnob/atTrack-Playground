@@ -10,12 +10,11 @@ import {
   JobsStageChart,
   AiTrendChart,
 } from "@/components/admin-charts";
+import { ClientGreeting } from "@/components/client-greeting";
 
 export default async function AdminDashboardPage() {
   const stats = await getAdminDashboardStats();
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const date = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -34,7 +33,7 @@ export default async function AdminDashboardPage() {
         <div className="relative">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="font-heading text-3xl font-bold tracking-tight">{greeting}, Admin</h1>
+              <ClientGreeting suffix=", Admin" className="font-heading text-3xl font-bold tracking-tight" />
               <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
                 Monitor users, jobs, and AI usage across your platform.
               </p>

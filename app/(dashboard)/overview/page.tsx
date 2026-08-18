@@ -16,11 +16,11 @@ import {
 import { DEFAULT_LIST_COLORS, matchScoreBand } from "@/lib/types/board";
 import { Briefcase, Calendar, Target, Camera, Activity } from "lucide-react";
 import { ArrowRightIcon } from "@/components/ui/arrow-right";
-import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { TrendingUpIcon } from "@/components/ui/trending-up";
 import { SendIcon } from "@/components/ui/send";
 import { GettingStartedWidget } from "@/components/onboarding/getting-started-widget";
 import { getOnboardingStatus } from "@/lib/actions/onboarding";
+import { ClientGreeting } from "@/components/client-greeting";
 
 /**
  * Importers write this field free-form, so the same mode arrives as "onsite",
@@ -223,15 +223,12 @@ export default async function OverviewPage() {
   const responseRate =
     reachedApplied > 0 ? Math.round((movedPastApplied / reachedApplied) * 100) : null;
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">{greeting}</h1>
+          <ClientGreeting />
           <p className="text-xs text-muted-foreground sm:text-sm">
             Search overview, pipeline progress, and upcoming milestones.
           </p>
