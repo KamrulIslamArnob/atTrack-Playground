@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import * as sqliteVec from "sqlite-vec";
-import { readFileSync } from "node:fs";
-import { mkdirSync } from "node:fs";
+import { readFileSync, copyFileSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { moduleLogger } from "../log/index.ts";
 
@@ -85,6 +84,18 @@ function open(): DatabaseSync {
 
   if (currentVersion < CURRENT_SCHEMA_VERSION) {
     const migrateStartedAt = Date.now();
+
+    // Precautious auto-backup before running any schema migrations on existing database
+    if (currentVersion > 0 && existsSync(DB_PATH)) {
+      try {
+        copyFileSync(DB_PATH, `${DB_PATH}.bak`);
+        copyFileSync(DB_PATH, `${DB_PATH}.bak-v${currentVersion}`);
+        dbLog.info({ event: "db.backup", fromVersion: currentVersion, toVersion: CURRENT_SCHEMA_VERSION }, "Created pre-migration database backup snapshot");
+      } catch (err) {
+        dbLog.warn({ err }, "Could not create database pre-migration backup snapshot");
+      }
+    }
+
     const schema = readFileSync(
       path.join(process.cwd(), "lib", "db", "schema.sql"),
       "utf8"

@@ -147,4 +147,21 @@ export function generateUUID(): string {
   });
 }
 
+/**
+ * Null-safe and type-safe JSON parser with fallback default.
+ * Prevents runtime crashes when parsing database columns or localStorage after schema updates.
+ */
+export function safeJsonParse<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "object") return value as T;
+  if (typeof value !== "string") return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed !== null && parsed !== undefined ? (parsed as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+
 
