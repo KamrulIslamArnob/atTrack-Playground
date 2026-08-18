@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
   Loader2, Ban, UserCog, Ban as BanIcon, UserMinus, ShieldAlert, UserCog as UserCogIcon } from "lucide-react";
 import { SearchIcon } from "@/components/ui/search";
@@ -21,6 +20,8 @@ import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { UsersIcon } from "@/components/ui/users";
 import { ShieldCheckIcon } from "@/components/ui/shield-check";
 import { UserPlusIcon } from "@/components/ui/user-plus";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PageHeader } from "@/components/page-header";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -133,23 +134,17 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="flex items-center justify-between px-6">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">Users</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              Manage user accounts, roles, and access across the platform.
-            </p>
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={loadUsers}>
-            <Loader2 className={`size-4 ${loading ? "animate-spin" : ""}`} />
+    <div className="space-y-6 pb-16">
+      <PageHeader
+        title="Users"
+        subtitle="Manage user accounts, roles, and access across the platform."
+        actions={
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={loadUsers}>
+            <Loader2 className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+        }
+      />
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -448,6 +443,21 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+
+          {/* Bottom Table Pagination */}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            perPage={perPage}
+            onPageChange={setPage}
+            onPerPageChange={(p) => {
+              setPerPage(p);
+              setPage(1);
+            }}
+            perPageOptions={[10, 20, 30, 50, 100]}
+            itemLabel="users"
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">

@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { FileTextIcon } from "@/components/ui/file-text";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ResumeBuilderEditor } from "@/components/resume-builder/resume-builder-editor";
 import { getResumeBuilderDocument } from "@/lib/actions/resume-builder";
 
@@ -34,7 +33,6 @@ export default async function ResumeBuilderPage({ params }: PageProps) {
         </div>
       </div>
 
-      <Breadcrumbs />
       <ResumeBuilderEditor id={document.id} initialName={document.name} initialDocument={document.builder_data} />
     </div>
   );

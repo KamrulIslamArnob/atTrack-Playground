@@ -26,6 +26,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { PageHeader } from "@/components/page-header";
+import { DocumentsUploadInline } from "@/components/documents-upload-inline";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface DocumentsListProps {
   documents: Document[];
@@ -594,10 +597,25 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       });
   }, [documents, search, typeFilter]);
 
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
   const rows = useMemo(() => {
     if (!sortKey) return filteredRows;
     return [...filteredRows].sort((a, b) => compareRows(a, b, sortKey, sortDir));
   }, [filteredRows, sortKey, sortDir]);
+
+  // Reset to page 1 on filter or search change
+  useEffect(() => {
+    setPage(1);
+  }, [search, typeFilter]);
+
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return rows.slice(start, start + perPage);
+  }, [rows, page, perPage]);
 
   // Lookup map for column definitions
   const columnDefMap = useMemo(() => {
@@ -692,37 +710,65 @@ export function DocumentsList({ documents }: DocumentsListProps) {
   };
 
   if (documents.length === 0) {
-    return null;
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Documents & Resumes"
+          subtitle="Your central hub for resumes, cover letters, and AI-generated documents."
+        >
+          <div className="flex items-center justify-end w-full">
+            <DocumentsUploadInline />
+          </div>
+        </PageHeader>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
+          <p className="text-sm text-muted-foreground">No documents yet.</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">
+            Upload a resume to start matching it against jobs.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {/* SearchIcon and filters */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative w-full lg:w-72">
-          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by document name..."
-            className="h-10 pl-9 text-sm"
-          />
+      {/* Page Header with search & type filter on left and upload actions on right */}
+      <PageHeader
+        title="Documents & Resumes"
+        subtitle="Your central hub for resumes, cover letters, and AI-generated documents."
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+          {/* Left: Search + Type filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-48 sm:w-64">
+              <SearchIcon className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by document name..."
+                className="h-8 pl-8 text-xs bg-card border-border"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="shrink-0 text-xs text-muted-foreground">Type</span>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
+                <SelectTrigger className="h-8 w-[120px] text-xs bg-card border-border">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="resume">Resume</SelectItem>
+                  <SelectItem value="cover_letter">Cover Letter</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Right: Build from template + Add Resume */}
+          <DocumentsUploadInline />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-xs text-muted-foreground">Type</span>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
-            <SelectTrigger className="h-10 w-full lg:w-[150px]">
-              <SelectValue placeholder="All types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="resume">Resume</SelectItem>
-              <SelectItem value="cover_letter">Cover Letter</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Active filters & Table Customization actions */}
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -840,7 +886,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {paginatedRows.map((row) => {
                 const { doc } = row;
                 const rowBg = rowColors[doc.id];
                 return (
@@ -1161,6 +1207,21 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               </div>
             </div>
           )}
+
+          {/* Bottom Table Pagination */}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={perPage}
+            onPageChange={setPage}
+            onPerPageChange={(p) => {
+              setPerPage(p);
+              setPage(1);
+            }}
+            perPageOptions={[10, 20, 30, 50]}
+            itemLabel="documents"
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">

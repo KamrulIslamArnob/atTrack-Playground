@@ -24,8 +24,14 @@ function findScrollableTarget(
   let curr: HTMLElement | null = startEl;
 
   while (curr && curr !== document.documentElement) {
-    // Avoid interfering with range inputs or specific isolated widgets
-    if (curr.tagName === "INPUT" && (curr as HTMLInputElement).type === "range") {
+    // Avoid interfering with range inputs, chatbot viewports, or specifically excluded containers
+    if (
+      (curr.tagName === "INPUT" && (curr as HTMLInputElement).type === "range") ||
+      curr.hasAttribute("data-no-smooth-scroll") ||
+      curr.getAttribute("data-slot") === "aui_thread-viewport" ||
+      curr.classList.contains("aui-root") ||
+      curr.classList.contains("aui-thread-root")
+    ) {
       return null;
     }
 

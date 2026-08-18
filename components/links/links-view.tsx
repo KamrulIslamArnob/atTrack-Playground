@@ -499,68 +499,69 @@ export function LinksView({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-16">
       {/* Consistent 2-Layer Page Header */}
       <PageHeader
         title="Social Links"
         subtitle="Organize and quick-launch professional links, career resources, and job portals."
       >
-        <div className="flex items-center gap-2">
-          {/* Search Input */}
-          <div className="relative w-40 sm:w-56">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search links..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-8 text-xs bg-card border-border"
-            />
+        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+          {/* Left Alignment: Search + Import JSON */}
+          <div className="flex items-center gap-2">
+            <div className="relative w-40 sm:w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search links..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 pl-8 text-xs bg-card border-border"
+              />
+            </div>
+
+            {jsonSyncEnabled && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setJsonImportOpen(true)}
+                className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground cursor-pointer"
+              >
+                <FileJson className="size-3.5 text-muted-foreground" />
+                <span className="hidden sm:inline">Import JSON</span>
+              </Button>
+            )}
           </div>
 
-          {/* Manage Categories Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setManageCatOpen(true)}
-            className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
-          >
-            <Settings2 className="size-3.5 text-muted-foreground" />
-            <span className="hidden sm:inline">Categories</span>
-          </Button>
-
-          {/* Manage Tags Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setManageTagsOpen(true)}
-            className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
-          >
-            <Tag className="size-3.5 text-muted-foreground" />
-            <span className="hidden sm:inline">Tags</span>
-          </Button>
-
-          {/* Import JSON Button */}
-          {jsonSyncEnabled && (
+          {/* Right Alignment: Categories + Tags + Add Link */}
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setJsonImportOpen(true)}
-              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground cursor-pointer"
+              onClick={() => setManageCatOpen(true)}
+              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
             >
-              <FileJson className="size-3.5 text-muted-foreground" />
-              <span className="hidden sm:inline">Import JSON</span>
+              <Settings2 className="size-3.5 text-muted-foreground" />
+              <span className="hidden sm:inline">Categories</span>
             </Button>
-          )}
 
-          {/* Add Link Button */}
-          <Button
-            size="sm"
-            onClick={() => handleOpenAdd()}
-            className="h-8 gap-1.5 text-xs font-medium"
-          >
-            <PlusIcon className="size-3.5" />
-            <span>Add Link</span>
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setManageTagsOpen(true)}
+              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
+            >
+              <Tag className="size-3.5 text-muted-foreground" />
+              <span className="hidden sm:inline">Tags</span>
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => handleOpenAdd()}
+              className="h-8 gap-1.5 text-xs font-medium"
+            >
+              <PlusIcon className="size-3.5" />
+              <span>Add Link</span>
+            </Button>
+          </div>
         </div>
       </PageHeader>
 

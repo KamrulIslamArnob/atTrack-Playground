@@ -444,7 +444,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
             type="button"
             onClick={toggleCollapse}
             className={cn(
-              "app-no-drag absolute -right-2.5 top-8 z-50 flex h-7 w-4.5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-white hover:border-primary hover:shadow-md focus:outline-none"
+              "app-no-drag absolute -right-2.5 top-[34px] -translate-y-1/2 z-50 flex h-7 w-4.5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-xs transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-white hover:border-primary hover:shadow-md focus:outline-none"
             )}
             title={isCollapsed ? "Expand sidebar (⌘B)" : "Minimize sidebar (⌘B)"}
           >
@@ -457,7 +457,12 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
         )}
 
         {/* Top Section: User Profile */}
-        <div className={cn("app-drag-region border-b border-border/50", isCollapsed ? "p-2.5 flex justify-center" : "p-4")}>
+        <div
+          className={cn(
+            "app-drag-region border-b border-border h-[68px] flex items-center shrink-0",
+            isCollapsed ? "px-2.5 justify-center" : "px-4"
+          )}
+        >
           {isCollapsed ? (
             <button
               onClick={handleCopyEmail}

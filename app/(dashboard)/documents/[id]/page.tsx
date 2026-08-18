@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { TextDocumentViewer } from "@/components/text-document-viewer";
 import { getDocumentDetails } from "@/lib/actions/documents";
@@ -74,8 +73,6 @@ export default async function DocumentPage(props: PageProps) {
           </div>
         </div>
 
-        <Breadcrumbs />
-
         <TextDocumentViewer doc={doc} job={job} />
       </div>
     );
@@ -125,8 +122,6 @@ export default async function DocumentPage(props: PageProps) {
           </div>
         </div>
       </div>
-
-      <Breadcrumbs />
 
       <PdfViewer url={pdfUrl} fileName={doc.name} />
     </div>

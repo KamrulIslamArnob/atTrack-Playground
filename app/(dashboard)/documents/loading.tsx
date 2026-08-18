@@ -2,19 +2,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DocumentsLoading() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="flex items-center justify-between px-6">
-          <div className="space-y-1.5">
-            <Skeleton className="h-7 w-28" />
-            <Skeleton className="h-4 w-56" />
-          </div>
-          <Skeleton className="h-9 w-24 rounded-2xl" />
+    <div className="flex-1 h-full overflow-y-auto min-h-0 px-6 pb-8 space-y-6">
+      {/* Header Layer 1 */}
+      <div className="-mx-6 border-b border-border h-[68px] flex items-center px-6 shrink-0">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-72 hidden md:block" />
         </div>
       </div>
 
-      <Skeleton className="h-4 w-24" />
+      {/* Header Layer 2 */}
+      <div className="-mx-6 flex items-center justify-between border-b border-border px-6 py-3">
+        <Skeleton className="h-4 w-28" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-36 rounded-xl" />
+          <Skeleton className="h-8 w-28 rounded-xl" />
+        </div>
+      </div>
 
       {/* Table skeleton */}
       <div className="overflow-x-auto rounded-2xl border border-border">

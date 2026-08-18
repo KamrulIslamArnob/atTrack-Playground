@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { useAITaskQueue } from "@/lib/ai-tasks/task-queue-context";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,6 +15,7 @@ import {
   RotateCcw,
   ArrowRight,
   Check,
+  GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskReviewModal } from "./task-review-modal";
@@ -64,17 +66,21 @@ export function TaskQueuePanel({
   if (isMinimized) {
     return (
       <>
-        <div className="fixed bottom-4 left-4 z-50 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <button
-            type="button"
+        <motion.div
+          drag
+          dragMomentum={false}
+          className="fixed bottom-4 left-4 z-50 animate-in fade-in slide-in-from-bottom-3 duration-200 cursor-grab active:cursor-grabbing"
+        >
+          <div
             onClick={toggleMinimize}
             className={cn(
-              "flex items-center gap-2.5 rounded-full border px-3.5 py-2 shadow-xl backdrop-blur-md transition-all hover:scale-102 cursor-pointer",
+              "flex items-center gap-2 rounded-full border px-3 py-2 shadow-xl backdrop-blur-md transition-all hover:scale-102 cursor-pointer select-none",
               pendingConfirmationCount > 0
                 ? "border-success/40 bg-success-surface/90 text-success dark:bg-success/15"
                 : "border-primary/30 bg-card/90 text-foreground"
             )}
           >
+            <GripVertical className="size-3.5 text-muted-foreground/60 -ml-0.5" />
             {activeTasksCount > 0 ? (
               <div className="relative flex size-4 items-center justify-center">
                 <Sparkles className="size-3.5 animate-spin text-primary" />
@@ -95,8 +101,8 @@ export function TaskQueuePanel({
               {tasks.length}
             </span>
             <Maximize2 className="size-3 text-muted-foreground ml-0.5" />
-          </button>
-        </div>
+          </div>
+        </motion.div>
         <TaskReviewModal
           task={reviewingTask}
           open={Boolean(reviewingTask)}
@@ -111,10 +117,15 @@ export function TaskQueuePanel({
   // Full Expanded Panel View
   return (
     <>
-      <div className="fixed bottom-4 left-4 z-50 w-88 max-w-[calc(100vw-2rem)] rounded-2xl border border-border/80 bg-card/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-200">
+      <motion.div
+        drag
+        dragMomentum={false}
+        className="fixed bottom-4 left-4 z-50 w-88 max-w-[calc(100vw-2rem)] rounded-2xl border border-border/80 bg-card/95 p-4 shadow-2xl backdrop-blur-md transition-shadow duration-200"
+      >
         {/* Panel Header */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2.5 cursor-grab active:cursor-grabbing select-none">
+          <div className="flex items-center gap-1.5">
+            <GripVertical className="size-3.5 text-muted-foreground/60 -ml-1" />
             <div className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
               <Sparkles className="size-3.5" />
             </div>
@@ -172,7 +183,7 @@ export function TaskQueuePanel({
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
 
       <TaskReviewModal
         task={reviewingTask}
@@ -210,6 +221,7 @@ function TaskItem({
   const isAwaiting = task.status === "awaiting_confirmation";
   const isApplied = task.status === "applied";
   const isFailed = task.status === "failed";
+  const isAiTool = task.type === "ai_tool_generation";
 
   return (
     <div className="rounded-xl border border-border/70 bg-muted/30 p-3 text-xs transition-colors">
@@ -256,7 +268,7 @@ function TaskItem({
         </div>
       )}
 
-      {/* Awaiting Confirmation (Completed Extraction) */}
+      {/* Awaiting Confirmation (Completed Extraction or Tool Generation) */}
       {isAwaiting && (
         <div className="mt-2 space-y-2">
           <p className="text-[11px] font-medium text-foreground">
@@ -266,29 +278,31 @@ function TaskItem({
           <div className="flex items-center gap-1.5 pt-0.5">
             <Button
               type="button"
-              variant="outline"
+              variant={isAiTool ? "default" : "outline"}
               size="xs"
               onClick={onReview}
-              className="h-6 rounded-lg text-[10px] px-2 cursor-pointer"
+              className="h-6 rounded-lg text-[10px] px-2.5 cursor-pointer font-semibold"
             >
               Review
             </Button>
+            {!isAiTool && (
+              <Button
+                type="button"
+                size="xs"
+                disabled={applying}
+                onClick={handleApplyClick}
+                className="h-6 rounded-lg text-[10px] px-2.5 gap-1 bg-primary text-primary-foreground font-semibold cursor-pointer"
+              >
+                {applying ? <Spinner className="size-2.5" /> : <ArrowRight className="size-2.5" />}
+                {applying ? "Applying..." : "Apply"}
+              </Button>
+            )}
             <Button
               type="button"
-              size="xs"
-              disabled={applying}
-              onClick={handleApplyClick}
-              className="h-6 rounded-lg text-[10px] px-2.5 gap-1 bg-primary text-primary-foreground font-semibold cursor-pointer"
-            >
-              {applying ? <Spinner className="size-2.5" /> : <ArrowRight className="size-2.5" />}
-              {applying ? "Applying..." : "Apply"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
+              variant="outline"
               size="xs"
               onClick={onDismiss}
-              className="h-6 rounded-lg text-[10px] px-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
+              className="h-6 rounded-lg text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
             >
               Dismiss
             </Button>

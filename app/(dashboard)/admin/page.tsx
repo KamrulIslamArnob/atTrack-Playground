@@ -1,5 +1,4 @@
 import { getAdminDashboardStats } from "@/lib/actions/admin";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
   Users, Ban, Briefcase, Calendar } from "lucide-react";
 import { ShieldCheckIcon } from "@/components/ui/shield-check";
@@ -45,8 +44,6 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </div>
-
-      <Breadcrumbs />
 
       {/* Key metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

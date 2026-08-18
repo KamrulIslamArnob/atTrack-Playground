@@ -33,6 +33,7 @@ interface AiToolsStore {
   setContext: (jobId: string, context: string) => void;
   setResult: (jobId: string, result: GeneratedEmail | null) => void;
   setTo: (jobId: string, to: string) => void;
+  setGenerating: (jobId: string, kind: AiToolKind, generating: boolean, error?: string | null) => void;
   resetJob: (jobId: string) => void;
   generate: (params: {
     jobId: string;
@@ -104,6 +105,23 @@ export const useAiToolsStore = create<AiToolsStore>()(
             jobs: {
               ...state.jobs,
               [jobId]: { ...current, to },
+            },
+          };
+        });
+      },
+
+      setGenerating: (jobId: string, kind: AiToolKind, generating: boolean, error: string | null = null) => {
+        set((state) => {
+          const current = state.jobs[jobId] ?? { ...defaultJobState };
+          return {
+            jobs: {
+              ...state.jobs,
+              [jobId]: {
+                ...current,
+                kind,
+                generating,
+                error,
+              },
             },
           };
         });
@@ -216,7 +234,6 @@ export const useAiToolsStore = create<AiToolsStore>()(
                 },
               };
             });
-            toast.success("AI content generated successfully!");
           } else {
             throw new Error("Couldn't parse the generated output");
           }

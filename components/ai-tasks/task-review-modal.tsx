@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { saveAiToolAsDocument } from "@/lib/actions/ai-tools";
+import { aiToolLabel } from "@/lib/types/ai-tools";
 import {
   Sparkles,
   CheckCircle2,
@@ -18,6 +21,8 @@ import {
   UserCheck,
   Check,
   ExternalLink,
+  Copy,
+  Save,
 } from "lucide-react";
 import type { AITask } from "@/lib/types/ai-task";
 
@@ -37,8 +42,142 @@ export function TaskReviewModal({
   onDismiss,
 }: TaskReviewModalProps) {
   const [applying, setApplying] = useState(false);
+  const [savingDoc, setSavingDoc] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  if (!open || !task || !task.result?.extraction) return null;
+  if (!open || !task) return null;
+
+  // Handle AI Tool generation tasks (Cover letter, follow-up, interview prep, etc.)
+  if (task.type === "ai_tool_generation" && task.result?.generatedEmail) {
+    const email = task.result.generatedEmail;
+    const kind = task.result.toolKind ?? task.payload.kind;
+    const jobId = task.payload.jobId;
+    const label = kind ? aiToolLabel(kind) : "AI Generated Content";
+
+    const handleCopy = async () => {
+      const text = [email.subject ? `Subject: ${email.subject}\n\n` : "", email.body]
+        .filter(Boolean)
+        .join("");
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copied content to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleSaveDoc = async () => {
+      if (!jobId || !kind) return;
+      setSavingDoc(true);
+      try {
+        await saveAiToolAsDocument(jobId, kind, email.subject, email.body);
+        toast.success("Saved as document in Documents library");
+        onDismiss(task.id);
+        onClose();
+      } catch {
+        toast.error("Could not save document");
+      } finally {
+        setSavingDoc(false);
+      }
+    };
+
+    const handleDismiss = () => {
+      onDismiss(task.id);
+      onClose();
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+        <div className="w-full max-w-xl rounded-3xl border border-border bg-card p-6 shadow-2xl max-h-[88vh] flex flex-col">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between border-b border-border/60 pb-3 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                <Sparkles className="size-4.5" />
+              </div>
+              <div>
+                <h2 className="font-heading text-base font-semibold">
+                  {label}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {task.title} {task.subtitle ? `· ${task.subtitle}` : ""}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close review dialog"
+              className="flex size-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          {/* Modal Body */}
+          <div className="mt-4 flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
+            {email.subject && (
+              <div className="rounded-2xl border border-border/70 bg-muted/30 p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Subject
+                </span>
+                <p className="text-xs font-semibold text-foreground select-text">
+                  {email.subject}
+                </p>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">
+                Content
+              </span>
+              <div className="whitespace-pre-wrap text-xs text-foreground/90 leading-relaxed font-sans select-text">
+                {email.body}
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="mt-4 border-t border-border/60 pt-3 flex items-center justify-between gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDismiss}
+              className="rounded-xl text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 cursor-pointer"
+            >
+              Dismiss Task
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                className="rounded-xl text-xs gap-1.5 cursor-pointer"
+              >
+                {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+                {copied ? "Copied" : "Copy text"}
+              </Button>
+              {jobId && kind && (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={savingDoc}
+                  onClick={handleSaveDoc}
+                  className="rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
+                >
+                  {savingDoc ? <Spinner className="size-3.5" /> : <Save className="size-3.5" />}
+                  {savingDoc ? "Saving..." : "Save as Document"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!task.result?.extraction) return null;
 
   const { extraction, summary } = task.result;
 
@@ -273,10 +412,10 @@ export function TaskReviewModal({
         <div className="mt-4 border-t border-border/60 pt-3 flex items-center justify-between gap-2 shrink-0">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={handleDismiss}
-            className="rounded-xl text-xs text-muted-foreground hover:text-destructive cursor-pointer"
+            className="rounded-xl text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 cursor-pointer"
           >
             Dismiss Task
           </Button>

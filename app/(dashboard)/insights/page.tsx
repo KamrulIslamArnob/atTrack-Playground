@@ -1,5 +1,5 @@
 import { getInsights } from "@/lib/actions/insights";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { PageHeader } from "@/components/page-header";
 import {
   Briefcase, Calendar, Target, Building2, Globe, BookOpen } from "lucide-react";
 import { FileTextIcon } from "@/components/ui/file-text";
@@ -48,17 +48,11 @@ export default async function InsightsPage() {
   const maxSourceCount = Math.max(...Object.values(insights.sourceBreakdown), 1);
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="px-6">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Insights</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              What your job search looks like from the outside — where things are working, where they&apos;re stuck.
-            </p>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+    <div className="space-y-6 pb-16">
+      <PageHeader
+        title="Insights"
+        subtitle="What your job search looks like from the outside — where things are working, where they're stuck."
+      />
 
       {/* Summary stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

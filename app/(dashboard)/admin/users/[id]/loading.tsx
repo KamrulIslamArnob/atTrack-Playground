@@ -14,9 +14,6 @@ export default function AdminUserDetailLoading() {
         </div>
       </div>
 
-      {/* Breadcrumbs */}
-      <Skeleton className="h-4 w-64" />
-
       {/* Profile card */}
       <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">

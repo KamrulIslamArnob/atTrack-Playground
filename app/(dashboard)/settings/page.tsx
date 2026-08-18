@@ -6,7 +6,7 @@ import { ProfileSettingsCard } from "@/components/settings/profile-settings-card
 import { type Profile } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { AiProvidersSettings } from "@/components/settings/ai-providers-settings";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { PageHeader } from "@/components/page-header";
 import { Mail } from "lucide-react";
 import { UpdateChecker } from "@/components/settings/update-checker";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
@@ -35,17 +35,11 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="px-6">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Your profile, your email settings, your data.
-          </p>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+    <div className="space-y-6 pb-16">
+      <PageHeader
+        title="Settings"
+        subtitle="Your profile, your email settings, your data."
+      />
 
       <UpdateChecker />
 

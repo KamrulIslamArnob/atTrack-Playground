@@ -14,7 +14,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
   ArrowLeft, Briefcase, Activity, Mail, Ban, Globe, Coins } from "lucide-react";
 import { FileTextIcon } from "@/components/ui/file-text";
@@ -142,7 +141,6 @@ export default function AdminUserDetailPage() {
   if (!user) {
     return (
       <div className="space-y-6">
-        <Breadcrumbs labels={{ [userId]: "Unknown" }} />
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">User not found.</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push("/admin/users")}>
@@ -173,8 +171,6 @@ export default function AdminUserDetailPage() {
           </div>
         </div>
       </div>
-
-      <Breadcrumbs labels={{ [userId]: user.full_name }} />
 
       {/* Profile card with gradient */}
       <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-background p-6">

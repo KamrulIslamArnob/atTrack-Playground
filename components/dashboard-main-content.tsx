@@ -13,6 +13,7 @@ export function DashboardMainContent({
     pathname.startsWith("/chatbot") ||
     pathname.startsWith("/ai-builder") ||
     pathname.startsWith("/jobs") ||
+    pathname.startsWith("/documents") ||
     pathname === "/";
 
   if (isFullBleed) {
@@ -24,8 +25,8 @@ export function DashboardMainContent({
   }
 
   return (
-    <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-      <div className="px-6 pt-6 pb-20 min-h-full">
+    <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex flex-col pb-12">
+      <div className="px-6 min-h-full flex-1 flex flex-col">
         {children}
       </div>
     </main>

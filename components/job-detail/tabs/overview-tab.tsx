@@ -42,8 +42,6 @@ interface OverviewTabProps {
   onRefresh: () => void;
   /** Opens the edit slide-over owned by job-detail-content. */
   onEditJob: () => void;
-  /** Opens the AI update dialog owned by job-detail-content. */
-  onAiUpdate?: () => void;
   /** Opens the company edit dialog owned by job-detail-content. */
   onEditCompany?: () => void;
   /** Switches tab in job-detail-content. */
@@ -153,7 +151,7 @@ function EmptyState({
  * everything atTrack thinks about it in the right rail. Editing lives in a
  * slide-over so inspecting a job can never overwrite it.
  */
-export function OverviewTab({ data, onRefresh, onEditJob, onAiUpdate }: OverviewTabProps) {
+export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
   const { job, company, resumeOptions } = data;
   const [isExtracting, setIsExtracting] = useState(false);
   const [isScoringMatch, setIsScoringMatch] = useState(false);
@@ -486,17 +484,6 @@ export function OverviewTab({ data, onRefresh, onEditJob, onAiUpdate }: Overview
               >
                 <MapPin className="size-3.5" />
                 <span>View map</span>
-              </Button>
-            )}
-            {onAiUpdate && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onAiUpdate}
-                className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer shrink-0"
-              >
-                <Sparkles className="size-3.5 text-primary" />
-                <span>Update with AI</span>
               </Button>
             )}
             <Button

@@ -1,6 +1,6 @@
 import { getApplications } from "@/lib/actions/applications";
 import { ApplicationsGrid } from "@/components/applications-grid";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { PageHeader } from "@/components/page-header";
 
 interface PageProps {
   searchParams: Promise<{
@@ -30,19 +30,11 @@ export default async function ApplicationsPage(props: PageProps) {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="flex items-center justify-between px-6">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">Applications</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              Every application you&apos;ve sent. See the status, the date, and what happened.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+    <div className="space-y-6 pb-16">
+      <PageHeader
+        title="Applications"
+        subtitle="Every application you've sent. See the status, the date, and what happened."
+      />
 
       <ApplicationsGrid
         applications={result.applications}

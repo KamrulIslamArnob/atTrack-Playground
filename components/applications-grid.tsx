@@ -6,16 +6,19 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Search, Building2, Mail } from "lucide-react";
 import { XIcon } from "@/components/ui/x";
-import { ChevronLeftIcon } from "@/components/ui/chevron-left";
-import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { MapPinIcon } from "@/components/ui/map-pin";
 import { DollarSignIcon } from "@/components/ui/dollar-sign";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
-import { SparklesIcon } from "@/components/ui/sparkles";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { APPLICATION_STATUS_LABELS } from "@/lib/types/job";
 
 interface Application {
@@ -116,7 +119,6 @@ export function ApplicationsGrid({
   const handleSearch = useCallback(
     (value: string) => {
       setSearch(value);
-      // Debounce: update URL after typing stops
       const timeout = setTimeout(() => {
         updateParams("search", value);
       }, 300);
@@ -141,11 +143,31 @@ export function ApplicationsGrid({
     [updateParams]
   );
 
-  const hasActiveFilters = initialStatus !== "all" || initialSort !== "newest" || initialSearch !== "";
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      updateParams("page", String(newPage));
+    },
+    [updateParams]
+  );
+
+  const handlePerPageChange = useCallback(
+    (newPerPage: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("perPage", String(newPerPage));
+      params.set("page", "1");
+      router.push(`?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  const hasActiveFilters =
+    initialStatus !== "all" ||
+    initialSort !== "applied_newest" ||
+    initialSearch !== "";
 
   return (
     <div className="space-y-4">
-      {/* Search and filter button */}
+      {/* Search and filter controls */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -153,13 +175,16 @@ export function ApplicationsGrid({
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search by role, company, or location..."
-            className="h-10 pl-9 text-sm"
+            className="h-9 pl-9 text-xs"
           />
         </div>
         <div className="flex items-center gap-2">
           <span className="shrink-0 text-xs text-muted-foreground">Status</span>
-          <Select value={statusFilter} onValueChange={(v) => handleStatusChange(v ?? "all")}>
-            <SelectTrigger className="h-10 w-full lg:w-[130px]">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => handleStatusChange(v ?? "all")}
+          >
+            <SelectTrigger className="h-9 w-full lg:w-[130px] text-xs">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -174,8 +199,11 @@ export function ApplicationsGrid({
         </div>
         <div className="flex items-center gap-2">
           <span className="shrink-0 text-xs text-muted-foreground">Sort</span>
-          <Select value={sort} onValueChange={(v) => handleSortChange(v ?? "applied_newest")}>
-            <SelectTrigger className="h-10 w-full lg:w-[160px]">
+          <Select
+            value={sort}
+            onValueChange={(v) => handleSortChange(v ?? "applied_newest")}
+          >
+            <SelectTrigger className="h-9 w-full lg:w-[160px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -188,55 +216,6 @@ export function ApplicationsGrid({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-1 lg:ml-auto">
-          <span className="text-xs text-muted-foreground">Per page</span>
-          <Select
-            value={String(perPage)}
-            onValueChange={(v) => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("perPage", v ?? "30");
-              params.set("page", "1");
-              router.push(`?${params.toString()}`);
-            }}
-          >
-            <SelectTrigger className="h-10 w-[70px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[20, 30, 50, 100].map((opt) => (
-                <SelectItem key={opt} value={String(opt)}>
-                  {opt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("page", String(Math.max(1, page - 1)));
-              router.push(`?${params.toString()}`);
-            }}
-            disabled={page <= 1}
-          >
-            <ChevronLeftIcon className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 w-10 p-0"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("page", String(Math.min(totalPages, page + 1)));
-              router.push(`?${params.toString()}`);
-            }}
-            disabled={page >= totalPages}
-          >
-            <ChevronRightIcon className="size-4" />
-          </Button>
-        </div>
       </div>
 
       {/* Active filters display */}
@@ -245,7 +224,13 @@ export function ApplicationsGrid({
           {initialSearch && (
             <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               &quot;{initialSearch}&quot;
-              <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
+              <button
+                onClick={() => {
+                  setSearch("");
+                  updateParams("search", "");
+                }}
+                className="ml-0.5"
+              >
                 <XIcon className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
@@ -253,15 +238,13 @@ export function ApplicationsGrid({
           {initialStatus !== "all" && (
             <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 capitalize dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
               {statusLabels[initialStatus] ?? initialStatus}
-              <button onClick={() => handleStatusChange("all")} className="ml-0.5">
-                <XIcon className="size-3 text-lime-900 dark:text-lime-300" />
-              </button>
-            </span>
-          )}
-          {initialSort !== "applied_newest" && (
-            <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
-              {initialSort === "applied_oldest" ? "Oldest applied" : initialSort === "deadline_earliest" ? "Deadline ↑" : initialSort === "deadline_latest" ? "Deadline ↓" : initialSort === "company_az" ? "Company A→Z" : initialSort === "company_za" ? "Company Z→A" : initialSort}
-              <button onClick={() => handleSortChange("applied_newest")} className="ml-0.5">
+              <button
+                onClick={() => {
+                  setStatusFilter("all");
+                  updateParams("status", "all");
+                }}
+                className="ml-0.5"
+              >
                 <XIcon className="size-3 text-lime-900 dark:text-lime-300" />
               </button>
             </span>
@@ -269,7 +252,9 @@ export function ApplicationsGrid({
           <button
             onClick={() => {
               setSearch("");
-              router.push("/applications");
+              setStatusFilter("all");
+              setSort("applied_newest");
+              router.push("?");
             }}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
@@ -278,113 +263,111 @@ export function ApplicationsGrid({
         </div>
       )}
 
-      {/* Results count */}
-      <div className="text-xs text-muted-foreground">
-        {total} application{total !== 1 ? "s" : ""} found
-      </div>
-
-      {/* Cards grid */}
+      {/* Applications Grid list */}
       {applications.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {applications.map((app) => (
-            <Link
-              key={app.id}
-              href={`/jobs/${app.job?.id}`}
-              className="group rounded-2xl border border-border bg-card p-5 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold leading-tight group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors sm:text-base">
-                    {app.job?.title ?? "Untitled"}
-                  </h3>
-                  <p className="mt-3 text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Building2 className="size-3.5 shrink-0" />
-                    <span>{app.job?.company?.name ?? "Unknown company"}</span>
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  {app.job?.match_score != null && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <span
-                          className={`rounded-2xl border px-2.5 py-1 text-[10px] font-semibold cursor-help transition-all ${
-                            app.job.match_score >= 80
-                              ? "bg-lime-400/25 border-lime-500/50 text-lime-950 dark:bg-lime-500/20 dark:border-lime-400/40 dark:text-lime-200"
-                              : app.job.match_score >= 50
-                                ? "bg-amber-400/25 border-amber-500/50 text-amber-950 dark:bg-amber-500/20 dark:border-amber-400/40 dark:text-amber-200"
-                                : "bg-rose-400/25 border-rose-500/50 text-rose-950 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-200"
-                          }`}
-                        >
-                          {app.job.match_score}% match
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs p-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
-                            <SparklesIcon className="size-3.5 text-amber-500" />
-                            <span>AI Match Analysis ({app.job.match_score}%)</span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">
-                            {app.job.match_reasoning || "Match score computed based on required skills & experience fit."}
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  <span className={`shrink-0 rounded-2xl px-2.5 py-1 text-[10px] font-medium ${statusColors[app.status ?? "draft"] ?? "bg-muted text-muted-foreground"}`}>
-                    {statusLabels[app.status ?? "draft"] ?? "Draft"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-1 space-y-1.5">
-                {app.job?.location && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <MapPinIcon className="size-3.5 shrink-0" />
-                    <span>{app.job.location}</span>
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {applications.map((app) => (
+              <Link
+                key={app.id}
+                href={app.job ? `/jobs` : "#"}
+                className="group block rounded-2xl border border-border bg-card p-4 transition-all hover:border-foreground/20 hover:shadow-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-heading text-base font-semibold leading-tight tracking-tight group-hover:text-primary transition-colors truncate">
+                      {app.job?.title || "Untitled Job"}
+                    </h3>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Building2 className="size-3.5 shrink-0" />
+                      <span className="truncate">
+                        {app.job?.company?.name || "Unknown Company"}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <DollarSignIcon className="size-3.5 shrink-0" />
-                  <span className={app.job?.salary_range ? "" : "text-muted-foreground/50"}>
-                    {app.job?.salary_range || "Unspecified"}
+                  <span
+                    className={`shrink-0 rounded-2xl px-2 py-0.5 text-xs font-medium ${
+                      statusColors[app.status] || "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {statusLabels[app.status] || app.status}
                   </span>
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
-                  {app.job?.employment_type && (
-                    <span className="rounded-2xl bg-muted px-2 py-0.5">
-                      {app.job.employment_type}
-                    </span>
-                  )}
-                  {app.job?.work_location && (
-                    <span className="rounded-2xl bg-muted px-2 py-0.5">
-                      {app.job.work_location}
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              <div className="mt-3.5 flex items-center justify-between text-xs text-muted-foreground/60">
-                <span>
-                  {app.applied_at
-                    ? `Applied ${new Date(app.applied_at).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
-                    : app.job?.deadline
+                <div className="mt-3 space-y-1.5">
+                  {app.job?.location && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPinIcon className="size-3.5 shrink-0" />
+                      <span>{app.job.location}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <DollarSignIcon className="size-3.5 shrink-0" />
+                    <span
+                      className={
+                        app.job?.salary_range ? "" : "text-muted-foreground/50"
+                      }
+                    >
+                      {app.job?.salary_range || "Unspecified"}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground/70">
+                    {app.job?.employment_type && (
+                      <span className="rounded-2xl bg-muted px-2 py-0.5">
+                        {app.job.employment_type}
+                      </span>
+                    )}
+                    {app.job?.work_location && (
+                      <span className="rounded-2xl bg-muted px-2 py-0.5">
+                        {app.job.work_location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3.5 flex items-center justify-between text-xs text-muted-foreground/60">
+                  <span>
+                    {app.applied_at
+                      ? `Applied ${new Date(app.applied_at).toLocaleDateString(
+                          "en-US",
+                          { month: "long", day: "2-digit", year: "numeric" }
+                        )}`
+                      : app.job?.deadline
                       ? app.job.deadline.trim().toLowerCase() === "asap"
                         ? "Apply ASAP"
                         : app.job.deadline.trim().toLowerCase() === "unknown"
-                          ? "Unknown deadline"
-                          : `Deadline ${new Date(app.job.deadline).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}`
+                        ? "Unknown deadline"
+                        : `Deadline ${new Date(
+                            app.job.deadline
+                          ).toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "2-digit",
+                            year: "numeric",
+                          })}`
                       : "No deadline"}
-                </span>
-                {app.job?.application_url && (
-                  <ExternalLinkIcon className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
-                )}
-                {!app.job?.application_url && app.job?.application_email && (
-                  <Mail className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
-                )}
-              </div>
-            </Link>
-          ))}
+                  </span>
+                  {app.job?.application_url && (
+                    <ExternalLinkIcon className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
+                  )}
+                  {!app.job?.application_url && app.job?.application_email && (
+                    <Mail className="size-3.5 shrink-0 text-muted-foreground/40 group-hover:text-green-800 dark:group-hover:text-lime-400 transition-colors" />
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Bottom Table Pagination */}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={perPage}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+            perPageOptions={[20, 30, 50, 100]}
+            itemLabel="applications"
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">

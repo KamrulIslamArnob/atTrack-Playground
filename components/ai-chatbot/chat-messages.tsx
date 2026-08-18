@@ -104,6 +104,7 @@ export function ChatMessages({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        data-slot="aui_thread-viewport"
         className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted/20 scrollbar-track-transparent px-3 py-6 sm:px-6 md:px-8 md:py-9"
       >
         {/* Central Chat Canvas: Max-width 768px, centered, 16px spacing between messages */}

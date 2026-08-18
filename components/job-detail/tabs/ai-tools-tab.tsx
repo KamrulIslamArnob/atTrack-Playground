@@ -15,6 +15,7 @@ import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
 import { useAiUnlocked } from "@/lib/hooks/use-ai-unlocked";
 import { useAiToolsStore } from "@/lib/stores/ai-tools-store";
+import { useAITaskQueue } from "@/lib/ai-tasks/task-queue-context";
 import { NoApiKeyOverlay } from "@/components/ai-chatbot/no-api-key-overlay";
 import { Mail, Save } from "lucide-react";
 import { SparklesIcon } from "@/components/ui/sparkles";
@@ -30,6 +31,7 @@ const STAGES = ["Application", "Interview", "Offer"] as const;
 export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   const router = useRouter();
   const { unlocked, checked } = useAiUnlocked();
+  const { enqueueAiToolTask } = useAITaskQueue();
   const [savePending, setSavePending] = useState(false);
   const [sendPending, setSendPending] = useState(false);
 
@@ -53,8 +55,6 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   const setContext = (context: string) => useAiToolsStore.getState().setContext(jobId, context);
   const setResult = (result: typeof jobState.result) => useAiToolsStore.getState().setResult(jobId, result);
   const setTo = (to: string) => useAiToolsStore.getState().setTo(jobId, to);
-  const resetJob = () => useAiToolsStore.getState().resetJob(jobId);
-  const generate = useAiToolsStore((state) => state.generate);
 
   const grouped = useMemo(
     () => STAGES.map((stage) => ({ stage, kinds: AI_TOOL_KINDS.filter((k) => k.stage === stage) })),
@@ -62,7 +62,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   );
 
   const handleGenerate = (selected: AiToolKind) => {
-    generate({
+    enqueueAiToolTask({
       jobId,
       kind: selected,
       jobTitle: data.job.title,
@@ -126,15 +126,28 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   }
 
   if (jobState.kind) {
+    const isThisGenerating = jobState.generating;
+
     return (
       <div className="space-y-4">
-        <button
-          type="button"
-          onClick={resetJob}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        >
-          ← Back to AI Tools
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setKind(null)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            ← Back to AI Tools
+          </button>
+          {jobState.result && (
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+            >
+              Clear draft
+            </button>
+          )}
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="ai-tool-context">Extra context (optional)</Label>
@@ -149,16 +162,16 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
 
         <Button
           onClick={() => handleGenerate(jobState.kind!)}
-          disabled={jobState.generating}
+          disabled={isThisGenerating}
           size="sm"
           className="cursor-pointer"
         >
-          {jobState.generating && <Spinner className="mr-2" />}
+          {isThisGenerating && <Spinner className="mr-2" />}
           <SparklesIcon className="mr-1 size-3.5" />
           {jobState.result ? "Regenerate" : "Generate"}
         </Button>
 
-        {jobState.generating && !jobState.result && (
+        {isThisGenerating && !jobState.result && (
           <div className="flex items-center gap-2.5 rounded-2xl border border-border/80 bg-muted/30 p-4 text-xs text-muted-foreground animate-pulse">
             <Spinner className="size-4 text-primary" />
             <span>Generating {jobState.kind.replace(/_/g, " ")} with AI...</span>
@@ -201,7 +214,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleSave}
-                disabled={savePending || jobState.generating}
+                disabled={savePending || isThisGenerating}
                 className="cursor-pointer"
               >
                 {savePending ? <Spinner className="mr-2" /> : <Save className="mr-1 size-3.5" />}
@@ -210,7 +223,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
               <Button
                 size="sm"
                 onClick={handleSend}
-                disabled={sendPending || !jobState.to.trim() || jobState.generating}
+                disabled={sendPending || !jobState.to.trim() || isThisGenerating}
                 className="cursor-pointer"
               >
                 {sendPending ? <Spinner className="mr-2" /> : <Mail className="mr-1 size-3.5" />}
@@ -229,18 +242,41 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
         <div key={stage}>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stage}</h3>
           <div className="grid grid-cols-2 gap-2">
-            {kinds.map((k) => (
-              <button
-                key={k.kind}
-                onClick={() => setKind(k.kind)}
-                className={cn(
-                  "flex items-center gap-2 rounded-2xl border border-border p-3 text-left text-sm transition-colors hover:bg-muted cursor-pointer"
-                )}
-              >
-                <SparklesIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                {k.label}
-              </button>
-            ))}
+            {kinds.map((k) => {
+              const isSelectedKind = rawJobState?.kind === k.kind;
+              const hasDraft = isSelectedKind && Boolean(rawJobState?.result);
+              const isGeneratingThis = isSelectedKind && Boolean(rawJobState?.generating);
+
+              return (
+                <button
+                  key={k.kind}
+                  onClick={() => setKind(k.kind)}
+                  className={cn(
+                    "flex items-center justify-between rounded-2xl border border-border p-3 text-left text-sm transition-colors hover:bg-muted cursor-pointer",
+                    (hasDraft || isGeneratingThis) && "border-primary/40 bg-primary/5"
+                  )}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <SparklesIcon
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        isGeneratingThis ? "text-primary animate-spin" : "text-muted-foreground"
+                      )}
+                    />
+                    <span className="truncate">{k.label}</span>
+                  </div>
+                  {isGeneratingThis ? (
+                    <span className="shrink-0 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                      Generating...
+                    </span>
+                  ) : hasDraft ? (
+                    <span className="shrink-0 text-[10px] font-medium text-success bg-success/10 px-1.5 py-0.5 rounded-full">
+                      Draft ready
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}

@@ -466,10 +466,6 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 <MoreHorizontal className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setAiUpdateOpen(true)} className="cursor-pointer">
-                  <Sparkles className="mr-2 size-3.5 text-primary" />
-                  Update with AI
-                </DropdownMenuItem>
                 {company && (
                   <DropdownMenuItem onClick={() => setCompanyOpen(true)}>
                     <Building2 className="mr-2 size-3.5" />
@@ -526,7 +522,6 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 data={data}
                 onRefresh={onRefresh}
                 onEditJob={() => setEditOpen(true)}
-                onAiUpdate={() => setAiUpdateOpen(true)}
               />
             </TabErrorBoundary>
           </TabsContent>

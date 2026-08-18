@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
   Search, Loader2, Coins, CheckCircle2, XCircle } from "lucide-react";
 import { XIcon } from "@/components/ui/x";
@@ -17,6 +16,8 @@ import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { CpuIcon } from "@/components/ui/cpu";
 import { ZapIcon } from "@/components/ui/zap";
 import { ClockIcon } from "@/components/ui/clock";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PageHeader } from "@/components/page-header";
 import { formatDistanceToNow } from "date-fns";
 import { formatAiUsageMessage, AI_ACTION_COLORS, AI_ACTION_LABELS } from "@/lib/ai-usage-messages";
 
@@ -91,23 +92,17 @@ export default function AdminAiUsagePage() {
   const errorCount = logs.length - successCount;
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="flex items-center justify-between px-6">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">AI Usage</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              Every AI request across the platform, with token counts and cost.
-            </p>
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={loadLogs}>
-            <Loader2 className={`size-4 ${loading ? "animate-spin" : ""}`} />
+    <div className="space-y-6 pb-16">
+      <PageHeader
+        title="AI Usage"
+        subtitle="Every AI request across the platform, with token counts and cost."
+        actions={
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={loadLogs}>
+            <Loader2 className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+        }
+      />
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -356,6 +351,21 @@ export default function AdminAiUsagePage() {
               })}
             </tbody>
           </table>
+
+          {/* Bottom Table Pagination */}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={perPage}
+            onPageChange={setPage}
+            onPerPageChange={(p) => {
+              setPerPage(p);
+              setPage(1);
+            }}
+            perPageOptions={[20, 30, 50, 100]}
+            itemLabel="requests"
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">

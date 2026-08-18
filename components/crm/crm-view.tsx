@@ -57,6 +57,7 @@ import { CompanyLogo } from "@/components/company-logo";
 import { ContactCard } from "@/components/crm/contact-card";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CrmImportDialog } from "@/components/crm/crm-import-dialog";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { JOB_STATUS_LABELS, JOB_TIERS, type JobStatus, type JobTier } from "@/lib/types/job";
@@ -121,6 +122,9 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
     }
   }, [initialCompanies, router]);
 
+  const [companyPage, setCompanyPage] = useState(1);
+  const [companyPerPage, setCompanyPerPage] = useState(18);
+
   const filteredCompanies = useMemo(() => {
     const q = companySearch.trim().toLowerCase();
     return companies.filter((c) => {
@@ -136,6 +140,18 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       );
     });
   }, [companies, companySearch, companyTierFilter]);
+
+  // Reset page when company filters change
+  useEffect(() => {
+    setCompanyPage(1);
+  }, [companySearch, companyTierFilter]);
+
+  const totalCompanies = filteredCompanies.length;
+  const totalCompanyPages = Math.max(1, Math.ceil(totalCompanies / companyPerPage));
+  const paginatedCompanies = useMemo(() => {
+    const start = (companyPage - 1) * companyPerPage;
+    return filteredCompanies.slice(start, start + companyPerPage);
+  }, [filteredCompanies, companyPage, companyPerPage]);
 
   const handleCompanyTierChange = (companyId: string, tier: JobTier | null) => {
     setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier } : c)));
@@ -247,7 +263,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
   return (
     <>
       <Tabs value={view} onValueChange={(v) => setView((v as "contacts" | "companies") ?? "contacts")}>
-        <div className="flex items-center justify-between gap-2 border-b border-border pb-1">
+        <div className="-mx-6 flex items-center justify-between gap-2 border-b border-border px-6">
           <TabsList variant="line" className="h-auto shrink-0 gap-1 p-0">
             <TabsTrigger
               value="contacts"
@@ -262,58 +278,6 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
               Companies
             </TabsTrigger>
           </TabsList>
-
-          {view === "companies" &&
-            (addingCompany ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  autoFocus
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreateCompany();
-                    if (e.key === "Escape") {
-                      setCompanyName("");
-                      setAddingCompany(false);
-                    }
-                  }}
-                  placeholder="Company name"
-                  className="h-9 w-56"
-                />
-                <Button size="sm" onClick={handleCreateCompany} disabled={pending}>
-                  {pending && <Spinner className="mr-1 size-4" />}
-                  Add
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setCompanyName("");
-                    setAddingCompany(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                {jsonSyncEnabled && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCrmImportOpen(true)}
-                    className="gap-1.5 cursor-pointer"
-                  >
-                    <FileJson className="size-3.5 text-muted-foreground" />
-                    Import JSON
-                  </Button>
-                )}
-                <Button size="sm" onClick={() => setAddingCompany(true)} className="cursor-pointer">
-                  <PlusIcon className="mr-1 size-4" />
-                  Add company
-                </Button>
-              </div>
-            ))}
         </div>
 
         <TabsContent value="contacts" className="mt-4">
@@ -330,36 +294,85 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
         </TabsContent>
 
         <TabsContent value="companies" className="mt-4 space-y-4">
-          {companies.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-48 max-w-lg">
-                <div className="relative flex-1 min-w-44">
-                  <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={companySearch}
-                    onChange={(e) => setCompanySearch(e.target.value)}
-                    placeholder="Search companies, locations..."
-                    className="h-9 pl-8 text-xs"
-                  />
-                </div>
-                <Select value={companyTierFilter} onValueChange={(v) => setCompanyTierFilter(v ?? "all")}>
-                  <SelectTrigger className="h-9 w-32 text-xs">
-                    <SelectValue placeholder="All tiers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tiers</SelectItem>
-                    <SelectItem value="1">Tier 1 (Top)</SelectItem>
-                    <SelectItem value="2">Tier 2 (Second)</SelectItem>
-                    <SelectItem value="3">Tier 3 (Third)</SelectItem>
-                    <SelectItem value="none">No tier</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-48 max-w-lg">
+              <div className="relative flex-1 min-w-44">
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  placeholder="Search companies, locations..."
+                  className="h-9 pl-8 text-xs"
+                />
               </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {filteredCompanies.length} {filteredCompanies.length === 1 ? "company" : "companies"}
-              </span>
+              <Select value={companyTierFilter} onValueChange={(v) => setCompanyTierFilter(v ?? "all")}>
+                <SelectTrigger className="h-9 w-32 text-xs">
+                  <SelectValue placeholder="All tiers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tiers</SelectItem>
+                  <SelectItem value="1">Tier 1 (Top)</SelectItem>
+                  <SelectItem value="2">Tier 2 (Second)</SelectItem>
+                  <SelectItem value="3">Tier 3 (Third)</SelectItem>
+                  <SelectItem value="none">No tier</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+
+            {/* Right: Import JSON & Add company controls */}
+            <div className="flex items-center gap-2">
+              {addingCompany ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreateCompany();
+                      if (e.key === "Escape") {
+                        setCompanyName("");
+                        setAddingCompany(false);
+                      }
+                    }}
+                    placeholder="Company name"
+                    className="h-9 w-56"
+                  />
+                  <Button size="sm" onClick={handleCreateCompany} disabled={pending}>
+                    {pending && <Spinner className="mr-1 size-4" />}
+                    Add
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCompanyName("");
+                      setAddingCompany(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {jsonSyncEnabled && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCrmImportOpen(true)}
+                      className="gap-1.5 cursor-pointer"
+                    >
+                      <FileJson className="size-3.5 text-muted-foreground" />
+                      Import JSON
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => setAddingCompany(true)} className="cursor-pointer">
+                    <PlusIcon className="mr-1 size-4" />
+                    Add company
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
 
           {companies.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">
@@ -373,16 +386,33 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
               <p className="text-sm text-muted-foreground">No companies match your search or tier filter.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
-              {filteredCompanies.map((company) => (
-                <CompanyRow
-                  key={company.id}
-                  company={company}
-                  onEdit={(c) => setEditingCompany(c)}
-                  onDelete={handleDeleteCompany}
-                  onTierChange={handleCompanyTierChange}
-                />
-              ))}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+                {paginatedCompanies.map((company) => (
+                  <CompanyRow
+                    key={company.id}
+                    company={company}
+                    onEdit={(c) => setEditingCompany(c)}
+                    onDelete={handleDeleteCompany}
+                    onTierChange={handleCompanyTierChange}
+                  />
+                ))}
+              </div>
+
+              {/* Companies Table Pagination */}
+              <TablePagination
+                page={companyPage}
+                totalPages={totalCompanyPages}
+                total={totalCompanies}
+                perPage={companyPerPage}
+                onPageChange={setCompanyPage}
+                onPerPageChange={(p) => {
+                  setCompanyPerPage(p);
+                  setCompanyPage(1);
+                }}
+                perPageOptions={[12, 18, 30, 60]}
+                itemLabel="companies"
+              />
             </div>
           )}
         </TabsContent>
@@ -463,6 +493,9 @@ function ContactsView({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [contacts]);
 
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return contacts.filter((c) => {
@@ -479,6 +512,18 @@ function ContactsView({
       );
     });
   }, [contacts, search, companyFilter, companyMap]);
+
+  // Reset page when search or company filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, companyFilter]);
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return filtered.slice(start, start + perPage);
+  }, [filtered, page, perPage]);
 
   const handleSaved = (saved: Contact, createdCompany?: CrmCompany) => {
     if (createdCompany) {
@@ -563,18 +608,35 @@ function ContactsView({
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-          {filtered.map((contact, index) => (
-            <ContactCard
-              key={contact.id}
-              contact={contact}
-              index={index}
-              onEdit={(c) => {
-                setEditingContact(c);
-                setDialogOpen(true);
-              }}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {paginated.map((contact, index) => (
+              <ContactCard
+                key={contact.id}
+                contact={contact}
+                index={(page - 1) * perPage + index}
+                onEdit={(c) => {
+                  setEditingContact(c);
+                  setDialogOpen(true);
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Contacts Table Pagination */}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={perPage}
+            onPageChange={setPage}
+            onPerPageChange={(p) => {
+              setPerPage(p);
+              setPage(1);
+            }}
+            perPageOptions={[10, 20, 40, 80]}
+            itemLabel="contacts"
+          />
         </div>
       )}
 

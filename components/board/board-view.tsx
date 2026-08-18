@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Search } from "lucide-react";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
 import { LayersIcon } from "@/components/ui/layers";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
@@ -98,6 +98,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   const [newListName, setNewListName] = useState("");
   const [addJobListId, setAddJobListId] = useState<string | null>(null);
   const [openJobId, setOpenJobId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recent");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
@@ -208,10 +209,22 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
     }
   }, [optimisticCards, sort]);
 
-  // O(N) single-pass bucket partitioning for O(1) column card lookups
+  const filteredAndSortedCards = useMemo(() => {
+    let list = sortedCards;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          (c.company_name && c.company_name.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [sortedCards, search]);
+
   const cardsByListId = useMemo(() => {
     const map = new Map<string, BoardCard[]>();
-    for (const card of sortedCards) {
+    for (const card of filteredAndSortedCards) {
       if (!card.list_id) continue;
       const list = map.get(card.list_id);
       if (list) {
@@ -221,7 +234,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
       }
     }
     return map;
-  }, [sortedCards]);
+  }, [filteredAndSortedCards]);
 
   const handleMove = (jobId: string, listId: string, targetIndex?: number) => {
     const card = optimisticCards.find((c) => c.id === jobId);
@@ -282,99 +295,101 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
     });
   };
 
-  const handleRenameList = (listId: string, name: string) => {
-    startTransition(async () => {
-      try {
-        await renameList(listId, name);
-        router.refresh();
-      } catch {
-        toast.error("Couldn't rename that list");
-      }
-    });
+  const handleRenameList = async (listId: string, name: string) => {
+    try {
+      await renameList(listId, name);
+      router.refresh();
+    } catch {
+      toast.error("Couldn't rename that list");
+    }
   };
 
   const handleDeleteList = async (listId: string) => {
-    const list = lists.find((l) => l.id === listId);
-    const count = optimisticCards.filter((c) => c.list_id === listId).length;
-    const message = count
-      ? `"${list?.name}" will be deleted and its ${count} job${count === 1 ? "" : "s"} will move to Wishlist.`
-      : `"${list?.name}" will be deleted. It has no jobs in it.`;
-
     const confirmed = await confirm({
-      title: "Delete this list?",
-      description: message,
-      confirmText: "Delete list",
+      title: "Delete List",
+      description: "Are you sure you want to delete this list and all its cards? This cannot be undone.",
+      confirmText: "Delete",
       variant: "destructive",
     });
     if (!confirmed) return;
-
-    startTransition(async () => {
-      try {
-        await deleteList(listId);
-        router.refresh();
-        toast.success("List deleted");
-      } catch {
-        toast.error("Couldn't delete that list");
-      }
-    });
+    try {
+      await deleteList(listId);
+      router.refresh();
+    } catch {
+      toast.error("Couldn't delete that list");
+    }
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-full w-full px-6 pt-4 pb-0">
+    <div className="flex flex-col flex-1 min-h-full w-full px-6 pb-0">
       <JobViewHeader currentView="board" onViewChange={onViewChange}>
-        <PipelineViewportNavigator
-          scrollRef={scrollRef}
-          stages={optimisticLists.map((l) => ({
-            id: l.id,
-            name: l.name,
-            count: cardsByListId.get(l.id)?.length ?? 0,
-            color: l.color,
-          }))}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-2">
+            <div className="relative w-40 sm:w-56">
+              <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search board jobs..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 pl-8 text-xs bg-card border-border"
+              />
+            </div>
+            <ImportChoice lists={optimisticLists} />
+          </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="group hidden h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-primary hover:text-white hover:border-primary data-[state=open]:bg-primary data-[state=open]:text-white data-[state=open]:border-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer sm:inline-flex">
-            <LayersIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
-            <span className="text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">Group:</span>
-            <span className="font-semibold text-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">{GROUP_LABELS[groupBy]}</span>
-            <ChevronDownIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuRadioGroup
-              value={groupBy}
-              onValueChange={(v) => setGroupBy(v as GroupOption)}
-            >
-              {Object.entries(GROUP_LABELS).map(([value, label]) => (
-                <DropdownMenuRadioItem key={value} value={value}>
-                  {label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <PipelineViewportNavigator
+              scrollRef={scrollRef}
+              stages={optimisticLists.map((l) => ({
+                id: l.id,
+                name: l.name,
+                count: cardsByListId.get(l.id)?.length ?? 0,
+                color: l.color,
+              }))}
+            />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-primary hover:text-white hover:border-primary data-[state=open]:bg-primary data-[state=open]:text-white data-[state=open]:border-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer">
-            <ArrowUpDown className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
-            <span className="text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">Sort:</span>
-            <span className="font-semibold text-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">{SORT_LABELS[sort]}</span>
-            <ChevronDownIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortOption)}>
-              {Object.entries(SORT_LABELS).map(([value, label]) => (
-                <DropdownMenuRadioItem key={value} value={value}>
-                  {label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="group hidden h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-primary hover:text-white hover:border-primary data-[state=open]:bg-primary data-[state=open]:text-white data-[state=open]:border-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer sm:inline-flex">
+                <LayersIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
+                <span className="text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">Group:</span>
+                <span className="font-semibold text-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">{GROUP_LABELS[groupBy]}</span>
+                <ChevronDownIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup
+                  value={groupBy}
+                  onValueChange={(v) => setGroupBy(v as GroupOption)}
+                >
+                  {Object.entries(GROUP_LABELS).map(([value, label]) => (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      {label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        <ImportChoice lists={optimisticLists} />
+            <DropdownMenu>
+              <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-primary hover:text-white hover:border-primary data-[state=open]:bg-primary data-[state=open]:text-white data-[state=open]:border-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer">
+                <ArrowUpDown className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
+                <span className="text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">Sort:</span>
+                <span className="font-semibold text-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">{SORT_LABELS[sort]}</span>
+                <ChevronDownIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortOption)}>
+                  {Object.entries(SORT_LABELS).map(([value, label]) => (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      {label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </JobViewHeader>
 
-      {/* Board Scroll Container with Overflow Navigation Affordances */}
       <BoardOverflowNavigator scrollRef={scrollRef}>
         <div
           ref={scrollRef}

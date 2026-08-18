@@ -24,7 +24,7 @@ export function JobViewHeader({
   return (
     <PageHeader
       title={
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-nowrap">
           {/* Segmented Toggle Switch */}
           <div
             role="tablist"
@@ -105,7 +105,7 @@ export function JobViewHeader({
             />
           )}
 
-          <p className="text-sm font-normal text-muted-foreground">
+          <p className="hidden xl:block text-sm font-normal text-muted-foreground truncate max-w-xl">
             {isBoard
               ? "Every job you're tracking, laid out in columns. Drag a card to move it to the next stage."
               : "Every job you've saved, in one list. Search, filter, and open any of them."}

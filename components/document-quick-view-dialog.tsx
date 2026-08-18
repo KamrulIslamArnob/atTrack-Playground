@@ -98,6 +98,17 @@ export function DocumentQuickViewDialog({
     Boolean(doc?.file_path && doc.file_path.startsWith("generated/")) ||
     doc?.generated_kind != null;
 
+  const kind = doc?.generated_kind ?? (doc?.type === "cover_letter" ? "cover_letter" : "other");
+  const isCoverLetter = kind === "cover_letter" || doc?.type === "cover_letter";
+  const isEmailType =
+    kind === "follow_up_application" ||
+    kind === "follow_up_interview" ||
+    kind === "reschedule_interview" ||
+    kind === "offer_negotiation" ||
+    kind === "offer_acceptance" ||
+    kind === "offer_decline" ||
+    kind === "offer_time_extension";
+
   // Parse subject line if text document is formatted as "Subject: ... \n\n ..."
   let subject = "";
   let body = doc?.content ?? "";
@@ -329,58 +340,116 @@ export function DocumentQuickViewDialog({
               </Button>
             </div>
           ) : isText ? (
-            /* Text Document / Cover Letter */
+            /* Purpose-driven Text Document Rendering */
             <div className="space-y-4">
-              {subject && (
-                <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1">
-                  <div className="flex items-center justify-between">
+              {isCoverLetter ? (
+                /* Formal Cover Letter Paper View */
+                <div className="rounded-2xl border border-border/80 bg-background p-5 sm:p-8 shadow-xs space-y-5 text-foreground font-sans select-text">
+                  <div className="flex items-start justify-between border-b border-border/60 pb-4">
+                    <div>
+                      <h4 className="font-heading text-base font-bold text-foreground">Applicant / Candidate</h4>
+                      <p className="text-xs text-muted-foreground">Application Letter</p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      <span>{new Date(doc.created_at || Date.now()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
+                    </div>
+                  </div>
+
+                  {job && (
+                    <div className="text-xs text-muted-foreground space-y-0.5 bg-muted/20 p-3 rounded-xl border border-border/50">
+                      <p className="font-semibold text-foreground">{job.company_name || "Hiring Organization"}</p>
+                      <p>Hiring Team · Position: {job.title}</p>
+                    </div>
+                  )}
+
+                  {subject && (
+                    <div className="text-xs font-bold text-foreground border-l-2 border-primary pl-2.5 py-0.5">
+                      RE: {subject}
+                    </div>
+                  )}
+
+                  <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-foreground/90 font-normal space-y-3">
+                    {body || <span className="text-muted-foreground italic">No content.</span>}
+                  </div>
+
+                  <div className="border-t border-border/50 pt-4 mt-6 space-y-1">
+                    <p className="text-xs text-foreground">Sincerely,</p>
+                    <p className="text-xs font-semibold text-foreground pt-2">Applicant</p>
+                  </div>
+                </div>
+              ) : isEmailType ? (
+                /* Modern Email Client View */
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 space-y-2">
+                    {subject && (
+                      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Subject
+                          </span>
+                          <span className="font-semibold text-xs text-foreground truncate select-text">
+                            {subject}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCopySubject}
+                          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0 ml-2 cursor-pointer transition-colors"
+                        >
+                          {copiedSubject ? <CheckIcon className="size-3 text-emerald-500" /> : <CopyIcon className="size-3" />}
+                          <span>{copiedSubject ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>From: You (Applicant)</span>
+                      <span>To: {job?.company_name ? `${job.company_name} Team` : "Recruiter"}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background p-4 sm:p-5 space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                        <Mail className="size-3 text-cyan-500" />
+                        Message Body
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyBody}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        {copiedBody ? <CheckIcon className="size-3 text-emerald-500" /> : <CopyIcon className="size-3" />}
+                        <span>{copiedBody ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                    <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-foreground/90 select-text font-sans">
+                      {body}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* General Document / Note View */
+                <div className="rounded-xl border border-border bg-background p-4 sm:p-5 space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-border/50 pb-2">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                      <Mail className="size-3 text-cyan-500" />
-                      Subject Line
+                      <FileText className="size-3 text-indigo-500" />
+                      Document Content
                     </span>
                     <button
                       type="button"
-                      onClick={handleCopySubject}
-                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                      onClick={handleCopyBody}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      {copiedSubject ? (
-                        <CheckIcon className="size-3 text-emerald-500" />
-                      ) : (
-                        <CopyIcon className="size-3" />
-                      )}
-                      <span>{copiedSubject ? "Copied" : "Copy Subject"}</span>
+                      {copiedBody ? <CheckIcon className="size-3 text-emerald-500" /> : <CopyIcon className="size-3" />}
+                      <span>{copiedBody ? "Copied" : "Copy"}</span>
                     </button>
                   </div>
-                  <p className="text-sm font-semibold text-foreground font-mono selection:bg-primary/20">
-                    {subject}
-                  </p>
+
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans text-foreground/90 select-text">
+                    {body || <span className="text-muted-foreground italic">No text content in this document.</span>}
+                  </div>
                 </div>
               )}
-
-              <div className="rounded-xl border border-border bg-background p-4 sm:p-5 space-y-3">
-                <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                    <FileText className="size-3 text-indigo-500" />
-                    Document Content
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopyBody}
-                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-                  >
-                    {copiedBody ? (
-                      <CheckIcon className="size-3 text-emerald-500" />
-                    ) : (
-                      <CopyIcon className="size-3" />
-                    )}
-                    <span>{copiedBody ? "Copied" : "Copy Content"}</span>
-                  </button>
-                </div>
-
-                <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap font-sans text-foreground/90 select-text">
-                  {body || <span className="text-muted-foreground italic">No text content in this document.</span>}
-                </div>
-              </div>
             </div>
           ) : pdfUrl ? (
             /* Uploaded PDF Document */

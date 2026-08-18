@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { extractJobImport, deleteScreenshots } from "@/lib/actions/job-imports";
 import { enrichJobFromAi } from "@/lib/actions/jobs";
+import { streamGenerateAiTool, parseEmailFromStream } from "@/lib/ai/ai-tools";
+import { useAiToolsStore } from "@/lib/stores/ai-tools-store";
 import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import type { AITask, AITaskPayload } from "@/lib/types/ai-task";
 import type { ExtractionResult } from "@/lib/ai/schema";
+import { aiToolLabel, type AiToolKind } from "@/lib/types/ai-tools";
 import { generateUUID } from "@/lib/utils";
 
 interface AITaskQueueContextType {
@@ -26,6 +29,17 @@ interface AITaskQueueContextType {
     url?: string;
     text?: string;
     imageIds?: string[];
+  }) => string;
+  enqueueAiToolTask: (params: {
+    jobId: string;
+    jobTitle: string;
+    companyName?: string;
+    kind: AiToolKind;
+    applicantName?: string;
+    applicantHeadline?: string | null;
+    resumeContent?: string | null;
+    jobDescription?: string | null;
+    context?: string | null;
   }) => string;
   applyTask: (taskId: string) => Promise<boolean>;
   dismissTask: (taskId: string) => void;
@@ -82,7 +96,88 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
 
   const runTask = useCallback(
     async (task: AITask) => {
-      const { id, payload } = task;
+      const { id, payload, type } = task;
+
+      if (type === "ai_tool_generation") {
+        const {
+          kind,
+          jobId,
+          jobTitle = "Job",
+          companyName = "the company",
+          jobDescription = null,
+          applicantName = "Applicant",
+          applicantHeadline = null,
+          resumeContent = null,
+          context = null,
+        } = payload;
+
+        if (!kind || !jobId) return;
+
+        const label = aiToolLabel(kind);
+
+        updateTask(id, {
+          status: "processing",
+          progress: 25,
+          statusMessage: `AI is generating ${label}...`,
+        });
+
+        useAiToolsStore.getState().setGenerating(jobId, kind, true);
+
+        let streamBuffer = "";
+        try {
+          for await (const chunk of streamGenerateAiTool({
+            kind,
+            jobTitle,
+            companyName,
+            jobDescription,
+            applicantName,
+            applicantHeadline,
+            resumeContent,
+            context: context?.trim() || null,
+          })) {
+            streamBuffer += chunk;
+            const partial = parseEmailFromStream(streamBuffer);
+            if (partial) {
+              useAiToolsStore.getState().setResult(jobId, partial);
+            }
+          }
+
+          const finalResult = parseEmailFromStream(streamBuffer);
+          if (finalResult) {
+            useAiToolsStore.getState().setResult(jobId, finalResult);
+            useAiToolsStore.getState().setGenerating(jobId, kind, false);
+
+            updateTask(id, {
+              status: "awaiting_confirmation",
+              progress: 100,
+              statusMessage: `${label} generated successfully`,
+              result: {
+                generatedEmail: finalResult,
+                toolKind: kind,
+                summary: `${label} for ${jobTitle} ready`,
+              },
+              completedAt: Date.now(),
+            });
+          } else {
+            throw new Error("Could not parse generated output");
+          }
+        } catch (err) {
+          const errMsg = cleanAiErrorMessage(
+            err instanceof Error ? err.message : "AI generation failed."
+          );
+          useAiToolsStore.getState().setGenerating(jobId, kind, false, errMsg);
+          updateTask(id, {
+            status: "failed",
+            progress: 0,
+            statusMessage: "Generation failed",
+            error: errMsg,
+            completedAt: Date.now(),
+          });
+          toast.error(`AI Task failed for "${label}": ${errMsg}`);
+        }
+        return;
+      }
+
       const { imageIds = [], text = "", url = "" } = payload;
 
       updateTask(id, {
@@ -127,13 +222,6 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
           },
           completedAt: Date.now(),
         });
-
-        toast.success(
-          `AI update ready for "${task.title}" (${changesCount} change${changesCount === 1 ? "" : "s"} found)`,
-          {
-            description: "Click Apply or Review in the Task Queue panel at the bottom.",
-          }
-        );
       } catch (err) {
         clearInterval(progressTimer);
         const errMsg = cleanAiErrorMessage(
@@ -179,6 +267,45 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
       setIsMinimized(false);
 
       // Start task asynchronously
+      setTimeout(() => {
+        runTask(newTask);
+      }, 50);
+
+      return taskId;
+    },
+    [runTask]
+  );
+
+  const enqueueAiToolTask = useCallback(
+    (params: {
+      jobId: string;
+      jobTitle: string;
+      companyName?: string;
+      kind: AiToolKind;
+      applicantName?: string;
+      applicantHeadline?: string | null;
+      resumeContent?: string | null;
+      jobDescription?: string | null;
+      context?: string | null;
+    }): string => {
+      const taskId = uid();
+      const label = aiToolLabel(params.kind);
+      const newTask: AITask = {
+        id: taskId,
+        type: "ai_tool_generation",
+        title: `Generating ${label}`,
+        subtitle: `${params.jobTitle}${params.companyName ? ` · ${params.companyName}` : ""}`,
+        status: "queued",
+        progress: 0,
+        statusMessage: `Queued ${label}...`,
+        payload: params as AITaskPayload,
+        createdAt: Date.now(),
+      };
+
+      setTasks((prev) => [newTask, ...prev]);
+      setIsPanelOpen(true);
+      setIsMinimized(false);
+
       setTimeout(() => {
         runTask(newTask);
       }, 50);
@@ -293,6 +420,7 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
       setIsMinimized,
       toggleMinimize,
       enqueueJobUpdateTask,
+      enqueueAiToolTask,
       applyTask,
       dismissTask,
       retryTask,
@@ -306,6 +434,7 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
       isMinimized,
       toggleMinimize,
       enqueueJobUpdateTask,
+      enqueueAiToolTask,
       applyTask,
       dismissTask,
       retryTask,

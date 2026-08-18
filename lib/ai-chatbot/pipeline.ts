@@ -195,7 +195,11 @@ export function buildChatContextBase(
   // deferred to stage 1b. It used to resolve here to a hardcoded vendor id
   // (gemini-2.0-flash / claude-3-5-sonnet / deepseek-r1); on any workspace
   // without those exact vendors every auto turn fell through to chain[0].
-  const isAuto = !input.model || input.model === "auto" || input.model === "Auto Hybrid Agent";
+  const isAuto =
+    !input.model ||
+    input.model === "auto" ||
+    input.model.toLowerCase() === "auto" ||
+    input.model === "Auto Hybrid Agent";
   const autoRule: AutoRule | undefined = !isAuto
     ? undefined
     : hasImages

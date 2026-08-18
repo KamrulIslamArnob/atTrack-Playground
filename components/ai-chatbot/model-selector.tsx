@@ -75,10 +75,6 @@ export function ModelSelector({
             <div className="flex flex-col gap-0.5 max-h-64 overflow-y-auto">
               {modelsList.map((model) => {
                 const isSelected = model.id === selectedModel.id;
-                const hasUniqueBadge =
-                  model.badge &&
-                  model.badge.toLowerCase() !== model.name.toLowerCase() &&
-                  model.badge.toLowerCase() !== model.id.toLowerCase();
 
                 return (
                   <button
@@ -108,22 +104,10 @@ export function ModelSelector({
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate text-xs font-medium text-foreground">{model.name}</span>
-                        {hasUniqueBadge && (
-                          <span className="rounded-full bg-primary/10 px-1.5 py-0.2 text-[9.5px] font-medium text-primary">
-                            {model.badge}
-                          </span>
-                        )}
-                      </div>
-                      {model.description && (
-                        <p className="truncate text-[10.5px] text-muted-foreground">
-                          {model.description}
-                        </p>
-                      )}
+                      <span className="truncate text-xs font-medium text-foreground">{model.name}</span>
                     </div>
 
-                    {isSelected && <CheckIcon size={14} className="size-3.5 shrink-0 text-primary ml-1" />}
+                    {isSelected && <CheckIcon size={14} className="size-3.5 shrink-0 text-primary ml-auto" />}
                   </button>
                 );
               })}

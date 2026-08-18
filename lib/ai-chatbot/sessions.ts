@@ -97,14 +97,13 @@ export const CHAT_PERSONAS: ChatPersona[] = [
 export const AI_MODELS: AIModel[] = [
   {
     id: "auto",
-    name: "Auto Hybrid Agent",
+    name: "Auto",
     provider: "auto",
-    description: "Smart Hybrid: Automatically routes turn to Vision, Code, or Reasoning models per context",
+    description: "",
     supportsImages: true,
     isReasoning: true,
     isFast: true,
     isPopular: true,
-    badge: "Smart Hybrid",
   },
 ];
 

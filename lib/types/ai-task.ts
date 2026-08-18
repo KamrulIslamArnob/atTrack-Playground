@@ -1,6 +1,8 @@
 import type { ExtractionResult } from "@/lib/ai/schema";
+import type { GeneratedEmail } from "@/lib/ai/ai-tools";
+import type { AiToolKind } from "@/lib/types/ai-tools";
 
-export type AITaskType = "job_update" | "job_import" | "generic_ai";
+export type AITaskType = "job_update" | "job_import" | "generic_ai" | "ai_tool_generation";
 
 export type AITaskStatus =
   | "queued"
@@ -18,14 +20,22 @@ export interface AITaskPayload {
   url?: string;
   text?: string;
   imageIds?: string[];
+  kind?: AiToolKind;
+  applicantName?: string;
+  applicantHeadline?: string | null;
+  resumeContent?: string | null;
+  jobDescription?: string | null;
+  context?: string | null;
   [key: string]: unknown;
 }
 
 export interface AITaskResult {
-  extraction: ExtractionResult;
+  extraction?: ExtractionResult;
   updatedFields?: string[];
   summary?: string;
   changesCount?: number;
+  generatedEmail?: GeneratedEmail;
+  toolKind?: AiToolKind;
   [key: string]: unknown;
 }
 

@@ -61,7 +61,7 @@ export function UnifiedJobsView({
   }
 
   return (
-    <div className="flex-1 h-full overflow-y-auto min-h-0 px-6 py-6 space-y-4">
+    <div className="flex-1 h-full overflow-y-auto min-h-0 px-6 pb-6 space-y-4">
       <JobViewHeader currentView="list" onViewChange={handleViewChange}>
         <JobsToolbar
           initialSearch={initialSearch}

@@ -21,6 +21,7 @@ import { SendIcon } from "@/components/ui/send";
 import { GettingStartedWidget } from "@/components/onboarding/getting-started-widget";
 import { getOnboardingStatus } from "@/lib/actions/onboarding";
 import { ClientGreeting } from "@/components/client-greeting";
+import { PageHeader } from "@/components/page-header";
 
 /**
  * Importers write this field free-form, so the same mode arrives as "onsite",
@@ -224,19 +225,13 @@ export default async function OverviewPage() {
     reachedApplied > 0 ? Math.round((movedPastApplied / reachedApplied) * 100) : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
       {/* Header & Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <ClientGreeting />
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            Search overview, pipeline progress, and upcoming milestones.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ImportChoice lists={boardLists} />
-        </div>
-      </div>
+      <PageHeader
+        title={<ClientGreeting className="font-heading text-xl sm:text-2xl font-semibold tracking-tight" />}
+        subtitle="Search overview, pipeline progress, and upcoming milestones."
+        actions={<ImportChoice lists={boardLists} />}
+      />
 
       {/* Ambient Getting Started Checklist */}
       <GettingStartedWidget

@@ -14,9 +14,6 @@ export default function AdminAiUsageLoading() {
         </div>
       </div>
 
-      {/* Breadcrumbs */}
-      <Skeleton className="h-4 w-48" />
-
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (

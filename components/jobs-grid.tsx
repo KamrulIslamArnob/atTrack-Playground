@@ -15,6 +15,7 @@ import { MapPinIcon } from "@/components/ui/map-pin";
 import { ClockIcon } from "@/components/ui/clock";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { CompanyLogo } from "@/components/company-logo";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
 import { JOB_STATUS_LABELS, JOB_TIERS, type JobTier } from "@/lib/types/job";
 
@@ -356,6 +357,25 @@ export function JobsGrid({
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", String(newPage));
+      router.push(`?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  const handlePerPageChange = useCallback(
+    (newPerPage: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("perPage", String(newPerPage));
+      params.set("page", "1");
+      router.push(`?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
 
   // Dynamic Column Order, Column Colors, Column Widths, and Row Colors state
   const [columnOrder, setColumnOrder] = useState<SortKey[]>(DEFAULT_COLUMN_KEYS);
@@ -1116,6 +1136,18 @@ export function JobsGrid({
               </div>
             </div>
           )}
+
+          {/* Bottom Table Pagination */}
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={perPage}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+            perPageOptions={[20, 30, 50, 100]}
+            itemLabel="jobs"
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center">

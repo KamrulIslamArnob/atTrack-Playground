@@ -18,9 +18,16 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/**": ["./release/**", "./dist/**", "./build/**", "./.next_trash/**"],
   },
-  // pino resolves its transports through worker threads (thread-stream), a
-  // shape Turbopack cannot bundle. Externalizing keeps it a plain runtime
-  // require, exactly as sqlite-vec's native binding needs.
+  turbopack: {
+    ignoreIssue: [
+      {
+        path: "**/next.config.ts",
+      },
+      {
+        path: "./next.config.ts",
+      },
+    ],
+  },
   serverExternalPackages: ["sqlite-vec", "pino"],
   images: {
     unoptimized: true,

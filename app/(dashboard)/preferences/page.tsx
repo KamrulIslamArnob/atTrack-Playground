@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,7 @@ import { CopyIcon } from "@/components/ui/copy";
 import { CheckIcon } from "@/components/ui/check";
 import { TerminalIcon } from "@/components/ui/terminal";
 import { ZapIcon } from "@/components/ui/zap";
+import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
 
 export default function PerformancePreferencesPage() {
@@ -107,25 +107,18 @@ export default function PerformancePreferencesPage() {
   const cpuUsagePercent = data?.cpuUsage.percentCPUUsage ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
       {/* Header */}
-      <div className="-mx-6 border-b border-border pb-6">
-        <div className="px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-heading text-xl sm:text-2xl font-semibold tracking-tight">
-                Performance & Technical Diagnostics
-              </h1>
-              <Badge variant="outline" className="border-primary/40 text-primary bg-primary/5 text-xs font-semibold px-2.5 py-0.5 shrink-0">
-                v{data?.appVersion || "1.5.0"}
-              </Badge>
-            </div>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Live RAM space, CPU resources, root directory paths, active network ports, and technical specifications.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+      <PageHeader
+        title="Performance & Technical Diagnostics"
+        titleExtra={
+          <Badge variant="outline" className="border-primary/40 text-primary bg-primary/5 text-xs font-semibold px-2.5 py-0.5 shrink-0">
+            v{data?.appVersion || "1.5.0"}
+          </Badge>
+        }
+        subtitle="Live RAM space, CPU resources, root directory paths, active network ports, and technical specifications."
+        actions={
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -157,10 +150,8 @@ export default function PerformancePreferencesPage() {
               <span className="truncate">Copy Diagnostic Log</span>
             </Button>
           </div>
-        </div>
-      </div>
-
-      <Breadcrumbs />
+        }
+      />
 
       {/* Quick Summary Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
