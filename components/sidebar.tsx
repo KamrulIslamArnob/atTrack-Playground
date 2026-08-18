@@ -816,6 +816,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
         >
           <Command value={query} onValueChange={handleSearch} className="w-full max-w-[660px] rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/25 overflow-hidden ring-1 ring-border/50 animate-in zoom-in-95 duration-150">
             <CommandInput
+              autoFocus
               placeholder={isAdmin ? "Search users, AI usage logs, or navigation..." : "Search jobs, companies, contacts, documents, interviews..."}
               onClear={() => {
                 setQuery("");

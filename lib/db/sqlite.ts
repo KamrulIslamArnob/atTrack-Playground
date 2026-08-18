@@ -21,7 +21,7 @@ declare global {
   var __attrackDb: DatabaseSync | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 9;
+const CURRENT_SCHEMA_VERSION = 10;
 
 // Triggers that schema.sql redefines in place. `CREATE TRIGGER IF NOT EXISTS` is a
 // no-op when an older definition already exists, so any trigger whose body or
@@ -380,6 +380,20 @@ function addMissingColumns(db: DatabaseSync): number {
       updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
     CREATE INDEX IF NOT EXISTS idx_ai_memories_user ON ai_memories(user_id, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      command TEXT NOT NULL,
+      description TEXT,
+      instructions TEXT NOT NULL,
+      icon TEXT DEFAULT 'Sparkles',
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_skills_user ON skills(user_id);
+    CREATE INDEX IF NOT EXISTS idx_skills_command ON skills(user_id, command);
 
     CREATE TABLE IF NOT EXISTS ai_feedback (
       id TEXT PRIMARY KEY,

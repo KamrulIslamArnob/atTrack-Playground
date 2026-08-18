@@ -175,15 +175,16 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
       <div className="border-b border-border bg-card/60 px-4 sm:px-6 py-3.5 backdrop-blur-sm pr-14 sm:pr-16 md:pr-20">
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            {/* The company logo / initial identifies the job */}
+            {/* The company logo / building glyph identifies the job */}
             <CompanyLogo
               name={company?.name}
               website={company?.website}
               logoUrl={company?.logo_url}
               companyId={company?.id}
               color={company?.color}
-              className="size-9 rounded-xl"
-              fallback="initial"
+              className="size-9"
+              iconClassName="size-5"
+              fallback="glyph"
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 min-w-0">

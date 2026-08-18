@@ -20,7 +20,7 @@ interface CompanyLogoProps {
   color?: string | null;
   className?: string;
   iconClassName?: string;
-  fallback?: "initial" | "glyph";
+  fallback?: "glyph" | "initial";
 }
 
 export function extractDomain(urlStr: string): string {
@@ -77,7 +77,7 @@ export function CompanyLogo({
   color,
   className,
   iconClassName = "size-3.5",
-  fallback = "initial",
+  fallback = "glyph",
 }: CompanyLogoProps) {
   const domain = website
     ? extractDomain(website)
@@ -186,42 +186,38 @@ export function CompanyLogo({
     if (brandIcon) return brandIcon;
     if (fallback === "initial" && name && name.trim()) {
       return (
-        <span className="font-bold text-current">
+        <span className="font-semibold text-xs leading-none text-current">
           {name.trim().charAt(0).toUpperCase()}
         </span>
       );
     }
-    return <Building2 className={iconClassName} />;
+    return (
+      <Building2
+        className={cn("size-3.5 shrink-0 text-muted-foreground", iconClassName)}
+        style={color ? { color } : undefined}
+      />
+    );
   };
 
-  const customStyle = color
-    ? {
-        backgroundColor: `${color}20`,
-        borderColor: `${color}40`,
-        color: color,
-      }
-    : undefined;
-
   return (
-    <div
-      style={customStyle}
+    <span
       className={cn(
-        "relative flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground overflow-hidden shadow-2xs select-none",
+        "relative inline-flex size-3.5 shrink-0 items-center justify-center overflow-hidden bg-transparent border-0 select-none",
         className
       )}
     >
       {currentSource && !hasError ? (
         <>
           {!loaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
+            <span className="absolute inset-0 flex items-center justify-center">
               {renderFallback()}
-            </div>
+            </span>
           )}
           <img
             src={currentSource}
             alt={name ? `${name} logo` : "Company logo"}
             className={cn(
-              "size-4 object-contain transition-opacity duration-200",
+              "size-full object-contain transition-opacity duration-150",
               loaded ? "opacity-100" : "opacity-0"
             )}
             loading="lazy"
@@ -233,6 +229,6 @@ export function CompanyLogo({
       ) : (
         renderFallback()
       )}
-    </div>
+    </span>
   );
 }

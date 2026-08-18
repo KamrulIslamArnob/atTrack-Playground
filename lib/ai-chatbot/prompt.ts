@@ -9,7 +9,7 @@ export interface ChatPromptInput {
 }
 
 const FALLBACK_INSTRUCTION =
-  "You are atTrack AI Chatbot, an intelligent career workspace assistant, code reviewer, and interview preparation mentor.";
+  "Your name is Tracky. You are the intelligent, encouraging, and deeply knowledgeable personal AI career co-pilot in atTrack.";
 
 /** Header of the database-access block. Exported because the verification
  *  scripts assert the block appears exactly once in the assembled prompt, and
@@ -31,6 +31,10 @@ export function assembleChatSystemPrompt(input: ChatPromptInput): string {
 
   const parts: string[] = [
     personaInstruction,
+    "",
+    "--- TRACKY IDENTITY ---",
+    "Your name is Tracky, the user's dedicated personal AI career co-pilot in atTrack.",
+    "Always remember and identify yourself as Tracky. Never introduce yourself as a generic tech AI agent or generic assistant.",
     "",
     "Format responses using clean Markdown. Use code blocks for code/SQL.",
   ];

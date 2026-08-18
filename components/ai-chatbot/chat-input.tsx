@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useRef, useEffect, useCallback, useMemo, type ComponentType, type DragEvent, } from "react";
+import { memo, useState, useRef, useEffect, useCallback, useMemo, type DragEvent } from "react";
 import type { AIModel, ChatPersona } from "@/lib/ai-chatbot/types";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelSelector } from "@/components/ai-chatbot/model-selector";
@@ -8,7 +8,20 @@ import { PersonaSelector } from "@/components/ai-chatbot/persona-selector";
 import { GlidingHighlight } from "@/components/ai-chatbot/gliding-highlight";
 import { cn } from "@/lib/utils";
 import {
-  ArrowUp, Square, Slash, Mail, Code2, Briefcase, Globe, MessageSquareReply, Brain } from "lucide-react";
+  ArrowUp,
+  Square,
+  Slash,
+  Mail,
+  Code2,
+  Briefcase,
+  Globe,
+  MessageSquareReply,
+  Brain,
+  Sparkles,
+  DollarSign,
+  Terminal,
+  Zap,
+} from "lucide-react";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { XIcon } from "@/components/ui/x";
 import { MenuIcon } from "@/components/ui/menu";
@@ -22,7 +35,9 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { getMemories } from "@/lib/actions/memories";
+import { getSkills } from "@/lib/actions/skills";
 import type { AiMemory } from "@/lib/types/memories";
+import { BUILTIN_SKILLS, type Skill } from "@/lib/types/skills";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
@@ -82,16 +97,20 @@ interface ChatInputProps {
   onClearReply?: () => void;
 }
 
-interface SlashCommand {
-  command: string;
-  label: string;
-  description: string;
-  icon: ComponentType<{ className?: string }>;
-  template: string;
-}
+const SKILL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  FileText: FileTextIcon,
+  Mail: Mail,
+  UserCheck: UserCheckIcon,
+  Send: SendIcon,
+  DollarSign: DollarSign,
+  Code2: Code2,
+  Briefcase: Briefcase,
+  Users: UsersIcon,
+  Sparkles: Sparkles,
+  Terminal: Terminal,
+};
 
-/** Minimal shape of the Web Speech API we rely on. TypeScript's DOM lib does
- *  not ship these because the API is not on a standards track. */
+/** Minimal shape of the Web Speech API we rely on. */
 interface SpeechRecognitionLike {
   continuous: boolean;
   interimResults: boolean;
@@ -104,58 +123,6 @@ interface SpeechRecognitionLike {
 }
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
-
-const SLASH_COMMANDS: SlashCommand[] = [
-  {
-    command: "/resume",
-    label: "Resume Review",
-    description: "Analyze my resume for ATS & impact",
-    icon: FileTextIcon,
-    template: "Review my resume and suggest ATS optimizations and stronger bullet points.",
-  },
-  {
-    command: "/cover",
-    label: "Cover Letter",
-    description: "Draft a tailored cover letter",
-    icon: Mail,
-    template: "Draft a cover letter for my application, tailored to the role and company.",
-  },
-  {
-    command: "/interview",
-    label: "Interview Prep",
-    description: "Run a STAR-method mock interview",
-    icon: UserCheckIcon,
-    template: "Run a mock interview question using the STAR method and give me feedback.",
-  },
-  {
-    command: "/outreach",
-    label: "Cold Outreach",
-    description: "Draft a recruiter outreach message",
-    icon: SendIcon,
-    template: "Draft a concise cold outreach message to a hiring manager or recruiter.",
-  },
-  {
-    command: "/code",
-    label: "Code Review",
-    description: "Review a code snippet",
-    icon: Code2,
-    template: "Review this code for performance, readability, and edge cases:\n",
-  },
-  {
-    command: "/job",
-    label: "Job Strategy",
-    description: "Analyze my tracked applications",
-    icon: Briefcase,
-    template: "Help me prioritize my tracked job applications and plan my next steps.",
-  },
-  {
-    command: "/contact",
-    label: "Networking",
-    description: "Plan my CRM outreach",
-    icon: UsersIcon,
-    template: "Help me plan outreach to my CRM contacts for referrals and networking.",
-  },
-];
 
 function ChatInput({
   input,
@@ -181,8 +148,6 @@ function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [slashQuery, setSlashQuery] = useState<string | null>(null);
   const [slashIndex, setSlashIndex] = useState(0);
-  // "Engaged" gates the gliding highlight: a freshly-opened menu shows no
-  // selection until the pointer or arrow keys actually pick a row.
   const [atEngaged, setAtEngaged] = useState(false);
   const [slashEngaged, setSlashEngaged] = useState(false);
   const atRowRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -193,11 +158,19 @@ function ChatInput({
   const [atQuery, setAtQuery] = useState<string | null>(null);
   const [atIndex, setAtIndex] = useState(0);
   const [availableMemories, setAvailableMemories] = useState<AiMemory[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>(BUILTIN_SKILLS);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     getMemories()
-      .then((mems) => setAvailableMemories(mems))
+      .then((mems) => {
+        if (Array.isArray(mems)) setAvailableMemories(mems);
+      })
+      .catch(() => {});
+    getSkills()
+      .then((sks) => {
+        if (Array.isArray(sks) && sks.length > 0) setAvailableSkills(sks);
+      })
       .catch(() => {});
   }, []);
 
@@ -218,7 +191,6 @@ function ChatInput({
     }
   }, [input, adjustHeight]);
 
-  // Arrow-key navigation must light the highlight too, not just the pointer.
   useEffect(() => {
     if (atQuery === null) setAtEngaged(false);
   }, [atQuery]);
@@ -226,8 +198,6 @@ function ChatInput({
     if (slashQuery === null) setSlashEngaged(false);
   }, [slashQuery]);
 
-  // Dictation rides the browser's own speech recognition — no dependency, but
-  // it is Chromium-only, so the button is hidden rather than shown broken.
   useEffect(() => {
     const w = window as unknown as {
       SpeechRecognition?: SpeechRecognitionCtor;
@@ -264,8 +234,6 @@ function ChatInput({
         .join(" ")
         .trim();
       if (!transcript) return;
-      // Append to the draft rather than replacing it — the user may have typed
-      // part of the message before reaching for the microphone.
       const next = input ? `${input.trimEnd()} ${transcript}` : transcript;
       onInputChange({ target: { value: next } } as React.ChangeEvent<HTMLTextAreaElement>);
       adjustHeight();
@@ -282,7 +250,6 @@ function ChatInput({
     const next = !isWebSearchActive;
     setIsWebSearchActive(next);
     onToggleWebSearch?.(next);
-    // No toast: the button's own active state already reports this.
   }, [isWebSearchActive, onToggleWebSearch]);
 
   const handleFileSelect = useCallback(
@@ -365,21 +332,46 @@ function ChatInput({
     [model.supportsImages, model.name]
   );
 
-  const applySlashCommand = useCallback(
-    (cmd: SlashCommand) => {
+  const filteredSkills = useMemo(() => {
+    if (slashQuery === null) return [];
+    const q = slashQuery.toLowerCase().trim();
+    return availableSkills.filter(
+      (s) => s.command.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+    );
+  }, [slashQuery, availableSkills]);
+
+  const applySkill = useCallback(
+    (skill: Skill) => {
+      const cursor = textareaRef.current?.selectionStart ?? input.length;
+      const textBeforeCursor = (input || "").slice(0, cursor);
+      const textAfterCursor = (input || "").slice(cursor);
+      const lastSlash = textBeforeCursor.lastIndexOf("/");
+
+      if (textBeforeCursor.trim().startsWith("/") && !textAfterCursor.trim()) {
+        onInputChange({
+          target: { value: skill.instructions },
+        } as React.ChangeEvent<HTMLTextAreaElement>);
+      } else if (lastSlash >= 0) {
+        const replaced = textBeforeCursor.slice(0, lastSlash) + skill.instructions + " " + textAfterCursor;
+        onInputChange({
+          target: { value: replaced },
+        } as React.ChangeEvent<HTMLTextAreaElement>);
+      } else {
+        onInputChange({
+          target: { value: skill.instructions },
+        } as React.ChangeEvent<HTMLTextAreaElement>);
+      }
+
       setSlashQuery(null);
-      onInputChange({
-        target: { value: cmd.template },
-      } as React.ChangeEvent<HTMLTextAreaElement>);
       adjustHeight();
       window.setTimeout(() => textareaRef.current?.focus(), 0);
     },
-    [onInputChange, adjustHeight]
+    [input, onInputChange, adjustHeight]
   );
 
   const filteredMemories = useMemo(() => {
     if (atQuery === null) return [];
-    const q = atQuery.trim();
+    const q = atQuery.trim().toLowerCase();
     return availableMemories
       .filter((m) => {
         if (!q) return true;
@@ -387,7 +379,7 @@ function ChatInput({
         const matchDesc = m.description.toLowerCase().includes(q);
         return matchTitle || matchDesc;
       })
-      .slice(0, 6);
+      .slice(0, 8);
   }, [atQuery, availableMemories]);
 
   const applyMemoryMention = useCallback(
@@ -395,18 +387,18 @@ function ChatInput({
       const cursor = textareaRef.current?.selectionStart ?? input.length;
       const textBeforeCursor = (input || "").slice(0, cursor);
       const textAfterCursor = (input || "").slice(cursor);
-      const match = textBeforeCursor.match(/@([a-zA-Z0-9_\-\s]*)$/);
-      if (match) {
-        const memTag = mem.title ? `@${mem.title.replace(/\s+/g, "_")}` : `@memory`;
-        const replaced = textBeforeCursor.slice(0, match.index) + `${memTag} ` + textAfterCursor;
-        onInputChange({
-          target: { value: replaced },
-        } as React.ChangeEvent<HTMLTextAreaElement>);
-        setAtQuery(null);
-        // No toast: the mention tag is now visible in the input itself.
-        adjustHeight();
-        window.setTimeout(() => textareaRef.current?.focus(), 0);
-      }
+      const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
+      
+      const memTag = mem.title ? `@${mem.title.toLowerCase().replace(/[^a-z0-9_-]/g, "_")}` : `@memory`;
+      const prefix = atSymbolIndex >= 0 ? textBeforeCursor.slice(0, atSymbolIndex) : textBeforeCursor;
+      const replaced = prefix + `${memTag} ` + textAfterCursor;
+
+      onInputChange({
+        target: { value: replaced },
+      } as React.ChangeEvent<HTMLTextAreaElement>);
+      setAtQuery(null);
+      adjustHeight();
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
     },
     [input, onInputChange, adjustHeight]
   );
@@ -445,23 +437,25 @@ function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (atQuery !== null && filteredMemories.length > 0) {
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          setAtEngaged(true);
-          setAtIndex((i) => Math.min(i + 1, filteredMemories.length - 1));
-          return;
-        }
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          setAtEngaged(true);
-          setAtIndex((i) => Math.max(i - 1, 0));
-          return;
-        }
-        if (e.key === "Tab" || e.key === "Enter") {
-          e.preventDefault();
-          applyMemoryMention(filteredMemories[Math.min(atIndex, filteredMemories.length - 1)]);
-          return;
+      if (atQuery !== null) {
+        if (filteredMemories.length > 0) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setAtEngaged(true);
+            setAtIndex((i) => Math.min(i + 1, filteredMemories.length - 1));
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setAtEngaged(true);
+            setAtIndex((i) => Math.max(i - 1, 0));
+            return;
+          }
+          if (e.key === "Tab" || e.key === "Enter") {
+            e.preventDefault();
+            applyMemoryMention(filteredMemories[Math.min(atIndex, filteredMemories.length - 1)]);
+            return;
+          }
         }
         if (e.key === "Escape") {
           e.preventDefault();
@@ -471,23 +465,24 @@ function ChatInput({
       }
 
       if (slashQuery !== null) {
-        const filtered = SLASH_COMMANDS.filter((c) => c.command.slice(1).startsWith(slashQuery));
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          setSlashEngaged(true);
-          setSlashIndex((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0)));
-          return;
-        }
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          setSlashEngaged(true);
-          setSlashIndex((i) => Math.max(i - 1, 0));
-          return;
-        }
-        if (e.key === "Tab" || (e.key === "Enter" && filtered.length > 0)) {
-          e.preventDefault();
-          applySlashCommand(filtered[Math.min(slashIndex, filtered.length - 1)]);
-          return;
+        if (filteredSkills.length > 0) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSlashEngaged(true);
+            setSlashIndex((i) => Math.min(i + 1, Math.max(filteredSkills.length - 1, 0)));
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSlashEngaged(true);
+            setSlashIndex((i) => Math.max(i - 1, 0));
+            return;
+          }
+          if (e.key === "Tab" || e.key === "Enter") {
+            e.preventDefault();
+            applySkill(filteredSkills[Math.min(slashIndex, filteredSkills.length - 1)]);
+            return;
+          }
         }
         if (e.key === "Escape") {
           e.preventDefault();
@@ -501,43 +496,61 @@ function ChatInput({
         handleFormSubmit(e);
       }
     },
-    [atQuery, atIndex, filteredMemories, applyMemoryMention, slashQuery, slashIndex, applySlashCommand, handleFormSubmit]
+    [atQuery, atIndex, filteredMemories, applyMemoryMention, slashQuery, slashIndex, filteredSkills, applySkill, handleFormSubmit]
   );
 
-  useEffect(() => {
-    const trimmed = (input || "").trimStart();
-    if (trimmed.startsWith("/") && !trimmed.includes(" ")) {
-      setSlashQuery(trimmed.slice(1).toLowerCase());
+  const checkTriggers = useCallback((val: string, cursor: number) => {
+    const textBeforeCursor = val.slice(0, cursor);
+
+    // Check slash command trigger: /(command) at start or after whitespace
+    const slashMatch = textBeforeCursor.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+    if (slashMatch) {
+      setSlashQuery(slashMatch[1].toLowerCase());
       setSlashIndex(0);
     } else {
       setSlashQuery(null);
     }
 
-    const cursor = textareaRef.current?.selectionStart ?? input.length;
-    const textBeforeCursor = (input || "").slice(0, cursor);
-    const match = textBeforeCursor.match(/@([a-zA-Z0-9_\-\s]*)$/);
-    if (match && !match[1].includes("\n") && match[1].length <= 25) {
-      setAtQuery(match[1].toLowerCase());
+    // Check at mention trigger: @(tag) at start or after whitespace
+    const atMatch = textBeforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+    if (atMatch) {
+      setAtQuery(atMatch[1].toLowerCase());
       setAtIndex(0);
     } else {
       setAtQuery(null);
     }
-  }, [input]);
-
-  const filteredCommands = useMemo(
-    () => (slashQuery !== null ? SLASH_COMMANDS.filter((c) => c.command.slice(1).startsWith(slashQuery)) : []),
-    [slashQuery]
-  );
-
-  const hasValue = Boolean((input || "").trim() || attachments.length > 0);
+  }, []);
 
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const val = e.target.value;
+      const cursor = e.target.selectionStart ?? val.length;
       onInputChange(e);
       adjustHeight();
+      checkTriggers(val, cursor);
     },
-    [onInputChange, adjustHeight]
+    [onInputChange, adjustHeight, checkTriggers]
   );
+
+  const handleTextareaKeyUp = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const target = e.currentTarget;
+      const cursor = target.selectionStart ?? target.value.length;
+      checkTriggers(target.value, cursor);
+    },
+    [checkTriggers]
+  );
+
+  const handleTextareaClick = useCallback(
+    (e: React.MouseEvent<HTMLTextAreaElement>) => {
+      const target = e.currentTarget;
+      const cursor = target.selectionStart ?? target.value.length;
+      checkTriggers(target.value, cursor);
+    },
+    [checkTriggers]
+  );
+
+  const hasValue = Boolean((input || "").trim() || attachments.length > 0);
 
   const triggerFilePicker = useCallback(() => {
     if (!model.supportsImages) {
@@ -551,7 +564,7 @@ function ChatInput({
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const items = Array.from(e.clipboardData?.items || []);
       const imageItems = items.filter((item) => item.type.startsWith("image/"));
-      if (imageItems.length === 0) return; // let normal text paste through
+      if (imageItems.length === 0) return;
 
       e.preventDefault();
 
@@ -581,7 +594,7 @@ function ChatInput({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className="relative rounded-[22px] border border-border/80 bg-transparent transition-all duration-200 ease-out focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10 dark:border-border/60"
+            className="relative rounded-[22px] border-0 bg-muted/40 transition-all duration-200 ease-out focus-within:ring-2 focus-within:ring-foreground/10"
           >
             {/* Drag and Drop Overlay */}
             <AnimatePresence>
@@ -591,9 +604,9 @@ function ChatInput({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.15, ease: EASE }}
-                  className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-600 bg-background/95 backdrop-blur-md"
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-background/95 backdrop-blur-md"
                 >
-                  <div className="flex size-10 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <UploadIcon className="size-5" />
                   </div>
                   <p className="text-xs font-medium text-foreground">Drop images or files here to attach</p>
@@ -604,110 +617,151 @@ function ChatInput({
 
             {/* @ Memory mention menu */}
             <AnimatePresence>
-              {atQuery !== null && filteredMemories.length > 0 && (
+              {atQuery !== null && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.97, y: 6 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97, y: 6 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   style={{ transformOrigin: "bottom center" }}
-                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/70 bg-popover/98 p-1.5 shadow-e3 backdrop-blur-md"
+                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/70 bg-popover/98 p-1.5 shadow-e3 backdrop-blur-md max-h-72 overflow-y-auto"
                 >
-                  <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
-                    <Brain className="size-3.5 text-blue-500" />
-                    <span>Connect AI Memory (@)</span>
+                  <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <Brain className="size-3.5 text-primary" />
+                      <span>Tracky AI Memory (@)</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground/60">{availableMemories.length} saved</span>
                   </div>
-                  <GlidingHighlight
-                    rowRefs={atRowRefs}
-                    activeIndex={atIndex}
-                    visible={atEngaged}
-                    deps={[filteredMemories.length, atQuery]}
-                  />
-                  {filteredMemories.map((mem, idx) => (
-                    <button
-                      key={mem.id}
-                      type="button"
-                      ref={(el) => {
-                        atRowRefs.current[idx] = el;
-                      }}
-                      onMouseEnter={() => {
-                        setAtIndex(idx);
-                        setAtEngaged(true);
-                      }}
-                      onClick={() => applyMemoryMention(mem)}
-                      className={cn(
-                        "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 ease-out cursor-pointer",
-                        idx === atIndex && atEngaged && "text-blue-600 dark:text-blue-400"
-                      )}
-                    >
-                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                        <Brain className="size-3.5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="font-medium text-xs text-foreground truncate">
-                            {mem.title || <span className="italic text-muted-foreground">Untitled Memory</span>}
-                          </span>
-                          <span className="font-mono text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.2 rounded shrink-0">
-                            @{mem.title ? mem.title.replace(/\s+/g, "_") : "memory"}
-                          </span>
-                        </div>
-                        <p className="truncate text-[10px] text-muted-foreground/80 font-mono mt-0.5">
-                          {mem.description.slice(0, 80).replace(/\n+/g, " ")}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+
+                  {filteredMemories.length > 0 ? (
+                    <>
+                      <GlidingHighlight
+                        rowRefs={atRowRefs}
+                        activeIndex={atIndex}
+                        visible={atEngaged}
+                        deps={[filteredMemories.length, atQuery]}
+                      />
+                      {filteredMemories.map((mem, idx) => (
+                        <button
+                          key={mem.id}
+                          type="button"
+                          ref={(el) => {
+                            atRowRefs.current[idx] = el;
+                          }}
+                          onMouseEnter={() => {
+                            setAtIndex(idx);
+                            setAtEngaged(true);
+                          }}
+                          onClick={() => applyMemoryMention(mem)}
+                          className={cn(
+                            "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 ease-out cursor-pointer hover:bg-muted/50",
+                            idx === atIndex && atEngaged && "text-primary bg-primary/10"
+                          )}
+                        >
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+                            <Brain className="size-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="font-medium text-xs text-foreground truncate">
+                                {mem.title || <span className="italic text-muted-foreground">Personal Fact</span>}
+                              </span>
+                              <span className="font-mono text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.2 rounded shrink-0">
+                                @{mem.title ? mem.title.toLowerCase().replace(/[^a-z0-9_-]/g, "_") : "memory"}
+                              </span>
+                            </div>
+                            <p className="truncate text-[10px] text-muted-foreground/80 mt-0.5">
+                              {mem.description.slice(0, 80).replace(/\n+/g, " ")}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-3 py-3 text-center text-xs text-muted-foreground">
+                      <p className="font-medium text-foreground">
+                        {availableMemories.length === 0 ? "No memories saved yet" : `No memories matching "@${atQuery}"`}
+                      </p>
+                      <p className="text-[11px] mt-1 text-muted-foreground/80">
+                        Add career facts in <span className="font-medium text-foreground">Prompts &gt; Tracky Memory</span> or tell Tracky about yourself.
+                      </p>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Slash command menu */}
+            {/* / Slash command / Skills menu */}
             <AnimatePresence>
-              {slashQuery !== null && filteredCommands.length > 0 && (
+              {slashQuery !== null && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.97, y: 6 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97, y: 6 }}
                   transition={{ duration: 0.16, ease: EASE }}
                   style={{ transformOrigin: "bottom center" }}
-                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/60 bg-popover/95 p-1.5 shadow-e3 backdrop-blur-md"
+                  className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/70 bg-popover/98 p-1.5 shadow-e3 backdrop-blur-md max-h-72 overflow-y-auto"
                 >
-                  <GlidingHighlight
-                    rowRefs={slashRowRefs}
-                    activeIndex={slashIndex}
-                    visible={slashEngaged}
-                    deps={[filteredCommands.length, slashQuery]}
-                  />
-                  {filteredCommands.map((cmd, idx) => (
-                    <button
-                      key={cmd.command}
-                      type="button"
-                      ref={(el) => {
-                        slashRowRefs.current[idx] = el;
-                      }}
-                      onMouseEnter={() => {
-                        setSlashIndex(idx);
-                        setSlashEngaged(true);
-                      }}
-                      onClick={() => applySlashCommand(cmd)}
-                      className={cn(
-                        "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 ease-out cursor-pointer",
-                        idx === slashIndex && slashEngaged && "text-blue-600 dark:text-blue-400"
-                      )}
-                    >
-                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-blue-600">
-                        <cmd.icon className="size-3.5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-medium text-foreground">{cmd.command}</span>
-                          <span className="text-[11px] text-muted-foreground">{cmd.label}</span>
-                        </div>
-                        <p className="truncate text-[10px] text-muted-foreground/80">{cmd.description}</p>
-                      </div>
-                    </button>
-                  ))}
+                  <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="size-3.5 text-amber-500" />
+                      <span>Chat Skills (/)</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground/60">{availableSkills.length} available</span>
+                  </div>
+
+                  {filteredSkills.length > 0 ? (
+                    <>
+                      <GlidingHighlight
+                        rowRefs={slashRowRefs}
+                        activeIndex={slashIndex}
+                        visible={slashEngaged}
+                        deps={[filteredSkills.length, slashQuery]}
+                      />
+                      {filteredSkills.map((skill, idx) => {
+                        const IconComp = (skill.icon && SKILL_ICON_MAP[skill.icon]) || Sparkles;
+                        return (
+                          <button
+                            key={skill.id}
+                            type="button"
+                            ref={(el) => {
+                              slashRowRefs.current[idx] = el;
+                            }}
+                            onMouseEnter={() => {
+                              setSlashIndex(idx);
+                              setSlashEngaged(true);
+                            }}
+                            onClick={() => applySkill(skill)}
+                            className={cn(
+                              "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 ease-out cursor-pointer hover:bg-muted/50",
+                              idx === slashIndex && slashEngaged && "text-primary bg-primary/10"
+                            )}
+                          >
+                            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+                              <IconComp className="size-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-xs font-semibold text-foreground">/{skill.command}</span>
+                                <span className="text-[11px] text-muted-foreground truncate">{skill.name}</span>
+                              </div>
+                              {skill.description && (
+                                <p className="truncate text-[10px] text-muted-foreground/80">{skill.description}</p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="px-3 py-3 text-center text-xs text-muted-foreground">
+                      <p className="font-medium text-foreground">No skills matching &quot;/{slashQuery}&quot;</p>
+                      <p className="text-[11px] mt-1 text-muted-foreground/80">
+                        Create custom skills in <span className="font-medium text-foreground">Prompts &gt; Skills</span>.
+                      </p>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -755,177 +809,153 @@ function ChatInput({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                         <MessageSquareReply className="size-3" />
                       </div>
-                      <div className="min-w-0 flex-1 text-xs">
-                        <span className="font-semibold text-foreground/90">
-                          Replying to {replyTo.role === "assistant" ? "Assistant" : "You"}:
-                        </span>{" "}
-                        <span className="text-muted-foreground truncate inline-block max-w-[320px] sm:max-w-[450px] align-bottom">
-                          {replyTo.preview}
-                        </span>
-                      </div>
+                      <span className="text-[11px] font-medium text-muted-foreground truncate">
+                        Replying to <span className="text-foreground capitalize">{replyTo.role}</span>: &quot;{replyTo.preview}&quot;
+                      </span>
                     </div>
-                    {onClearReply && (
-                      <button
-                        type="button"
-                        onClick={onClearReply}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-                        title="Cancel reply"
-                      >
-                        <XIcon className="size-3" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={onClearReply}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                    >
+                      <XIcon className="size-3" />
+                    </button>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Top row: Textarea */}
+            {/* Main Textarea */}
             <Textarea
               ref={textareaRef}
-              value={input || ""}
+              value={input}
               onChange={handleTextareaChange}
+              onKeyUp={handleTextareaKeyUp}
+              onClick={handleTextareaClick}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder="Message..."
-              className={cn(
-                "w-full resize-none border-none bg-transparent px-4 py-3 pr-32 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
-                "min-h-[52px]"
-              )}
-              style={{ overflow: "hidden" }}
+              placeholder={
+                selectedPersona.id === "general"
+                  ? "Ask Tracky anything, type @ for memory, or / for skills..."
+                  : `Ask ${selectedPersona.name}, type @ for memory, / for skills...`
+              }
+              rows={1}
+              className="w-full resize-none border-0 bg-transparent px-3.5 pt-3 pb-1 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-50 text-foreground placeholder:text-muted-foreground"
             />
 
-            {/* Bottom controls row */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2">
-              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            {/* Bottom Actions Bar */}
+            <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1">
+              <div className="flex items-center gap-1">
+                {/* Mobile sidebar toggle button */}
                 {onMobileMenuToggle && (
                   <button
                     type="button"
                     onClick={onMobileMenuToggle}
-                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-[0.96] md:hidden"
-                    title="Open menu"
+                    className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+                    title="Toggle Chat Sessions"
                   >
                     <MenuIcon className="size-4" />
                   </button>
                 )}
 
-                {/* Model Selector Dropdown */}
+                {/* Model Selector */}
                 <ModelSelector
                   selectedModelId={model.id}
-                  onSelectModel={onSelectModel}
                   availableModels={availableModels}
-                  direction="up"
+                  onSelectModel={onSelectModel}
                 />
 
-                {/* Persona Selector Pill */}
+                {/* Persona Selector */}
                 <PersonaSelector
                   selectedPersonaId={selectedPersona.id}
                   onSelectPersona={onSelectPersona}
-                  direction="up"
                 />
 
-                {/* Search Toggle */}
-                <button
-                  type="button"
-                  onClick={toggleWebSearch}
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded-lg border border-border/70 bg-muted/60 text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted hover:text-foreground active:scale-[0.96] cursor-pointer",
-                    isWebSearchActive && "border-primary/30 bg-primary/5 text-primary"
-                  )}
-                  title={isWebSearchActive ? "Web & tools search active" : "Enable Web & tools search"}
-                >
-                  <Globe className="size-3.5" />
-                </button>
+                {/* Web Search Toggle */}
+                {onToggleWebSearch && (
+                  <button
+                    type="button"
+                    onClick={toggleWebSearch}
+                    className={cn(
+                      "flex size-7.5 items-center justify-center rounded-lg transition-colors cursor-pointer",
+                      isWebSearchActive
+                        ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                    )}
+                    title={isWebSearchActive ? "Web search enabled" : "Enable web search"}
+                  >
+                    <Globe className="size-3.5" />
+                  </button>
+                )}
 
-                {/* Attach File Button */}
+                {/* Image Upload Button */}
                 <button
                   type="button"
                   onClick={triggerFilePicker}
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-[0.96] cursor-pointer",
-                    !model.supportsImages && "opacity-40"
-                  )}
-                  title={model.supportsImages ? "Attach image" : "Model doesn't support images"}
+                  className="flex size-7.5 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+                  title="Attach image"
                 >
                   <PlusIcon className="size-4" />
                 </button>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-
-                {/* Dictation — hidden where the browser has no speech API. */}
+                {/* Dictation (Speech to Text) */}
                 {dictationSupported && (
                   <button
                     type="button"
                     onClick={toggleDictation}
-                    aria-pressed={isListening}
                     className={cn(
-                      "flex size-7 items-center justify-center rounded-lg transition-all duration-150 active:scale-[0.96] cursor-pointer",
+                      "flex size-7.5 items-center justify-center rounded-lg transition-colors cursor-pointer",
                       isListening
-                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-red-500/15 text-red-600 border border-red-500/30 animate-pulse"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
-                    title={isListening ? "Stop dictation" : "Dictate message"}
+                    title={isListening ? "Listening... click to stop" : "Voice dictation"}
                   >
-                    {isListening ? (
-                      <span className="flex h-3.5 items-center gap-[2.5px]">
-                        {[0, 1, 2].map((i) => (
-                          <span
-                            key={i}
-                            className="agent-eq-bar w-[2.5px] rounded-full bg-current"
-                            style={{ height: "100%", animationDelay: `${i * 150}ms` }}
-                          />
-                        ))}
-                      </span>
-                    ) : (
-                      <MicIcon className="size-4" />
-                    )}
+                    <MicIcon className="size-3.5" />
                   </button>
                 )}
-
               </div>
 
-              {/* SendIcon / Stop button aligned to the right */}
-              {isLoading ? (
-                <motion.button
-                  type="button"
-                  onClick={onStop}
-                  initial={reduceMotion ? false : { scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.16, ease: EASE }}
-                  whileTap={{ scale: 0.94 }}
-                  className="flex size-8 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-xs hover:opacity-90 transition-all cursor-pointer shrink-0"
-                  title="Stop generation"
-                >
-                  <Square className="size-3.5 fill-current" />
-                </motion.button>
-              ) : (
-                <motion.button
-                  type="submit"
-                  disabled={!hasValue}
-                  initial={reduceMotion ? false : { scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.16, ease: EASE }}
-                  whileTap={{ scale: hasValue ? 0.94 : 1 }}
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-lg transition-all shrink-0",
-                    hasValue
-                      ? "bg-gradient-brand text-white shadow-xs hover:opacity-90 cursor-pointer"
-                      : "cursor-not-allowed bg-muted text-muted-foreground/40"
-                  )}
-                  title="Send message"
-                >
-                  <ArrowUp className="size-4" />
-                </motion.button>
-              )}
+              {/* Submit or Stop Button */}
+              <div>
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={onStop}
+                    className="flex size-8 items-center justify-center rounded-xl bg-foreground text-background transition-transform active:scale-95 cursor-pointer shadow-xs"
+                    title="Stop generating"
+                  >
+                    <Square className="size-3 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!hasValue}
+                    className={cn(
+                      "flex size-8 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer shadow-xs",
+                      hasValue
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                        : "bg-muted text-muted-foreground/40 cursor-not-allowed"
+                    )}
+                    title="Send message"
+                  >
+                    <ArrowUp className="size-4 stroke-[2.5]" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </form>
@@ -935,3 +965,4 @@ function ChatInput({
 }
 
 export const MemoizedChatInput = memo(ChatInput);
+export { ChatInput };

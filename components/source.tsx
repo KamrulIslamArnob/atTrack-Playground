@@ -2,7 +2,12 @@
 
 import { memo } from "react";
 import {
-  Briefcase, Database, Code2, Globe } from "lucide-react";
+  Briefcase,
+  Database,
+  Code2,
+  Globe,
+  Brain,
+} from "lucide-react";
 import { FileTextIcon } from "@/components/ui/file-text";
 import { UsersIcon } from "@/components/ui/users";
 import { Link2Icon } from "@/components/ui/link-2";
@@ -20,7 +25,8 @@ export interface SourceProps {
 
 function SourceIcon({ title }: { title: string }) {
   const lower = title.toLowerCase();
-  const cls = "size-3.5 shrink-0 text-primary";
+  const cls = "size-3.5 shrink-0 text-muted-foreground";
+  if (lower.includes("memor")) return <Brain className={cls} />;
   if (lower.includes("job") || lower.includes("application")) return <Briefcase className={cls} />;
   if (lower.includes("resume") || lower.includes("document")) return <FileTextIcon className={cls} />;
   if (lower.includes("contact") || lower.includes("crm")) return <UsersIcon className={cls} />;

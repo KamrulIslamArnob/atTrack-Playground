@@ -147,9 +147,9 @@ export function BoardCardItem({
             website={card.company_website}
             logoUrl={card.company_logo_url}
             color={card.company_color}
-            className="size-4 rounded-sm"
-            iconClassName="size-2.5"
-            fallback="initial"
+            className="size-3.5"
+            iconClassName="size-3.5"
+            fallback="glyph"
           />
           <span className="truncate">{card.company_name ?? "Unknown company"}</span>
         </span>

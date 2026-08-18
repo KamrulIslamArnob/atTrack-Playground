@@ -39,6 +39,7 @@ import {
   type ImageMessagePartComponent,
   type ToolCallMessagePartComponent,
   useAuiState,
+  unstable_useComposerInput,
 } from "@assistant-ui/react";
 import {
   ArrowDownIcon,
@@ -46,7 +47,24 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   SquareIcon,
+  Brain,
+  Zap,
+  Sparkles,
+  FileText,
+  Mail,
+  UserCheck,
+  Send,
+  DollarSign,
+  Code2,
+  Briefcase,
+  Users,
+  Terminal,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { getMemories } from "@/lib/actions/memories";
+import { getSkills } from "@/lib/actions/skills";
+import type { AiMemory } from "@/lib/types/memories";
+import { BUILTIN_SKILLS, type Skill } from "@/lib/types/skills";
 import { ArrowUpIcon } from "@/components/ui/arrow-up";
 import { MicIcon } from "@/components/ui/mic";
 import { CheckIcon } from "@/components/ui/check";
@@ -59,6 +77,11 @@ import type { AIModel } from "@/lib/ai-chatbot/types";
 import {
   createContext,
   useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
   type ComponentType,
   type FC,
   type PropsWithChildren,
@@ -212,24 +235,350 @@ const ThreadWelcome: FC = () => {
   );
 };
 
+const SKILL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  FileText: FileText,
+  Mail: Mail,
+  UserCheck: UserCheck,
+  Send: Send,
+  DollarSign: DollarSign,
+  Code2: Code2,
+  Briefcase: Briefcase,
+  Users: Users,
+  Sparkles: Sparkles,
+  Terminal: Terminal,
+};
+
 const Composer: FC = () => {
+  const { value, setText, send, isDisabled, canSend } = unstable_useComposerInput();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [atQuery, setAtQuery] = useState<string | null>(null);
+  const [atIndex, setAtIndex] = useState(0);
+  const [availableMemories, setAvailableMemories] = useState<AiMemory[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>(BUILTIN_SKILLS);
+
+  useEffect(() => {
+    getMemories()
+      .then((mems) => {
+        if (Array.isArray(mems)) setAvailableMemories(mems);
+      })
+      .catch(() => {});
+    getSkills()
+      .then((sks) => {
+        if (Array.isArray(sks) && sks.length > 0) setAvailableSkills(sks);
+      })
+      .catch(() => {});
+  }, []);
+
+  const filteredSkills = useMemo(() => {
+    if (slashQuery === null) return [];
+    const q = slashQuery.toLowerCase().trim();
+    return availableSkills.filter(
+      (s) => s.command.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+    );
+  }, [slashQuery, availableSkills]);
+
+  const filteredMemories = useMemo(() => {
+    if (atQuery === null) return [];
+    const q = atQuery.trim().toLowerCase();
+    return availableMemories
+      .filter((m) => {
+        if (!q) return true;
+        const matchTitle = m.title ? m.title.toLowerCase().includes(q) : false;
+        const matchDesc = m.description.toLowerCase().includes(q);
+        return matchTitle || matchDesc;
+      })
+      .slice(0, 8);
+  }, [atQuery, availableMemories]);
+
+  const checkTriggers = useCallback((val: string, cursor: number) => {
+    const textBeforeCursor = val.slice(0, cursor);
+
+    const slashMatch = textBeforeCursor.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+    if (slashMatch) {
+      setSlashQuery(slashMatch[1].toLowerCase());
+      setSlashIndex(0);
+    } else {
+      setSlashQuery(null);
+    }
+
+    const atMatch = textBeforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+    if (atMatch) {
+      setAtQuery(atMatch[1].toLowerCase());
+      setAtIndex(0);
+    } else {
+      setAtQuery(null);
+    }
+  }, []);
+
+  const applySkill = useCallback(
+    (skill: Skill) => {
+      const cursor = textareaRef.current?.selectionStart ?? value.length;
+      const textBeforeCursor = value.slice(0, cursor);
+      const textAfterCursor = value.slice(cursor);
+      const lastSlash = textBeforeCursor.lastIndexOf("/");
+
+      if (textBeforeCursor.trim().startsWith("/") && !textAfterCursor.trim()) {
+        setText(skill.instructions);
+      } else if (lastSlash >= 0) {
+        const replaced = textBeforeCursor.slice(0, lastSlash) + skill.instructions + " " + textAfterCursor;
+        setText(replaced);
+      } else {
+        setText(skill.instructions);
+      }
+
+      setSlashQuery(null);
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
+    },
+    [value, setText]
+  );
+
+  const applyMemoryMention = useCallback(
+    (mem: AiMemory) => {
+      const cursor = textareaRef.current?.selectionStart ?? value.length;
+      const textBeforeCursor = value.slice(0, cursor);
+      const textAfterCursor = value.slice(cursor);
+      const atSymbolIndex = textBeforeCursor.lastIndexOf("@");
+
+      const memTag = mem.title ? `@${mem.title.toLowerCase().replace(/[^a-z0-9_-]/g, "_")}` : `@memory`;
+      const prefix = atSymbolIndex >= 0 ? textBeforeCursor.slice(0, atSymbolIndex) : textBeforeCursor;
+      const replaced = prefix + `${memTag} ` + textAfterCursor;
+
+      setText(replaced);
+      setAtQuery(null);
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
+    },
+    [value, setText]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (atQuery !== null) {
+        if (filteredMemories.length > 0) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setAtIndex((i) => Math.min(i + 1, filteredMemories.length - 1));
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setAtIndex((i) => Math.max(i - 1, 0));
+            return;
+          }
+          if (e.key === "Tab" || e.key === "Enter") {
+            e.preventDefault();
+            applyMemoryMention(filteredMemories[Math.min(atIndex, filteredMemories.length - 1)]);
+            return;
+          }
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setAtQuery(null);
+          return;
+        }
+      }
+
+      if (slashQuery !== null) {
+        if (filteredSkills.length > 0) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSlashIndex((i) => Math.min(i + 1, Math.max(filteredSkills.length - 1, 0)));
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSlashIndex((i) => Math.max(i - 1, 0));
+            return;
+          }
+          if (e.key === "Tab" || e.key === "Enter") {
+            e.preventDefault();
+            applySkill(filteredSkills[Math.min(slashIndex, filteredSkills.length - 1)]);
+            return;
+          }
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setSlashQuery(null);
+          return;
+        }
+      }
+
+      if (e.key === "Enter" && !e.shiftKey && canSend) {
+        e.preventDefault();
+        send();
+        setSlashQuery(null);
+        setAtQuery(null);
+      }
+    },
+    [atQuery, atIndex, filteredMemories, applyMemoryMention, slashQuery, slashIndex, filteredSkills, applySkill, canSend, send]
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    const cursor = e.target.selectionStart ?? val.length;
+    setText(val);
+    checkTriggers(val, cursor);
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    const cursor = target.selectionStart ?? target.value.length;
+    checkTriggers(target.value, cursor);
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    const cursor = target.selectionStart ?? target.value.length;
+    checkTriggers(target.value, cursor);
+  };
+
   return (
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
+      {/* @ Memory mention popup */}
+      <AnimatePresence>
+        {atQuery !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 6 }}
+            transition={{ duration: 0.15 }}
+            style={{ transformOrigin: "bottom center" }}
+            className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/80 bg-popover/98 p-1.5 shadow-xl backdrop-blur-md max-h-72 overflow-y-auto"
+          >
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+              <div className="flex items-center gap-1.5">
+                <Brain className="size-3.5 text-muted-foreground" />
+                <span>Tracky AI Memory (@)</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground/60">{availableMemories.length} saved</span>
+            </div>
+
+            {filteredMemories.length > 0 ? (
+              filteredMemories.map((mem, idx) => (
+                <button
+                  key={mem.id}
+                  type="button"
+                  onMouseEnter={() => setAtIndex(idx)}
+                  onClick={() => applyMemoryMention(mem)}
+                  className={cn(
+                    "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 cursor-pointer hover:bg-muted/50",
+                    idx === atIndex && "text-foreground bg-muted"
+                  )}
+                >
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground border border-border/60">
+                    <Brain className="size-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="font-medium text-xs text-foreground truncate">
+                        {mem.title || <span className="italic text-muted-foreground">Personal Fact</span>}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.2 rounded shrink-0">
+                        @{mem.title ? mem.title.toLowerCase().replace(/[^a-z0-9_-]/g, "_") : "memory"}
+                      </span>
+                    </div>
+                    <p className="truncate text-[10px] text-muted-foreground/80 mt-0.5">
+                      {mem.description.slice(0, 80).replace(/\n+/g, " ")}
+                    </p>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-3 text-center text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">
+                  {availableMemories.length === 0 ? "No memories saved yet" : `No memories matching "@${atQuery}"`}
+                </p>
+                <p className="text-[11px] mt-1 text-muted-foreground/80">
+                  Add career facts in <span className="font-medium text-foreground">Prompts &gt; Tracky Memory</span> or tell Tracky about yourself.
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* / Slash command / Skills popup */}
+      <AnimatePresence>
+        {slashQuery !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 6 }}
+            transition={{ duration: 0.15 }}
+            style={{ transformOrigin: "bottom center" }}
+            className="absolute bottom-full left-0 z-50 mb-2 w-full max-w-md origin-bottom rounded-xl border border-border/80 bg-popover/98 p-1.5 shadow-xl backdrop-blur-md max-h-72 overflow-y-auto"
+          >
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+              <div className="flex items-center gap-1.5">
+                <Zap className="size-3.5 text-muted-foreground" />
+                <span>Chat Skills (/)</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground/60">{availableSkills.length} available</span>
+            </div>
+
+            {filteredSkills.length > 0 ? (
+              filteredSkills.map((skill, idx) => {
+                const IconComp = (skill.icon && SKILL_ICONS[skill.icon]) || Sparkles;
+                return (
+                  <button
+                    key={skill.id}
+                    type="button"
+                    onMouseEnter={() => setSlashIndex(idx)}
+                    onClick={() => applySkill(skill)}
+                    className={cn(
+                      "relative z-10 flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 cursor-pointer hover:bg-muted/50",
+                      idx === slashIndex && "text-foreground bg-muted"
+                    )}
+                  >
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground border border-border/60">
+                      <IconComp className="size-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-semibold text-foreground">/{skill.command}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">{skill.name}</span>
+                      </div>
+                      {skill.description && (
+                        <p className="truncate text-[10px] text-muted-foreground/80">{skill.description}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-3 py-3 text-center text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">No skills matching &quot;/{slashQuery}&quot;</p>
+                <p className="text-[11px] mt-1 text-muted-foreground/80">
+                  Create custom skills in <span className="font-medium text-foreground">Prompts &gt; Skills</span>.
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <ComposerPrimitive.AttachmentDropzone
         render={
           <div
             data-slot="aui_composer-shell"
-            className="flex w-full flex-col rounded-2xl border border-border bg-card p-2.5 shadow-xs transition-all focus-within:border-foreground/30 focus-within:ring-1 focus-within:ring-foreground/10 data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/40"
+            className="flex w-full flex-col rounded-2xl border-0 bg-muted/40 p-2.5 shadow-xs transition-all focus-within:ring-1 focus-within:ring-foreground/10 data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/40"
           />
         }
       >
         <ComposerAttachments />
-        <ComposerPrimitive.Input
-          placeholder="Ask AI or send a message..."
+        <textarea
+          ref={textareaRef}
+          value={value}
+          disabled={isDisabled}
+          onChange={handleChange}
+          onKeyUp={handleKeyUp}
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask Tracky anything, type @ for memory, or / for skills..."
           className="aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-36 min-h-9 w-full resize-none bg-transparent px-2 py-1 text-xs sm:text-[13px] text-foreground outline-none leading-relaxed"
           rows={1}
           autoFocus
-          enterKeyHint="send"
           aria-label="Message input"
         />
         <ComposerAction />
@@ -434,7 +783,7 @@ const AssistantMessage: FC = () => {
                     className="flex w-fit items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground my-0.5"
                     aria-label="Assistant is thinking"
                   >
-                    <SparklesIcon size={14} className="size-3.5 shrink-0 text-primary animate-pulse" />
+                    <SparklesIcon size={14} className="size-3.5 shrink-0 text-muted-foreground animate-pulse" />
                     <span className="text-xs font-medium text-foreground">
                       Thinking…
                     </span>
@@ -510,7 +859,7 @@ const UserMessage: FC = () => {
       <UserMessageAttachments />
 
       <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0">
-        <div className="aui-user-message-content peer bg-muted/60 text-foreground rounded-xl border border-border px-3.5 py-2 text-xs leading-relaxed wrap-break-word empty:hidden">
+        <div className="aui-user-message-content peer bg-[#e3f0fe] dark:bg-[#1a2d42] text-[#0d1e3a] dark:text-[#f0f4fc] rounded-2xl border-0 px-4 py-2.5 text-xs sm:text-[13px] leading-relaxed wrap-break-word empty:hidden">
           <MessagePrimitive.Parts
             components={{ File: UserFilePart, Image: UserImagePart }}
           />

@@ -667,8 +667,9 @@ function CompanyRow({
             logoUrl={company.logo_url}
             companyId={company.id}
             color={company.color ?? (tierConfig ? tierConfig.dotColor : undefined)}
-            className="size-8"
-            fallback="initial"
+            className="size-6"
+            iconClassName="size-5"
+            fallback="glyph"
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">

@@ -921,17 +921,11 @@ export default function AIChatbotPage() {
 
           <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
             <TopNavigation
-              title={activeSession?.title || "New Chat"}
-              onRenameTitle={(newTitle) => {
-                if (activeSessionId) {
-                  handleRenameSession(activeSessionId, newTitle);
-                }
-              }}
               onNewChat={handleNewChat}
               onToggleSidebar={() => setSessionSidebarCollapsed((prev) => !prev)}
               sources={sources}
               connectedSourceIds={activeConnectedIds}
-              onOpenDrawer={() => setIsWorkspaceDrawerOpen(true)}
+              onOpenDrawer={() => setIsWorkspaceDrawerOpen((prev) => !prev)}
             />
 
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

@@ -2,21 +2,25 @@
 
 import { useState } from "react";
 import {
-  FileText, Briefcase, Code2, BookOpen, Database, FolderKanban, KeyRound, Brain } from "lucide-react";
+  FileText,
+  Briefcase,
+  Code2,
+  BookOpen,
+  Database,
+  FolderKanban,
+  KeyRound,
+  Brain,
+  X,
+} from "lucide-react";
 import { UsersIcon } from "@/components/ui/users";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { FolderOpenIcon } from "@/components/ui/folder-open";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import type { ContextSource } from "@/lib/ai-chatbot/types";
 
 interface WorkspaceConnectionDrawerProps {
@@ -45,7 +49,7 @@ const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 const NATIVE_SOURCE_TYPES = new Set(["jobs", "resume", "contacts", "memories", "ai_prompts"]);
 
 const CATEGORY_LABELS: Record<string, string> = {
-  native: "Native",
+  native: "Native Workspace",
   external: "Integrations",
 };
 
@@ -132,11 +136,11 @@ function DbQueryInfo() {
   return (
     <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
       <div className="flex items-center gap-1.5 font-medium text-foreground mb-1">
-        <Database className="size-3.5 text-primary" />
+        <Database className="size-3.5 text-muted-foreground" />
         Local SQLite Database Connection
       </div>
       Direct read, create, and update access to your local database tables (jobs, companies, contacts, links, prompts, memories). Reads and writes run immediately.
-      <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2 text-xs text-foreground font-medium">
+      <div className="mt-2 rounded-lg border border-border/60 bg-muted/40 p-2 text-xs text-foreground font-medium">
         🔒 <strong>Deletes need your OK:</strong> the agent always shows the exact rows and SQL it wants to delete first. Nothing is removed until you confirm in your next message.
       </div>
     </div>
@@ -170,38 +174,44 @@ export function WorkspaceConnectionDrawer({
   const toggleExpand = (id: string) => setExpanded((cur) => (cur === id ? null : id));
 
   return (
-    <>
-      <Sheet
-        open={isOpen}
-        onOpenChange={(open) => {
-          if (!open) onClose();
-        }}
-      >
-        <SheetContent
-          side="right"
-          className="flex h-full w-full flex-col border-l border-border bg-background p-0 backdrop-blur-xl sm:max-w-[480px] md:max-w-[500px]"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.aside
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: "auto", opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+          className="relative z-20 flex h-full w-[340px] max-w-[85vw] shrink-0 flex-col overflow-hidden bg-card/90 backdrop-blur-xl md:w-[350px] lg:w-[370px]"
         >
-          <SheetHeader className="shrink-0 border-b border-border bg-muted/20 px-6 py-4 pr-14 text-left">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <div className="flex items-center gap-2">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Database className="size-4" />
-                </div>
-                <SheetTitle className="text-base font-semibold text-foreground tracking-tight">
-                  Workspace Sources
-                </SheetTitle>
+          {/* Header */}
+          <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-border/40 bg-muted/10">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <Database className="size-3.5" />
               </div>
+              <span className="text-sm font-semibold text-foreground truncate">
+                Workspace Sources
+              </span>
               <Badge
                 variant="outline"
-                className="border-primary/30 bg-primary/5 text-[11px] font-medium text-primary px-2.5 py-0.5"
+                className="border-border/60 bg-muted/50 text-[10px] font-medium text-muted-foreground px-2 py-0.5"
               >
-                <SparklesIcon className="mr-1 size-3" />
                 {activeCount} / {sources.length} Active
               </Badge>
             </div>
-          </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-colors cursor-pointer"
+              title="Close panel"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          {/* Sources list */}
+          <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
             {(["native", "external"] as const).map((category) => {
               const categorySources = sources.filter((s) =>
                 category === "native" ? NATIVE_SOURCE_TYPES.has(s.type) : !NATIVE_SOURCE_TYPES.has(s.type)
@@ -209,8 +219,8 @@ export function WorkspaceConnectionDrawer({
               if (categorySources.length === 0) return null;
 
               return (
-                <div key={category} className="mb-4 last:mb-0">
-                  <div className="mb-2 px-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
+                <div key={category} className="space-y-2">
+                  <div className="px-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
                     {CATEGORY_LABELS[category]}
                   </div>
                   <div className="space-y-2">
@@ -225,40 +235,40 @@ export function WorkspaceConnectionDrawer({
                         <div
                           key={source.id}
                           className={cn(
-                            "rounded-xl border p-3.5 transition-colors",
+                            "rounded-xl border p-3 transition-colors",
                             enabled
                               ? "border-border bg-card"
-                              : "border-border/60 bg-muted/20 opacity-75 hover:opacity-100"
+                              : "border-border/50 bg-muted/20 opacity-75 hover:opacity-100"
                           )}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-start gap-3">
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex min-w-0 items-start gap-2.5">
                               <div
                                 className={cn(
-                                  "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                                  enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                  "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors",
+                                  enabled ? "bg-muted text-foreground" : "bg-muted/50 text-muted-foreground"
                                 )}
                               >
-                                <Icon className="size-4" />
+                                <Icon className="size-3.5" />
                               </div>
 
                               <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="truncate text-xs font-semibold text-foreground">{source.name}</span>
                                   {enabled ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                                      <span className="size-1.5 rounded-full bg-primary" />
-                                      {needsSetup ? "Set up required" : `Connected · ${unitText}`}
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-1.5 py-0.2 text-[9px] font-medium text-foreground">
+                                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                                      {needsSetup ? "Setup needed" : unitText}
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                      Disconnected
+                                    <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-1.5 py-0.2 text-[9px] font-medium text-muted-foreground">
+                                      Off
                                     </span>
                                   )}
                                 </div>
 
-                                <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-                                  {source.lastSync ? <span>Synced {source.lastSync}</span> : <span>Not yet synced</span>}
+                                <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/70">
+                                  {source.lastSync ? <span>Synced {source.lastSync}</span> : <span>Not synced</span>}
                                 </div>
                               </div>
                             </div>
@@ -270,13 +280,13 @@ export function WorkspaceConnectionDrawer({
                               aria-label={`Toggle ${source.name}`}
                               onClick={() => onToggleSource(source.id)}
                               className={cn(
-                                "mt-1 relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95",
-                                enabled ? "bg-primary" : "bg-muted-foreground/30"
+                                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
+                                enabled ? "bg-foreground" : "bg-muted-foreground/30"
                               )}
                             >
                               <span
                                 className={cn(
-                                  "pointer-events-none inline-block size-4 transform rounded-full bg-background transition duration-200",
+                                  "pointer-events-none inline-block size-4 transform rounded-full bg-background shadow-xs ring-0 transition duration-200 ease-out",
                                   enabled ? "translate-x-4" : "translate-x-0"
                                 )}
                               />
@@ -287,10 +297,10 @@ export function WorkspaceConnectionDrawer({
                             <button
                               type="button"
                               onClick={() => toggleExpand(source.id)}
-                              className="mt-2 flex w-full items-center justify-between rounded-lg px-1 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/5 active:scale-95 cursor-pointer"
+                              className="mt-1.5 flex w-full items-center justify-between rounded-lg px-1 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 cursor-pointer"
                             >
                               {isExpanded ? "Hide details" : needsSetup ? "Set up connection" : "Configure / details"}
-                              <ChevronDownIcon className={cn("size-3.5 transition-transform duration-200", isExpanded && "rotate-180")} />
+                              <ChevronDownIcon className={cn("size-3 transition-transform duration-200", isExpanded && "rotate-180")} />
                             </button>
                           )}
                           {isExpanded && enabled && (
@@ -304,8 +314,8 @@ export function WorkspaceConnectionDrawer({
               );
             })}
           </div>
-        </SheetContent>
-      </Sheet>
-    </>
+        </motion.aside>
+      )}
+    </AnimatePresence>
   );
 }

@@ -605,8 +605,9 @@ export function OverviewTab({ data, onRefresh, onEditJob, onAiUpdate }: Overview
                     logoUrl={company.logo_url}
                     companyId={company.id}
                     color={company.color}
-                    className="size-8"
-                    fallback="initial"
+                    className="size-6"
+                    iconClassName="size-5"
+                    fallback="glyph"
                   />
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-foreground">{company.name}</p>

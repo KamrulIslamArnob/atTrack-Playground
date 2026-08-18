@@ -52,14 +52,33 @@ interface CommandInputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps>(
-  ({ className, onClear, isLoading, ...props }, ref) => {
+  ({ className, onClear, isLoading, autoFocus = true, ...props }, forwardedRef) => {
     const { value, onValueChange } = useCommand();
+    const internalInputRef = React.useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+      if (autoFocus) {
+        const raf = requestAnimationFrame(() => {
+          internalInputRef.current?.focus();
+        });
+        const timer = setTimeout(() => {
+          internalInputRef.current?.focus();
+        }, 20);
+        return () => {
+          cancelAnimationFrame(raf);
+          clearTimeout(timer);
+        };
+      }
+    }, [autoFocus]);
+
+    React.useImperativeHandle(forwardedRef, () => internalInputRef.current!);
 
     return (
       <div className="flex items-center border-b border-border/70 px-4 py-1">
         <Search className="mr-3 size-4.5 shrink-0 text-muted-foreground/70" />
         <input
-          ref={ref}
+          ref={internalInputRef}
+          autoFocus={autoFocus}
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           className={cn(

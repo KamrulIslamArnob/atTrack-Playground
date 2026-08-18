@@ -7,25 +7,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  AI_TOOL_KINDS, type AiToolKind, } from "@/lib/types/ai-tools";
+  AI_TOOL_KINDS,
+  type AiToolKind,
+} from "@/lib/types/ai-tools";
 import type { AiMemory } from "@/lib/types/memories";
+import type { Skill } from "@/lib/types/skills";
 import {
-  getCustomPrompts, saveCustomPrompt, resetCustomPrompt, } from "@/lib/actions/ai-prompts";
+  getCustomPrompts,
+  saveCustomPrompt,
+  resetCustomPrompt,
+} from "@/lib/actions/ai-prompts";
 import { getMemories } from "@/lib/actions/memories";
+import { getSkills } from "@/lib/actions/skills";
 import {
-  getDefaultPrompt, DEFAULT_PURPOSES, } from "@/lib/ai/prompts-defaults";
-import { Sparkles, Save, Mail, Info, Brain } from "lucide-react";
+  getDefaultPrompt,
+  DEFAULT_PURPOSES,
+} from "@/lib/ai/prompts-defaults";
+import { Sparkles, Save, Mail, Info, Brain, Zap } from "lucide-react";
 import { RotateCCWIcon } from "@/components/ui/rotate-ccw";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { MemoriesTab } from "@/components/preferences/memories-tab";
+import { SkillsTab } from "@/components/preferences/skills-tab";
 import { cn } from "@/lib/utils";
 
 export default function PromptsPage() {
-  const [activeTab, setActiveTab] = useState<"prompts" | "memories">("prompts");
+  const [activeTab, setActiveTab] = useState<"prompts" | "skills" | "memories">("prompts");
   const [selectedKind, setSelectedKind] = useState<AiToolKind>("cover_letter");
   const [customPrompts, setCustomPrompts] = useState<Record<string, string>>({});
   const [memories, setMemories] = useState<AiMemory[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [currentPromptText, setCurrentPromptText] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSaving, startSaveTransition] = useTransition();
@@ -35,14 +46,16 @@ export default function PromptsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [loadedPrompts, loadedMemories] = await Promise.all([
+        const [loadedPrompts, loadedMemories, loadedSkills] = await Promise.all([
           getCustomPrompts().catch(() => ({})),
           getMemories().catch(() => []),
+          getSkills().catch(() => []),
         ]);
         setCustomPrompts(loadedPrompts);
         setMemories(loadedMemories);
+        setSkills(loadedSkills);
       } catch {
-        toast.error("Couldn't load prompts and memories");
+        toast.error("Couldn't load prompts, skills, and memories");
       } finally {
         setLoading(false);
       }
@@ -108,6 +121,8 @@ export default function PromptsPage() {
 
   return (
     <div className="space-y-6">
+      {dialog}
+
       {/* Header */}
       <div className="-mx-6 border-b border-border pb-6">
         <div className="flex items-center justify-between px-6">
@@ -117,9 +132,9 @@ export default function PromptsPage() {
                 <Sparkles className="size-5" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Custom AI Prompts & Memory</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">AI Prompts, Skills & Memory</h1>
                 <p className="text-sm text-muted-foreground">
-                  Customize system prompt instructions and manage Markdown memories for grounded AI chatbot context.
+                  Customize generator prompts, configure slash command skills, and manage Tracky AI context memory.
                 </p>
               </div>
             </div>
@@ -130,7 +145,7 @@ export default function PromptsPage() {
       <Breadcrumbs />
 
       {/* Main Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-border/70 pb-3">
+      <div className="flex items-center gap-2 border-b border-border/70 pb-3 flex-wrap">
         <button
           type="button"
           onClick={() => setActiveTab("prompts")}
@@ -147,6 +162,30 @@ export default function PromptsPage() {
 
         <button
           type="button"
+          onClick={() => setActiveTab("skills")}
+          className={cn(
+            "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer",
+            activeTab === "skills"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Zap className="size-3.5" />
+          <span>Skills (Slash Commands /)</span>
+          {skills.length > 0 && (
+            <span
+              className={cn(
+                "inline-flex items-center justify-center min-w-5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none",
+                activeTab === "skills" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {skills.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab("memories")}
           className={cn(
             "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer",
@@ -156,7 +195,7 @@ export default function PromptsPage() {
           )}
         >
           <Brain className="size-3.5" />
-          <span>AI Memories</span>
+          <span>Tracky Memory (@)</span>
           {memories.length > 0 && (
             <span
               className={cn(
@@ -199,10 +238,10 @@ export default function PromptsPage() {
                     </div>
                     {hasCustom && (
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
                           isSelected
                             ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-primary/15 text-primary dark:bg-primary/30"
+                            : "bg-primary/10 text-primary"
                         }`}
                       >
                         Custom
@@ -214,101 +253,93 @@ export default function PromptsPage() {
             </div>
           </div>
 
-          {/* Right Editor Area */}
-          <div className="md:col-span-8 space-y-6">
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
-              <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold">{activeTool.label}</h3>
-                    <span className="text-xs font-medium text-muted-foreground px-2 py-0.5 rounded-md bg-muted">
-                      Stage: {activeTool.stage}
+          {/* Right Area: Prompt Editor */}
+          <div className="md:col-span-8 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{activeTool.label}</h3>
+                  {isCustomized ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary border border-primary/20">
+                      Customized
                     </span>
-                    {isCustomized ? (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                        Customized
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {DEFAULT_PURPOSES[activeTool.kind]}
-                  </p>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
+                      Default Template
+                    </span>
+                  )}
                 </div>
-              </div>
-
-              {/* Prompt Editor */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="prompt-editor" className="font-semibold text-sm">
-                    System Prompt Instructions
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    {isCustomized && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleReset}
-                        disabled={isResetting || isSaving}
-                        className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                      >
-                        {isResetting ? <Spinner className="size-3" /> : <RotateCCWIcon className="size-3.5" />}
-                        Reset to Default
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={isSaving || isResetting}
-                      className="h-8 text-xs gap-1.5"
-                    >
-                      {isSaving ? <Spinner className="size-3" /> : <Save className="size-3.5" />}
-                      Save Prompt
-                    </Button>
-                  </div>
-                </div>
-
-                <Textarea
-                  id="prompt-editor"
-                  value={currentPromptText}
-                  onChange={(e) => setCurrentPromptText(e.target.value)}
-                  rows={14}
-                  className="font-mono text-xs leading-relaxed p-4 rounded-xl border-border bg-background/50 focus:bg-background"
-                  placeholder="Enter custom system prompt instructions..."
-                />
-              </div>
-
-              {/* Variable Info Guide */}
-              <div className="rounded-xl border border-border/60 bg-muted/30 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <Info className="size-3.5 text-primary" />
-                  Available Context Variables
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  When generating, atTrack automatically injects the job details and candidate profile into the user prompt:
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {DEFAULT_PURPOSES[selectedKind] || "Controls AI generation behavior"}
                 </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {["jobTitle", "companyName", "jobDescription", "applicantName", "applicantHeadline", "resumeContent", "context"].map((v) => (
-                    <code key={v} className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-muted border border-border text-foreground">
-                      {`{${v}}`}
-                    </code>
-                  ))}
-                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  disabled={isResetting || !isCustomized}
+                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCCWIcon className={`size-3.5 ${isResetting ? "animate-spin" : ""}`} />
+                  Reset to Default
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs"
+                >
+                  {isSaving ? <Spinner className="size-3.5" /> : <Save className="size-3.5" />}
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+
+            {/* Prompt Textarea */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="prompt-text" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  System Prompt Definition
+                </Label>
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  {currentPromptText.length} characters
+                </span>
+              </div>
+              <Textarea
+                id="prompt-text"
+                value={currentPromptText}
+                onChange={(e) => setCurrentPromptText(e.target.value)}
+                rows={14}
+                className="font-mono text-xs leading-relaxed resize-y p-3.5 bg-background border-border/80 focus-visible:ring-primary"
+                placeholder="Enter system instructions..."
+              />
+            </div>
+
+            {/* Help / Variables Callout */}
+            <div className="p-3.5 rounded-xl border border-sky-500/20 bg-sky-50/50 dark:bg-sky-950/20 text-sky-900 dark:text-sky-200 text-xs flex items-start gap-2.5">
+              <Info className="size-4 shrink-0 text-sky-600 dark:text-sky-400 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-sky-950 dark:text-sky-100">Template Dynamic Variables</p>
+                <p className="text-[11px] leading-relaxed text-sky-800 dark:text-sky-300">
+                  During generation, atTrack automatically grounds the prompt with the target job description, company details, your matching resume, and your tone preferences.
+                </p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tab 2: AI Memories View */}
+      {/* Tab 2: Skills View */}
+      {activeTab === "skills" && (
+        <SkillsTab initialSkills={skills} />
+      )}
+
+      {/* Tab 3: Tracky Memories View */}
       {activeTab === "memories" && (
         <MemoriesTab initialMemories={memories} />
       )}
-
-      {dialog}
     </div>
   );
 }

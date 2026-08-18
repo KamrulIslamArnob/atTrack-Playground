@@ -354,7 +354,7 @@ const MessageItem = React.memo(function MessageItem({
             </div>
           )}
 
-          <div className="rounded-3xl border border-border/70 bg-muted/45 px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-foreground">
+          <div className="rounded-2xl border-0 bg-[#e3f0fe] dark:bg-[#1a2d42] px-4 py-3 sm:px-5 sm:py-3.5 text-sm text-[#0d1e3a] dark:text-[#f0f4fc]">
             {isEditing ? (
               <div className="flex flex-col gap-2 min-w-[260px]">
                 <textarea

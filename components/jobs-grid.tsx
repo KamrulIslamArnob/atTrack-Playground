@@ -676,16 +676,16 @@ export function JobsGrid({
         );
       case "company":
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
             <CompanyLogo
               name={job.company?.name}
               website={job.company?.website}
               logoUrl={job.company?.logo_url}
               companyId={job.company?.id}
               color={job.company?.color}
-              className="size-5.5 rounded-md text-[10px]"
-              iconClassName="size-3"
-              fallback="initial"
+              className="size-4"
+              iconClassName="size-4"
+              fallback="glyph"
             />
             <span className="truncate text-foreground font-medium">{job.company?.name ?? "Unknown company"}</span>
           </div>

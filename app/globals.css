@@ -1417,19 +1417,14 @@
    deepen/lift is hover-capable-pointer only; reduced motion keeps the
    shadow change and drops the transform (see override below). */
 .btn-cta {
-  box-shadow: 0 4px 12px -4px color-mix(in oklch, var(--gradient-brand-via) 45%, transparent);
-  transition: transform 200ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1)),
-              box-shadow 200ms var(--ease-out-quint, cubic-bezier(0.23, 1, 0.32, 1));
+  box-shadow: none !important;
+  transform: none !important;
 }
-@media (hover: hover) and (pointer: fine) {
-  .btn-cta:hover,
-  .btn-cta:focus-visible {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 22px -6px color-mix(in oklch, var(--gradient-brand-via) 55%, transparent);
-  }
-}
+.btn-cta:hover,
+.btn-cta:focus-visible,
 .btn-cta:active {
-  transform: translateY(0) scale(0.98);
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /* Reduced Motion Override */
@@ -1449,7 +1444,6 @@
   .btn-cta:focus-visible,
   .btn-cta:active {
     transform: none !important;
-    transition: box-shadow 150ms ease-out !important;
   }
 
   /* Keep the arrival cue, drop the movement and the blur. */

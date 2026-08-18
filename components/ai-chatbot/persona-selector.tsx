@@ -56,7 +56,7 @@ export function PersonaSelector({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "group flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted hover:text-foreground active:scale-[0.98]",
+          "group flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-all duration-200 hover:bg-muted hover:text-foreground active:scale-[0.98]",
           isOpen && "border-primary/30 bg-primary/5"
         )}
         title="Switch assistant persona"

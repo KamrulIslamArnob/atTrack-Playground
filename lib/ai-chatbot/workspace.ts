@@ -243,7 +243,14 @@ export function buildWorkspaceContextBlock(
   snapshot: WorkspaceSnapshot | null,
   sources?: ContextSource[]
 ): string | null {
-  if (!snapshot || snapshot.counts.jobs === 0) return null;
+  if (!snapshot) return null;
+  const hasAnyData =
+    snapshot.counts.jobs > 0 ||
+    snapshot.counts.resumes > 0 ||
+    snapshot.counts.contacts > 0 ||
+    (snapshot.counts.memories ?? 0) > 0 ||
+    (snapshot.counts.links ?? 0) > 0;
+  if (!hasAnyData) return null;
 
   const isEnabled = (type: string) => {
     if (!sources || sources.length === 0) return true;
@@ -305,11 +312,10 @@ export function buildWorkspaceContextBlock(
   }
 
   if (isEnabled("memories") && snapshot.memories && snapshot.memories.length > 0) {
-    lines.push(`- Saved AI Memories & Markdown Context (${snapshot.memories.length} entries):`);
-    for (const mem of snapshot.memories.slice(0, 10)) {
+    lines.push(`- Core User Profile & Personal Context (${snapshot.memories.length} memories):`);
+    for (const mem of snapshot.memories) {
       const titleStr = mem.title ? `[${mem.title}] ` : "";
-      const textPreview = mem.description.length > 200 ? `${mem.description.slice(0, 200)}...` : mem.description;
-      lines.push(`  · ${titleStr}${textPreview.replace(/\n+/g, " ")}`);
+      lines.push(`  · ${titleStr}${mem.description.replace(/\n+/g, " ").trim()}`);
     }
   }
 

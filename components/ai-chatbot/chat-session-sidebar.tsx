@@ -146,7 +146,7 @@ export function ChatSessionSidebar({
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] shrink-0 flex-col border-r border-border bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:z-10 md:transition-none md:w-[280px]",
+        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] shrink-0 flex-col bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:relative md:z-10 md:transition-none md:w-[280px]",
         isMobileOpen ? "translate-x-0 shadow-lg" : "-translate-x-full md:translate-x-0"
       )}
     >

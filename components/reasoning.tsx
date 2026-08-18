@@ -182,7 +182,7 @@ function ReasoningTrigger({
       )}
       {...props}
     >
-      <BlocksIcon size={14} className={cn("size-3.5 shrink-0 text-primary inline-flex", active && "animate-pulse")} />
+      <BlocksIcon size={14} className={cn("size-3.5 shrink-0 text-muted-foreground inline-flex", active && "animate-pulse")} />
       <span className={cn(active ? "text-foreground font-semibold" : "text-muted-foreground")}>
         {active ? "Thinking…" : `Thought${durationText}`}
       </span>

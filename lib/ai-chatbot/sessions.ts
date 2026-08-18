@@ -29,7 +29,7 @@ export const CHAT_PERSONAS: ChatPersona[] = [
     badge: "Versatile",
     iconName: "Sparkles",
     description: "All-purpose career, coding, and productivity assistant",
-    systemPrompt: "You are atTrack AI, a helpful, precise, and professional career & software engineering assistant.",
+    systemPrompt: "Your name is Tracky. You are the helpful, precise, and professional career & software engineering co-pilot in atTrack.",
     heading: "What would you like to accomplish today?",
     subheading: "Ask questions, generate content, or explore career strategies.",
     preferredSources: ["jobs", "resumes", "contacts"],
