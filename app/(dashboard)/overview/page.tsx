@@ -262,19 +262,7 @@ export default async function OverviewPage() {
       </div>
 
       {/* Primary Zone: Connected Pipeline Stepper */}
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-semibold sm:text-base text-foreground">Pipeline</h2>
-            <p className="text-xs text-muted-foreground">Current distribution across hiring stages</p>
-          </div>
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-colors cursor-pointer"
-          >
-            View board <ArrowRightIcon className="size-3.5" />
-          </Link>
-        </div>
+      <div className="rounded-2xl bg-card p-4 sm:p-5">
         {allJobs.length > 0 ? (
           <PipelineStages stages={pipelineStages} total={allJobs.length} />
         ) : (
