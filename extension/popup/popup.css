@@ -1,52 +1,36 @@
+/* Always dark — deliberately not OS-toggled. Values are atTrack's own dark
+ * palette (docs/Design.md §1.1, app/globals.css .dark block), copied in as
+ * plain custom properties since this popup has no build step to share the
+ * app's Tailwind token pipeline. Keep these two files in sync by hand if
+ * Design.md's dark palette ever changes. */
 :root {
-  --bg-app: #f8fafc;
-  --card-bg: #ffffff;
-  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  
-  --input-bg: #f1f5f9;
-  --input-hover: #e2e8f0;
-  --border-color: #e2e8f0;
-  --border-hover: #cbd5e1;
-  
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-subtle: #94a3b8;
-  
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-text: #ffffff;
-  --primary-glow: rgba(37, 99, 235, 0.25);
-  
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.08);
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.1);
-  
+  --bg-app: #09090b;              /* --background */
+  --card-bg: #121215;             /* --card */
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+  --input-bg: #18181b;            /* --muted */
+  --input-hover: #27272a;         /* --border, used one step up as a hover ground */
+  --border-color: #27272a;        /* --border */
+  --border-hover: #3f3f46;
+
+  --text-main: #f8fafc;           /* --foreground */
+  --text-muted: #94a3b8;          /* --muted-foreground */
+  --text-subtle: #71717a;
+
+  --primary: #38bdf8;             /* --primary */
+  --primary-hover: #7dd3fc;
+  --primary-text: #082f49;        /* --primary-foreground */
+  --primary-glow: rgba(56, 189, 248, 0.35);
+
+  --success: #4ade80;
+  --success-bg: #14532d33;
+  --warning: #fbbf24;
+  --warning-bg: #78350f33;
+  --destructive: #f87171;
+
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-app: #09090b;
-    --card-bg: #18181b;
-    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    
-    --input-bg: #27272a;
-    --input-hover: #3f3f46;
-    --border-color: #27272a;
-    --border-hover: #3f3f46;
-    
-    --text-main: #f4f4f5;
-    --text-muted: #a1a1aa;
-    --text-subtle: #71717a;
-    
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --primary-text: #ffffff;
-    --primary-glow: rgba(59, 130, 246, 0.35);
-  }
 }
 
 * {
@@ -72,7 +56,11 @@ body::-webkit-scrollbar,
 }
 
 body {
-  width: 360px;
+  /* min-width, not a fixed width: Chrome lets a popup be drag-resized from
+   * its bottom-right corner, independent of the browser window's own size.
+   * Everything below already lays out with flex/grid at 100% width, so it
+   * reflows instead of clipping at whatever width the popup ends up. */
+  min-width: 360px;
   background-color: var(--bg-app);
   color: var(--text-main);
   font-family: var(--font-family);
@@ -172,12 +160,12 @@ body {
 }
 
 .status-pill.disconnected {
-  border-color: rgba(239, 68, 68, 0.3);
-  background-color: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  border-color: rgba(248, 113, 113, 0.3);
+  background-color: rgba(248, 113, 113, 0.12);
+  color: var(--destructive);
 }
 .status-pill.disconnected .status-dot {
-  background-color: #ef4444;
+  background-color: var(--destructive);
 }
 
 .status-pill.checking .status-dot {
@@ -241,6 +229,37 @@ body {
 .drawer-hint {
   font-size: 11px;
   color: var(--text-subtle);
+}
+
+/* Advanced disclosure — collapsed by default; the manual server address is
+ * only an escape hatch now that connecting is automatic. */
+.advanced-details summary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  list-style: none;
+}
+.advanced-details summary::-webkit-details-marker {
+  display: none;
+}
+.advanced-details summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 4px;
+  transition: transform 160ms var(--ease-out);
+}
+.advanced-details[open] summary::before {
+  transform: rotate(90deg);
+}
+.advanced-details .input-group {
+  margin-top: 8px;
+}
+
+.button-full {
+  width: 100%;
 }
 
 /* Banners */

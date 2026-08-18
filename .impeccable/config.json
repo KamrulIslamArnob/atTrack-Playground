@@ -32,6 +32,24 @@
         ],
         "createdAt": "2026-08-15T13:53:47.956Z",
         "reason": "pre-existing .auth-bg dot-grid (radial-gradient, --border token, 24px cell) used only on full-page error.tsx/not-found.tsx states, unrelated to this session's .btn-cta edit"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "tagspring",
+        "createdAt": "2026-08-18T03:57:37.595Z",
+        "reason": "Claude: pre-existing skill-tag pop-in animation, unchanged from before this redesign; redesign scope was rounded corners + dark tokens + fluid width, not motion"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "var(--ease-spring)",
+        "createdAt": "2026-08-18T03:57:47.619Z",
+        "reason": "Claude: pre-existing toast slide-up entrance, unchanged from before this redesign; redesign scope was rounded corners + dark tokens + fluid width, not motion"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        "createdAt": "2026-08-18T03:57:47.720Z",
+        "reason": "Claude: pre-existing --ease-spring token backing the tag/toast pop-ins above, kept as originally defined; not in scope of this redesign"
       }
     ]
   }

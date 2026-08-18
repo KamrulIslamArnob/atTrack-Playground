@@ -3,7 +3,7 @@ const crypto = require("node:crypto");
 const path = require("node:path");
 const os = require("node:os");
 const { loadSettings, saveSettings } = require("./settings");
-const { findFreePort, waitForReady, spawnServer, stopServer } = require("./server");
+const { findPreferredPort, waitForReady, spawnServer, stopServer } = require("./server");
 
 // Determines %APPDATA%\AtTrack (userData) instead of %APPDATA%\Electron/whatever the
 // packaged exe's internal name is — must be called before any app.getPath() use.
@@ -67,10 +67,17 @@ async function main() {
     settings.geminiApiKey = await promptForGeminiKey();
   }
 
-  saveSettings(settings);
-
-  const port = await findFreePort();
+  // Prefer last launch's resolved port, then the fixed ladder the extension
+  // also probes (see extension/background/service-worker.js CANDIDATE_PORTS)
+  // — makes the app's address predictable across relaunches so the Chrome
+  // extension can find it automatically instead of the user reading a random
+  // port out of Settings and retyping it every time the app restarts.
+  const preferred = settings.lastPort || 3308;
+  const port = await findPreferredPort([preferred, 3308, 3309, 3310, 3311, 3312]);
   currentPort = port;
+  settings.lastPort = port;
+
+  saveSettings(settings);
 
   const standaloneDir = app.isPackaged
     ? path.join(process.resourcesPath, "standalone")

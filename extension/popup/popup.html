@@ -34,27 +34,32 @@
     <!-- Settings Drawer (Collapsible) -->
     <div id="settingsPanel" class="settings-drawer hidden">
       <div class="drawer-header">
-        <span class="drawer-title">Server Endpoint</span>
-      </div>
-      <div class="input-group">
-        <input type="text" id="serverUrlInput" value="http://127.0.0.1:3308" placeholder="http://127.0.0.1:3308" />
-      </div>
-
-      <div class="drawer-header mt-4">
         <span class="drawer-title">Extension Secret</span>
       </div>
       <div class="input-group">
-        <input type="password" id="secretInput" placeholder="Paste from atTrack Settings" />
+        <input type="password" id="secretInput" class="field-input" placeholder="Paste from atTrack Settings" />
       </div>
+      <p class="drawer-hint">The address to reach atTrack at is found automatically — this is the only thing to paste.</p>
 
       <div class="drawer-header mt-4">
         <span class="drawer-title">Firecrawl API Key (Optional)</span>
       </div>
       <div class="input-group">
-        <input type="password" id="firecrawlKeyInput" placeholder="fc-..." />
-        <button type="button" id="btnSaveServerUrl" class="button button-secondary">Save</button>
+        <input type="password" id="firecrawlKeyInput" class="field-input" placeholder="fc-..." />
       </div>
-      <p class="drawer-hint">Configures local server endpoint, extension secret & Firecrawl cloud scraper key.</p>
+
+      <details class="advanced-details mt-4">
+        <summary>Advanced</summary>
+        <div class="drawer-header mt-4">
+          <span class="drawer-title">Server address</span>
+        </div>
+        <div class="input-group">
+          <input type="text" id="serverUrlInput" class="field-input" value="http://127.0.0.1:3308" placeholder="http://127.0.0.1:3308" />
+        </div>
+        <p class="drawer-hint">Only change this for a second atTrack instance or a remote machine.</p>
+      </details>
+
+      <button type="button" id="btnSaveServerUrl" class="button button-secondary button-full mt-8">Save</button>
     </div>
 
     <!-- Offline Alert Banner -->

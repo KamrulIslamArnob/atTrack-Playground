@@ -13,6 +13,7 @@ import { requestId } from "@/lib/log/request";
 import { logResourceActivity } from "./activity-log";
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobState, JobTier } from "@/lib/types/job";
+import type { ExtractionResult } from "@/lib/ai/schema";
 
 const log = moduleLogger("actions.jobs");
 
@@ -1012,4 +1013,243 @@ export async function updateJobTier(
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${jobId}`);
   return { success: true };
+}
+
+export async function enrichJobFromAi(
+  jobId: string,
+  extraction: ExtractionResult
+): Promise<{ success: boolean; updatedFields: string[] }> {
+  const { supabase, userId } = await getUser();
+
+  const { data: existingJob, error: fetchError } = await supabase
+    .from("jobs")
+    .select("*, companies(*)")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .single();
+
+  if (fetchError || !existingJob) {
+    throw new Error("Job not found");
+  }
+
+  const updatedFields: string[] = [];
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (extraction.title?.trim()) {
+    updateData.title = extraction.title.trim();
+    updatedFields.push("title");
+  }
+  if (extraction.application_url?.trim()) {
+    updateData.application_url = extraction.application_url.trim();
+    updatedFields.push("application_url");
+  }
+  if (extraction.application_email?.trim()) {
+    updateData.application_email = extraction.application_email.trim();
+    updatedFields.push("application_email");
+  }
+  if (extraction.application_process?.trim()) {
+    updateData.application_process = extraction.application_process.trim();
+    updatedFields.push("application_process");
+  }
+  if (extraction.location?.trim()) {
+    updateData.location = extraction.location.trim();
+    updatedFields.push("location");
+  }
+  if (extraction.salary_range?.trim()) {
+    updateData.salary_range = extraction.salary_range.trim();
+    updatedFields.push("salary");
+  }
+  if (extraction.salary_min != null) {
+    updateData.salary_min = extraction.salary_min;
+  }
+  if (extraction.salary_max != null) {
+    updateData.salary_max = extraction.salary_max;
+  }
+  if (extraction.salary_currency?.trim()) {
+    updateData.salary_currency = extraction.salary_currency.trim();
+  }
+  if (extraction.salary_period?.trim()) {
+    updateData.salary_period = extraction.salary_period.trim();
+  }
+  if (extraction.is_unpaid != null) {
+    updateData.is_unpaid = extraction.is_unpaid ? 1 : 0;
+  }
+  if (extraction.employment_type?.trim()) {
+    updateData.employment_type = extraction.employment_type.trim();
+    updatedFields.push("employment_type");
+  }
+  if (extraction.work_location?.trim()) {
+    updateData.work_location = extraction.work_location.trim();
+    updatedFields.push("work_location");
+  }
+  if (extraction.educational_requirements?.trim()) {
+    updateData.educational_requirements = extraction.educational_requirements.trim();
+    updatedFields.push("educational_requirements");
+  }
+  if (extraction.work_schedule?.trim()) {
+    updateData.work_schedule = extraction.work_schedule.trim();
+    updatedFields.push("work_schedule");
+  }
+  if (extraction.holiday_policy?.trim()) {
+    updateData.holiday_policy = extraction.holiday_policy.trim();
+    updatedFields.push("holiday_policy");
+  }
+  if (extraction.map_url?.trim()) {
+    updateData.map_url = extraction.map_url.trim();
+    updatedFields.push("map_url");
+  }
+  if (extraction.deadline?.trim()) {
+    updateData.deadline = extraction.deadline.trim();
+    updatedFields.push("deadline");
+  }
+  if (extraction.source?.trim() && !existingJob.source) {
+    updateData.source = extraction.source.trim();
+    updatedFields.push("source");
+  }
+
+  // Description: update if extracted description is non-empty
+  if (extraction.description?.trim()) {
+    updateData.description = extraction.description.trim();
+    updatedFields.push("description");
+  }
+
+  // Skills: merge/union
+  if (Array.isArray(extraction.skills) && extraction.skills.length > 0) {
+    const existingSkills: string[] = Array.isArray(existingJob.skills) ? existingJob.skills : [];
+    const mergedSkills = Array.from(
+      new Set([...existingSkills, ...extraction.skills].map((s) => s.trim()).filter(Boolean))
+    );
+    if (mergedSkills.length > 0) {
+      updateData.skills = mergedSkills;
+      updatedFields.push("skills");
+    }
+  }
+
+  // Benefits: merge/union
+  if (Array.isArray(extraction.benefits) && extraction.benefits.length > 0) {
+    const existingBenefits: string[] = Array.isArray(existingJob.benefits) ? existingJob.benefits : [];
+    const mergedBenefits = Array.from(
+      new Set([...existingBenefits, ...extraction.benefits].map((b) => b.trim()).filter(Boolean))
+    );
+    if (mergedBenefits.length > 0) {
+      updateData.benefits = mergedBenefits;
+      updatedFields.push("benefits");
+    }
+  }
+
+  // Notes: append any new extracted notes
+  if (Array.isArray(extraction.notes) && extraction.notes.length > 0) {
+    const existingNotes = Array.isArray(existingJob.notes) ? existingJob.notes : [];
+    const existingTitles = new Set(existingNotes.map((n: { title?: string }) => n.title?.toLowerCase()));
+    const newNotes = extraction.notes.filter((n) => !existingTitles.has(n.title?.toLowerCase()));
+    if (newNotes.length > 0) {
+      updateData.notes = [...existingNotes, ...newNotes];
+      updatedFields.push("notes");
+    }
+  }
+
+  // Update Company
+  if (extraction.company?.trim()) {
+    const companyId = existingJob.company_id;
+    if (companyId) {
+      await supabase
+        .from("companies")
+        .update({ name: extraction.company.trim() })
+        .eq("id", companyId)
+        .eq("user_id", userId);
+    }
+  }
+
+  // Contact linking if found
+  if (extraction.contact && (extraction.contact.name || extraction.contact.email) && existingJob.company_id) {
+    try {
+      const cName = extraction.contact.name?.trim() || null;
+      const cEmail = extraction.contact.email?.trim() || null;
+      const cRole = extraction.contact.role?.trim() || "recruiter";
+      let contactId: string | null = null;
+
+      if (cEmail) {
+        const { data: existing } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("company_id", existingJob.company_id)
+          .eq("email", cEmail)
+          .maybeSingle();
+        contactId = existing?.id ?? null;
+      }
+      if (!contactId && cName) {
+        const { data: existing } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("company_id", existingJob.company_id)
+          .eq("name", cName)
+          .maybeSingle();
+        contactId = existing?.id ?? null;
+      }
+      if (!contactId) {
+        const { data: newContact } = await supabase
+          .from("contacts")
+          .insert({
+            user_id: userId,
+            name: cName ?? cEmail,
+            email: cEmail,
+            role: cRole,
+            company_id: existingJob.company_id,
+          })
+          .select("id")
+          .single();
+        contactId = newContact?.id ?? null;
+      }
+      if (contactId) {
+        // Link to job_contacts if not already linked
+        const { data: linked } = await supabase
+          .from("job_contacts")
+          .select("id")
+          .eq("job_id", jobId)
+          .eq("contact_id", contactId)
+          .maybeSingle();
+        if (!linked) {
+          await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contactId });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Update the job row
+  const { error: updateError } = await supabase
+    .from("jobs")
+    .update(updateData)
+    .eq("id", jobId)
+    .eq("user_id", userId);
+
+  if (updateError) {
+    throw new Error("Failed to update job with AI details.");
+  }
+
+  // Rescore match score
+  scheduleJobScore(userId, jobId);
+
+  // Vector index description
+  if (updateData.description) {
+    try {
+      const { indexEntityChunks } = await import("@/lib/ai/embeddings");
+      indexEntityChunks({
+        userId,
+        sourceId: jobId,
+        sourceType: "job_description",
+        text: updateData.description as string,
+      }).catch(() => {});
+    } catch {}
+  }
+
+  revalidatePath("/board");
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${jobId}`);
+  return { success: true, updatedFields };
 }

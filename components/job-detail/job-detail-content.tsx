@@ -9,6 +9,7 @@ import {
   Bot,
   MoreHorizontal,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
 import { CheckIcon } from "@/components/ui/check";
@@ -26,6 +27,7 @@ import { NetworkTab } from "@/components/job-detail/tabs/network-tab";
 import { EditDrawer } from "@/components/job-detail/edit-drawer";
 import { TabErrorBoundary } from "@/components/job-detail/tab-error-boundary";
 import { CompanyEditDialog } from "@/components/job-detail/company-edit-dialog";
+import { JobAiUpdateDialog } from "@/components/job-detail/job-ai-update-dialog";
 import {
   JOB_STATUS_LABELS,
   JOB_TIERS,
@@ -71,6 +73,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   const { job, company } = data;
   const [tab, setTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
+  const [aiUpdateOpen, setAiUpdateOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [tierPending, setTierPending] = useState(false);
   const { confirm, dialog } = useConfirm();
@@ -424,6 +427,17 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Update with AI action button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAiUpdateOpen(true)}
+              className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer"
+            >
+              <Sparkles className="size-3.5 text-primary" />
+              <span className="hidden sm:inline">Update with AI</span>
+            </Button>
+
             {!lists && (
               <Button
                 variant="outline"
@@ -448,6 +462,10 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 <MoreHorizontal className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setAiUpdateOpen(true)} className="cursor-pointer">
+                  <Sparkles className="mr-2 size-3.5 text-primary" />
+                  Update with AI
+                </DropdownMenuItem>
                 {company && (
                   <DropdownMenuItem onClick={() => setCompanyOpen(true)}>
                     <Building2 className="mr-2 size-3.5" />
@@ -490,7 +508,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                   className="shrink-0 gap-1.5 px-3 py-2.5 text-xs font-semibold group-data-horizontal/tabs:after:bottom-0 data-active:text-primary data-active:after:bg-primary"
                 >
                   <Icon className="size-3.5" />
-                  <span>{item.label}</span>
+                  {item.label}
                 </TabsTrigger>
               );
             })}
@@ -500,7 +518,12 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
         <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <TabsContent value="overview">
             <TabErrorBoundary label="overview">
-              <OverviewTab data={data} onRefresh={onRefresh} onEditJob={() => setEditOpen(true)} />
+              <OverviewTab
+                data={data}
+                onRefresh={onRefresh}
+                onEditJob={() => setEditOpen(true)}
+                onAiUpdate={() => setAiUpdateOpen(true)}
+              />
             </TabErrorBoundary>
           </TabsContent>
           <TabsContent value="timeline">
@@ -527,6 +550,16 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
         open={editOpen}
         onOpenChange={setEditOpen}
         onRefresh={onRefresh}
+      />
+      <JobAiUpdateDialog
+        data={data}
+        open={aiUpdateOpen}
+        onClose={() => setAiUpdateOpen(false)}
+        onRefresh={onRefresh}
+        onOpenEditWithExtraction={() => {
+          setAiUpdateOpen(false);
+          setEditOpen(true);
+        }}
       />
       {company && (
         <CompanyEditDialog

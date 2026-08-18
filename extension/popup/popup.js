@@ -132,19 +132,37 @@ document.addEventListener("DOMContentLoaded", () => {
       { type: "CHECK_SERVER_STATUS", serverUrl: currentServerUrl },
       (response) => {
         if (response && response.online) {
-          isServerOnline = true;
-          statusBadge.className = "status-pill connected";
-          statusText.textContent = "Connected";
-          offlineNotice.classList.add("hidden");
-          btnSubmit.disabled = false;
+          setConnected();
         } else {
-          isServerOnline = false;
-          statusBadge.className = "status-pill disconnected";
-          statusText.textContent = "Offline";
-          offlineNotice.classList.remove("hidden");
+          // The stored address is stale or was never right — try to find the
+          // real one automatically instead of leaving the user to type it in.
+          chrome.runtime.sendMessage({ type: "DISCOVER_SERVER" }, (discovery) => {
+            if (discovery && discovery.found) {
+              currentServerUrl = discovery.serverUrl;
+              serverUrlInput.value = currentServerUrl;
+              setConnected();
+            } else {
+              setDisconnected();
+            }
+          });
         }
       }
     );
+  }
+
+  function setConnected() {
+    isServerOnline = true;
+    statusBadge.className = "status-pill connected";
+    statusText.textContent = "Connected";
+    offlineNotice.classList.add("hidden");
+    btnSubmit.disabled = false;
+  }
+
+  function setDisconnected() {
+    isServerOnline = false;
+    statusBadge.className = "status-pill disconnected";
+    statusText.textContent = "Offline";
+    offlineNotice.classList.remove("hidden");
   }
 
   async function extractFromCurrentTab() {

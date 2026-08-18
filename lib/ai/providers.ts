@@ -918,13 +918,47 @@ export async function generateTextStream(
   });
 }
 
+const BLOCKED_HOSTNAME_PATTERNS: RegExp[] = [
+  /^127\./, // 127.0.0.0/8 loopback
+  /^10\./, // 10.0.0.0/8 private
+  /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12 private
+  /^192\.168\./, // 192.168.0.0/16 private
+  /^169\.254\./, // 169.254.0.0/16 link-local
+  /^0\.0\.0\.0$/,
+  /^\[?::1\]?$/, // IPv6 loopback
+];
+
+/** Guards every server-side "fetch a URL someone else supplied" call — the
+ *  chatbot's web_search tool and the native scrape fallback below are the
+ *  app's only two. Rejects requests aimed at the local machine or a private
+ *  network before they go out, so a job description or chat message can't
+ *  smuggle in an SSRF probe against localhost/the LAN. */
+export function assertPublicHttpUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Only http/https URLs are allowed");
+  }
+  const hostname = parsed.hostname;
+  if (hostname === "localhost" || BLOCKED_HOSTNAME_PATTERNS.some((re) => re.test(hostname))) {
+    throw new Error("Requests to local or private network addresses are not allowed");
+  }
+}
+
 /** Scraping-task substitute for Gemini's built-in url_context tool: plain
  *  fetch + tag-stripping, used only when the resolved scraping hop isn't
  *  Gemini. Capped at 20k chars — plenty for a job posting, keeps the prompt
- *  bounded. */
+ *  bounded. redirect:"manual" means a 3xx is treated as a failed fetch rather
+ *  than followed — a public-looking URL can still redirect to a private one. */
 export async function fetchUrlAsText(url: string): Promise<string> {
+  assertPublicHttpUrl(url);
   const res = await fetchWithLog(url, {
     headers: { "user-agent": "Mozilla/5.0 (compatible; atTrack/1.0)" },
+    redirect: "manual",
     signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);

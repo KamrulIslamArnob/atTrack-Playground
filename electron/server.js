@@ -18,6 +18,34 @@ function findFreePort() {
   });
 }
 
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.unref();
+    server.on("error", () => resolve(false));
+    server.listen(port, "127.0.0.1", () => {
+      server.close(() => resolve(true));
+    });
+  });
+}
+
+/**
+ * Tries a fixed, deterministic list of ports in order and binds the first free
+ * one. Unlike findFreePort's random OS-assigned port, this makes the app's
+ * address predictable across launches, which is what lets the Chrome extension
+ * auto-discover it instead of the user copying a random port out of Settings
+ * every relaunch (see extension/background/service-worker.js's
+ * CANDIDATE_PORTS, which probes this same list). Falls back to a fully random
+ * port only if every candidate is already taken.
+ * @param {number[]} candidates
+ */
+async function findPreferredPort(candidates) {
+  for (const port of candidates) {
+    if (await isPortFree(port)) return port;
+  }
+  return findFreePort();
+}
+
 function waitForReady(url, { timeoutMs = 30000, intervalMs = 300 } = {}) {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve, reject) => {
@@ -69,4 +97,4 @@ function stopServer(child) {
   if (child && !child.killed) child.kill();
 }
 
-module.exports = { findFreePort, waitForReady, spawnServer, stopServer };
+module.exports = { findFreePort, findPreferredPort, waitForReady, spawnServer, stopServer };

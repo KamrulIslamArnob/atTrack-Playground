@@ -2,13 +2,49 @@
 
 const DEFAULT_SERVER_URL = "http://127.0.0.1:3308";
 
-// Ensure default settings on install
+// Electron tries 3308 first and only falls back to a nearby port if
+// something else already holds it (electron/main.js findPreferredPort) —
+// probing the same short ladder is how the extension finds the app with zero
+// manual setup, on install and on every relaunch after a port changes.
+const CANDIDATE_PORTS = [3308, 3309, 3310, 3311, 3312];
+
+// Ensure default settings on install — try to find the real app immediately
+// instead of assuming the default port; falls back to it if nothing answers
+// yet (e.g. the desktop app isn't running at install time).
 chrome.runtime.onInstalled.addListener(async () => {
   const { serverUrl } = await chrome.storage.local.get("serverUrl");
   if (!serverUrl) {
-    await chrome.storage.local.set({ serverUrl: DEFAULT_SERVER_URL });
+    const found = await discoverServer();
+    await chrome.storage.local.set({ serverUrl: found || DEFAULT_SERVER_URL });
   }
 });
+
+/** One candidate: does anything atTrack-shaped answer on this port? No auth
+ *  needed here — /api/extension/status is intentionally open. */
+async function probeUrl(url) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 800);
+    const response = await fetch(`${url}/api/extension/status`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data && data.appName === "atTrack" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Races the fixed port ladder and returns the first live atTrack instance. */
+async function discoverServer() {
+  const candidates = CANDIDATE_PORTS.map((port) => `http://127.0.0.1:${port}`);
+  const results = await Promise.all(candidates.map(probeUrl));
+  return results.find(Boolean) || null;
+}
 
 // Message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -17,6 +53,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === "CHECK_SERVER_STATUS") {
         const result = await checkServerStatus(message.serverUrl);
         sendResponse(result);
+      } else if (message.type === "DISCOVER_SERVER") {
+        const found = await discoverServer();
+        if (found) await chrome.storage.local.set({ serverUrl: found });
+        sendResponse({ found: Boolean(found), serverUrl: found || null });
       } else if (message.type === "PARSE_JOB_AI") {
         const result = await parseJobAI(message.payload, message.serverUrl);
         sendResponse(result);

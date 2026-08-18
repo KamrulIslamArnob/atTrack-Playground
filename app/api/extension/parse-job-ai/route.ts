@@ -3,6 +3,7 @@ import { getUser } from "@/lib/auth";
 import { resolveProviderChain, resolveAllProviders, generateText } from "@/lib/ai/providers";
 import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import { scrapeWithFirecrawl } from "@/lib/services/firecrawl";
+import { scrapeNative } from "@/lib/services/native-scrape";
 import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
 import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
@@ -34,7 +35,11 @@ export const POST = withRoute("/api/extension/parse-job-ai", async (req: Request
     const url = typeof body.url === "string" ? body.url.trim() : "";
     const pageText = typeof body.pageText === "string" ? body.pageText.trim() : "";
     const layer1Data = typeof body.layer1Data === "object" && body.layer1Data ? body.layer1Data : {};
-    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+    // Env var wins if set; otherwise honor the key the extension/Settings page
+    // already collect and store, which this route previously ignored.
+    const firecrawlApiKey =
+      process.env.FIRECRAWL_API_KEY ||
+      (typeof body.firecrawlApiKey === "string" && body.firecrawlApiKey.trim() ? body.firecrawlApiKey.trim() : undefined);
 
     if (!url && !pageText && !layer1Data.title) {
       return NextResponse.json(
@@ -56,10 +61,26 @@ export const POST = withRoute("/api/extension/parse-job-ai", async (req: Request
           { headers: corsHeaders }
         );
       }
-      log.warn(`[AI Scraper API] Firecrawl scrape failed or unconfigured. Falling back to local LLM provider chain...`);
+      log.warn(`[AI Scraper API] Firecrawl scrape failed or unconfigured. Trying native crawl...`);
     }
 
-    // --- 2. Fallback to Local LLM Provider Chain (Gemini / OpenRouter / OpenAI / Anthropic) ---
+    // --- 2. Native Crawl Fallback (no key required) ---
+    if (url) {
+      const nativeResult = await scrapeNative(url);
+      if (nativeResult.success && nativeResult.data && nativeResult.data.title) {
+        return NextResponse.json(
+          {
+            success: true,
+            aiParsedData: nativeResult.data,
+            provider: "native",
+          },
+          { headers: corsHeaders }
+        );
+      }
+      log.warn(`[AI Scraper API] Native crawl found nothing usable. Falling back to local LLM provider chain...`);
+    }
+
+    // --- 3. Fallback to Local LLM Provider Chain (Gemini / OpenRouter / OpenAI / Anthropic) ---
     const configuredChain = await resolveProviderChain(userId, "scraping");
     const allProviders = await resolveAllProviders(userId);
     const chain = [...configuredChain];

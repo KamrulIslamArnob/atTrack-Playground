@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Sparkles,
   Tag,
@@ -22,10 +21,6 @@ import {
   ScanSearch,
   CircleCheck,
   Briefcase,
-  Bookmark,
-  Users,
-  ExternalLink,
-  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -46,6 +41,8 @@ interface OverviewTabProps {
   onRefresh: () => void;
   /** Opens the edit slide-over owned by job-detail-content. */
   onEditJob: () => void;
+  /** Opens the AI update dialog owned by job-detail-content. */
+  onAiUpdate?: () => void;
   /** Opens the company edit dialog owned by job-detail-content. */
   onEditCompany?: () => void;
   /** Switches tab in job-detail-content. */
@@ -72,19 +69,26 @@ function Stat({
   value,
   label,
   tint,
+  className,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   value: string;
   label: string;
   tint: string;
+  className?: string;
 }) {
   return (
-    <div className="flex min-w-[110px] items-center gap-2.5">
+    <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
       <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", tint)}>
         <Icon className="size-4" />
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-foreground first-letter:uppercase">{value}</p>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <p
+          className="truncate text-xs font-semibold text-foreground first-letter:uppercase"
+          title={value}
+        >
+          {value}
+        </p>
         <p className="truncate text-[11px] text-muted-foreground">{label}</p>
       </div>
     </div>
@@ -105,9 +109,11 @@ function Section({
 }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
-      <header className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5">
-        <Icon className="size-3.5 text-amber-700 dark:text-amber-300" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-950 dark:text-amber-100">{title}</h3>
+      <header className="mb-3 flex items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/[0.08] dark:bg-amber-500/10 px-2.5 py-1">
+          <Icon className="size-3.5 text-amber-600 dark:text-amber-400" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-900 dark:text-amber-200">{title}</h3>
+        </div>
         {action && <div className="ml-auto">{action}</div>}
       </header>
       {children}
@@ -146,7 +152,7 @@ function EmptyState({
  * everything atTrack thinks about it in the right rail. Editing lives in a
  * slide-over so inspecting a job can never overwrite it.
  */
-export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
+export function OverviewTab({ data, onRefresh, onEditJob, onAiUpdate }: OverviewTabProps) {
   const { job, company, resumeOptions } = data;
   const [isExtracting, setIsExtracting] = useState(false);
   const [isScoringMatch, setIsScoringMatch] = useState(false);
@@ -247,10 +253,12 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
       {/* ---------- Right rail: what atTrack thinks (first on narrow screens) ---------- */}
       <aside className="order-1 space-y-4 lg:order-2">
         <div className="rounded-2xl border border-border bg-card p-4">
-          <header className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5">
-            <Sparkles className="size-3.5 text-amber-700 dark:text-amber-300" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-950 dark:text-amber-100">AI fit analysis</h3>
-            <span className="ml-auto text-[11px] font-medium text-amber-800 dark:text-amber-300">AI analysis</span>
+          <header className="mb-3 flex items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/[0.08] dark:bg-amber-500/10 px-2.5 py-1">
+              <Sparkles className="size-3.5 text-amber-600 dark:text-amber-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-900 dark:text-amber-200">AI fit analysis</h3>
+            </div>
+            <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">AI analysis</span>
           </header>
 
           <Select
@@ -296,27 +304,34 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
               <EmptyState
                 icon={Sparkles}
                 headline="Not scored yet"
-                hint="atTrack scores it in the background, or check now"
+                hint="Calculate how well this job matches your resume"
                 action={
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={handleScoreMatch} disabled={isScoringMatch}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleScoreMatch}
+                    disabled={isScoringMatch}
+                  >
                     {isScoringMatch ? <Spinner className="size-3.5" /> : <Sparkles className="size-3.5 text-primary" />}
-                    Check match score
+                    {isScoringMatch ? "Calculating…" : "Calculate score"}
                   </Button>
                 }
               />
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center gap-4">
-                <div className="relative shrink-0">
-                  <svg viewBox="0 0 64 64" className="size-[68px] -rotate-90" aria-hidden="true">
-                    <circle cx="32" cy="32" r="28" fill="none" strokeWidth="6" className="stroke-muted" />
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="relative flex size-14 shrink-0 items-center justify-center">
+                  <svg className="size-14 -rotate-90" viewBox="0 0 56 56">
+                    <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="4" className="text-muted" fill="none" />
                     <circle
-                      cx="32"
-                      cy="32"
-                      r="28"
+                      cx="28"
+                      cy="28"
+                      r="22"
+                      stroke="currentColor"
+                      strokeWidth="4"
                       fill="none"
-                      strokeWidth="6"
                       strokeLinecap="round"
                       strokeDasharray={RING_LENGTH}
                       strokeDashoffset={RING_LENGTH * (1 - Math.min(100, Math.max(0, job.match_score)) / 100)}
@@ -372,17 +387,19 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4">
-          <header className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5">
-            <Tag className="size-3.5 text-amber-700 dark:text-amber-300" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-950 dark:text-amber-100">
-              Extracted keywords
-            </h3>
+          <header className="mb-3 flex items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/[0.08] dark:bg-amber-500/10 px-2.5 py-1">
+              <Tag className="size-3.5 text-amber-600 dark:text-amber-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                Extracted keywords
+              </h3>
+            </div>
             {keywords.length > 0 && (
               <div className="ml-auto">
                 <Button
                   variant="ghost"
                   size="xs"
-                  className="h-6 gap-1 rounded-lg px-2 text-[11px] font-medium text-amber-900 hover:bg-amber-500/20 hover:text-amber-950 dark:text-amber-200 dark:hover:bg-amber-500/30 dark:hover:text-amber-50"
+                  className="h-6 gap-1 rounded-lg px-2 text-[11px] font-medium text-amber-800 hover:bg-amber-500/10 hover:text-amber-950 dark:text-amber-200 dark:hover:bg-amber-500/20 dark:hover:text-amber-50"
                   onClick={handleExtractKeywords}
                   disabled={isExtracting}
                 >
@@ -431,7 +448,7 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
       <div className="order-2 min-w-0 space-y-4 lg:order-1">
         {/* Meta bar — the four facts that decide whether this job is worth an hour. */}
         <div className="flex flex-col gap-3.5 rounded-2xl border border-border bg-card p-3.5 sm:p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
             {job.location && (
               <Stat
                 icon={MapPin}
@@ -464,20 +481,31 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleOpenMap}
-                className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground"
+                className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer shrink-0"
               >
                 <MapPin className="size-3.5" />
-                View map
+                <span>View map</span>
+              </Button>
+            )}
+            {onAiUpdate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAiUpdate}
+                className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer shrink-0"
+              >
+                <Sparkles className="size-3.5 text-primary" />
+                <span>Update with AI</span>
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
               onClick={onEditJob}
-              className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground"
+              className="h-8 gap-1.5 rounded-xl border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer shrink-0"
             >
               <Pencil className="size-3.5" />
-              Edit job
+              <span>Edit job</span>
             </Button>
           </div>
         </div>
@@ -593,19 +621,18 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
                 )}
               </div>
 
-              {[
-                company.company_type && { label: "Type", value: company.company_type },
-                company.founded_year && { label: "Founded", value: String(company.founded_year) },
-                company.country && { label: "Country", value: company.country },
-              ].filter(Boolean).length > 0 && (
-                <div className="flex flex-wrap gap-2 border-t border-border/60 pt-2.5">
-                  {[
-                    company.company_type && { label: "Type", value: company.company_type },
-                    company.founded_year && { label: "Founded", value: String(company.founded_year) },
-                    company.country && { label: "Country", value: company.country },
-                  ]
-                    .filter(Boolean)
-                    .map((item: any) => (
+              {(() => {
+                const companyMeta = [
+                  company.company_type && { label: "Type", value: company.company_type },
+                  company.founded_year && { label: "Founded", value: String(company.founded_year) },
+                  company.country && { label: "Country", value: company.country },
+                ].filter(Boolean) as { label: string; value: string }[];
+
+                if (companyMeta.length === 0) return null;
+
+                return (
+                  <div className="flex flex-wrap gap-2 border-t border-border/60 pt-2.5">
+                    {companyMeta.map((item) => (
                       <div
                         key={item.label}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 px-2.5 py-1 text-xs"
@@ -614,8 +641,9 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
                         <span className="font-medium text-foreground">{item.value}</span>
                       </div>
                     ))}
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </div>
           </Section>
         )}

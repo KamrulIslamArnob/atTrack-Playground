@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { ChatQueueProvider } from "@/lib/ai-chatbot/chat-queue-context";
+import { AITaskQueueProvider } from "@/lib/ai-tasks/task-queue-context";
+import { TaskQueuePanel } from "@/components/ai-tasks/task-queue-panel";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <NextThemesProvider
       attribute="class"
@@ -20,10 +15,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
       storageKey="attrack-theme"
     >
-      <ChatQueueProvider>
-        {children}
-        <Toaster richColors position="bottom-right" />
-      </ChatQueueProvider>
+      <AITaskQueueProvider>
+        <ChatQueueProvider>
+          {children}
+          <TaskQueuePanel />
+          <Toaster richColors position="bottom-right" />
+        </ChatQueueProvider>
+      </AITaskQueueProvider>
     </NextThemesProvider>
   );
 }
+
