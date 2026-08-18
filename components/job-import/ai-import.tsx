@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { Upload, AlertCircle } from "lucide-react";
+import { Upload, AlertCircle, FileJson, CheckCircle2 } from "lucide-react";
 import { XIcon } from "@/components/ui/x";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { Link2Icon } from "@/components/ui/link-2";
@@ -15,9 +15,12 @@ import {
   uploadScreenshot,
   extractJobImport,
   deleteScreenshots,
+  importJobsFromJson,
 } from "@/lib/actions/job-imports";
+import { toast } from "sonner";
 import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import { AddJobDialog } from "@/components/add-job-dialog";
+import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
 import type { ExtractionResult } from "@/lib/ai/schema";
 import type { BoardList } from "@/lib/types/board";
 
@@ -36,6 +39,7 @@ interface UploadedImage {
 }
 
 export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
+  const { enabled: jsonSyncEnabled } = useJsonSyncPreference();
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -44,9 +48,58 @@ export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
   const [error, setError] = useState<string | null>(null);
   const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
   const [jobDialogOpen, setJobDialogOpen] = useState(false);
+  const [jsonImporting, setJsonImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const imagesRef = useRef<UploadedImage[]>([]);
+
+  // Check if pasted text is valid atTrack job JSON
+  const detectedJson = useMemo(() => {
+    if (!text.trim()) return null;
+    try {
+      const parsed = JSON.parse(text.trim());
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return { count: parsed.length };
+      }
+      if (parsed && typeof parsed === "object") {
+        const obj = parsed as Record<string, unknown>;
+        if (Array.isArray(obj.jobs) && obj.jobs.length > 0) {
+          return { count: obj.jobs.length };
+        }
+        if (Array.isArray(obj.data) && obj.data.length > 0) {
+          return { count: obj.data.length };
+        }
+        if (obj.job || obj.title) {
+          return { count: 1 };
+        }
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }, [text]);
+
+  const handleDirectJsonImport = async () => {
+    if (!text.trim()) return;
+    setJsonImporting(true);
+    setError(null);
+    try {
+      const result = await importJobsFromJson(text.trim());
+      if (result.success) {
+        toast.success(
+          `Import complete: ${result.created} new job${result.created === 1 ? "" : "s"}, ${result.updated} updated.`
+        );
+        onClose();
+        router.refresh();
+      } else {
+        setError(result.errors[0] || "Failed to import jobs from JSON.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error importing JSON.");
+    } finally {
+      setJsonImporting(false);
+    }
+  };
 
   useEffect(() => {
     imagesRef.current = images;
@@ -64,9 +117,24 @@ export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
 
+    // If single .json file dropped/selected
+    const jsonFile = fileArray.find((f) => f.name.endsWith(".json") || f.type === "application/json");
+    if (jsonFile) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        if (content) {
+          setText(content);
+          toast.success(`Loaded JSON file: ${jsonFile.name}`);
+        }
+      };
+      reader.readAsText(jsonFile);
+      return;
+    }
+
     for (const file of fileArray) {
       if (!file.type.startsWith("image/")) {
-        setError("Please upload image files only");
+        setError("Please upload image files or .json files only");
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
@@ -284,6 +352,33 @@ export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
               rows={6}
             />
           </div>
+
+          {jsonSyncEnabled && detectedJson && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-success-border bg-success-surface p-3.5 text-xs text-success">
+              <div className="flex items-center gap-2.5">
+                <FileJson className="size-5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-foreground">
+                    atTrack Job JSON detected ({detectedJson.count} job{detectedJson.count === 1 ? "" : "s"})
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Bypass AI tokens and directly import/sync with smart duplicate merge
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                disabled={jsonImporting}
+                onClick={handleDirectJsonImport}
+                className="shrink-0 rounded-xl text-xs gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {jsonImporting ? <Spinner className="size-3.5" /> : <CheckCircle2 className="size-3.5" />}
+                Direct Import
+              </Button>
+            </div>
+          )}
 
           {error && (
             <div className="mt-3 rounded-2xl bg-destructive/10 p-3.5 text-xs text-destructive border border-destructive/20 overflow-hidden">

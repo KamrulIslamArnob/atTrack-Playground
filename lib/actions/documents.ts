@@ -443,6 +443,39 @@ export async function getDocumentDetails(
   return { document: doc as unknown as Document, job };
 }
 
+export interface DocumentPreviewResult {
+  document: Document;
+  job: LinkedJobInfo | null;
+  pdfUrl: string | null;
+}
+
+export async function getDocumentPreview(id: string): Promise<DocumentPreviewResult | null> {
+  const details = await getDocumentDetails(id);
+  if (!details) return null;
+
+  const { document: doc, job } = details;
+  let pdfUrl: string | null = null;
+
+  const isText =
+    (doc.content && doc.content.trim().length > 0) ||
+    Boolean(doc.file_path && doc.file_path.startsWith("generated/")) ||
+    doc.generated_kind != null;
+
+  if (!isText && !doc.builder_data && doc.generated_kind !== "external_link" && doc.file_path) {
+    try {
+      pdfUrl = await getSignedUrl(doc.file_path);
+    } catch (e) {
+      log.warn({ err: e, reqId: requestId(), documentId: id }, "Failed to generate signed URL for document preview:");
+    }
+  }
+
+  return {
+    document: doc,
+    job,
+    pdfUrl,
+  };
+}
+
 export async function updateDocumentContent(
   id: string,
   name: string,

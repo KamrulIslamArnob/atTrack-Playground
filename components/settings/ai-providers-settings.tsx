@@ -1,15 +1,27 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { deleteProvider, getTaskRoutes, listProviders, testProviderConnection, exportAiProviders, importAiProviders } from "@/lib/actions/ai-providers";
+import { useState, useRef, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  deleteProvider,
+  getTaskRoutes,
+  listProviders,
+  testProviderConnection,
+  exportAiProviders,
+  importAiProviders,
+} from "@/lib/actions/ai-providers";
 import { AiProviderDialog } from "@/components/settings/ai-provider-dialog";
 import { AiTaskRoutePicker } from "@/components/settings/ai-task-route-picker";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Pencil, Trash2, Plug } from "lucide-react";
+import { Pencil, Trash2, Plug, ChevronDown } from "lucide-react";
+import { SparklesIcon } from "@/components/ui/sparkles";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { DownloadIcon } from "@/components/ui/download";
 import { UploadIcon } from "@/components/ui/upload";
+import { AnimatePresence, motion } from "motion/react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PROVIDER_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
 
@@ -30,11 +42,26 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   const [dialogOpen, setDialogOpen] = useState<"add" | AiProviderSummary | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("attrack_ai_providers_collapsed");
+      if (stored === "true") {
+        setCollapsed(true);
+      }
+    }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("attrack_ai_providers_collapsed", String(next));
+      return next;
+    });
+  };
 
   const refreshProviders = async () => {
-    // Fetch both before setting either — setProviders and setRoutes must land
-    // in the same render so the picker's remount key (derived from providers)
-    // never fires on a stale intermediate routes value.
     const [next, freshRoutes] = await Promise.all([listProviders(), getTaskRoutes()]);
     setProviders(next);
     setRoutes(freshRoutes);
@@ -50,8 +77,6 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       model: p.model,
     });
     setTestingId(null);
-    // testProviderConnection just stamped (or cleared) verified_at server-side —
-    // refetch so the Verified badge and any AI-feature lock screen agree with it.
     await refreshProviders();
 
     if (res.success) {
@@ -120,123 +145,195 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
     }
   };
 
-  // Forces the three pickers to remount (and re-read routes/providers into
-  // their own local state) whenever the provider set changes — otherwise a
-  // deleted provider would linger in a picker's already-initialized state.
   const providerSetKey = providers.map((p) => p.id).join(",");
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-medium">Providers</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              <UploadIcon className="size-3.5" />
-              {importing ? "Importing..." : "Import JSON"}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExportJson}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <DownloadIcon className="size-3.5" />
-              Export JSON
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDialogOpen("add")}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <PlusIcon className="size-3.5" />
-              Add provider
-            </button>
-          </div>
-        </div>
-
-        {providers.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 p-4 text-center">
-            <p className="text-xs text-muted-foreground">
-              No AI providers connected yet. Click <strong>Add provider</strong> above to connect Google Gemini, OpenAI, or Anthropic.
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {providers.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-col gap-3 rounded-2xl border border-border px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-                  <Badge variant="outline">{PROVIDER_TYPE_LABELS[p.provider_type]}</Badge>
-                  <Badge variant="outline" className={p.verified ? "border-success/30 text-success" : "border-warning/30 text-warning"}>
-                    {p.verified ? "Verified" : "Not verified"}
-                  </Badge>
-                  <span className="min-w-0 truncate font-medium">{p.name}</span>
-                  <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{p.model}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1 self-start sm:shrink-0 sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={() => handleTest(p)}
-                    disabled={testingId === p.id}
-                    title="Test connection"
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                  >
-                    {testingId === p.id ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDialogOpen(p)}
-                    title="Edit provider"
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <Pencil className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(p.id)}
-                    disabled={deletingId === p.id}
-                    title="Delete provider"
-                    className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                  >
-                    {deletingId === p.id ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+    <Card className="border-border shadow-xs overflow-hidden transition-all py-0 gap-0">
+      <CardHeader
+        onClick={toggleCollapsed}
+        className={cn(
+          "cursor-pointer select-none px-6 py-5 hover:bg-muted/40 transition-colors",
+          collapsed ? "rounded-2xl" : "rounded-t-2xl"
         )}
-      </div>
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <SparklesIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-base font-semibold text-foreground">
+                  AI Providers & Task Routing
+                </CardTitle>
+                <Badge variant="secondary" className="text-xs font-normal">
+                  {providers.length} {providers.length === 1 ? "provider" : "providers"}
+                </Badge>
+              </div>
+              <CardDescription className="text-xs sm:text-sm mt-0.5">
+                Connect LLM credentials and set fallback priority routes for generation and scraping.
+              </CardDescription>
+            </div>
+          </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Task routing</p>
-        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-          {(Object.keys(TASK_DESCRIPTIONS) as TaskType[]).map((taskType) => (
-            <AiTaskRoutePicker
-              key={`${taskType}-${providerSetKey}`}
-              taskType={taskType}
-              description={TASK_DESCRIPTIONS[taskType]}
-              allProviders={providers}
-              initialSelectedIds={(routes[taskType] ?? []).map((p) => p.id)}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={collapsed ? "Expand AI Providers" : "Minimize AI Providers"}
+            className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCollapsed();
+            }}
+          >
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform duration-200",
+                collapsed ? "-rotate-90" : "rotate-0"
+              )}
             />
-          ))}
+          </Button>
         </div>
-      </div>
+      </CardHeader>
+
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <CardContent className="space-y-6 px-6 pb-6 pt-2">
+              {/* Providers List Section */}
+              <div className="space-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-medium">Configured Providers</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={importing}
+                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
+                    >
+                      <UploadIcon className="size-3.5" />
+                      {importing ? "Importing..." : "Import JSON"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleExportJson}
+                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
+                    >
+                      <DownloadIcon className="size-3.5" />
+                      Export JSON
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDialogOpen("add")}
+                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
+                    >
+                      <PlusIcon className="size-3.5" />
+                      Add provider
+                    </button>
+                  </div>
+                </div>
+
+                {providers.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/70 p-4 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      No AI providers connected yet. Click <strong>Add provider</strong> above to connect Google Gemini, OpenAI, or Anthropic.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {providers.map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex flex-col gap-3 rounded-2xl border border-border px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                          <Badge variant="outline">{PROVIDER_TYPE_LABELS[p.provider_type]}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={p.verified ? "border-success/30 text-success" : "border-warning/30 text-warning"}
+                          >
+                            {p.verified ? "Verified" : "Not verified"}
+                          </Badge>
+                          <span className="min-w-0 truncate font-medium">{p.name}</span>
+                          <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{p.model}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 self-start sm:shrink-0 sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleTest(p)}
+                            disabled={testingId === p.id}
+                            title="Test connection"
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 cursor-pointer"
+                          >
+                            {testingId === p.id ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDialogOpen(p)}
+                            title="Edit provider"
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(p.id)}
+                            disabled={deletingId === p.id}
+                            title="Delete provider"
+                            className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50 cursor-pointer"
+                          >
+                            {deletingId === p.id ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />}
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-border/80" />
+
+              {/* Task Routing Section */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">Task Routing Hierarchy</p>
+                  <p className="text-xs text-muted-foreground">
+                    Define the priority sequence of models for each task. Top priority model is attempted first; fallback occurs in order.
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                  {(Object.keys(TASK_DESCRIPTIONS) as TaskType[]).map((taskType) => (
+                    <AiTaskRoutePicker
+                      key={`${taskType}-${providerSetKey}`}
+                      taskType={taskType}
+                      description={TASK_DESCRIPTIONS[taskType]}
+                      allProviders={providers}
+                      initialSelectedIds={(routes[taskType] ?? []).map((p) => p.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {dialogOpen && (
         <AiProviderDialog
@@ -245,6 +342,6 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
           onSaved={refreshProviders}
         />
       )}
-    </div>
+    </Card>
   );
 }

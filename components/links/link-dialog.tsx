@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TagInput } from "@/components/ui/tag-input";
-import { Plus, FileSpreadsheet } from "lucide-react";
+import { Plus, FileSpreadsheet, FileJson } from "lucide-react";
 
 interface LinkDialogProps {
   open: boolean;
@@ -27,6 +27,7 @@ interface LinkDialogProps {
   onSubmit: (data: CreateLinkInput, editId?: string) => Promise<void>;
   onCreateCategoryInline: (name: string) => Promise<string | undefined>;
   onOpenCsv?: () => void;
+  onOpenJson?: () => void;
 }
 
 export function LinkDialog({
@@ -39,6 +40,7 @@ export function LinkDialog({
   onSubmit,
   onCreateCategoryInline,
   onOpenCsv,
+  onOpenJson,
 }: LinkDialogProps) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -252,17 +254,33 @@ export function LinkDialog({
           </div>
 
           <div className="flex items-center justify-between gap-2 pt-2">
-            {!linkToEdit && onOpenCsv && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onOpenCsv}
-                className="rounded-lg gap-1.5 text-xs font-medium shrink-0 active:scale-[0.98] transition-transform"
-              >
-                <FileSpreadsheet className="size-3.5 text-muted-foreground" />
-                CSV Import
-              </Button>
+            {!linkToEdit && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onOpenJson && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onOpenJson}
+                    className="rounded-lg gap-1.5 text-xs font-medium active:scale-[0.98] transition-transform"
+                  >
+                    <FileJson className="size-3.5 text-muted-foreground" />
+                    JSON
+                  </Button>
+                )}
+                {onOpenCsv && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onOpenCsv}
+                    className="rounded-lg gap-1.5 text-xs font-medium active:scale-[0.98] transition-transform"
+                  >
+                    <FileSpreadsheet className="size-3.5 text-muted-foreground" />
+                    CSV
+                  </Button>
+                )}
+              </div>
             )}
             <DialogFooter className="pt-0 flex-1 justify-end">
               <Button

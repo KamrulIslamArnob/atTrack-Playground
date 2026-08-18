@@ -5,6 +5,7 @@ import { isSmtpConfigured } from "@/lib/actions/smtp";
 import { getJobDocuments } from "@/lib/actions/documents";
 import { getJobContacts } from "@/lib/actions/contacts";
 import { getBoardLists } from "@/lib/actions/board";
+import { getJobDeadlines } from "@/lib/actions/deadlines";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import type { JobState, JobTier } from "@/lib/types/job";
 
@@ -39,6 +40,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     { data: profile },
     boardLists,
     { data: resumeDoc },
+    deadlines,
   ] = await Promise.all([
     supabase
       .from("applications")
@@ -74,6 +76,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
           .eq("user_id", userId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    getJobDeadlines(jobId).catch(() => []),
   ]);
 
   const company = Array.isArray(job.company) ? job.company[0] : job.company;
@@ -141,6 +144,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     documents,
     resumeOptions: (resumes ?? []) as unknown as JobDetailData["resumeOptions"],
     boardLists: (boardLists ?? []) as unknown as import("@/lib/types/board").BoardList[],
+    deadlines: (deadlines ?? []) as unknown as import("@/lib/types/board").JobDeadline[],
     smtpReady,
     applicantName: profile?.full_name ?? "",
     applicantHeadline: profile?.headline ?? null,

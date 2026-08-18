@@ -23,8 +23,8 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  PieChart,
-  Pie,
+  BarChart,
+  Bar,
   Cell,
   LineChart,
   Line,
@@ -221,7 +221,7 @@ export function BreakdownBar({ items, total }: { items: BreakdownItem[]; total: 
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="space-y-0.5">
         {items.map((item, i) => {
           const Icon = breakdownIcons[item.label] ?? CircleHelp;
           const isHovered = active === item.label;
@@ -231,19 +231,23 @@ export function BreakdownBar({ items, total }: { items: BreakdownItem[]; total: 
               key={item.label}
               onMouseEnter={() => setActive(item.label)}
               onMouseLeave={() => setActive(null)}
-              className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors cursor-pointer ${
-                isHovered ? "border-border bg-muted text-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors cursor-pointer ${
+                isHovered ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               }`}
             >
-              <Icon
-                className="size-3.5 shrink-0"
-                style={{ color: `var(--chart-${(i % 5) + 1})` }}
-                aria-hidden="true"
-              />
-              <span className="text-[11px]">{item.label}</span>
-              <span className="text-[11px] font-semibold tabular-nums text-foreground">{item.count}</span>
-              <span className="text-[10px] text-muted-foreground">
-                {Math.round((item.count / total) * 100)}%
+              <span className="flex min-w-0 items-center gap-2">
+                <Icon
+                  className="size-3.5 shrink-0"
+                  style={{ color: `var(--chart-${(i % 5) + 1})` }}
+                  aria-hidden="true"
+                />
+                <span className="truncate text-xs">{item.label}</span>
+              </span>
+              <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                <span className="text-xs font-semibold text-foreground">{item.count}</span>
+                <span className="w-9 text-right text-xs text-muted-foreground">
+                  {Math.round((item.count / total) * 100)}%
+                </span>
               </span>
             </div>
           );
@@ -266,8 +270,7 @@ const scoreBandColor: Record<string, string> = {
 };
 
 export function MatchScoreDistributionChart({ data }: { data: MatchScoreBand[] }) {
-  const filtered = data.filter((d) => d.count > 0);
-  const total = filtered.reduce((sum, d) => sum + d.count, 0);
+  const total = data.reduce((sum, d) => sum + d.count, 0);
 
   if (total === 0) {
     return <p className="py-4 text-center text-xs text-muted-foreground">No scored jobs yet</p>;
@@ -275,33 +278,58 @@ export function MatchScoreDistributionChart({ data }: { data: MatchScoreBand[] }
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={160}>
-        <PieChart>
-          <Pie
-            data={filtered}
-            cx="50%"
-            cy="50%"
-            innerRadius={48}
-            outerRadius={70}
-            paddingAngle={3}
-            dataKey="count"
-            nameKey="label"
-          >
-            {filtered.map((entry) => (
-              <Cell key={entry.label} fill={scoreBandColor[entry.label]} stroke="var(--card)" strokeWidth={2} />
-            ))}
-          </Pie>
-          <Tooltip contentStyle={tooltipStyle} />
-        </PieChart>
+      <ResponsiveContainer width="100%" height={170}>
+        <BarChart data={data} barCategoryGap="12%" margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradStrong" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--success)" stopOpacity={0.85} />
+              <stop offset="100%" stopColor="var(--success)" stopOpacity={0.25} />
+            </linearGradient>
+            <linearGradient id="gradFair" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--warning)" stopOpacity={0.85} />
+              <stop offset="100%" stopColor="var(--warning)" stopOpacity={0.25} />
+            </linearGradient>
+            <linearGradient id="gradWeak" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.85} />
+              <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0.25} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+          <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)", opacity: 0.15 }} />
+          <Bar dataKey="count" radius={[10, 10, 0, 0]} barSize={100} maxBarSize={130}>
+            {data.map((entry) => {
+              const fillUrl =
+                entry.label === "Strong"
+                  ? "url(#gradStrong)"
+                  : entry.label === "Fair"
+                    ? "url(#gradFair)"
+                    : "url(#gradWeak)";
+              return (
+                <Cell
+                  key={entry.label}
+                  fill={fillUrl}
+                  stroke={scoreBandColor[entry.label]}
+                  strokeWidth={1.5}
+                />
+              );
+            })}
+          </Bar>
+        </BarChart>
       </ResponsiveContainer>
-      <div className="mt-2 flex items-center justify-center gap-4 text-xs">
-        {filtered.map((entry) => (
-          <div key={entry.label} className="flex items-center gap-1.5">
-            <div className="size-2 rounded-full" style={{ backgroundColor: scoreBandColor[entry.label] }} />
-            <span className="text-muted-foreground">{entry.label}</span>
-            <span className="font-medium tabular-nums text-foreground">{entry.count}</span>
-          </div>
-        ))}
+      <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+        {data.map((entry) => {
+          const share = total > 0 ? Math.round((entry.count / total) * 100) : 0;
+          return (
+            <div key={entry.label} className="flex items-center gap-1.5">
+              <div className="size-2 rounded-full" style={{ backgroundColor: scoreBandColor[entry.label] }} />
+              <span className="text-muted-foreground">{entry.label}</span>
+              <span className="font-semibold tabular-nums text-foreground">{entry.count}</span>
+              <span className="text-[11px] text-muted-foreground/80">({share}%)</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -322,7 +350,11 @@ export function ApplicationTrendChart({ data }: { data: TrendData[] }) {
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
-        <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
+        {/* One tick per data point would crowd the axis once the trend is
+            zero-filled to a full window — preserveStartEnd thins the rest to
+            what actually fits instead of hardcoding a skip count tied to a
+            30-day window that might not always be 30. */}
+        <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
         <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip contentStyle={tooltipStyle} />
         <Area type="monotone" dataKey="applications" stroke="var(--chart-1)" fillOpacity={1} fill="url(#colorApplications)" strokeWidth={2} />

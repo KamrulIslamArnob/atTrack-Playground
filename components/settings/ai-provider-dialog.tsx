@@ -331,8 +331,8 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                           setModel(m.id);
                           setShowModelPicker(false);
                         }}
-                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
-                          model === m.id ? "bg-accent/70 font-medium" : ""
+                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted hover:text-foreground ${
+                          model === m.id ? "bg-muted font-medium text-foreground" : "text-foreground"
                         }`}
                       >
                         <div className="truncate max-w-[240px]">

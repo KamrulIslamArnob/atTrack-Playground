@@ -73,7 +73,17 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      // base-ui keeps a panel mounted+visible until a real CSS transition on
+      // it fires `transitionend` (see data-starting-style/data-ending-style
+      // in its docs) — with no transition here, that event never came, so
+      // the outgoing panel never got `hidden` and every switched-away tab
+      // stayed stacked underneath the new one, all still fully mounted and
+      // interactive. A real (if near-instant) transition gives it something
+      // to finish, so panels actually unmount/hide again.
+      className={cn(
+        "flex-1 text-sm outline-none transition-opacity duration-100 data-starting-style:opacity-0 data-ending-style:opacity-0",
+        className
+      )}
       {...props}
     />
   )

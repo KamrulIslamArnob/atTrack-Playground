@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { saveTaskRoute } from "@/lib/actions/ai-providers";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowUp } from "lucide-react";
 import { ArrowDownIcon } from "@/components/ui/arrow-down";
 import { XIcon } from "@/components/ui/x";
@@ -21,6 +26,10 @@ interface AiTaskRoutePickerProps {
 export function AiTaskRoutePicker({ taskType, description, allProviders, initialSelectedIds }: AiTaskRoutePickerProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSelectedIds(initialSelectedIds);
+  }, [initialSelectedIds]);
 
   const save = async (next: string[]) => {
     const prev = selectedIds;
@@ -41,8 +50,8 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
 
   const move = (index: number, dir: -1 | 1) => {
     const target = index + dir;
-    if (target < 0 || target >= selectedIds.length) return;
-    const next = [...selectedIds];
+    if (target < 0 || target >= selected.length) return;
+    const next = selected.map((p) => p.id);
     [next[index], next[target]] = [next[target], next[index]];
     save(next);
   };
@@ -76,7 +85,8 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
                   type="button"
                   onClick={() => move(i, -1)}
                   disabled={i === 0}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                  className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30 cursor-pointer"
+                  title="Move priority up"
                 >
                   <ArrowUp className="size-3.5" />
                 </button>
@@ -84,14 +94,16 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
                   type="button"
                   onClick={() => move(i, 1)}
                   disabled={i === selected.length - 1}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                  className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30 cursor-pointer"
+                  title="Move priority down"
                 >
                   <ArrowDownIcon className="size-3.5" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => save(selectedIds.filter((id) => id !== p.id))}
-                  className="rounded p-1 text-destructive hover:bg-destructive/10"
+                  onClick={() => save(selected.filter((item) => item.id !== p.id).map((item) => item.id))}
+                  className="rounded p-1 text-destructive hover:bg-destructive/10 cursor-pointer"
+                  title="Remove from task route"
                 >
                   <XIcon className="size-3.5" />
                 </button>
@@ -102,7 +114,7 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
       )}
 
       {availableToAdd.length > 0 && (
-        <Select onValueChange={(id) => save([...selectedIds, id as string])}>
+        <Select onValueChange={(id) => save([...selected.map((p) => p.id), id as string])}>
           <SelectTrigger className="h-9 w-full text-xs">
             <SelectValue placeholder="+ Add provider to this task" />
           </SelectTrigger>

@@ -53,6 +53,8 @@ import {
 } from "@/lib/actions/companies";
 import { ContactCard } from "@/components/crm/contact-card";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
+import { CrmImportDialog } from "@/components/crm/crm-import-dialog";
+import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { JOB_STATUS_LABELS, JOB_TIERS, type JobStatus, type JobTier } from "@/lib/types/job";
 import { getContactAvatarColorClass, cn } from "@/lib/utils";
@@ -65,6 +67,7 @@ import {
   Tag,
   Trash2,
   UserRound,
+  FileJson,
 } from "lucide-react";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
 import { Link2Icon } from "@/components/ui/link-2";
@@ -79,6 +82,7 @@ interface CrmViewProps {
 }
 
 export function CrmView({ companies: initialCompanies, contacts: initialContacts }: CrmViewProps) {
+  const { enabled: jsonSyncEnabled } = useJsonSyncPreference();
   const [companies, setCompanies] = useState(initialCompanies);
   const [contacts, setContacts] = useState(initialContacts);
   const [view, setView] = useState<"contacts" | "companies">("contacts");
@@ -93,6 +97,9 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
 
   // Manage Tags dialog state
   const [manageTagsOpen, setManageTagsOpen] = useState(false);
+
+  // CRM JSON Import dialog state
+  const [crmImportOpen, setCrmImportOpen] = useState(false);
 
   const { confirm, dialog: confirmDialog } = useConfirm();
 
@@ -178,7 +185,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
       setContacts((prev) =>
         prev.map((c) => (c.company_id === company.id ? { ...c, company_id: null, company_name: null } : c))
       );
-      toast.success(`Company "${company.name}" deleted`);
+      toast.success("Company deleted");
     } catch {
       toast.error("Couldn't delete company");
     }
@@ -271,10 +278,23 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
                 </Button>
               </div>
             ) : (
-              <Button size="sm" onClick={() => setAddingCompany(true)}>
-                <PlusIcon className="mr-1 size-4" />
-                Add company
-              </Button>
+              <div className="flex items-center gap-2">
+                {jsonSyncEnabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCrmImportOpen(true)}
+                    className="gap-1.5 cursor-pointer"
+                  >
+                    <FileJson className="size-3.5 text-muted-foreground" />
+                    Import JSON
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setAddingCompany(true)} className="cursor-pointer">
+                  <PlusIcon className="mr-1 size-4" />
+                  Add company
+                </Button>
+              </div>
             ))}
         </div>
 
@@ -286,6 +306,7 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
             onCompanyCountChange={bumpContactCount}
             onCompanyCreated={handleCompanyCreated}
             onOpenManageTags={() => setManageTagsOpen(true)}
+            onOpenImportJson={jsonSyncEnabled ? () => setCrmImportOpen(true) : undefined}
             onTagDeleted={handleTagDeleted}
           />
         </TabsContent>
@@ -367,6 +388,9 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
         onTagDeleted={handleTagDeleted}
         onTagRenamed={handleTagRenamed}
       />
+
+      {/* CRM JSON Import Dialog */}
+      <CrmImportDialog open={crmImportOpen} onOpenChange={setCrmImportOpen} />
     </>
   );
 }
@@ -379,6 +403,7 @@ function ContactsView({
   onCompanyCountChange,
   onCompanyCreated,
   onOpenManageTags,
+  onOpenImportJson,
   onTagDeleted,
 }: {
   contacts: Contact[];
@@ -387,6 +412,7 @@ function ContactsView({
   onCompanyCountChange: (companyId: string | null, delta: number) => void;
   onCompanyCreated?: (company: CrmCompany) => void;
   onOpenManageTags: () => void;
+  onOpenImportJson?: () => void;
   onTagDeleted: (tag: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -479,6 +505,13 @@ function ContactsView({
           <Tag className="mr-1 size-4 text-muted-foreground" />
           Manage tags
         </Button>
+
+        {onOpenImportJson && (
+          <Button variant="outline" size="sm" onClick={onOpenImportJson} className="gap-1.5 cursor-pointer">
+            <FileJson className="size-3.5 text-muted-foreground" />
+            Import JSON
+          </Button>
+        )}
 
         <Button
           size="sm"

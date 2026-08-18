@@ -154,31 +154,39 @@ export default async function OverviewPage() {
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Application trend
+  // Application trend — one point per day across the full window, zero-filled.
+  // Grouping only the days that had activity (the old approach) plots those
+  // days back-to-back on the x-axis with a straight interpolated line between
+  // them — with 1-2 active days in the window that reads as a sharp trend
+  // that isn't there. A flat daily grid makes the "no activity" stretches
+  // flat instead of misleading, at any activity level.
+  const TREND_WINDOW_DAYS = 30;
   const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const trendMap: Record<string, { applications: number; interviews: number }> = {};
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - TREND_WINDOW_DAYS);
+  const trendByDay: Record<string, { applications: number; interviews: number }> = {};
   for (const job of allJobs) {
     for (const app of Array.isArray(job.applications) ? job.applications : []) {
       const d = new Date((app as { created_at: string }).created_at);
       if (d >= thirtyDaysAgo) {
-        const k = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        if (!trendMap[k]) trendMap[k] = { applications: 0, interviews: 0 };
-        trendMap[k].applications++;
+        const k = d.toDateString();
+        (trendByDay[k] ??= { applications: 0, interviews: 0 }).applications++;
       }
     }
     for (const int of Array.isArray(job.interviews) ? job.interviews : []) {
       const d = new Date((int as { scheduled_at: string }).scheduled_at);
       if (d >= thirtyDaysAgo) {
-        const k = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        if (!trendMap[k]) trendMap[k] = { applications: 0, interviews: 0 };
-        trendMap[k].interviews++;
+        const k = d.toDateString();
+        (trendByDay[k] ??= { applications: 0, interviews: 0 }).interviews++;
       }
     }
   }
-  const applicationTrend = Object.entries(trendMap)
-    .map(([date, data]) => ({ date, ...data }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const applicationTrend = Array.from({ length: TREND_WINDOW_DAYS }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (TREND_WINDOW_DAYS - 1 - i));
+    const counts = trendByDay[d.toDateString()] ?? { applications: 0, interviews: 0 };
+    return { date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), ...counts };
+  });
+  const hasApplicationTrend = applicationTrend.some((p) => p.applications > 0 || p.interviews > 0);
 
   // Upcoming interviews
   const upcomingInterviews = allJobs
@@ -287,17 +295,33 @@ export default async function OverviewPage() {
               <h2 className="font-heading text-base font-semibold sm:text-lg">Activity Trend</h2>
               <p className="text-xs text-muted-foreground">Applications and interviews in last 30 days</p>
             </div>
-            <ApplicationTrendChart data={applicationTrend} />
-            <div className="mt-3 flex items-center justify-center gap-5 text-xs">
-              <div className="flex items-center gap-1.5">
-                <div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-1)" }} />
-                <span className="text-muted-foreground">Applications</span>
+            {hasApplicationTrend ? (
+              <>
+                <ApplicationTrendChart data={applicationTrend} />
+                <div className="mt-3 flex items-center justify-center gap-5 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-1)" }} />
+                    <span className="text-muted-foreground">Applications</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-2)" }} />
+                    <span className="text-muted-foreground">Interviews</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-[180px] flex-col items-center justify-center gap-2 text-center">
+                <span className="flex size-10 items-center justify-center rounded-full bg-muted">
+                  <Activity className="size-5 text-muted-foreground" />
+                </span>
+                <div>
+                  <p className="font-heading text-sm font-semibold">No activity yet</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Applications and interviews will chart here once you have some
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="size-2 rounded-full" style={{ backgroundColor: "var(--chart-2)" }} />
-                <span className="text-muted-foreground">Interviews</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Upcoming Interviews */}

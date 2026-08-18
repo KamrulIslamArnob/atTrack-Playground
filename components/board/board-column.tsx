@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Archive,
@@ -169,6 +169,8 @@ export function BoardColumn({
   };
 
   const renderCardItems = (items: BoardCard[]) => {
+    if (items.length === 0) return null;
+
     const isShowingIndicator = isDropTarget && draggingId !== null;
 
     if (groupBy === "none") {

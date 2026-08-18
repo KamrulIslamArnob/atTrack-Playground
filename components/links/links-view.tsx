@@ -15,9 +15,11 @@ import { LinkDialog } from "./link-dialog";
 import { CategoryManagerDialog } from "./category-manager-dialog";
 import { TagManagerDialog, TagInfo } from "./tag-manager-dialog";
 import { CsvImportDialog } from "./csv-import-dialog";
+import { LinksJsonImportDialog } from "./links-json-import-dialog";
+import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
 import { QuickShortcutsBar } from "./quick-shortcuts-bar";
 import { PageHeader } from "@/components/page-header";
-import { Search, Settings2, Tag } from "lucide-react";
+import { Search, Settings2, Tag, FileJson } from "lucide-react";
 import { ChevronLeftIcon } from "@/components/ui/chevron-left";
 import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
@@ -68,6 +70,8 @@ export function LinksView({
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [shortcuts, setShortcuts] = useState<QuickShortcut[]>(initialShortcuts);
   const [extraTags, setExtraTags] = useState<string[]>([]);
+  const [jsonImportOpen, setJsonImportOpen] = useState(false);
+  const { enabled: jsonSyncEnabled } = useJsonSyncPreference();
   const [, startTransition] = useTransition();
   const router = useRouter();
 
@@ -564,6 +568,19 @@ export function LinksView({
             <span className="hidden sm:inline">Tags</span>
           </Button>
 
+          {/* Import JSON Button */}
+          {jsonSyncEnabled && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setJsonImportOpen(true)}
+              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground cursor-pointer"
+            >
+              <FileJson className="size-3.5 text-muted-foreground" />
+              <span className="hidden sm:inline">Import JSON</span>
+            </Button>
+          )}
+
           {/* Add Link Button */}
           <Button
             size="sm"
@@ -761,6 +778,14 @@ export function LinksView({
         onSubmit={handleSaveLink}
         onCreateCategoryInline={handleCreateCategoryInline}
         onOpenCsv={() => setCsvOpen(true)}
+        onOpenJson={
+          jsonSyncEnabled
+            ? () => {
+                setAddLinkOpen(false);
+                setJsonImportOpen(true);
+              }
+            : undefined
+        }
       />
 
       <CsvImportDialog
@@ -772,6 +797,11 @@ export function LinksView({
           setCsvOpen(false);
           router.refresh();
         }}
+      />
+
+      <LinksJsonImportDialog
+        open={jsonImportOpen}
+        onOpenChange={setJsonImportOpen}
       />
 
       <CategoryManagerDialog

@@ -2,13 +2,12 @@ import { getUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSmtpConfig } from "@/lib/actions/smtp";
 import { listProviders, getTaskRoutes } from "@/lib/actions/ai-providers";
-import { AvatarUpload } from "@/components/settings/avatar-upload";
-import { ProfileForm, type Profile } from "@/components/settings/profile-form";
+import { ProfileSettingsCard } from "@/components/settings/profile-settings-card";
+import { type Profile } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { AiProvidersSettings } from "@/components/settings/ai-providers-settings";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Mail } from "lucide-react";
-import { SparklesIcon } from "@/components/ui/sparkles";
 import { UpdateChecker } from "@/components/settings/update-checker";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
 import { getExtensionSecret } from "@/lib/actions/extension";
@@ -16,6 +15,7 @@ import { RawDatabaseToggle } from "@/components/settings/raw-database-toggle";
 import { ThemeSettings } from "@/components/settings/theme-settings";
 import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";
 import { OnboardingSettingsCard } from "@/components/settings/onboarding-settings-card";
+import { DataBackupCard } from "@/components/settings/data-backup-card";
 
 export default async function SettingsPage() {
   const { supabase, userId, user } = await getUser();
@@ -34,7 +34,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div className="-mx-6 border-b border-border pb-6">
         <div className="px-6">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
@@ -52,23 +52,11 @@ export default async function SettingsPage() {
 
       <ExtensionSettings secret={extensionSecret} />
 
-      <Card>
-        <CardContent className="pt-0">
-          <AvatarUpload
-            avatarUrl={profile?.avatar_url}
-            fullName={profile?.full_name}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProfileForm profile={{ ...(profile || {}), email: user.email } as unknown as Profile} />
-        </CardContent>
-      </Card>
+      <ProfileSettingsCard
+        profile={{ ...(profile || {}), email: user.email } as unknown as Profile}
+        avatarUrl={profile?.avatar_url}
+        fullName={profile?.full_name}
+      />
 
       <Card>
         <CardHeader>
@@ -82,21 +70,13 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <SparklesIcon className="size-4" />
-            AI Providers
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AiProvidersSettings initialProviders={aiProviders} initialRoutes={aiTaskRoutes} />
-        </CardContent>
-      </Card>
+      <AiProvidersSettings initialProviders={aiProviders} initialRoutes={aiTaskRoutes} />
 
       <RawDatabaseToggle initialEnabled={Boolean(profile?.show_raw_database)} />
 
       <OnboardingSettingsCard />
+
+      <DataBackupCard />
 
       <Card className="border-destructive/20">
         <CardHeader>

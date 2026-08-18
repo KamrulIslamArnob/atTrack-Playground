@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, FileJson } from "lucide-react";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { XIcon } from "@/components/ui/x";
 import { AddJobDialog } from "@/components/add-job-dialog";
 import { AiImport } from "@/components/job-import/ai-import";
+import { JsonImportDialog } from "@/components/job-import/json-import-dialog";
+import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
 import type { BoardList } from "@/lib/types/board";
 
 export interface ImportChoiceProps {
@@ -36,13 +38,14 @@ export function ImportChoice({
   variant,
   size = "sm",
 }: ImportChoiceProps) {
+  const { enabled: jsonSyncEnabled } = useJsonSyncPreference();
   const [internalOpen, setInternalOpen] = useState(false);
-  const [choice, setChoice] = useState<"manual" | "ai" | null>(null);
+  const [choice, setChoice] = useState<"manual" | "ai" | "json" | null>(null);
 
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : internalOpen;
 
-  const handleOpenChange = (nextOpen: boolean) => {
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
     if (!nextOpen) {
       setChoice(null);
     }
@@ -51,7 +54,7 @@ export function ImportChoice({
     } else {
       setInternalOpen(nextOpen);
     }
-  };
+  }, [isControlled, onOpenChange]);
 
   // Close on Escape
   useEffect(() => {
@@ -63,26 +66,27 @@ export function ImportChoice({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, choice]);
+  }, [isOpen, choice, handleOpenChange]);
 
   return (
     <>
-      {trigger ? (
-        React.isValidElement(trigger) ? (
-          React.cloneElement(trigger as React.ReactElement<{ onClick?: () => void }>, {
-            onClick: () => handleOpenChange(true),
-          })
-        ) : (
-          <span onClick={() => handleOpenChange(true)} className="cursor-pointer">
+      {trigger !== undefined ? (
+        trigger ? (
+          <span onClick={() => handleOpenChange(true)} className="contents cursor-pointer">
             {trigger}
           </span>
-        )
-      ) : !isControlled ? (
-        <Button variant={variant} size={size} className={className} onClick={() => handleOpenChange(true)}>
-          <Plus className="mr-1 size-4" />
+        ) : null
+      ) : isControlled ? null : (
+        <Button
+          onClick={() => handleOpenChange(true)}
+          className={className}
+          variant={variant}
+          size={size}
+        >
+          <Plus className="size-4" />
           Add Job
         </Button>
-      ) : null}
+      )}
 
       {/* Choice Modal */}
       {isOpen && choice === null && (
@@ -107,11 +111,11 @@ export function ImportChoice({
               How do you want to add this job?
             </p>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-2.5">
               <button
                 type="button"
                 onClick={() => setChoice("manual")}
-                className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-4 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
+                className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-3.5 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                   <Plus className="size-5" />
@@ -119,7 +123,7 @@ export function ImportChoice({
                 <div>
                   <p className="font-medium text-sm text-foreground">Enter it yourself</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Type in the title, company, and details manually
+                    Type in title, company, and details manually
                   </p>
                 </div>
               </button>
@@ -127,7 +131,7 @@ export function ImportChoice({
               <button
                 type="button"
                 onClick={() => setChoice("ai")}
-                className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-4 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
+                className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-3.5 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                   <SparklesIcon className="size-5" />
@@ -135,10 +139,28 @@ export function ImportChoice({
                 <div>
                   <p className="font-medium text-sm text-foreground">Import with AI</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Screenshot or paste text — atTrack reads and fills in details
+                    Screenshot, link, or text — AI extracts fields
                   </p>
                 </div>
               </button>
+
+              {jsonSyncEnabled && (
+                <button
+                  type="button"
+                  onClick={() => setChoice("json")}
+                  className="group flex w-full items-center gap-3.5 rounded-2xl border border-border/80 bg-background p-3.5 text-left transition-all hover:bg-muted/60 hover:border-border cursor-pointer active:scale-[0.98]"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                    <FileJson className="size-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-foreground">Import JSON / Backup</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Paste atTrack JSON or drop backup files
+                    </p>
+                  </div>
+                </button>
+              )}
             </div>
 
             <Button
@@ -173,6 +195,18 @@ export function ImportChoice({
           listId={listId}
           onClose={() => {
             handleOpenChange(false);
+          }}
+        />
+      )}
+
+      {/* JSON Import Flow */}
+      {isOpen && choice === "json" && (
+        <JsonImportDialog
+          open={true}
+          onOpenChange={(o) => {
+            if (!o) {
+              handleOpenChange(false);
+            }
           }}
         />
       )}

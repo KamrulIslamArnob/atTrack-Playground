@@ -24,6 +24,7 @@ import { DeadlinesTab } from "@/components/job-detail/tabs/deadlines-tab";
 import { AiToolsTab } from "@/components/job-detail/tabs/ai-tools-tab";
 import { NetworkTab } from "@/components/job-detail/tabs/network-tab";
 import { EditDrawer } from "@/components/job-detail/edit-drawer";
+import { TabErrorBoundary } from "@/components/job-detail/tab-error-boundary";
 import { CompanyEditDialog } from "@/components/job-detail/company-edit-dialog";
 import {
   JOB_STATUS_LABELS,
@@ -498,16 +499,24 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
 
         <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <TabsContent value="overview">
-            <OverviewTab data={data} onRefresh={onRefresh} onEditJob={() => setEditOpen(true)} />
+            <TabErrorBoundary label="overview">
+              <OverviewTab data={data} onRefresh={onRefresh} onEditJob={() => setEditOpen(true)} />
+            </TabErrorBoundary>
           </TabsContent>
           <TabsContent value="timeline">
-            <DeadlinesTab data={data} onRefresh={onRefresh} />
+            <TabErrorBoundary label="timeline">
+              <DeadlinesTab data={data} onRefresh={onRefresh} />
+            </TabErrorBoundary>
           </TabsContent>
           <TabsContent value="ai-studio">
-            <AiToolsTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />
+            <TabErrorBoundary label="AI studio">
+              <AiToolsTab data={data} companyName={company?.name ?? null} onRefresh={onRefresh} />
+            </TabErrorBoundary>
           </TabsContent>
           <TabsContent value="network">
-            <NetworkTab data={data} onRefresh={onRefresh} />
+            <TabErrorBoundary label="network">
+              <NetworkTab data={data} onRefresh={onRefresh} />
+            </TabErrorBoundary>
           </TabsContent>
         </div>
       </Tabs>

@@ -94,6 +94,7 @@ export interface JobDetailData {
   documents: JobDocument[];
   resumeOptions: JobDetailResumeOption[];
   boardLists?: import("@/lib/types/board").BoardList[];
+  deadlines?: import("@/lib/types/board").JobDeadline[];
   smtpReady: boolean;
   applicantName: string;
   applicantHeadline: string | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { streamGenerateAiTool, parseEmailFromStream, type GeneratedEmail } from "@/lib/ai/ai-tools";
 import { saveAiToolAsDocument } from "@/lib/actions/ai-tools";
 import { sendApplicationEmail } from "@/lib/actions/email";
 import { AI_TOOL_KINDS, type AiToolKind } from "@/lib/types/ai-tools";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
 import { useAiUnlocked } from "@/lib/hooks/use-ai-unlocked";
+import { useAiToolsStore } from "@/lib/stores/ai-tools-store";
 import { NoApiKeyOverlay } from "@/components/ai-chatbot/no-api-key-overlay";
 import { Mail, Save } from "lucide-react";
 import { SparklesIcon } from "@/components/ui/sparkles";
@@ -30,56 +30,56 @@ const STAGES = ["Application", "Interview", "Offer"] as const;
 export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   const router = useRouter();
   const { unlocked, checked } = useAiUnlocked();
-  const [kind, setKind] = useState<AiToolKind | null>(null);
-  const [context, setContext] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<GeneratedEmail | null>(null);
-  const [to, setTo] = useState(data.job.application_email ?? "");
   const [savePending, setSavePending] = useState(false);
   const [sendPending, setSendPending] = useState(false);
-  const streamRef = useRef("");
+
+  const jobId = data.job.id;
+  const defaultToEmail = data.job.application_email ?? "";
+
+  const rawJobState = useAiToolsStore((state) => state.jobs[jobId]);
+  const jobState = useMemo(() => {
+    if (rawJobState) return rawJobState;
+    return {
+      kind: null,
+      context: "",
+      generating: false,
+      result: null,
+      to: defaultToEmail,
+      error: null,
+    };
+  }, [rawJobState, defaultToEmail]);
+
+  const setKind = (kind: AiToolKind | null) => useAiToolsStore.getState().setKind(jobId, kind);
+  const setContext = (context: string) => useAiToolsStore.getState().setContext(jobId, context);
+  const setResult = (result: typeof jobState.result) => useAiToolsStore.getState().setResult(jobId, result);
+  const setTo = (to: string) => useAiToolsStore.getState().setTo(jobId, to);
+  const resetJob = () => useAiToolsStore.getState().resetJob(jobId);
+  const generate = useAiToolsStore((state) => state.generate);
 
   const grouped = useMemo(
     () => STAGES.map((stage) => ({ stage, kinds: AI_TOOL_KINDS.filter((k) => k.stage === stage) })),
     []
   );
 
-  const handleGenerate = async (selected: AiToolKind) => {
-    setKind(selected);
-    setResult(null);
-    setGenerating(true);
-    streamRef.current = "";
-
-    try {
-      for await (const chunk of streamGenerateAiTool({
-        kind: selected,
-        jobTitle: data.job.title,
-        companyName: companyName ?? "the company",
-        jobDescription: data.job.description,
-        applicantName: data.applicantName,
-        applicantHeadline: data.applicantHeadline,
-        resumeContent: data.resumeContent,
-        context: context.trim() || null,
-      })) {
-        streamRef.current += chunk;
-        const partial = parseEmailFromStream(streamRef.current);
-        if (partial) setResult(partial);
-      }
-      const final = parseEmailFromStream(streamRef.current);
-      if (final) setResult(final);
-      else toast.error("Couldn't parse the generated email");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Generation failed");
-    } finally {
-      setGenerating(false);
-    }
+  const handleGenerate = (selected: AiToolKind) => {
+    generate({
+      jobId,
+      kind: selected,
+      jobTitle: data.job.title,
+      companyName: companyName ?? "the company",
+      jobDescription: data.job.description,
+      applicantName: data.applicantName,
+      applicantHeadline: data.applicantHeadline,
+      resumeContent: data.resumeContent,
+      context: jobState.context,
+    });
   };
 
   const handleSave = async () => {
-    if (!kind || !result) return;
+    if (!jobState.kind || !jobState.result) return;
     setSavePending(true);
     try {
-      await saveAiToolAsDocument(data.job.id, kind, result.subject, result.body);
+      await saveAiToolAsDocument(jobId, jobState.kind, jobState.result.subject, jobState.result.body);
       onRefresh();
       toast.success("Saved as a document");
     } catch {
@@ -90,7 +90,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
   };
 
   const handleSend = async () => {
-    if (!result || !to.trim()) return;
+    if (!jobState.result || !jobState.to.trim()) return;
     if (!data.smtpReady) {
       toast.error("SMTP not configured", {
         description: "Set up your email in Settings to send directly.",
@@ -101,10 +101,10 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
     setSendPending(true);
     try {
       const res = await sendApplicationEmail({
-        jobId: data.job.id,
-        to: to.trim(),
-        subject: result.subject,
-        body: result.body,
+        jobId,
+        to: jobState.to.trim(),
+        subject: jobState.result.subject,
+        body: jobState.result.body,
         resumeId: null,
       });
       if (res.error) throw new Error(res.error);
@@ -125,15 +125,13 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
     );
   }
 
-  if (kind) {
+  if (jobState.kind) {
     return (
       <div className="space-y-4">
         <button
-          onClick={() => {
-            setKind(null);
-            setResult(null);
-          }}
-          className="text-xs text-muted-foreground hover:text-foreground"
+          type="button"
+          onClick={resetJob}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           ← Back to AI Tools
         </button>
@@ -142,47 +140,79 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
           <Label htmlFor="ai-tool-context">Extra context (optional)</Label>
           <Textarea
             id="ai-tool-context"
-            value={context}
+            value={jobState.context}
             onChange={(e) => setContext(e.target.value)}
             placeholder="e.g. interview was on Tuesday, offer includes $120k base, requesting 1 more week..."
             rows={2}
           />
         </div>
 
-        <Button onClick={() => handleGenerate(kind)} disabled={generating} size="sm">
-          {generating && <Spinner className="mr-2" />}
+        <Button
+          onClick={() => handleGenerate(jobState.kind!)}
+          disabled={jobState.generating}
+          size="sm"
+          className="cursor-pointer"
+        >
+          {jobState.generating && <Spinner className="mr-2" />}
           <SparklesIcon className="mr-1 size-3.5" />
-          {result ? "Regenerate" : "Generate"}
+          {jobState.result ? "Regenerate" : "Generate"}
         </Button>
 
-        {result && (
+        {jobState.generating && !jobState.result && (
+          <div className="flex items-center gap-2.5 rounded-2xl border border-border/80 bg-muted/30 p-4 text-xs text-muted-foreground animate-pulse">
+            <Spinner className="size-4 text-primary" />
+            <span>Generating {jobState.kind.replace(/_/g, " ")} with AI...</span>
+          </div>
+        )}
+
+        {jobState.result && (
           <div className="space-y-3 rounded-2xl border border-border p-3">
             <div className="space-y-1">
               <Label className="text-xs">Subject</Label>
               <Input
-                value={result.subject}
-                onChange={(e) => setResult({ ...result, subject: e.target.value })}
+                value={jobState.result.subject}
+                onChange={(e) =>
+                  setResult({ ...jobState.result!, subject: e.target.value })
+                }
                 className="h-9"
               />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Body</Label>
               <Textarea
-                value={result.body}
-                onChange={(e) => setResult({ ...result, body: e.target.value })}
+                value={jobState.result.body}
+                onChange={(e) =>
+                  setResult({ ...jobState.result!, body: e.target.value })
+                }
                 rows={10}
               />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Send to</Label>
-              <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="recipient@company.com" className="h-9" />
+              <Input
+                value={jobState.to}
+                onChange={(e) => setTo(e.target.value)}
+                placeholder="recipient@company.com"
+                className="h-9"
+              />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={handleSave} disabled={savePending}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSave}
+                disabled={savePending || jobState.generating}
+                className="cursor-pointer"
+              >
                 {savePending ? <Spinner className="mr-2" /> : <Save className="mr-1 size-3.5" />}
                 Save as document
               </Button>
-              <Button size="sm" onClick={handleSend} disabled={sendPending || !to.trim()}>
+              <Button
+                size="sm"
+                onClick={handleSend}
+                disabled={sendPending || !jobState.to.trim() || jobState.generating}
+                className="cursor-pointer"
+              >
                 {sendPending ? <Spinner className="mr-2" /> : <Mail className="mr-1 size-3.5" />}
                 Send
               </Button>
@@ -204,7 +234,7 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
                 key={k.kind}
                 onClick={() => setKind(k.kind)}
                 className={cn(
-                  "flex items-center gap-2 rounded-2xl border border-border p-3 text-left text-sm transition-colors hover:bg-muted"
+                  "flex items-center gap-2 rounded-2xl border border-border p-3 text-left text-sm transition-colors hover:bg-muted cursor-pointer"
                 )}
               >
                 <SparklesIcon className="size-3.5 shrink-0 text-muted-foreground" />

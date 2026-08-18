@@ -568,8 +568,8 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
                         isActive
                           ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -601,8 +601,8 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
                         isActive
                           ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -634,8 +634,8 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
                         isActive
                           ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -663,8 +663,8 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
                         isActive
                           ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -696,8 +696,8 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
                         isActive
                           ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -727,8 +727,8 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                       onClick={onNavigate}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
-                        isCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2",
+                        "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
+                        isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
                         isActive
                           ? "bg-gradient-brand text-primary-foreground font-semibold shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"

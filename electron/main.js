@@ -103,6 +103,11 @@ async function main() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    // 768px is Tailwind's `md` breakpoint — the app's mobile/desktop layout
+    // switch (see dashboard-header.tsx's md:hidden). Below it the desktop
+    // sidebar/board/table layouts have no responsive fallback and break, so
+    // this is the floor: the window can shrink into mobile layout, never past it.
+    minWidth: 768,
     show: false,
     title: "atTrack",
     titleBarStyle: "hidden",

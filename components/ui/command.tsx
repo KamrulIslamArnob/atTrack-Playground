@@ -152,7 +152,7 @@ const CommandItem = React.forwardRef<HTMLDivElement, CommandItemProps>(
         className={cn(
           "group relative flex cursor-pointer select-none items-center rounded-xl px-2.5 py-2 text-sm outline-none transition-all duration-150",
           isSelected
-            ? "bg-accent text-accent-foreground font-medium shadow-2xs"
+            ? "bg-muted text-foreground font-medium shadow-2xs"
             : "text-foreground hover:bg-muted/70",
           className
         )}

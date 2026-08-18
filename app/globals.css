@@ -138,8 +138,8 @@
   --secondary-foreground: #1d4ed8;
   --muted: #f4f4f5;
   --muted-foreground: #64748b;
-  --accent: #dbeafe;
-  --accent-foreground: #1d4ed8;
+  --accent: #f4f4f5;
+  --accent-foreground: #09090b;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #e4e4e7;
   --input: #e4e4e7;
@@ -199,7 +199,7 @@
   --red: #ef4444;
   --red-tint: #fef2f2;
   --orange: #f59e0b;
-  --accent: #2563eb;
+  --agent-accent: #2563eb;
   --accent-ink: #1d4ed8;
   --accent-tint: #eff6ff;
   --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
@@ -255,8 +255,8 @@
   --secondary-foreground: #e0f2fe;
   --muted: #262730;
   --muted-foreground: #9ca3af;
-  --accent: #1e293b;
-  --accent-foreground: #f0f9ff;
+  --accent: #262730;
+  --accent-foreground: #f8fafc;
   --destructive: oklch(0.704 0.191 22.216);
   --border: #2e2f38;
   --input: #2a2b34;
@@ -316,7 +316,7 @@
   --red: #ef4444;
   --red-tint: rgba(239, 68, 68, 0.15);
   --orange: #f59e0b;
-  --accent: #38bdf8;
+  --agent-accent: #38bdf8;
   --accent-ink: #38bdf8;
   --accent-tint: rgba(56, 189, 248, 0.15);
   --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3);

@@ -148,10 +148,10 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
                       <img src={c.avatar_url} alt={c.name} className="size-5 rounded-full object-cover" />
                     ) : (
                       <span className={cn("flex size-5 items-center justify-center rounded-full text-[10px] font-bold", getContactAvatarColorClass(c.role, c.name))}>
-                        {(c.name.trim()[0] || "C").toUpperCase()}
+                        {(c.name ?? "").trim().charAt(0).toUpperCase() || "C"}
                       </span>
                     )}
-                    {c.name}
+                    {c.name || "Unnamed contact"}
                   </span>
                   <span className="text-xs text-muted-foreground">{contactRoleLabel(c.role)}</span>
                 </button>
@@ -179,11 +179,11 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
                       getContactAvatarColorClass(c.role, c.name)
                     )}
                   >
-                    {(c.name.trim()[0] || "C").toUpperCase()}
+                    {(c.name ?? "").trim().charAt(0).toUpperCase() || "C"}
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{c.name}</p>
+                  <p className="text-sm font-medium">{c.name || "Unnamed contact"}</p>
                   <p className="text-xs text-muted-foreground">{contactRoleLabel(c.role)}</p>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                     {c.email && (
