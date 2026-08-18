@@ -21,7 +21,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
   const { data: job } = await supabase
     .from("jobs")
     .select(
-      `*, company:companies(id, name, website, location, founded_year, company_type, country),
+      `*, company:companies(id, name, website, location, logo_url, color, founded_year, company_type, country),
        position:positions(name), resume:documents!jobs_resume_id_fkey(name)`
     )
     .eq("id", jobId)

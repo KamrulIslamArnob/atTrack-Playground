@@ -39,7 +39,12 @@ interface RawJobRow {
   section_deadline_list_id: string | null;
   tier?: string | null;
   created_at: string;
-  company: { name: string } | null;
+  company: {
+    name: string;
+    website?: string | null;
+    logo_url?: string | null;
+    color?: string | null;
+  } | null;
   position: { name: string } | null;
   resume: { name: string } | null;
   applications: { id: string; status: string }[] | null;
@@ -119,7 +124,7 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
       section_deadline_list_id,
       tier,
       created_at,
-      company:companies(name),
+      company:companies(name, website, logo_url, color),
       position:positions(name),
       resume:documents!jobs_resume_id_fkey(name),
       applications(id, status),
@@ -157,6 +162,9 @@ export async function getBoard(params: { positionId?: string } = {}): Promise<Bo
         title: j.title,
         state: (j.state as JobState) ?? "active",
         company_name: j.company?.name ?? null,
+        company_website: j.company?.website ?? null,
+        company_logo_url: j.company?.logo_url ?? null,
+        company_color: j.company?.color ?? null,
         list_id: j.list_id,
         board_position: j.board_position,
         position_id: j.position_id,

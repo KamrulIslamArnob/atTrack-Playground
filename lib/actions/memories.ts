@@ -69,7 +69,7 @@ export async function createMemory(input: CreateMemoryInput): Promise<AiMemory> 
     log.warn({ err }, "Failed to index memory vector:");
   }
 
-  revalidatePath("/preferences/ai-prompts");
+  revalidatePath("/prompts");
   return newMemory;
 }
 
@@ -108,7 +108,7 @@ export async function updateMemory(id: string, input: UpdateMemoryInput): Promis
     log.warn({ err }, "Failed to update memory vector:");
   }
 
-  revalidatePath("/preferences/ai-prompts");
+  revalidatePath("/prompts");
   return (data as unknown) as AiMemory;
 }
 
@@ -133,5 +133,5 @@ export async function deleteMemory(id: string): Promise<void> {
     log.warn({ err }, "Failed to delete memory vector:");
   }
 
-  revalidatePath("/preferences/ai-prompts");
+  revalidatePath("/prompts");
 }

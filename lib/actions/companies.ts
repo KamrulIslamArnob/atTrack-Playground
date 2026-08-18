@@ -5,6 +5,7 @@ import { getUser } from "@/lib/auth";
 import { moduleLogger } from "@/lib/log";
 import { requestId } from "@/lib/log/request";
 import { logResourceActivity } from "./activity-log";
+import { fetchAndOptimizeFavicon } from "./links";
 import type { JobTier } from "@/lib/types/job";
 
 const log = moduleLogger("actions.companies");
@@ -20,15 +21,24 @@ export async function updateCompany(companyId: string, formData: FormData): Prom
   const companyType = (formData.get("company_type") as string) || null;
   const country = (formData.get("country") as string) || null;
 
+  const updates: Record<string, unknown> = {
+    website,
+    location,
+    founded_year: foundedYear,
+    company_type: companyType,
+    country,
+  };
+
+  if (website) {
+    const logoUrl = await fetchAndOptimizeFavicon(website);
+    if (logoUrl) {
+      updates.logo_url = logoUrl;
+    }
+  }
+
   const { error } = await supabase
     .from("companies")
-    .update({
-      website,
-      location,
-      founded_year: foundedYear,
-      company_type: companyType,
-      country,
-    })
+    .update(updates)
     .eq("id", companyId)
     .eq("user_id", userId);
 
@@ -36,6 +46,8 @@ export async function updateCompany(companyId: string, formData: FormData): Prom
 
   void logResourceActivity(userId, "company.update", "company", companyId, { fields: "profile" });
   revalidatePath("/jobs");
+  revalidatePath("/crm");
+  revalidatePath("/board");
 }
 
 export interface CrmCompany {
@@ -44,6 +56,7 @@ export interface CrmCompany {
   website: string | null;
   location: string | null;
   color: string | null;
+  logo_url?: string | null;
   tier?: JobTier | null;
   job_count: number;
   contact_count: number;
@@ -59,6 +72,8 @@ export async function updateCompanyColor(companyId: string, color: string | null
   if (error) throw new Error("Failed to update company color.");
   void logResourceActivity(userId, "company.update", "company", companyId, { fields: "color" });
   revalidatePath("/crm");
+  revalidatePath("/jobs");
+  revalidatePath("/board");
 }
 
 export async function updateCompanyTier(companyId: string, tier: JobTier | null): Promise<void> {
@@ -71,22 +86,15 @@ export async function updateCompanyTier(companyId: string, tier: JobTier | null)
   if (error) throw new Error("Failed to update company tier.");
   void logResourceActivity(userId, "company.update", "company", companyId, { fields: "tier" });
   revalidatePath("/crm");
+  revalidatePath("/jobs");
+  revalidatePath("/board");
 }
 
-/**
- * Every job already resolves to a companies row by exact name match
- * (createJob's find-or-create), and every contact optionally carries the same
- * company_id — so "which company is common ground" is already true in the
- * data model. This just aggregates it for the CRM's company directory.
- *
- * ponytail: counts computed in memory (single-user data volumes), not via a
- * SQL GROUP BY the query builder doesn't support — fine at this scale.
- */
 export async function getCrmCompanies(): Promise<CrmCompany[]> {
   const { supabase, userId } = await getUser();
 
   const [{ data: companies }, { data: jobs }, { data: contacts }] = await Promise.all([
-    supabase.from("companies").select("id, name, website, location, color, tier").eq("user_id", userId).order("name", { ascending: true }),
+    supabase.from("companies").select("id, name, website, location, color, tier, logo_url").eq("user_id", userId).order("name", { ascending: true }),
     supabase.from("jobs").select("company_id").eq("user_id", userId),
     supabase.from("contacts").select("company_id").eq("user_id", userId),
   ]);
@@ -106,6 +114,7 @@ export async function getCrmCompanies(): Promise<CrmCompany[]> {
     website: c.website ?? null,
     location: c.location ?? null,
     color: c.color ?? null,
+    logo_url: c.logo_url ?? null,
     tier: (c.tier as JobTier) ?? null,
     job_count: jobCounts.get(c.id) ?? 0,
     contact_count: contactCounts.get(c.id) ?? 0,
@@ -152,13 +161,21 @@ export async function createCompany(formData: FormData): Promise<{ id: string }>
     .maybeSingle();
   if (existing) return { id: existing.id };
 
+  const website = (formData.get("website") as string)?.trim() || null;
+  const location = (formData.get("location") as string)?.trim() || null;
+
+  // Auto-fetch logo if website or name provided
+  const query = website || (name.includes(".") ? name : `${name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`);
+  const logoUrl = query ? await fetchAndOptimizeFavicon(query) : null;
+
   const { data: company, error } = await supabase
     .from("companies")
     .insert({
       user_id: userId,
       name,
-      website: (formData.get("website") as string) || null,
-      location: (formData.get("location") as string) || null,
+      website,
+      location,
+      logo_url: logoUrl,
     })
     .select("id")
     .single();
@@ -167,6 +184,8 @@ export async function createCompany(formData: FormData): Promise<{ id: string }>
 
   void logResourceActivity(userId, "company.create", "company", company.id);
   revalidatePath("/crm");
+  revalidatePath("/jobs");
+  revalidatePath("/board");
   return { id: company.id };
 }
 
@@ -185,18 +204,26 @@ export async function updateCompanyDetails(
   const tierRaw = formData.get("tier") as string | null;
   const tier = tierRaw === "none" || !tierRaw ? null : tierRaw;
 
+  const updates: Record<string, unknown> = { name, website, location, tier };
+  if (website) {
+    const logoUrl = await fetchAndOptimizeFavicon(website);
+    if (logoUrl) updates.logo_url = logoUrl;
+  }
+
   const { data: updated, error } = await supabase
     .from("companies")
-    .update({ name, website, location, tier })
+    .update(updates)
     .eq("id", companyId)
     .eq("user_id", userId)
-    .select("id, name, website, location, color, tier")
+    .select("id, name, website, location, color, tier, logo_url")
     .single();
 
   if (error) throw new Error("Failed to update company.");
 
   void logResourceActivity(userId, "company.update", "company", companyId, { fields: "details" });
   revalidatePath("/crm");
+  revalidatePath("/jobs");
+  revalidatePath("/board");
 
   const [{ count: jobCount }, { count: contactCount }] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("company_id", companyId),
@@ -209,6 +236,7 @@ export async function updateCompanyDetails(
     website: updated.website,
     location: updated.location,
     color: updated.color,
+    logo_url: updated.logo_url ?? null,
     tier: (updated.tier as JobTier) ?? null,
     job_count: jobCount ?? 0,
     contact_count: contactCount ?? 0,
@@ -243,4 +271,83 @@ export async function deleteCompany(companyId: string): Promise<void> {
 
   void logResourceActivity(userId, "company.delete", "company", companyId);
   revalidatePath("/crm");
+  revalidatePath("/jobs");
+  revalidatePath("/board");
 }
+
+/**
+ * Fetches and saves a single company logo directly into SQLite.
+ * Uses 'none' sentinel if no online icon exists so it is never re-fetched.
+ */
+export async function fetchAndSaveCompanyLogo(companyId: string, websiteOrName: string): Promise<string | null> {
+  const { supabase, userId } = await getUser();
+  const query = websiteOrName.includes(".") ? websiteOrName : `${websiteOrName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`;
+  const logoData = await fetchAndOptimizeFavicon(query);
+  await supabase
+    .from("companies")
+    .update({ logo_url: logoData ?? "none", updated_at: new Date().toISOString() })
+    .eq("id", companyId)
+    .eq("user_id", userId);
+  if (logoData) {
+    revalidatePath("/crm");
+    revalidatePath("/jobs");
+    revalidatePath("/board");
+  }
+  return logoData;
+}
+
+/**
+ * Backfills missing logos for existing companies and saves them permanently in SQLite.
+ * Marks un-fetchable companies with 'none' to ensure only a single pass is ever executed.
+ */
+export async function backfillCompanyLogos(): Promise<{ updated: number; icons: Record<string, string> }> {
+  const { supabase, userId } = await getUser();
+
+  const { data: rawCompanies, error } = await supabase
+    .from("companies")
+    .select("id, name, website, logo_url")
+    .eq("user_id", userId);
+
+  if (error || !rawCompanies) {
+    return { updated: 0, icons: {} };
+  }
+
+  // Only check companies where logo_url IS NULL (has never been attempted)
+  const missing = rawCompanies.filter((c) => c.logo_url === null && (c.website || c.name));
+  if (missing.length === 0) {
+    return { updated: 0, icons: {} };
+  }
+
+  let updated = 0;
+  const icons: Record<string, string> = {};
+
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const batch = missing.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (comp) => {
+        const query = comp.website || (comp.name.includes(".") ? comp.name : `${comp.name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`);
+        const logoData = await fetchAndOptimizeFavicon(query);
+        await supabase
+          .from("companies")
+          .update({ logo_url: logoData ?? "none", updated_at: new Date().toISOString() })
+          .eq("id", comp.id)
+          .eq("user_id", userId);
+        if (logoData) {
+          icons[comp.id] = logoData;
+        }
+        updated++;
+      })
+    );
+  }
+
+  if (updated > 0) {
+    revalidatePath("/crm");
+    revalidatePath("/jobs");
+    revalidatePath("/board");
+  }
+
+  return { updated, icons };
+}
+
+

@@ -13,6 +13,7 @@ import { ExtensionSettings } from "@/components/settings/extension-settings";
 import { getExtensionSecret } from "@/lib/actions/extension";
 import { RawDatabaseToggle } from "@/components/settings/raw-database-toggle";
 import { ThemeSettings } from "@/components/settings/theme-settings";
+import { StartupServiceCard } from "@/components/settings/startup-service-card";
 import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";
 import { OnboardingSettingsCard } from "@/components/settings/onboarding-settings-card";
 import { DataBackupCard } from "@/components/settings/data-backup-card";
@@ -47,6 +48,8 @@ export default async function SettingsPage() {
       <Breadcrumbs />
 
       <UpdateChecker />
+
+      <StartupServiceCard />
 
       <ThemeSettings />
 

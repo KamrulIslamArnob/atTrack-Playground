@@ -41,6 +41,40 @@ const nextConfig: NextConfig = {
     "192.168.0.154:3308",
     "192.168.0.154",
   ],
+  async redirects() {
+    return [
+      {
+        source: "/crm",
+        destination: "/network",
+        permanent: true,
+      },
+      {
+        source: "/links",
+        destination: "/resources",
+        permanent: true,
+      },
+      {
+        source: "/preferences/ai-prompts",
+        destination: "/prompts",
+        permanent: true,
+      },
+      {
+        source: "/ai-prompts",
+        destination: "/prompts",
+        permanent: true,
+      },
+      {
+        source: "/resume",
+        destination: "/documents",
+        permanent: true,
+      },
+      {
+        source: "/document",
+        destination: "/documents",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

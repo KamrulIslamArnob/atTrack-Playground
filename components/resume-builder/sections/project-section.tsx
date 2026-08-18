@@ -7,6 +7,7 @@ import { DateField } from "../interactive/date-field";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { ProjectEntry } from "@/lib/types/resume-builder";
+import { generateUUID } from "@/lib/utils";
 
 interface ProjectSectionEditorProps {
   title: string;
@@ -49,7 +50,7 @@ export function ProjectSectionEditor({
       [
         ...entries,
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           left: "",
           right: "",
           bullets: [],
@@ -78,7 +79,7 @@ export function ProjectSectionEditor({
           onAddAfter={() => {
             const newEntries = [...entries];
             newEntries.splice(index + 1, 0, {
-              id: crypto.randomUUID(),
+              id: generateUUID(),
               left: "",
               right: "",
               bullets: [],

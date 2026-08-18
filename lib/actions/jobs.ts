@@ -277,7 +277,7 @@ export async function createJob(formData: FormData) {
 
   revalidatePath("/jobs");
   revalidatePath("/board");
-  revalidatePath("/crm");
+  revalidatePath("/network");
   return { jobId: job.id };
 }
 
@@ -967,7 +967,7 @@ export async function deleteJobWithSmartCascade(
 
   revalidatePath("/board");
   revalidatePath("/jobs");
-  revalidatePath("/crm");
+  revalidatePath("/network");
 
   return { success: true, companyDeleted };
 }

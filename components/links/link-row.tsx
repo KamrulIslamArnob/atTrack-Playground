@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { SocialLink, LinkCategory } from "@/lib/types/links";
-import { Globe, MoreVertical, Edit2, Trash2, FolderOutput } from "lucide-react";
+import { MoreVertical, Edit2, Trash2, FolderOutput } from "lucide-react";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { CopyIcon } from "@/components/ui/copy";
 import { CheckIcon } from "@/components/ui/check";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { WebsiteFavicon } from "./website-favicon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,12 +56,8 @@ export function LinkRow({ link, categories, onEdit, onDelete, onMoveCategory }: 
   return (
     <div className="group relative flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 shadow-2xs transition-all duration-150 ease-out hover:border-border hover:shadow-xs active:scale-[0.99]">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        {/* Icon. Deliberately not a remote favicon: fetching one told Google the
-            domain of every link the user saved, and atTrack is a local, offline
-            job search. It also never resolved without a connection. */}
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50 overflow-hidden text-muted-foreground shadow-2xs transition-transform duration-150 group-hover:scale-105">
-          <Globe className="size-4 text-muted-foreground" />
-        </div>
+        {/* Favicon / Website Logo with instant local cache and SQLite persistence */}
+        <WebsiteFavicon url={link.url} title={link.title} iconUrl={link.icon_url} linkId={link.id} />
 
         {/* Info */}
         <div className="min-w-0 flex-1">

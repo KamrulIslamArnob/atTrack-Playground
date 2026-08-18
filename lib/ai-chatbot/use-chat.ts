@@ -60,9 +60,10 @@ export interface UseAtTrackChatOptions {
   onApproval?: (approval: DbApproval, sessionId?: string) => void;
 }
 
+import { generateUUID } from "@/lib/utils";
+
 function uid(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return generateUUID();
 }
 
 export function extractThinkingAndContent(

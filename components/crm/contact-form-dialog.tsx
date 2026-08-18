@@ -20,7 +20,7 @@ import {
 import { createCompany, type CrmCompany } from "@/lib/actions/companies";
 import { getJobsForMention, type JobMentionOption } from "@/lib/actions/jobs-list";
 import { insertMentionToken } from "@/lib/mentions";
-import { getTagColorClass, getContactAvatarColorClass, cn } from "@/lib/utils";
+import { getTagColorClass, getContactAvatarColorClass, generateUUID, cn } from "@/lib/utils";
 import { Plus, Trash2, Building2, Camera, Loader2 } from "lucide-react";
 import { XIcon } from "@/components/ui/x";
 import { LinkIcon } from "@/components/ui/link";
@@ -154,14 +154,14 @@ export function ContactFormDialog({
       const parsed = parseContactSocialLinks(contact);
       setSocialLinks(
         parsed.map((item) => ({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           platform: item.platform,
           url: item.url,
         }))
       );
     } else {
       setSocialLinks([
-        { id: crypto.randomUUID(), platform: "linkedin", url: "" },
+        { id: generateUUID(), platform: "linkedin", url: "" },
       ]);
     }
 
@@ -227,7 +227,7 @@ export function ContactFormDialog({
   const handleAddSocialLink = () => {
     setSocialLinks((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), platform: "linkedin", url: "" },
+      { id: generateUUID(), platform: "linkedin", url: "" },
     ]);
   };
 

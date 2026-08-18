@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { XIcon } from "@/components/ui/x";
+import { generateUUID } from "@/lib/utils";
 
 export interface JobNote {
   id: string;
@@ -39,7 +40,7 @@ export function JobNotesEditor({ notes, onChange, label = "Notes" }: JobNotesEdi
     if (!title.trim()) return;
     onChange([
       ...notes,
-      { id: crypto.randomUUID(), title: title.trim(), bullets: bullets.filter((b) => b.trim()) },
+      { id: generateUUID(), title: title.trim(), bullets: bullets.filter((b) => b.trim()) },
     ]);
     resetForm();
     setShowForm(false);

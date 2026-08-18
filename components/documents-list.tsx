@@ -410,32 +410,40 @@ export function DocumentsList({ documents }: DocumentsListProps) {
     }
   };
 
-  // Column Resizing Handler
+  // Column Resizing Handler with high-performance RAF and deferred localStorage persistence
   const handleResizeStart = (e: React.MouseEvent, columnKey: SortKey) => {
     e.preventDefault();
     e.stopPropagation();
     const startX = e.clientX;
     const targetHeader = (e.currentTarget as HTMLElement).parentElement;
     const startWidth = columnWidths[columnKey] || (targetHeader ? targetHeader.getBoundingClientRect().width : 140);
+    let latestWidths: Record<string, number> = { ...columnWidths };
+    let rafId: number | null = null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const newWidth = Math.max(50, Math.round(startWidth + deltaX));
-      setColumnWidths((prev) => {
-        const next = { ...prev, [columnKey]: newWidth };
-        try {
-          localStorage.setItem("attrack_documents_column_widths", JSON.stringify(next));
-        } catch {}
-        return next;
+      
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        setColumnWidths((prev) => {
+          latestWidths = { ...prev, [columnKey]: newWidth };
+          return latestWidths;
+        });
       });
     };
 
     const handleMouseUp = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      try {
+        localStorage.setItem("attrack_documents_column_widths", JSON.stringify(latestWidths));
+      } catch {}
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("mouseup", handleMouseUp);
   };
 

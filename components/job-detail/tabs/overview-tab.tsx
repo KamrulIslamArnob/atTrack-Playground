@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { extractJobKeywords, checkJobResumeScore, setJobResume } from "@/lib/actions/jobs";
+import { CompanyLogo } from "@/components/company-logo";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import { cn } from "@/lib/utils";
 
@@ -598,9 +599,15 @@ export function OverviewTab({ data, onRefresh, onEditJob, onAiUpdate }: Overview
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand-tint text-xs font-bold text-primary">
-                    {company.name.charAt(0).toUpperCase()}
-                  </span>
+                  <CompanyLogo
+                    name={company.name}
+                    website={company.website}
+                    logoUrl={company.logo_url}
+                    companyId={company.id}
+                    color={company.color}
+                    className="size-8"
+                    fallback="initial"
+                  />
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-foreground">{company.name}</p>
                     {company.location && (

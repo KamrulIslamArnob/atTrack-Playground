@@ -32,19 +32,52 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Jobs", href: "/jobs", keywords: "job listings saved interested preparing" },
   { title: "Applications", href: "/applications", keywords: "application drafts submitted sent" },
   { title: "Interviews", href: "/interviews", keywords: "interview schedule upcoming completed" },
-  { title: "Network", href: "/crm", keywords: "contacts companies network crm hiring managers recruiters alumni" },
+  { title: "Network", href: "/network", keywords: "contacts companies network crm hiring managers recruiters alumni" },
   { title: "Document", href: "/documents", keywords: "document resume cv cover letter file upload" },
-  { title: "Resources", href: "/links", keywords: "social links resources portals bookmarks directory" },
+  { title: "Resources", href: "/resources", keywords: "social links resources portals bookmarks directory" },
   { title: "Settings", href: "/settings", keywords: "account profile smtp email preferences" },
-  { title: "Prompts & Memory", href: "/preferences/ai-prompts", keywords: "custom ai system prompts memory cover letter templates preferences" },
+  { title: "Prompts", href: "/prompts", keywords: "custom ai system prompts memory cover letter templates preferences" },
   { title: "Database", href: "/preferences/database", keywords: "database sqlite tables schema viewer data preferences" },
   { title: "Performance", href: "/preferences", keywords: "performance ram memory cpu system ports root path connection process status details preferences" },
 ];
 
-// In-memory query cache for instant backspace / repeated searches
-const searchCache = new Map<string, { timestamp: number; data: SearchResult[] }>();
-const CACHE_TTL_MS = 20_000;
-const CACHE_MAX_SIZE = 60;
+// High-performance O(1) LRU Query Cache with TTL and recency promotion
+class LRUCache<K, V> {
+  private capacity: number;
+  private map = new Map<K, { value: V; expiresAt: number }>();
+
+  constructor(capacity: number) {
+    this.capacity = capacity;
+  }
+
+  get(key: K): V | undefined {
+    const entry = this.map.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expiresAt) {
+      this.map.delete(key);
+      return undefined;
+    }
+    // O(1) recency promotion in JavaScript Map
+    this.map.delete(key);
+    this.map.set(key, entry);
+    return entry.value;
+  }
+
+  set(key: K, value: V, ttlMs: number): void {
+    if (this.map.has(key)) {
+      this.map.delete(key);
+    } else if (this.map.size >= this.capacity) {
+      const oldestKey = this.map.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.map.delete(oldestKey);
+      }
+    }
+    this.map.set(key, { value, expiresAt: Date.now() + ttlMs });
+  }
+}
+
+const searchCache = new LRUCache<string, SearchResult[]>(80);
+const CACHE_TTL_MS = 25_000;
 
 // Prepared statement cache
 let cachedFtsStmt: StatementSync | null = null;
@@ -81,8 +114,8 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
   const cacheKey = `${userId}:${q.toLowerCase()}`;
 
   const cached = searchCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data;
+  if (cached) {
+    return cached;
   }
 
   const results: SearchResult[] = [];
@@ -163,12 +196,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     log.error({ err }, "Omni search query failed:");
   }
 
-  // Manage Cache Size
-  if (searchCache.size >= CACHE_MAX_SIZE) {
-    const oldestKey = searchCache.keys().next().value;
-    if (oldestKey) searchCache.delete(oldestKey);
-  }
-  searchCache.set(cacheKey, { timestamp: Date.now(), data: results });
+  searchCache.set(cacheKey, results, CACHE_TTL_MS);
 
   return results;
 }

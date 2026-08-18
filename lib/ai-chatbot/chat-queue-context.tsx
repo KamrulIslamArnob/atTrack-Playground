@@ -61,10 +61,10 @@ export interface ChatQueueContextType {
 
 const ChatQueueContext = createContext<ChatQueueContextType | null>(null);
 
+import { generateUUID } from "@/lib/utils";
+
 function uid(): string {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `t_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return generateUUID();
 }
 
 export function ChatQueueProvider({ children }: { children: React.ReactNode }) {

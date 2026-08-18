@@ -73,7 +73,7 @@ function isTransientError(err: unknown): boolean {
 
 /** Retries an individual LLM/network call on 429 or network glitch with escalating backoff,
  *  then throws RateLimitError so the surrounding task can be re-queued wholesale. */
-async function callWithRateRetry<T>(runner: () => Promise<T>): Promise<T> {
+export async function callWithRateRetry<T>(runner: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await runner();
@@ -316,6 +316,41 @@ export async function scoreJob(userId: string, jobId: string, pickedResumeId?: s
 
 export function scheduleJobScore(userId: string, jobId: string, pickedResumeId?: string | null): void {
   enqueueBackground(`score-job-${jobId}`, () => scoreJob(userId, jobId, pickedResumeId));
+}
+
+/** Queues a job the extension just inserted for AI cleanup — same shape the
+ *  dashboard's "Import with AI" dialog produces (skills, salary_min/max,
+ *  benefits, structured description, ...) instead of whatever the extension's
+ *  client-side DOM/native-crawl layers happened to scrape. Runs after the
+ *  extension's own POST has already returned, so saving a job is never
+ *  slowed down by an LLM call. */
+export function scheduleJobEnrich(userId: string, jobId: string): void {
+  enqueueBackground(`enrich-job-${jobId}`, () => enrichJobInBackground(userId, jobId));
+}
+
+/** Dynamically imported to avoid a static import cycle: lib/actions/jobs.ts
+ *  already imports scheduleJobScore from this file, and enrichJobFromAi lives
+ *  there; extractJobImport pulls in the same AI pipeline the dashboard's AI
+ *  Import dialog uses. */
+async function enrichJobInBackground(userId: string, jobId: string): Promise<void> {
+  const { supabase } = await getUser();
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, description, application_url")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .single();
+  if (!job || (!job.description && !job.application_url)) return;
+
+  const [{ extractJobImport }, { enrichJobFromAi }] = await Promise.all([
+    import("@/lib/actions/job-imports"),
+    import("@/lib/actions/jobs"),
+  ]);
+
+  const extraction = await callWithRateRetry(() =>
+    extractJobImport([], job.description ?? "", job.application_url ?? "")
+  );
+  await enrichJobFromAi(jobId, extraction);
 }
 
 export function scheduleRescoreAll(userId: string): void {

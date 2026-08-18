@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CompanyLogo } from "@/components/company-logo";
 import { updateCompany } from "@/lib/actions/companies";
 import type { JobDetailCompany } from "@/lib/types/job-detail";
 
@@ -30,6 +31,7 @@ interface CompanyEditDialogProps {
  */
 export function CompanyEditDialog({ company, open, onOpenChange, onRefresh }: CompanyEditDialogProps) {
   const [pending, setPending] = useState(false);
+  const [website, setWebsite] = useState(company.website ?? "");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,8 +52,21 @@ export function CompanyEditDialog({ company, open, onOpenChange, onRefresh }: Co
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit company</DialogTitle>
-          <DialogDescription>These details are shared by every job at {company.name}.</DialogDescription>
+          <div className="flex items-center gap-3">
+            <CompanyLogo
+              name={company.name}
+              website={website || company.website}
+              logoUrl={company.logo_url}
+              companyId={company.id}
+              color={company.color}
+              className="size-10 rounded-xl"
+              fallback="initial"
+            />
+            <div>
+              <DialogTitle>Edit company</DialogTitle>
+              <DialogDescription>Details shared by every job at {company.name}.</DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -61,7 +76,8 @@ export function CompanyEditDialog({ company, open, onOpenChange, onRefresh }: Co
               id="website"
               name="website"
               type="url"
-              defaultValue={company.website ?? ""}
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
               placeholder="https://..."
               className="h-9"
             />

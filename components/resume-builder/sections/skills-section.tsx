@@ -6,6 +6,7 @@ import { InlineRichText } from "../interactive/inline-rich-text";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { SkillRow } from "@/lib/types/resume-builder";
+import { generateUUID } from "@/lib/utils";
 
 interface SkillsSectionEditorProps {
   visible: boolean;
@@ -47,7 +48,7 @@ export function SkillsSectionEditor({
 
   const handleAdd = () => {
     onChange(
-      [...rows, { id: crypto.randomUUID(), label: "", value: "" }],
+      [...rows, { id: generateUUID(), label: "", value: "" }],
       callout,
       visible
     );

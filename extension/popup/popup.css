@@ -274,8 +274,14 @@ body {
 
 .banner-warning {
   background-color: var(--warning-bg);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #d97706;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--warning);
+}
+
+.banner-info {
+  background-color: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--primary);
 }
 
 /* Extraction Method Pill */
@@ -739,6 +745,20 @@ body {
   animation: toastSlideUp 220ms var(--ease-spring);
   pointer-events: auto;
 }
+
+/* Same small-dot idiom as .status-dot in the header pill — a colored bar down
+ * the side reads as generic AI-UI chrome; a dot matches how this file already
+ * signals state elsewhere. */
+.toast-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.toast-item.toast-success .toast-dot { background-color: var(--success); }
+.toast-item.toast-error .toast-dot { background-color: var(--destructive); }
+.toast-item.toast-warning .toast-dot { background-color: var(--warning); }
+.toast-item.toast-info .toast-dot { background-color: var(--primary); }
 
 @keyframes toastSlideUp {
   0% { transform: translateY(12px) scale(0.95); opacity: 0; }

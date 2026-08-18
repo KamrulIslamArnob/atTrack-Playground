@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
 import { setJobNotes } from "@/lib/actions/jobs";
 import type { JobDetailData } from "@/lib/types/job-detail";
+import { generateUUID } from "@/lib/utils";
 
 interface NotesTabProps {
   data: JobDetailData;
@@ -15,7 +16,7 @@ interface NotesTabProps {
 
 export function NotesTab({ data, onRefresh }: NotesTabProps) {
   const [notes, setNotes] = useState<JobNote[]>(
-    (data.job.notes ?? []).map((n) => ({ id: crypto.randomUUID(), title: n.title, bullets: n.bullets }))
+    (data.job.notes ?? []).map((n) => ({ id: generateUUID(), title: n.title, bullets: n.bullets }))
   );
   const [pending, setPending] = useState(false);
   const dirty = JSON.stringify(notes.map((n) => ({ title: n.title, bullets: n.bullets }))) !==

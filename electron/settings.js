@@ -21,10 +21,21 @@ function canEncrypt() {
 
 function loadSettings() {
   const file = configPath();
-  if (!existsSync(file)) return {};
+  if (!existsSync(file)) {
+    return {
+      startAtLogin: false,
+      closeToTray: true,
+      lastPort: 3308,
+    };
+  }
 
   const raw = JSON.parse(readFileSync(file, "utf8"));
-  const settings = { ...raw };
+  const settings = {
+    startAtLogin: false,
+    closeToTray: true,
+    lastPort: 3308,
+    ...raw,
+  };
   for (const field of SECRET_FIELDS) {
     if (typeof raw[field] !== "string" || !raw[field]) continue;
     if (raw[`${field}Encrypted`] && canEncrypt()) {

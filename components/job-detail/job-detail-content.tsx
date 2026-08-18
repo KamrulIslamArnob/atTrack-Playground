@@ -19,6 +19,7 @@ import { SparklesIcon } from "@/components/ui/sparkles";
 import { UsersIcon } from "@/components/ui/users";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CompanyLogo } from "@/components/company-logo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverviewTab } from "@/components/job-detail/tabs/overview-tab";
 import { DeadlinesTab } from "@/components/job-detail/tabs/deadlines-tab";
@@ -174,14 +175,16 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
       <div className="border-b border-border bg-card/60 px-4 sm:px-6 py-3.5 backdrop-blur-sm pr-14 sm:pr-16 md:pr-20">
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            {/* The company initial identifies the job faster than a generic glyph. */}
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-brand-tint text-sm font-semibold text-primary">
-              {company?.name ? (
-                company.name.charAt(0).toUpperCase()
-              ) : (
-                <Building2 className="size-4 text-muted-foreground/70" />
-              )}
-            </div>
+            {/* The company logo / initial identifies the job */}
+            <CompanyLogo
+              name={company?.name}
+              website={company?.website}
+              logoUrl={company?.logo_url}
+              companyId={company?.id}
+              color={company?.color}
+              className="size-9 rounded-xl"
+              fallback="initial"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 min-w-0">
                 <h1 className="truncate text-sm sm:text-base font-bold tracking-tight max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md">

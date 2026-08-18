@@ -43,8 +43,83 @@ async function probeUrl(url) {
 async function discoverServer() {
   const candidates = CANDIDATE_PORTS.map((port) => `http://127.0.0.1:${port}`);
   const results = await Promise.all(candidates.map(probeUrl));
-  return results.find(Boolean) || null;
+  const found = results.find(Boolean) || null;
+  if (found) flushPendingJobs(); // just learned the server is reachable — try to drain the offline queue
+  return found;
 }
+
+// --- Offline queue: a save that couldn't reach the server waits here instead
+// of being lost, and is retried automatically once the server is reachable
+// again (chrome.alarms below, plus opportunistically on every successful
+// discoverServer/status check). ---
+
+const PENDING_JOBS_KEY = "pendingJobs";
+const FLUSH_ALARM = "flush-pending-jobs";
+
+async function getPendingJobs() {
+  const { [PENDING_JOBS_KEY]: jobs } = await chrome.storage.local.get(PENDING_JOBS_KEY);
+  return Array.isArray(jobs) ? jobs : [];
+}
+
+async function queuePendingJob(jobData) {
+  const jobs = await getPendingJobs();
+  jobs.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, jobData, queuedAt: Date.now() });
+  await chrome.storage.local.set({ [PENDING_JOBS_KEY]: jobs });
+}
+
+/** One POST attempt, shared by the direct save path and the queue flush. */
+async function postJob(targetUrl, jobData) {
+  const response = await fetch(`${targetUrl}/api/extension/add-job`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      ...(await authHeaders()),
+    },
+    body: JSON.stringify(jobData),
+  });
+  const data = await response.json();
+  return response.ok && data.success
+    ? { success: true, jobId: data.jobId, message: data.message }
+    : { success: false, error: data.error || `HTTP ${response.status}` };
+}
+
+/** Retries every queued save. A network-level failure (server still
+ *  unreachable) keeps an item queued; a real server response — even a
+ *  rejection — removes it, since retrying the same bad request forever won't
+ *  fix a stale secret or a validation error the user needs to see instead. */
+async function flushPendingJobs() {
+  const jobs = await getPendingJobs();
+  if (jobs.length === 0) return 0;
+
+  const { serverUrl = DEFAULT_SERVER_URL } = await chrome.storage.local.get("serverUrl");
+  const targetUrl = serverUrl.replace(/\/$/, "");
+
+  const remaining = [];
+  let flushed = 0;
+
+  for (const item of jobs) {
+    try {
+      const result = await postJob(targetUrl, item.jobData);
+      if (result.success) {
+        flushed++;
+      }
+      // else: the server answered with a real rejection — drop it rather
+      // than retry a request that will keep failing the same way.
+    } catch {
+      remaining.push(item); // still unreachable — keep it queued
+    }
+  }
+
+  await chrome.storage.local.set({ [PENDING_JOBS_KEY]: remaining });
+  return flushed;
+}
+
+chrome.alarms.create(FLUSH_ALARM, { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === FLUSH_ALARM) discoverServer();
+});
+chrome.runtime.onStartup.addListener(() => discoverServer());
 
 // Message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -63,6 +138,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } else if (message.type === "ADD_JOB_TO_ATTRACK") {
         const result = await addJobToAtTrack(message.jobData, message.serverUrl);
         sendResponse(result);
+      } else if (message.type === "GET_PENDING_COUNT") {
+        const jobs = await getPendingJobs();
+        sendResponse({ count: jobs.length });
+      } else if (message.type === "FLUSH_PENDING_JOBS") {
+        const flushed = await flushPendingJobs();
+        const remaining = await getPendingJobs();
+        sendResponse({ flushed, remaining: remaining.length });
       } else if (message.type === "GET_SERVER_URL") {
         const { serverUrl = DEFAULT_SERVER_URL } = await chrome.storage.local.get("serverUrl");
         sendResponse({ serverUrl });
@@ -143,22 +225,16 @@ async function addJobToAtTrack(jobData, customUrl) {
   const targetUrl = (customUrl || serverUrl).replace(/\/$/, "");
 
   try {
-    const response = await fetch(`${targetUrl}/api/extension/add-job`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        ...(await authHeaders()),
-      },
-      body: JSON.stringify(jobData),
-    });
-
-    const data = await response.json();
-    if (response.ok && data.success) {
-      return { success: true, jobId: data.jobId, message: data.message };
-    }
-    return { success: false, error: data.error || `HTTP ${response.status}` };
+    return await postJob(targetUrl, jobData);
   } catch (err) {
-    return { success: false, error: err.message || "Network request failed" };
+    // fetch() itself threw — server unreachable, not a rejection from it.
+    // Queue instead of losing the job; the alarm/discovery flow above
+    // retries automatically once the server answers again.
+    await queuePendingJob(jobData);
+    return {
+      success: false,
+      queued: true,
+      error: "atTrack is unreachable right now. Saved locally — it'll sync automatically once the app is back online.",
+    };
   }
 }

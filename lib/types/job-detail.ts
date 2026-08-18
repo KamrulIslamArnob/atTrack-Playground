@@ -11,6 +11,8 @@ export interface JobDetailCompany {
   name: string;
   website: string | null;
   location: string | null;
+  logo_url?: string | null;
+  color?: string | null;
   founded_year: number | null;
   company_type: string | null;
   country: string | null;

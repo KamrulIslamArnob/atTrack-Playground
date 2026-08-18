@@ -705,7 +705,7 @@ export async function importLinksFromJson(rawJson: string): Promise<LinksImportR
     }
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
 
   return {
     success: categoriesCreated > 0 || linksCreated > 0 || linksUpdated > 0 || shortcutsCreated > 0,

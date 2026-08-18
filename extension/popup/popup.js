@@ -8,6 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const serverUrlInput = document.getElementById("serverUrlInput");
   const btnSaveServerUrl = document.getElementById("btnSaveServerUrl");
   const offlineNotice = document.getElementById("offlineNotice");
+  const pendingQueueNotice = document.getElementById("pendingQueueNotice");
+  const pendingQueueText = document.getElementById("pendingQueueText");
+  const btnSyncNow = document.getElementById("btnSyncNow");
   const extractionBadge = document.getElementById("extractionBadge");
   const extractionText = document.getElementById("extractionText");
   const skillCounterBadge = document.getElementById("skillCounterBadge");
@@ -32,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSubmit = document.getElementById("btnSubmit");
   const btnSubmitText = document.getElementById("btnSubmitText");
   const successBanner = document.getElementById("successBanner");
+  const successTitle = document.getElementById("successTitle");
+  const successSubtitle = document.getElementById("successSubtitle");
   const btnOpenBoard = document.getElementById("btnOpenBoard");
 
   const firecrawlKeyInput = document.getElementById("firecrawlKeyInput");
@@ -120,7 +125,32 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    btnSyncNow.addEventListener("click", () => {
+      btnSyncNow.disabled = true;
+      btnSyncNow.textContent = "Syncing…";
+      chrome.runtime.sendMessage({ type: "FLUSH_PENDING_JOBS" }, (res) => {
+        btnSyncNow.disabled = false;
+        btnSyncNow.textContent = "Sync now";
+        if (res && res.flushed > 0) {
+          showToast(`Synced ${res.flushed} queued job${res.flushed === 1 ? "" : "s"}`, "success");
+        }
+        refreshPendingBadge();
+      });
+    });
+
     jobForm.addEventListener("submit", handleFormSubmit);
+  }
+
+  function refreshPendingBadge() {
+    chrome.runtime.sendMessage({ type: "GET_PENDING_COUNT" }, (res) => {
+      const count = res && typeof res.count === "number" ? res.count : 0;
+      if (count > 0) {
+        pendingQueueText.textContent = `${count} job${count === 1 ? "" : "s"} queued — will sync automatically`;
+        pendingQueueNotice.classList.remove("hidden");
+      } else {
+        pendingQueueNotice.classList.add("hidden");
+      }
+    });
   }
 
   function checkStatus() {
@@ -156,6 +186,9 @@ document.addEventListener("DOMContentLoaded", () => {
     statusText.textContent = "Connected";
     offlineNotice.classList.add("hidden");
     btnSubmit.disabled = false;
+    // Just confirmed the server is reachable — a good moment to drain
+    // anything saved offline earlier.
+    chrome.runtime.sendMessage({ type: "FLUSH_PENDING_JOBS" }, () => refreshPendingBadge());
   }
 
   function setDisconnected() {
@@ -163,6 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     statusBadge.className = "status-pill disconnected";
     statusText.textContent = "Offline";
     offlineNotice.classList.remove("hidden");
+    refreshPendingBadge();
   }
 
   async function extractFromCurrentTab() {
@@ -385,7 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function showToast(message, type = "info") {
     const toast = document.createElement("div");
     toast.className = `toast-item toast-${type}`;
-    toast.innerHTML = `<span>${message}</span>`;
+    toast.innerHTML = `<span class="toast-dot"></span><span>${message}</span>`;
     toastContainer.appendChild(toast);
 
     setTimeout(() => {
@@ -433,17 +467,36 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmitText.textContent = "Save to Board";
 
         if (response && response.success) {
-          jobForm.classList.add("hidden");
-          successBanner.classList.remove("hidden");
-          showToast("Saved to atTrack Wishlist! 🎉", "success");
-
-          btnOpenBoard.addEventListener("click", () => {
-            chrome.tabs.create({ url: `${currentServerUrl}/board` });
-          });
+          showSuccess(false);
+          showToast("Saved to atTrack Wishlist", "success");
+        } else if (response && response.queued) {
+          showSuccess(true);
+          showToast("Saved locally — will sync once atTrack is back online", "info");
+          refreshPendingBadge();
         } else {
-          showToast(`Failed to save: ${response?.error || "Unknown error"}`, "error");
+          showToast(`Couldn't save job: ${response?.error || "Unknown error"}`, "error");
         }
       }
     );
+  }
+
+  function showSuccess(queued) {
+    jobForm.classList.add("hidden");
+    successBanner.classList.remove("hidden");
+    successTitle.textContent = queued ? "Queued to sync" : "Saved to Wishlist";
+    successSubtitle.textContent = queued
+      ? "Will be added the moment atTrack is back online"
+      : "Job added to atTrack board";
+
+    // The job isn't on the server yet in the queued case, so there's nowhere
+    // for this button to open.
+    btnOpenBoard.classList.toggle("hidden", queued);
+    if (!queued) {
+      btnOpenBoard.addEventListener(
+        "click",
+        () => chrome.tabs.create({ url: `${currentServerUrl}/board` }),
+        { once: true }
+      );
+    }
   }
 });

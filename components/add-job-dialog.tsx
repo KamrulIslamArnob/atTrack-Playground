@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import type { ExtractionResult } from "@/lib/ai/schema";
 import type { BoardList } from "@/lib/types/board";
 import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
-import { cn } from "@/lib/utils";
+import { cn, generateUUID } from "@/lib/utils";
 
 const employmentTypes = [
   "Full-time",
@@ -79,7 +79,7 @@ export function AddJobDialog({
   const [milestoneDate, setMilestoneDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState<JobNote[]>(
     initialData?.notes?.map((n) => ({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title: n.title,
       bullets: n.bullets,
     })) ?? []

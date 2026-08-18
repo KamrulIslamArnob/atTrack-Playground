@@ -4,6 +4,7 @@ const path = require("node:path");
 const os = require("node:os");
 const { loadSettings, saveSettings } = require("./settings");
 const { findPreferredPort, waitForReady, spawnServer, stopServer } = require("./server");
+const { createTray } = require("./tray");
 
 // Determines %APPDATA%\AtTrack (userData) instead of %APPDATA%\Electron/whatever the
 // packaged exe's internal name is — must be called before any app.getPath() use.
@@ -17,15 +18,42 @@ let mainWindow = null;
 let serverProcess = null;
 let currentPort = null;
 let currentSettings = null;
+let trayManager = null;
+let isQuitting = false;
+
+function applyStartupSettings(enable) {
+  if (app.isPackaged) {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: Boolean(enable),
+        openAsHidden: true,
+        args: ["--hidden"],
+      });
+    } catch (err) {
+      console.warn("[Startup] Failed to set login item settings:", err);
+    }
+  }
+}
+
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    if (currentPort) {
+      createMainWindow(`http://127.0.0.1:${currentPort}`);
+      mainWindow?.show();
+    }
+  } else {
+    if (!mainWindow.isVisible()) mainWindow.show();
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+}
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
+    showMainWindow();
   });
 
   app.whenReady().then(main).catch((err) => {
@@ -34,77 +62,21 @@ if (!gotLock) {
   });
 
   app.on("window-all-closed", () => {
-    stopServer(serverProcess);
-    if (process.platform !== "darwin") app.quit();
+    if (!currentSettings?.closeToTray && process.platform !== "darwin") {
+      isQuitting = true;
+      stopServer(serverProcess);
+      app.quit();
+    }
   });
 
-  app.on("before-quit", () => stopServer(serverProcess));
+  app.on("before-quit", () => {
+    isQuitting = true;
+    stopServer(serverProcess);
+    trayManager?.destroy();
+  });
 }
 
-async function main() {
-  const settings = loadSettings();
-  currentSettings = settings;
-
-  if (!settings.dataDir) {
-    const chosen = await promptForDataDir();
-    if (!chosen) {
-      dialog.showErrorBox(
-        "Setup required",
-        "atTrack needs a folder to store its data. Please relaunch and choose one."
-      );
-      app.quit();
-      return;
-    }
-    settings.dataDir = chosen;
-    currentSettings = settings;
-  }
-
-  if (!settings.encryptionKey) {
-    settings.encryptionKey = crypto.randomBytes(32).toString("hex");
-  }
-
-  if (settings.geminiApiKey === undefined) {
-    settings.geminiApiKey = await promptForGeminiKey();
-  }
-
-  // Prefer last launch's resolved port, then the fixed ladder the extension
-  // also probes (see extension/background/service-worker.js CANDIDATE_PORTS)
-  // — makes the app's address predictable across relaunches so the Chrome
-  // extension can find it automatically instead of the user reading a random
-  // port out of Settings and retyping it every time the app restarts.
-  const preferred = settings.lastPort || 3308;
-  const port = await findPreferredPort([preferred, 3308, 3309, 3310, 3311, 3312]);
-  currentPort = port;
-  settings.lastPort = port;
-
-  saveSettings(settings);
-
-  const standaloneDir = app.isPackaged
-    ? path.join(process.resourcesPath, "standalone")
-    : path.join(__dirname, "..", ".next", "standalone");
-
-  serverProcess = spawnServer({
-    standaloneDir,
-    port,
-    env: {
-      SQLITE_DIR: settings.dataDir,
-      STORAGE_DIR: path.join(settings.dataDir, "storage"),
-      ENCRYPTION_KEY: settings.encryptionKey,
-      SMTP_ENCRYPTION_KEY: settings.encryptionKey,
-      GEMINI_API_KEY: settings.geminiApiKey || "",
-    },
-  });
-
-  const url = `http://127.0.0.1:${port}`;
-
-  try {
-    await waitForReady(url);
-  } catch (err) {
-    dialog.showErrorBox("atTrack failed to start", String(err));
-    app.quit();
-    return;
-  }
-
+function createMainWindow(url) {
   Menu.setApplicationMenu(null);
 
   mainWindow = new BrowserWindow({
@@ -171,15 +143,128 @@ async function main() {
     mainWindow?.webContents.send("window-maximized-state", false);
   });
 
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-    setupAutoUpdater();
+  mainWindow.on("close", (event) => {
+    if (!isQuitting && currentSettings?.closeToTray) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
   });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 
-  // Setup IPC window control actions
+  mainWindow.loadURL(url);
+}
+
+async function main() {
+  const settings = loadSettings();
+  currentSettings = settings;
+
+  const startHidden =
+    process.argv.includes("--hidden") ||
+    process.argv.includes("--start-hidden") ||
+    (app.isPackaged && Boolean(app.getLoginItemSettings()?.wasOpenedAsHidden));
+
+  if (!settings.dataDir) {
+    const chosen = await promptForDataDir();
+    if (!chosen) {
+      dialog.showErrorBox(
+        "Setup required",
+        "atTrack needs a folder to store its data. Please relaunch and choose one."
+      );
+      app.quit();
+      return;
+    }
+    settings.dataDir = chosen;
+    currentSettings = settings;
+  }
+
+  if (!settings.encryptionKey) {
+    settings.encryptionKey = crypto.randomBytes(32).toString("hex");
+  }
+
+  if (settings.geminiApiKey === undefined) {
+    settings.geminiApiKey = await promptForGeminiKey();
+  }
+
+  if (settings.startAtLogin !== undefined) {
+    applyStartupSettings(settings.startAtLogin);
+  }
+
+  // Prefer last launch's resolved port, then the fixed ladder the extension
+  // also probes (see extension/background/service-worker.js CANDIDATE_PORTS)
+  // — makes the app's address predictable across relaunches so the Chrome
+  // extension can find it automatically instead of the user reading a random
+  // port out of Settings and retyping it every time the app restarts.
+  const preferred = settings.lastPort || 3308;
+  const port = await findPreferredPort([preferred, 3308, 3309, 3310, 3311, 3312]);
+  currentPort = port;
+  settings.lastPort = port;
+
+  saveSettings(settings);
+
+  const standaloneDir = app.isPackaged
+    ? path.join(process.resourcesPath, "standalone")
+    : path.join(__dirname, "..", ".next", "standalone");
+
+  serverProcess = spawnServer({
+    standaloneDir,
+    port,
+    env: {
+      SQLITE_DIR: settings.dataDir,
+      STORAGE_DIR: path.join(settings.dataDir, "storage"),
+      ENCRYPTION_KEY: settings.encryptionKey,
+      SMTP_ENCRYPTION_KEY: settings.encryptionKey,
+      GEMINI_API_KEY: settings.geminiApiKey || "",
+    },
+  });
+
+  const url = `http://127.0.0.1:${port}`;
+
+  try {
+    await waitForReady(url);
+  } catch (err) {
+    dialog.showErrorBox("atTrack failed to start", String(err));
+    app.quit();
+    return;
+  }
+
+  // Initialize System Tray
+  trayManager = createTray({
+    getPort: () => currentPort,
+    getSettings: () => currentSettings,
+    onToggleSetting: (key, val) => {
+      if (!currentSettings) currentSettings = loadSettings();
+      currentSettings[key] = val;
+      if (key === "startAtLogin") applyStartupSettings(val);
+      saveSettings(currentSettings);
+      trayManager?.updateMenu();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("app:startup-settings-changed", currentSettings);
+      }
+    },
+    onShowApp: () => showMainWindow(),
+    onQuit: () => {
+      isQuitting = true;
+      app.quit();
+    },
+  });
+
+  createMainWindow(url);
+
+  if (!startHidden) {
+    mainWindow.once("ready-to-show", () => {
+      mainWindow.show();
+      setupAutoUpdater();
+    });
+  } else {
+    mainWindow.once("ready-to-show", () => {
+      setupAutoUpdater();
+    });
+  }
+
+  // Register IPC window control actions
   ipcMain.on("app:minimize", () => mainWindow?.minimize());
   ipcMain.on("app:maximize", () => {
     if (!mainWindow) return;
@@ -189,8 +274,55 @@ async function main() {
       mainWindow.maximize();
     }
   });
-  ipcMain.on("app:close", () => mainWindow?.close());
+  ipcMain.on("app:close", () => {
+    if (currentSettings?.closeToTray && !isQuitting) {
+      mainWindow?.hide();
+    } else {
+      mainWindow?.close();
+    }
+  });
   ipcMain.handle("app:is-maximized", () => mainWindow?.isMaximized() ?? false);
+
+  // Register IPC Startup & Background service handlers
+  ipcMain.handle("app:get-startup-settings", () => {
+    const isPackaged = app.isPackaged;
+    const loginItem = isPackaged ? app.getLoginItemSettings() : { openAtLogin: false };
+    return {
+      startAtLogin: currentSettings?.startAtLogin ?? loginItem.openAtLogin ?? false,
+      closeToTray: currentSettings?.closeToTray ?? true,
+      port: currentPort || 3308,
+      serverUrl: `http://127.0.0.1:${currentPort || 3308}`,
+      isPackaged,
+    };
+  });
+
+  ipcMain.handle("app:set-startup-settings", (_event, newSettings) => {
+    if (!currentSettings) currentSettings = loadSettings();
+    if (newSettings && typeof newSettings.startAtLogin === "boolean") {
+      currentSettings.startAtLogin = newSettings.startAtLogin;
+      applyStartupSettings(newSettings.startAtLogin);
+    }
+    if (newSettings && typeof newSettings.closeToTray === "boolean") {
+      currentSettings.closeToTray = newSettings.closeToTray;
+    }
+    saveSettings(currentSettings);
+    trayManager?.updateMenu();
+    return {
+      startAtLogin: currentSettings.startAtLogin,
+      closeToTray: currentSettings.closeToTray,
+      port: currentPort || 3308,
+      serverUrl: `http://127.0.0.1:${currentPort || 3308}`,
+      isPackaged: app.isPackaged,
+    };
+  });
+
+  ipcMain.handle("app:open-browser-url", (_event, targetUrl) => {
+    if (typeof targetUrl === "string" && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
+      shell.openExternal(targetUrl);
+      return true;
+    }
+    return false;
+  });
 
   ipcMain.handle("app:get-system-performance", async () => {
     const totalMem = os.totalmem();
@@ -200,7 +332,7 @@ async function main() {
     let procMem = null;
     try {
       procMem = await process.getProcessMemoryInfo();
-    } catch (e) {
+    } catch {
       // process.getProcessMemoryInfo fallback
     }
     const cpuUsage = process.getCPUUsage();
@@ -262,8 +394,6 @@ async function main() {
       timestamp: new Date().toISOString(),
     };
   });
-
-  mainWindow.loadURL(url);
 }
 
 function setupAutoUpdater() {

@@ -7,6 +7,7 @@ import { DateField } from "../interactive/date-field";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { SubheadingEntry } from "@/lib/types/resume-builder";
+import { generateUUID } from "@/lib/utils";
 
 interface SubheadingSectionEditorProps {
   title: string;
@@ -49,7 +50,7 @@ export function SubheadingSectionEditor({
       [
         ...entries,
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           left1: "",
           right1: "",
           left2: "",
@@ -80,7 +81,7 @@ export function SubheadingSectionEditor({
           onAddAfter={() => {
             const newEntries = [...entries];
             newEntries.splice(index + 1, 0, {
-              id: crypto.randomUUID(),
+              id: generateUUID(),
               left1: "",
               right1: "",
               left2: "",

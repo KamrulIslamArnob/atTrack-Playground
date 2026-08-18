@@ -19,6 +19,7 @@ import { UploadIcon } from "@/components/ui/upload";
 import { XIcon } from "@/components/ui/x";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { generateUUID } from "@/lib/utils";
 
 interface DocumentsTabProps {
   data: JobDetailData;
@@ -95,7 +96,7 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setLinks([...links, { id: crypto.randomUUID(), label: "", url: "" }])}
+            onClick={() => setLinks([...links, { id: generateUUID(), label: "", url: "" }])}
           >
             <PlusIcon className="mr-1 size-3.5" />
             Add link

@@ -19,6 +19,7 @@ import {
   type BoardList,
 } from "@/lib/types/board";
 import { JOB_TIERS } from "@/lib/types/job";
+import { CompanyLogo } from "@/components/company-logo";
 import { cn, parseLocalDate } from "@/lib/utils";
 
 interface BoardCardProps {
@@ -140,8 +141,16 @@ export function BoardCardItem({
 
       {/* Company Name & Metadata Tags */}
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="flex min-w-0 items-center gap-1 font-medium text-foreground/80">
-          <Building2 className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground/80">
+          <CompanyLogo
+            name={card.company_name}
+            website={card.company_website}
+            logoUrl={card.company_logo_url}
+            color={card.company_color}
+            className="size-4 rounded-sm"
+            iconClassName="size-2.5"
+            fallback="initial"
+          />
           <span className="truncate">{card.company_name ?? "Unknown company"}</span>
         </span>
         {card.position_name && (

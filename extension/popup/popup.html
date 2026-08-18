@@ -72,6 +72,18 @@
       <span>atTrack app offline. Launch desktop app to save.</span>
     </div>
 
+    <!-- Offline Queue Banner -->
+    <div id="pendingQueueNotice" class="banner banner-info flex-between hidden">
+      <span class="flex-center gap-4">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span id="pendingQueueText">0 jobs queued</span>
+      </span>
+      <button type="button" id="btnSyncNow" class="text-button">Sync now</button>
+    </div>
+
     <!-- Extraction Method Pill Banner -->
     <div id="extractionBadge" class="extraction-pill hidden">
       <span id="extractionText">⚡ Layer 1: DOM Extracted</span>
@@ -218,8 +230,8 @@
             </svg>
           </div>
           <div>
-            <div class="success-title">Saved to Wishlist!</div>
-            <div class="success-subtitle">Job added to atTrack board</div>
+            <div id="successTitle" class="success-title">Saved to Wishlist</div>
+            <div id="successSubtitle" class="success-subtitle">Job added to atTrack board</div>
           </div>
         </div>
         <button type="button" id="btnOpenBoard" class="button button-success-outline">

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { scheduleJobScore } from "@/lib/ai/background";
+import { scheduleJobScore, scheduleJobEnrich } from "@/lib/ai/background";
 import { verifyExtensionAuth } from "@/lib/db/extension-secret";
 
 import { getExtensionCorsHeaders } from "@/lib/db/extension-cors";
@@ -137,8 +137,10 @@ export const POST = withRoute("/api/extension/add-job", async (req: Request) => 
       );
     }
 
-    // Background job match score
+    // Background: match score + AI cleanup into atTrack's full job shape —
+    // both queued, neither blocks this response.
     scheduleJobScore(userId, job.id);
+    scheduleJobEnrich(userId, job.id);
 
     // Revalidate paths
     revalidatePath("/jobs");

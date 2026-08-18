@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TagInput } from "@/components/ui/tag-input";
 import { Plus, FileSpreadsheet, FileJson } from "lucide-react";
+import { WebsiteFavicon } from "./website-favicon";
 
 interface LinkDialogProps {
   open: boolean;
@@ -147,14 +148,19 @@ export function LinkDialog({
             <Label htmlFor="title" className="text-xs font-medium text-foreground">
               Title <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="title"
-              placeholder="e.g. LinkedIn Job Search"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="rounded-lg"
-            />
+            <div className="flex items-center gap-2">
+              {url.trim() && (
+                <WebsiteFavicon url={url} title={title} className="size-9 rounded-lg shrink-0" />
+              )}
+              <Input
+                id="title"
+                placeholder="e.g. LinkedIn Job Search"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="rounded-lg flex-1"
+              />
+            </div>
           </div>
 
           {/* Category Dropdown */}

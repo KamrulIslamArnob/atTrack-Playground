@@ -63,7 +63,7 @@ export async function saveCustomPrompt(kind: string, systemPrompt: string): Prom
     if (error) throw new Error(`Failed to save prompt: ${error.message}`);
   }
 
-  revalidatePath("/preferences/ai-prompts");
+  revalidatePath("/prompts");
 }
 
 export async function resetCustomPrompt(kind: string): Promise<void> {
@@ -75,5 +75,5 @@ export async function resetCustomPrompt(kind: string): Promise<void> {
     .eq("user_id", userId)
     .eq("kind", kind);
 
-  revalidatePath("/preferences/ai-prompts");
+  revalidatePath("/prompts");
 }

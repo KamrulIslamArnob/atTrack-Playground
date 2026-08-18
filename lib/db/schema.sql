@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS companies (
   country TEXT,
   color TEXT,
   tier TEXT,
+  logo_url TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -670,7 +671,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_ins AFTER INSERT ON contacts BEGI
     'contact', NEW.id, NEW.user_id, NEW.name,
     COALESCE(NEW.position, '') || ' ' || COALESCE(NEW.role, '') || ' ' || COALESCE(NEW.email, '') || ' ' || COALESCE(NEW.phone, ''),
     COALESCE(NEW.notes, '') || ' ' || COALESCE(NEW.linkedin_url, '') || ' ' || COALESCE(NEW.github_url, ''),
-    '/crm', 'contact'
+    '/network', 'contact'
   );
 END;
 
@@ -681,7 +682,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_upd AFTER UPDATE OF id, user_id, 
     'contact', NEW.id, NEW.user_id, NEW.name,
     COALESCE(NEW.position, '') || ' ' || COALESCE(NEW.role, '') || ' ' || COALESCE(NEW.email, '') || ' ' || COALESCE(NEW.phone, ''),
     COALESCE(NEW.notes, '') || ' ' || COALESCE(NEW.linkedin_url, '') || ' ' || COALESCE(NEW.github_url, ''),
-    '/crm', 'contact'
+    '/network', 'contact'
   );
 END;
 
@@ -696,7 +697,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_companies_ins AFTER INSERT ON companies BE
     'company', NEW.id, NEW.user_id, NEW.name,
     COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.company_type, '') || ' ' || COALESCE(NEW.country, ''),
     COALESCE(NEW.website, ''),
-    '/crm', 'company'
+    '/network', 'company'
   );
 END;
 
@@ -707,7 +708,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_companies_upd AFTER UPDATE OF id, user_id,
     'company', NEW.id, NEW.user_id, NEW.name,
     COALESCE(NEW.location, '') || ' ' || COALESCE(NEW.company_type, '') || ' ' || COALESCE(NEW.country, ''),
     COALESCE(NEW.website, ''),
-    '/crm', 'company'
+    '/network', 'company'
   );
 END;
 

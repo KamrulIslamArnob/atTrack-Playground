@@ -96,6 +96,9 @@ export async function createLink(input: CreateLinkInput): Promise<{ success: boo
     formattedUrl = `https://${formattedUrl}`;
   }
 
+  // Fetch and optimize favicon directly into tiny base64 data URI for instant local storage
+  const iconUrl = await fetchAndOptimizeFavicon(formattedUrl);
+
   const payload = {
     user_id: userId,
     category_id: input.category_id,
@@ -103,6 +106,7 @@ export async function createLink(input: CreateLinkInput): Promise<{ success: boo
     url: formattedUrl,
     notes: input.notes?.trim() || null,
     tags: input.tags ?? [],
+    icon_url: iconUrl,
   };
 
   const { data, error } = await from("links").insert(payload).select().single();
@@ -112,7 +116,7 @@ export async function createLink(input: CreateLinkInput): Promise<{ success: boo
     return { success: false, error: "Failed to create link." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true, data: data as unknown as SocialLink };
 }
 
@@ -130,6 +134,8 @@ export async function updateLink(id: string, input: UpdateLinkInput): Promise<{ 
       formattedUrl = `https://${formattedUrl}`;
     }
     updates.url = formattedUrl;
+    const iconUrl = await fetchAndOptimizeFavicon(formattedUrl);
+    if (iconUrl) updates.icon_url = iconUrl;
   }
   if (input.category_id !== undefined) updates.category_id = input.category_id;
   if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
@@ -142,7 +148,7 @@ export async function updateLink(id: string, input: UpdateLinkInput): Promise<{ 
     return { success: false, error: "Failed to update link." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -156,7 +162,7 @@ export async function deleteLink(id: string): Promise<{ success: boolean; error?
     return { success: false, error: "Failed to delete link." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -197,7 +203,7 @@ export async function createCategory(input: CreateCategoryInput): Promise<{ succ
     return { success: false, error: "Failed to create category." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true, data: data as unknown as LinkCategory };
 }
 
@@ -218,7 +224,7 @@ export async function updateCategory(id: string, name: string): Promise<{ succes
     return { success: false, error: "Failed to update category." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -256,7 +262,7 @@ export async function deleteCategory(
     return { success: false, error: "Failed to delete category." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -270,7 +276,7 @@ export async function reorderCategories(orderedIds: string[]): Promise<{ success
       .eq("user_id", userId);
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -351,7 +357,7 @@ export async function createQuickShortcut(
     return { success: false, error: "Failed to create quick shortcut." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true, data: data as unknown as QuickShortcut };
 }
 
@@ -380,7 +386,7 @@ export async function updateQuickShortcut(
     return { success: false, error: "Failed to update quick shortcut." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -394,7 +400,7 @@ export async function deleteQuickShortcut(id: string): Promise<{ success: boolea
     return { success: false, error: "Failed to delete quick shortcut." };
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -442,7 +448,7 @@ export async function renameTag(
     }
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
 
@@ -480,7 +486,128 @@ export async function deleteTag(
     }
   }
 
-  revalidatePath("/links");
+  revalidatePath("/resources");
   return { success: true };
 }
+
+function extractDomain(urlStr: string): string {
+  if (!urlStr || !urlStr.trim()) return "";
+  try {
+    const normalized = /^https?:\/\//i.test(urlStr.trim())
+      ? urlStr.trim()
+      : `https://${urlStr.trim()}`;
+    const parsed = new URL(normalized);
+    return parsed.hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Fetches and compresses a website favicon into a tiny Base64 data URI (typically <1.5KB)
+ * to be saved permanently in the local database.
+ */
+export async function fetchAndOptimizeFavicon(urlStr: string): Promise<string | null> {
+  try {
+    const domain = extractDomain(urlStr);
+    if (!domain) return null;
+
+    const sources = [
+      `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
+      `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,
+    ];
+
+    for (const src of sources) {
+      try {
+        const res = await fetch(src, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          },
+          signal: AbortSignal.timeout(3500),
+        });
+        if (res.ok) {
+          const contentType = res.headers.get("content-type") || "image/png";
+          const arrayBuffer = await res.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          // Only accept valid image buffer (> 60 bytes, < 60KB)
+          if (buffer.length >= 60 && buffer.length <= 60000) {
+            const base64 = buffer.toString("base64");
+            return `data:${contentType};base64,${base64}`;
+          }
+        }
+      } catch {
+        // try next fallback source
+      }
+    }
+    return null;
+  } catch (err) {
+    log.error({ err }, "Failed to fetch favicon:");
+    return null;
+  }
+}
+
+/**
+ * Backfills missing favicons for existing links and saves them permanently in SQLite.
+ */
+export async function backfillLinkFavicons(): Promise<{ updated: number; icons: Record<string, string> }> {
+  const userId = getOrCreateLocalUser().id;
+
+  const { data: rawLinks, error } = await from("links")
+    .select("id, url, icon_url")
+    .eq("user_id", userId);
+
+  if (error || !rawLinks) {
+    return { updated: 0, icons: {} };
+  }
+
+  const links = rawLinks as unknown as Array<{ id: string; url: string; icon_url?: string | null }>;
+  // Only check links where icon_url IS NULL (has never been attempted)
+  const missing = links.filter((l) => l.icon_url === null && l.url);
+
+  if (missing.length === 0) {
+    return { updated: 0, icons: {} };
+  }
+
+  let updated = 0;
+  const icons: Record<string, string> = {};
+
+  // Process in batches of 5
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const batch = missing.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (link) => {
+        const iconData = await fetchAndOptimizeFavicon(link.url);
+        await from("links")
+          .update({ icon_url: iconData ?? "none", updated_at: new Date().toISOString() })
+          .eq("id", link.id)
+          .eq("user_id", userId);
+        if (iconData) {
+          icons[link.id] = iconData;
+        }
+        updated++;
+      })
+    );
+  }
+
+  if (updated > 0) {
+    revalidatePath("/resources");
+  }
+
+  return { updated, icons };
+}
+
+/**
+ * Fetches and saves a single link favicon directly into SQLite.
+ */
+export async function fetchAndSaveLinkFavicon(linkId: string, url: string): Promise<string | null> {
+  const userId = getOrCreateLocalUser().id;
+  const iconData = await fetchAndOptimizeFavicon(url);
+  await from("links")
+    .update({ icon_url: iconData ?? "none", updated_at: new Date().toISOString() })
+    .eq("id", linkId)
+    .eq("user_id", userId);
+  return iconData;
+}
+
 

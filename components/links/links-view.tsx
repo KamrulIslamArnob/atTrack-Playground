@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   LinkCategory,
@@ -40,6 +40,7 @@ import {
   deleteQuickShortcut,
   renameTag,
   deleteTag,
+  backfillLinkFavicons,
 } from "@/lib/actions/links";
 import { toast } from "sonner";
 
@@ -87,6 +88,20 @@ export function LinksView({
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   const COLUMN_SCROLL_WIDTH = 380;
+
+  // One-time automatic background favicon fetch & persistent SQLite storage for existing links
+  useEffect(() => {
+    const hasMissingIcons = initialLinks.some((l) => l.icon_url === null && l.url);
+    if (hasMissingIcons) {
+      backfillLinkFavicons()
+        .then((res) => {
+          if (res && res.updated > 0) {
+            router.refresh();
+          }
+        })
+        .catch(() => {});
+    }
+  }, [initialLinks, router]);
 
   const handleAddShortcut = async (input: CreateQuickShortcutInput) => {
     const temp: QuickShortcut = {
@@ -351,46 +366,53 @@ export function LinksView({
     }
   };
 
-  // Search & Filter Matching
+  // Search & Filter Matching with memoization and Set-based category resolution
   const query = search.trim().toLowerCase();
 
-  const filteredLinks = links.filter((link) => {
-    if (!query) return true;
+  const filteredLinks = useMemo(() => {
+    if (!query) return links;
     const cleanQuery = query.startsWith("#") ? query.slice(1) : query;
-    return (
-      link.title.toLowerCase().includes(cleanQuery) ||
-      link.url.toLowerCase().includes(cleanQuery) ||
-      (link.notes && link.notes.toLowerCase().includes(cleanQuery)) ||
-      (link.tags && link.tags.some((t) => t.toLowerCase().includes(cleanQuery)))
-    );
-  });
+    return links.filter((link) => {
+      return (
+        link.title.toLowerCase().includes(cleanQuery) ||
+        link.url.toLowerCase().includes(cleanQuery) ||
+        (link.notes && link.notes.toLowerCase().includes(cleanQuery)) ||
+        (link.tags && link.tags.some((t) => t.toLowerCase().includes(cleanQuery)))
+      );
+    });
+  }, [links, query]);
 
-  const visibleCategories = categories.filter((cat) => {
-    if (query) {
-      return filteredLinks.some((l) => l.category_id === cat.id);
+  // O(L) Set building for O(1) category membership checks (O(C + L) instead of O(C * L))
+  const visibleCategories = useMemo(() => {
+    if (!query) return categories;
+    const matchingCatIds = new Set<string>();
+    for (const link of filteredLinks) {
+      if (link.category_id) matchingCatIds.add(link.category_id);
     }
-    return true;
-  });
+    return categories.filter((cat) => matchingCatIds.has(cat.id));
+  }, [categories, filteredLinks, query]);
 
-  // Calculate all unique tags with count
-  const tagCountsMap = new Map<string, number>();
-  for (const link of links) {
-    for (const tag of link.tags || []) {
-      const clean = tag.trim().replace(/^#/, "");
-      if (!clean) continue;
-      tagCountsMap.set(clean, (tagCountsMap.get(clean) || 0) + 1);
+  // Memoized unique tags calculation
+  const allTags = useMemo(() => {
+    const tagCountsMap = new Map<string, number>();
+    for (const link of links) {
+      for (const tag of link.tags || []) {
+        const clean = tag.trim().replace(/^#/, "");
+        if (!clean) continue;
+        tagCountsMap.set(clean, (tagCountsMap.get(clean) || 0) + 1);
+      }
     }
-  }
-  for (const extra of extraTags) {
-    if (!tagCountsMap.has(extra)) {
-      tagCountsMap.set(extra, 0);
+    for (const extra of extraTags) {
+      if (!tagCountsMap.has(extra)) {
+        tagCountsMap.set(extra, 0);
+      }
     }
-  }
-  const allTags: TagInfo[] = Array.from(tagCountsMap.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    return Array.from(tagCountsMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [links, extraTags]);
 
-  const existingTags = allTags.map((t) => t.name);
+  const existingTags = useMemo(() => allTags.map((t) => t.name), [allTags]);
 
   // Horizontal Scroll & Pan Management
   const updateScrollState = useCallback(() => {

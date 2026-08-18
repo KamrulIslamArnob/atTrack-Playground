@@ -50,6 +50,9 @@ export interface BoardCard {
   title: string;
   state: JobState;
   company_name: string | null;
+  company_website?: string | null;
+  company_logo_url?: string | null;
+  company_color?: string | null;
   list_id: string | null;
   board_position: number | null;
   position_id: string | null;

@@ -14,6 +14,7 @@ import { CheckIcon } from "@/components/ui/check";
 import { MapPinIcon } from "@/components/ui/map-pin";
 import { ClockIcon } from "@/components/ui/clock";
 import { SparklesIcon } from "@/components/ui/sparkles";
+import { CompanyLogo } from "@/components/company-logo";
 import { cn } from "@/lib/utils";
 import { JOB_STATUS_LABELS, JOB_TIERS, type JobTier } from "@/lib/types/job";
 
@@ -33,8 +34,12 @@ interface JobListItem {
   tier?: string | null;
   created_at: string;
   company: {
+    id?: string;
     name: string;
     location: string | null;
+    website?: string | null;
+    logo_url?: string | null;
+    color?: string | null;
   } | null;
   applications: {
     id: string;
@@ -456,32 +461,40 @@ export function JobsGrid({
     }
   };
 
-  // Column Resizing Handler
+  // Column Resizing Handler with high-performance RAF and deferred localStorage persistence
   const handleResizeStart = (e: React.MouseEvent, columnKey: SortKey) => {
     e.preventDefault();
     e.stopPropagation();
     const startX = e.clientX;
     const targetHeader = (e.currentTarget as HTMLElement).parentElement;
     const startWidth = columnWidths[columnKey] || (targetHeader ? targetHeader.getBoundingClientRect().width : 140);
+    let latestWidths: Record<string, number> = { ...columnWidths };
+    let rafId: number | null = null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const newWidth = Math.max(70, Math.round(startWidth + deltaX));
-      setColumnWidths((prev) => {
-        const next = { ...prev, [columnKey]: newWidth };
-        try {
-          localStorage.setItem("attrack_jobs_column_widths", JSON.stringify(next));
-        } catch {}
-        return next;
+      
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        setColumnWidths((prev) => {
+          latestWidths = { ...prev, [columnKey]: newWidth };
+          return latestWidths;
+        });
       });
     };
 
     const handleMouseUp = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      try {
+        localStorage.setItem("attrack_jobs_column_widths", JSON.stringify(latestWidths));
+      } catch {}
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("mouseup", handleMouseUp);
   };
 
@@ -662,7 +675,21 @@ export function JobsGrid({
           </div>
         );
       case "company":
-        return job.company?.name ?? "Unknown company";
+        return (
+          <div className="flex items-center gap-2 min-w-0">
+            <CompanyLogo
+              name={job.company?.name}
+              website={job.company?.website}
+              logoUrl={job.company?.logo_url}
+              companyId={job.company?.id}
+              color={job.company?.color}
+              className="size-5.5 rounded-md text-[10px]"
+              iconClassName="size-3"
+              fallback="initial"
+            />
+            <span className="truncate text-foreground font-medium">{job.company?.name ?? "Unknown company"}</span>
+          </div>
+        );
       case "location":
         return job.location ?? "—";
       case "employment_type":

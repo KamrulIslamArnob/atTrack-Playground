@@ -5,6 +5,7 @@ import { InlineRichText } from "../interactive/inline-rich-text";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import type { ResumeLink } from "@/lib/types/resume-builder";
+import { generateUUID } from "@/lib/utils";
 
 interface HeaderSectionEditorProps {
   name: string;
@@ -86,7 +87,7 @@ function LinkGroup({
           onClick={() =>
             onChange([
               ...links,
-              { id: crypto.randomUUID(), variant: "contact", icon: "globe", label: "", url: "" },
+              { id: generateUUID(), variant: "contact", icon: "globe", label: "", url: "" },
             ])
           }
         >

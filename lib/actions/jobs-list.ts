@@ -38,8 +38,12 @@ export interface JobListItem {
   created_at: string;
   updated_at: string;
   company: {
+    id?: string;
     name: string;
     location: string | null;
+    website?: string | null;
+    logo_url?: string | null;
+    color?: string | null;
   } | null;
   applications: {
     id: string;
@@ -78,7 +82,7 @@ export async function getJobsList(params: JobsListParams = {}): Promise<JobsList
       tier,
       created_at,
       updated_at,
-      company:companies(name, location),
+      company:companies(id, name, location, website, logo_url, color),
       applications(id, status, applied_at)
     `, { count: "exact" })
     .eq("user_id", userId);

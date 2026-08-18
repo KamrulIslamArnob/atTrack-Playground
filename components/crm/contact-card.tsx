@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { updateContactNotes, type Contact } from "@/lib/actions/contacts";
 import { parseNoteMentions } from "@/lib/mentions";
 import { getContactAvatarColorClass, getTagColorClass, cn } from "@/lib/utils";
+import { CompanyLogo } from "@/components/company-logo";
 import { toast } from "sonner";
 import {
   Building2, Globe, Mail, Palette, Pencil, Video, AtSign } from "lucide-react";
@@ -204,7 +205,12 @@ export function ContactCard({
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             {contact.company_name && contact.position && (
               <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                <Building2 className="size-3 text-muted-foreground/70" />
+                <CompanyLogo
+                  name={contact.company_name}
+                  className="size-3.5 rounded-xs"
+                  iconClassName="size-2.5"
+                  fallback="initial"
+                />
                 <span className="truncate max-w-[120px]">{contact.company_name}</span>
               </span>
             )}

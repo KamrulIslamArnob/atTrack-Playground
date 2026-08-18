@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,9 +49,11 @@ import {
   getCompanyJobs,
   updateCompanyTier,
   updateCompanyDetails,
+  backfillCompanyLogos,
   type CompanyJob,
   type CrmCompany,
 } from "@/lib/actions/companies";
+import { CompanyLogo } from "@/components/company-logo";
 import { ContactCard } from "@/components/crm/contact-card";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CrmImportDialog } from "@/components/crm/crm-import-dialog";
@@ -82,6 +85,7 @@ interface CrmViewProps {
 }
 
 export function CrmView({ companies: initialCompanies, contacts: initialContacts }: CrmViewProps) {
+  const router = useRouter();
   const { enabled: jsonSyncEnabled } = useJsonSyncPreference();
   const [companies, setCompanies] = useState(initialCompanies);
   const [contacts, setContacts] = useState(initialContacts);
@@ -102,6 +106,20 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
   const [crmImportOpen, setCrmImportOpen] = useState(false);
 
   const { confirm, dialog: confirmDialog } = useConfirm();
+
+  // One-time automatic background company logo fetch & persistent SQLite storage
+  useEffect(() => {
+    const hasMissingLogos = initialCompanies.some((c) => c.logo_url === null && (c.website || c.name));
+    if (hasMissingLogos) {
+      backfillCompanyLogos()
+        .then((res) => {
+          if (res && res.updated > 0) {
+            router.refresh();
+          }
+        })
+        .catch(() => {});
+    }
+  }, [initialCompanies, router]);
 
   const filteredCompanies = useMemo(() => {
     const q = companySearch.trim().toLowerCase();
@@ -420,7 +438,16 @@ function ContactsView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined);
 
-  const companyName = (id: string | null) => companies.find((c) => c.id === id)?.name ?? null;
+  // O(K) pre-indexing for O(1) constant-time company name lookup
+  const companyMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of companies) {
+      map.set(c.id, c.name);
+    }
+    return map;
+  }, [companies]);
+
+  const companyName = (id: string | null) => (id ? companyMap.get(id) ?? null : null);
 
   // Gather all unique tag suggestions across contacts
   const tagSuggestions = useMemo(() => {
@@ -442,15 +469,16 @@ function ContactsView({
       if (companyFilter === "unassigned" && c.company_id) return false;
       if (companyFilter !== "all" && companyFilter !== "unassigned" && c.company_id !== companyFilter) return false;
       if (!q) return true;
+      const compName = c.company_id ? companyMap.get(c.company_id) ?? "" : "";
       return (
         c.name.toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q) ||
         (c.position ?? "").toLowerCase().includes(q) ||
         (c.role ?? "").toLowerCase().includes(q) ||
-        (companyName(c.company_id) ?? "").toLowerCase().includes(q)
+        compName.toLowerCase().includes(q)
       );
     });
-  }, [contacts, search, companyFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [contacts, search, companyFilter, companyMap]);
 
   const handleSaved = (saved: Contact, createdCompany?: CrmCompany) => {
     if (createdCompany) {
@@ -633,20 +661,15 @@ function CompanyRow({
           aria-expanded={expanded}
           className="group flex flex-1 items-center gap-2.5 text-left rounded-lg min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          <div
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/60 text-muted-foreground transition-colors"
-            style={
-              tierConfig
-                ? {
-                    backgroundColor: `${tierConfig.dotColor}18`,
-                    color: tierConfig.dotColor,
-                    borderColor: `${tierConfig.dotColor}35`,
-                  }
-                : undefined
-            }
-          >
-            <Building2 className="size-3.5" />
-          </div>
+          <CompanyLogo
+            name={company.name}
+            website={company.website}
+            logoUrl={company.logo_url}
+            companyId={company.id}
+            color={company.color ?? (tierConfig ? tierConfig.dotColor : undefined)}
+            className="size-8"
+            fallback="initial"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -1160,7 +1183,21 @@ function CompanyEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit company</DialogTitle>
+          <div className="flex items-center gap-3">
+            <CompanyLogo
+              name={name || company?.name}
+              website={website || company?.website}
+              logoUrl={company?.logo_url}
+              companyId={company?.id}
+              color={company?.color}
+              className="size-10 rounded-xl"
+              fallback="initial"
+            />
+            <div>
+              <DialogTitle>Edit company</DialogTitle>
+              <p className="text-xs text-muted-foreground">Update details and logo for {name || company?.name}</p>
+            </div>
+          </div>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">

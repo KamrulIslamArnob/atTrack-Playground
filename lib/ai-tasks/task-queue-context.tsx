@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { extractJobImport, deleteScreenshots } from "@/lib/actions/job-imports";
@@ -8,6 +8,7 @@ import { enrichJobFromAi } from "@/lib/actions/jobs";
 import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import type { AITask, AITaskPayload } from "@/lib/types/ai-task";
 import type { ExtractionResult } from "@/lib/ai/schema";
+import { generateUUID } from "@/lib/utils";
 
 interface AITaskQueueContextType {
   tasks: AITask[];
@@ -35,9 +36,7 @@ interface AITaskQueueContextType {
 const AITaskQueueContext = createContext<AITaskQueueContextType | null>(null);
 
 function uid(): string {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `ai_task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return generateUUID();
 }
 
 function summarizeExtraction(extraction: ExtractionResult): { summary: string; changesCount: number } {
@@ -273,32 +272,49 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
     setIsMinimized((prev) => !prev);
   }, []);
 
-  const activeTasksCount = tasks.filter(
-    (t) => t.status === "queued" || t.status === "processing"
-  ).length;
+  const { activeTasksCount, pendingConfirmationCount } = useMemo(() => {
+    let active = 0;
+    let pending = 0;
+    for (const t of tasks) {
+      if (t.status === "queued" || t.status === "processing") active++;
+      else if (t.status === "awaiting_confirmation") pending++;
+    }
+    return { activeTasksCount: active, pendingConfirmationCount: pending };
+  }, [tasks]);
 
-  const pendingConfirmationCount = tasks.filter(
-    (t) => t.status === "awaiting_confirmation"
-  ).length;
+  const contextValue = useMemo(
+    () => ({
+      tasks,
+      activeTasksCount,
+      pendingConfirmationCount,
+      isPanelOpen,
+      isMinimized,
+      setIsPanelOpen,
+      setIsMinimized,
+      toggleMinimize,
+      enqueueJobUpdateTask,
+      applyTask,
+      dismissTask,
+      retryTask,
+      clearCompletedTasks,
+    }),
+    [
+      tasks,
+      activeTasksCount,
+      pendingConfirmationCount,
+      isPanelOpen,
+      isMinimized,
+      toggleMinimize,
+      enqueueJobUpdateTask,
+      applyTask,
+      dismissTask,
+      retryTask,
+      clearCompletedTasks,
+    ]
+  );
 
   return (
-    <AITaskQueueContext.Provider
-      value={{
-        tasks,
-        activeTasksCount,
-        pendingConfirmationCount,
-        isPanelOpen,
-        isMinimized,
-        setIsPanelOpen,
-        setIsMinimized,
-        toggleMinimize,
-        enqueueJobUpdateTask,
-        applyTask,
-        dismissTask,
-        retryTask,
-        clearCompletedTasks,
-      }}
-    >
+    <AITaskQueueContext.Provider value={contextValue}>
       {children}
     </AITaskQueueContext.Provider>
   );

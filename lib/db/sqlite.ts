@@ -21,7 +21,7 @@ declare global {
   var __attrackDb: DatabaseSync | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 8;
+const CURRENT_SCHEMA_VERSION = 9;
 
 // Triggers that schema.sql redefines in place. `CREATE TRIGGER IF NOT EXISTS` is a
 // no-op when an older definition already exists, so any trigger whose body or
@@ -118,14 +118,14 @@ export function rebuildOmniSearchIndex(db: DatabaseSync) {
       SELECT 'contact', id, user_id, name,
         COALESCE(position, '') || ' ' || COALESCE(role, '') || ' ' || COALESCE(email, '') || ' ' || COALESCE(phone, ''),
         COALESCE(notes, '') || ' ' || COALESCE(linkedin_url, '') || ' ' || COALESCE(github_url, ''),
-        '/crm', 'contact'
+        '/network', 'contact'
       FROM contacts;
 
       INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
       SELECT 'company', id, user_id, name,
         COALESCE(location, '') || ' ' || COALESCE(company_type, '') || ' ' || COALESCE(country, ''),
         COALESCE(website, ''),
-        '/crm', 'company'
+        '/network', 'company'
       FROM companies;
 
       INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
@@ -326,6 +326,7 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "chat_messages", column: "tool_calls", ddl: "ALTER TABLE chat_messages ADD COLUMN tool_calls TEXT" },
   { table: "jobs", column: "tier", ddl: "ALTER TABLE jobs ADD COLUMN tier TEXT" },
   { table: "companies", column: "tier", ddl: "ALTER TABLE companies ADD COLUMN tier TEXT" },
+  { table: "companies", column: "logo_url", ddl: "ALTER TABLE companies ADD COLUMN logo_url TEXT" },
 ];
 
 /** Returns how many COLUMN_MIGRATIONS actually landed — zero on an

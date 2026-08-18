@@ -219,7 +219,7 @@ export async function clearSampleDataAction(): Promise<{ success: boolean; remov
   const { userId } = await getUser();
   const res = deleteSampleData(userId);
 
-  safeRevalidatePaths(["/", "/overview", "/jobs", "/crm"]);
+  safeRevalidatePaths(["/", "/overview", "/jobs", "/network"]);
 
   return { success: true, removedCount: res.removedCount };
 }

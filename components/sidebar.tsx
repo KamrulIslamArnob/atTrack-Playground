@@ -53,9 +53,9 @@ const navigation = [
 
 const resourceNavigation = [
   { name: "Document", href: "/documents", icon: FileText },
-  { name: "Network", href: "/crm", icon: Users },
-  { name: "Resources", href: "/links", icon: Link2 },
-  { name: "Prompts & Memory", href: "/preferences/ai-prompts", icon: Sparkles },
+  { name: "Network", href: "/network", icon: Users },
+  { name: "Resources", href: "/resources", icon: Link2 },
+  { name: "Prompts", href: "/prompts", icon: Sparkles },
 ];
 
 const secondaryNavigation = [
@@ -82,10 +82,10 @@ const NAV_ITEMS = [
   { name: "Ask Tracky", href: "/ai-builder/chatbot", keywords: "ai builder chatbot ask tracky tracky gpt gemini claude assistant prompt chat" },
   { name: "Jobs", href: "/jobs", keywords: "jobs board kanban pipeline stages drag job listings saved interested table list" },
   { name: "Document", href: "/documents", keywords: "document resume cv cover letter" },
-  { name: "Network", href: "/crm", keywords: "contacts companies network crm" },
-  { name: "Resources", href: "/links", keywords: "social links resources portals bookmarks directory" },
+  { name: "Network", href: "/network", keywords: "contacts companies network crm" },
+  { name: "Resources", href: "/resources", keywords: "social links resources portals bookmarks directory" },
   { name: "Settings", href: "/settings", keywords: "profile preferences email" },
-  { name: "Prompts & Memory", href: "/preferences/ai-prompts", keywords: "ai prompts memory custom instructions" },
+  { name: "Prompts", href: "/prompts", keywords: "ai prompts memory custom instructions" },
   { name: "Performance", href: "/preferences", keywords: "performance ram cpu memory port system root path version" },
 ];
 

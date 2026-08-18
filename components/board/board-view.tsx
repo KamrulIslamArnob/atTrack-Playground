@@ -1,12 +1,10 @@
 "use client";
 
-import { Fragment, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowUpDown } from "lucide-react";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
-import { ChevronLeftIcon } from "@/components/ui/chevron-left";
-import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { LayersIcon } from "@/components/ui/layers";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { XIcon } from "@/components/ui/x";
@@ -23,8 +21,9 @@ import {
 import { JobViewHeader } from "@/components/board/board-view-header";
 import { ImportChoice } from "@/components/import-choice";
 import { BoardColumn, type GroupOption } from "@/components/board/board-column";
+import { BoardOverflowNavigator } from "@/components/board/board-overflow-navigator";
 import { JobDetailSheet } from "@/components/job-detail/job-detail-sheet";
-import { ElasticJogScroller } from "@/components/ui/elastic-jog-scroller";
+import { PipelineViewportNavigator } from "@/components/ui/pipeline-viewport-navigator";
 import {
   createList,
   deleteList,
@@ -102,6 +101,24 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   const [sort, setSort] = useState<SortOption>("recent");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(
+    null
+  );
+
+  const handlePanStart = (pointerId: number, clientX: number) => {
+    if (!scrollRef.current) return;
+    panRef.current = { pointerId, startX: clientX, startScrollLeft: scrollRef.current.scrollLeft };
+  };
+  const handlePanMove = (pointerId: number, clientX: number) => {
+    if (!panRef.current || panRef.current.pointerId !== pointerId || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = panRef.current.startScrollLeft - (clientX - panRef.current.startX);
+  };
+  const handlePanEnd = (pointerId: number) => {
+    if (!panRef.current || panRef.current.pointerId !== pointerId) return;
+    panRef.current = null;
+  };
+
   // Dual-axis smooth edge auto-scrolling during card or column drag
   useEffect(() => {
     if (!draggingId && !draggingListId) return;
@@ -135,15 +152,9 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
         if (pointerX >= boardRect.left && pointerX < boardRect.left + EDGE_SIZE) {
           const factor = (boardRect.left + EDGE_SIZE - pointerX) / EDGE_SIZE;
           scrollRef.current.scrollLeft -= Math.round(factor * MAX_SPEED);
-          if (fixedScrollRef.current) {
-            fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
-          }
         } else if (pointerX > boardRect.right - EDGE_SIZE && pointerX <= boardRect.right) {
           const factor = (pointerX - (boardRect.right - EDGE_SIZE)) / EDGE_SIZE;
           scrollRef.current.scrollLeft += Math.round(factor * MAX_SPEED);
-          if (fixedScrollRef.current) {
-            fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
-          }
         }
       }
 
@@ -159,7 +170,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
     };
   }, [draggingId, draggingListId]);
 
-  const sortedCards = (() => {
+  const sortedCards = useMemo(() => {
     switch (sort) {
       case "tier":
         return [...optimisticCards].sort((a, b) => {
@@ -195,69 +206,22 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
       default:
         return optimisticCards;
     }
-  })();
+  }, [optimisticCards, sort]);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const fixedScrollRef = useRef<HTMLDivElement>(null);
-  const isSyncingScroll = useRef(false);
-  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
-
-  const panRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(
-    null
-  );
-  const [canScroll, setCanScroll] = useState(false);
-  const COLUMN_SCROLL_WIDTH = 260;
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const checkOverflow = () => {
-      setBoardScrollWidth(el.scrollWidth);
-      setCanScroll(el.scrollWidth > el.clientWidth + 1);
-    };
-    checkOverflow();
-    const observer = new ResizeObserver(checkOverflow);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [lists.length, cards.length]);
-
-  const handleMainScroll = () => {
-    if (isSyncingScroll.current) return;
-    if (fixedScrollRef.current && scrollRef.current) {
-      isSyncingScroll.current = true;
-      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
-      requestAnimationFrame(() => {
-        isSyncingScroll.current = false;
-      });
+  // O(N) single-pass bucket partitioning for O(1) column card lookups
+  const cardsByListId = useMemo(() => {
+    const map = new Map<string, BoardCard[]>();
+    for (const card of sortedCards) {
+      if (!card.list_id) continue;
+      const list = map.get(card.list_id);
+      if (list) {
+        list.push(card);
+      } else {
+        map.set(card.list_id, [card]);
+      }
     }
-  };
-
-  const handleFixedScroll = () => {
-    if (isSyncingScroll.current) return;
-    if (fixedScrollRef.current && scrollRef.current) {
-      isSyncingScroll.current = true;
-      scrollRef.current.scrollLeft = fixedScrollRef.current.scrollLeft;
-      requestAnimationFrame(() => {
-        isSyncingScroll.current = false;
-      });
-    }
-  };
-
-  const handlePanStart = (pointerId: number, clientX: number) => {
-    if (!scrollRef.current) return;
-    panRef.current = { pointerId, startX: clientX, startScrollLeft: scrollRef.current.scrollLeft };
-  };
-  const handlePanMove = (pointerId: number, clientX: number) => {
-    if (!panRef.current || panRef.current.pointerId !== pointerId || !scrollRef.current) return;
-    scrollRef.current.scrollLeft = panRef.current.startScrollLeft - (clientX - panRef.current.startX);
-    if (fixedScrollRef.current) {
-      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
-    }
-  };
-  const handlePanEnd = (pointerId: number) => {
-    if (!panRef.current || panRef.current.pointerId !== pointerId) return;
-    panRef.current = null;
-  };
+    return map;
+  }, [sortedCards]);
 
   const handleMove = (jobId: string, listId: string, targetIndex?: number) => {
     const card = optimisticCards.find((c) => c.id === jobId);
@@ -358,12 +322,12 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   return (
     <div className="flex flex-col flex-1 min-h-full w-full px-6 pt-4 pb-0">
       <JobViewHeader currentView="board" onViewChange={onViewChange}>
-        <ElasticJogScroller
+        <PipelineViewportNavigator
           scrollRef={scrollRef}
           stages={optimisticLists.map((l) => ({
             id: l.id,
             name: l.name,
-            count: sortedCards.filter((c) => c.list_id === l.id).length,
+            count: cardsByListId.get(l.id)?.length ?? 0,
             color: l.color,
           }))}
         />
@@ -410,19 +374,20 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
         <ImportChoice lists={optimisticLists} />
       </JobViewHeader>
 
-      {/* Board Scroll Container */}
-      <div
-        ref={scrollRef}
-        onScroll={handleMainScroll}
-        className="no-scrollbar -mx-6 overflow-x-auto px-6 w-[calc(100%+3rem)] pt-3"
-      >
-        <div className="flex items-stretch gap-3 w-max min-w-full pb-8 pr-6">
+      {/* Board Scroll Container with Overflow Navigation Affordances */}
+      <BoardOverflowNavigator scrollRef={scrollRef}>
+        <div
+          ref={scrollRef}
+          id="board-scroll-container"
+          className="no-scrollbar -mx-6 overflow-x-auto px-6 w-[calc(100%+3rem)] pt-3"
+        >
+        <div className="flex items-stretch gap-3 w-max min-w-full pb-8 pr-6 min-h-[calc(100vh-140px)]">
           {optimisticLists.map((list) => (
             <Fragment key={list.id}>
               <BoardColumn
                 list={list}
                 lists={optimisticLists}
-                cards={sortedCards.filter((c) => c.list_id === list.id)}
+                cards={cardsByListId.get(list.id) ?? []}
                 groupBy={groupBy}
                 draggingId={draggingId}
                 isDropTarget={dropTarget === list.id && draggingId !== null}
@@ -554,6 +519,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
           <div className="w-4 shrink-0 pointer-events-none" aria-hidden="true" />
         </div>
       </div>
+      </BoardOverflowNavigator>
 
       <ImportChoice
         open={addJobListId !== null}

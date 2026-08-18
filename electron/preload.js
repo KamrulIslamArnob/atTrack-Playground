@@ -19,4 +19,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("window-maximized-state", handler);
   },
   getSystemPerformance: () => ipcRenderer.invoke("app:get-system-performance"),
+  getStartupSettings: () => ipcRenderer.invoke("app:get-startup-settings"),
+  setStartupSettings: (settings) => ipcRenderer.invoke("app:set-startup-settings", settings),
+  openExternalUrl: (url) => ipcRenderer.invoke("app:open-browser-url", url),
+  onStartupSettingsChange: (callback) => {
+    const handler = (_event, settings) => callback(settings);
+    ipcRenderer.on("app:startup-settings-changed", handler);
+    return () => ipcRenderer.removeListener("app:startup-settings-changed", handler);
+  },
 });

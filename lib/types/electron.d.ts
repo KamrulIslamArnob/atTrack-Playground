@@ -56,6 +56,14 @@ export interface SystemPerformanceData {
   timestamp: string;
 }
 
+export interface ElectronStartupSettings {
+  startAtLogin: boolean;
+  closeToTray: boolean;
+  port: number;
+  serverUrl: string;
+  isPackaged: boolean;
+}
+
 declare global {
   interface Window {
     electronAPI?: {
@@ -69,6 +77,10 @@ declare global {
       isMaximized?: () => Promise<boolean>;
       onMaximizedChange?: (callback: (isMaximized: boolean) => void) => () => void;
       getSystemPerformance?: () => Promise<SystemPerformanceData>;
+      getStartupSettings?: () => Promise<ElectronStartupSettings>;
+      setStartupSettings?: (settings: Partial<ElectronStartupSettings>) => Promise<ElectronStartupSettings>;
+      openExternalUrl?: (url: string) => Promise<boolean>;
+      onStartupSettingsChange?: (callback: (settings: ElectronStartupSettings) => void) => () => void;
     };
   }
 }

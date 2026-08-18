@@ -21,7 +21,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { MemoriesTab } from "@/components/preferences/memories-tab";
 import { cn } from "@/lib/utils";
 
-export default function AiPromptsPreferencesPage() {
+export default function PromptsPage() {
   const [activeTab, setActiveTab] = useState<"prompts" | "memories">("prompts");
   const [selectedKind, setSelectedKind] = useState<AiToolKind>("cover_letter");
   const [customPrompts, setCustomPrompts] = useState<Record<string, string>>({});
@@ -113,7 +113,7 @@ export default function AiPromptsPreferencesPage() {
         <div className="flex items-center justify-between px-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <div className="flex size-10 items-center justify-center rounded-2xl border border-lime-500/50 bg-lime-400/25 text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200 shadow-2xs">
+              <div className="flex size-10 items-center justify-center rounded-2xl border border-sky-400/50 bg-gradient-to-br from-sky-400/20 via-sky-300/15 to-sky-500/25 text-sky-700 dark:border-sky-400/40 dark:from-sky-500/20 dark:via-sky-400/10 dark:to-sky-600/25 dark:text-sky-300 shadow-2xs">
                 <Sparkles className="size-5" />
               </div>
               <div>
