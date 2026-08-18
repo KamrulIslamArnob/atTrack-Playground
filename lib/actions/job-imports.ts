@@ -12,6 +12,9 @@ const log = moduleLogger("actions.job-imports");
 const BUCKET = "job-imports";
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+// Longer than the 1h signed URL so a slow-but-live import never loses its
+// image mid-use; short enough that crash orphans don't linger indefinitely.
+const STALE_TEMP_MS = 2 * 60 * 60 * 1000;
 
 export async function uploadScreenshot(
   formData: FormData
@@ -27,6 +30,17 @@ export async function uploadScreenshot(
   }
 
   const supabase = createAdminClient();
+
+  // Backstop for crash/force-close orphans — deletion elsewhere is
+  // fire-and-forget and gets skipped entirely when the session ends
+  // abnormally, so sweep this user's own stale temp files on next use.
+  await supabase.storage
+    .from(BUCKET)
+    .sweepStale(`${userId}/temp`, STALE_TEMP_MS)
+    .catch((err: unknown) =>
+      log.error({ err: err instanceof Error ? err.message : err }, "Failed to sweep stale screenshots:")
+    );
+
   const ext = file.name.split(".").pop() || "png";
   const screenshotId = `${userId}/temp/${crypto.randomUUID()}.${ext}`;
 

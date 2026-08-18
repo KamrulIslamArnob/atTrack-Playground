@@ -648,7 +648,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_jobs_ins AFTER INSERT ON jobs BEGIN
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_jobs_upd AFTER UPDATE ON jobs BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_jobs_upd AFTER UPDATE OF id, user_id, title, location, employment_type, status, source, description, notes ON jobs BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'job' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -674,7 +674,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_ins AFTER INSERT ON contacts BEGI
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_upd AFTER UPDATE ON contacts BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_contacts_upd AFTER UPDATE OF id, user_id, name, position, role, email, phone, notes, linkedin_url, github_url ON contacts BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'contact' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -700,7 +700,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_companies_ins AFTER INSERT ON companies BE
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_companies_upd AFTER UPDATE ON companies BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_companies_upd AFTER UPDATE OF id, user_id, name, company_type, country, location, website ON companies BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'company' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -727,7 +727,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_applications_ins AFTER INSERT ON applicati
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_applications_upd AFTER UPDATE ON applications BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_applications_upd AFTER UPDATE OF id, user_id, status, resume_name, notes ON applications BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'application' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -755,7 +755,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_interviews_ins AFTER INSERT ON interviews 
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_interviews_upd AFTER UPDATE ON interviews BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_interviews_upd AFTER UPDATE OF id, user_id, type, status, location, interviewer_name, interviewer_email, notes, prep_notes ON interviews BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'interview' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -782,7 +782,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_documents_ins AFTER INSERT ON documents BE
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_documents_upd AFTER UPDATE ON documents BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_documents_upd AFTER UPDATE OF id, user_id, name, type, file_path, content ON documents BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'document' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -808,7 +808,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_deadlines_ins AFTER INSERT ON job_deadline
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_deadlines_upd AFTER UPDATE ON job_deadlines BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_deadlines_upd AFTER UPDATE OF id, user_id, title, stage_kind, due_date, notes ON job_deadlines BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'deadline' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -834,7 +834,7 @@ CREATE TRIGGER IF NOT EXISTS trg_omni_positions_ins AFTER INSERT ON positions BE
   );
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_omni_positions_upd AFTER UPDATE ON positions BEGIN
+CREATE TRIGGER IF NOT EXISTS trg_omni_positions_upd AFTER UPDATE OF id, user_id, name, experience_level ON positions BEGIN
   DELETE FROM omni_search_index WHERE entity_type = 'position' AND entity_id = OLD.id;
   INSERT INTO omni_search_index(entity_type, entity_id, user_id, title, subtitle, content, href, icon)
   VALUES (
@@ -945,19 +945,11 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 CREATE INDEX IF NOT EXISTS idx_document_chunks_user_source ON document_chunks(user_id, source_id);
 
-CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  embedding float[768] distance_metric=cosine,
-  +memory_id TEXT,
-  +user_id TEXT
-);
-
-CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
-  id INTEGER PRIMARY KEY,
-  embedding float[768] distance_metric=cosine,
-  +user_id TEXT,
-  +source_id TEXT
-);
+-- The vec_memories / vec_document_chunks virtual tables are deliberately NOT
+-- declared here. They need the sqlite-vec extension, and this file is run through
+-- one unguarded db.exec() in sqlite.ts — so a machine without the extension would
+-- fail the whole migration and take the app down instead of losing one feature.
+-- They are created inside addMissingColumns(), which wraps them in a try/catch.
 
 
 

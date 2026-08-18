@@ -29,10 +29,9 @@ interface LinkRowProps {
 }
 
 export function LinkRow({ link, categories, onEdit, onDelete, onMoveCategory }: LinkRowProps) {
-  const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Extract clean domain for subtitle and favicon
+  // Extract clean domain for the subtitle
   let domain = "";
   try {
     const parsed = new URL(link.url);
@@ -40,8 +39,6 @@ export function LinkRow({ link, categories, onEdit, onDelete, onMoveCategory }: 
   } catch {
     domain = link.url;
   }
-
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -58,19 +55,11 @@ export function LinkRow({ link, categories, onEdit, onDelete, onMoveCategory }: 
   return (
     <div className="group relative flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 shadow-2xs transition-all duration-150 ease-out hover:border-border hover:shadow-xs active:scale-[0.99]">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        {/* Favicon / Icon */}
+        {/* Icon. Deliberately not a remote favicon: fetching one told Google the
+            domain of every link the user saved, and atTrack is a local, offline
+            job search. It also never resolved without a connection. */}
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50 overflow-hidden text-muted-foreground shadow-2xs transition-transform duration-150 group-hover:scale-105">
-          {!imgError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={faviconUrl}
-              alt=""
-              className="size-4 object-contain"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <Globe className="size-4 text-muted-foreground" />
-          )}
+          <Globe className="size-4 text-muted-foreground" />
         </div>
 
         {/* Info */}

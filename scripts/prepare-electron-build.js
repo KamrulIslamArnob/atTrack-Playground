@@ -4,7 +4,7 @@
 // standalone server to serve the app correctly. Cross-platform: env var is set
 // via spawnSync's env option, not shell syntax, so this works the same on
 // Windows/macOS/Linux without a cross-env dependency.
-const { cpSync, existsSync } = require("node:fs");
+const { cpSync, existsSync, readdirSync } = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
@@ -34,4 +34,30 @@ cpSync(path.join(root, ".next", "static"), path.join(standalone, ".next", "stati
 });
 cpSync(path.join(root, "public"), path.join(standalone, "public"), { recursive: true });
 
-console.log("Built standalone server and copied .next/static and public/ into it");
+// sqlite-vec finds its own loadable extension at runtime with a fully computed
+// specifier:  import.meta.resolve(`sqlite-vec-${os}-${arch}/vec0.${ext}`)
+// Nothing about that string exists at build time, so Next's file tracer cannot
+// see it and the platform package (the one holding vec0.dll/.dylib/.so) is left
+// out of the standalone tree. Without it every vector feature dies silently.
+// Copy the platform packages ourselves, exactly as with static/ and public/.
+const nodeModules = path.join(root, "node_modules");
+const vecPackages = readdirSync(nodeModules).filter((name) => name.startsWith("sqlite-vec-"));
+
+if (vecPackages.length === 0) {
+  console.error(
+    "Couldn't find any sqlite-vec platform package in node_modules. The installer would " +
+      "ship without vec0 and every semantic-search feature would fail on the user's machine. " +
+      "Run `npm install` and build again."
+  );
+  process.exit(1);
+}
+
+for (const name of vecPackages) {
+  cpSync(path.join(nodeModules, name), path.join(standalone, "node_modules", name), {
+    recursive: true,
+  });
+}
+
+console.log(
+  `Built standalone server and copied .next/static, public/, and ${vecPackages.join(", ")} into it`
+);

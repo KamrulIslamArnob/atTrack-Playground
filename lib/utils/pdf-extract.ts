@@ -2,9 +2,11 @@
 
 import * as pdfjsLib from "pdfjs-dist";
 
-// Use CDN worker for Vercel serverless compatibility
-// This avoids bundling the worker which doesn't work in serverless environments
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Served from public/, not a CDN: atTrack is an offline desktop app, and a remote
+// worker meant PDF text extraction failed with no internet. scripts/copy-pdf-worker.js
+// refreshes this file from node_modules on every install, so it always matches the
+// resolved pdfjs-dist version.
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 export async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();

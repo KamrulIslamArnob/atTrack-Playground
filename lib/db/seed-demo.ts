@@ -143,8 +143,10 @@ export function seedSampleJobsAndContacts({ userId, positionId }: SeedOptions): 
     JSON.stringify([
       {
         id: randomUUID(),
-        content: `${DEMO_MARKER} Introduced by Sarah Chen. Strong alignment with React server components and high-throughput dashboard architecture.`,
-        createdAt: now.toISOString(),
+        title: "Recruiter outreach",
+        bullets: [
+          `${DEMO_MARKER} Introduced by Sarah Chen. Strong alignment with React server components and high-throughput dashboard architecture.`,
+        ],
       },
     ]),
     "1",
@@ -175,8 +177,10 @@ export function seedSampleJobsAndContacts({ userId, positionId }: SeedOptions): 
     JSON.stringify([
       {
         id: randomUUID(),
-        content: `${DEMO_MARKER} Tailoring master resume to emphasize offline-first caching and synchronous SQLite architecture.`,
-        createdAt: now.toISOString(),
+        title: "Application prep",
+        bullets: [
+          `${DEMO_MARKER} Tailoring master resume to emphasize offline-first caching and synchronous SQLite architecture.`,
+        ],
       },
     ]),
     "1",
@@ -207,8 +211,10 @@ export function seedSampleJobsAndContacts({ userId, positionId }: SeedOptions): 
     JSON.stringify([
       {
         id: randomUUID(),
-        content: `${DEMO_MARKER} Recruiter screen passed. Technical round with engineering manager scheduled. Review streaming SSR architecture.`,
-        createdAt: now.toISOString(),
+        title: "Interview notes",
+        bullets: [
+          `${DEMO_MARKER} Recruiter screen passed. Technical round with engineering manager scheduled. Review streaming SSR architecture.`,
+        ],
       },
     ]),
     "1",

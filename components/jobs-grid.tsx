@@ -139,19 +139,24 @@ interface ColumnDef {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   className?: string;
+  /** Share of table width (%) this column gets when the user hasn't dragged a custom width. Sums to 100 with ACTIONS_DEFAULT_PCT. */
+  defaultPct: number;
 }
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { key: "title", label: "Title", icon: Briefcase, className: "min-w-[200px]" },
-  { key: "company", label: "Company", icon: Building2, className: "min-w-[140px] max-w-[180px] truncate" },
-  { key: "location", label: "Location", icon: MapPinIcon, className: "min-w-[160px] max-w-[200px] truncate" },
-  { key: "employment_type", label: "Type", icon: ClockIcon },
-  { key: "work_location", label: "Work", icon: Laptop },
-  { key: "salary_range", label: "Salary", icon: Banknote, className: "min-w-[140px]" },
-  { key: "match_score", label: "Match", icon: SparklesIcon },
-  { key: "status", label: "Status", icon: CircleDot },
-  { key: "date", label: "Date", icon: Calendar, className: "min-w-[140px]" },
+  { key: "title", label: "Title", icon: Briefcase, defaultPct: 18 },
+  { key: "company", label: "Company", icon: Building2, className: "truncate", defaultPct: 12 },
+  { key: "location", label: "Location", icon: MapPinIcon, className: "truncate", defaultPct: 13 },
+  { key: "employment_type", label: "Type", icon: ClockIcon, defaultPct: 8 },
+  { key: "work_location", label: "Work", icon: Laptop, defaultPct: 8 },
+  { key: "salary_range", label: "Salary", icon: Banknote, defaultPct: 12 },
+  { key: "match_score", label: "Match", icon: SparklesIcon, defaultPct: 7 },
+  { key: "status", label: "Status", icon: CircleDot, defaultPct: 9 },
+  { key: "date", label: "Date", icon: Calendar, defaultPct: 8 },
 ];
+
+// Remaining share after the columns above, reserved for the fixed link/actions column.
+const ACTIONS_DEFAULT_PCT = 5;
 
 const DEFAULT_COLUMN_KEYS: SortKey[] = ALL_COLUMNS.map((c) => c.key);
 
@@ -228,7 +233,8 @@ interface SortHeaderProps {
   isDragging?: boolean;
   isDragOver?: boolean;
   bgColor?: string;
-  width?: number;
+  /** CSS width value, e.g. "140px" (user-resized) or "18%" (proportional default). */
+  width?: string;
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -268,8 +274,7 @@ function SortHeader({
       onDragEnd={onDragEnd}
       onContextMenu={onContextMenu}
       style={{
-        width: width ? `${width}px` : undefined,
-        minWidth: width ? `${width}px` : undefined,
+        width,
         backgroundColor: bgColor || undefined,
       }}
       className={cn(
@@ -789,7 +794,7 @@ export function JobsGrid({
       {/* Table */}
       {rows.length > 0 ? (
         <div className="overflow-x-auto rounded-2xl border border-border relative">
-          <table className="w-full border-collapse text-sm select-none">
+          <table className="w-full table-fixed border-collapse text-sm select-none">
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 {columnOrder.map((key) => {
@@ -808,7 +813,7 @@ export function JobsGrid({
                       isDragging={draggedCol === key}
                       isDragOver={dragOverCol === key}
                       bgColor={columnColors[key]}
-                      width={columnWidths[key]}
+                      width={columnWidths[key] ? `${columnWidths[key]}px` : `${col.defaultPct}%`}
                       onDragStart={(e) => handleDragStart(e, key)}
                       onDragOver={(e) => handleDragOver(e, key)}
                       onDrop={(e) => handleDrop(e, key)}
@@ -818,7 +823,7 @@ export function JobsGrid({
                     />
                   );
                 })}
-                <th scope="col" className="px-3 py-2.5 w-10">
+                <th scope="col" style={{ width: `${ACTIONS_DEFAULT_PCT}%` }} className="px-3 py-2.5">
                   <span className="sr-only">Link</span>
                 </th>
               </tr>
@@ -850,11 +855,10 @@ export function JobsGrid({
                           onContextMenu={(e) => handleContextMenu(e, key, job.id, job.title)}
                           style={{
                             width: colWidth ? `${colWidth}px` : undefined,
-                            minWidth: colWidth ? `${colWidth}px` : undefined,
                             backgroundColor: colBg && !rowBg ? colBg : undefined,
                           }}
                           className={cn(
-                            "border-r border-border px-3 py-3 last:border-r-0",
+                            "border-r border-border px-3 py-3 last:border-r-0 overflow-hidden",
                             isTitle && "font-semibold",
                             isMeta && "text-muted-foreground",
                             key === "date" && "whitespace-nowrap text-xs text-muted-foreground",

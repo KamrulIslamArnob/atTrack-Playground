@@ -59,7 +59,7 @@ npm run start
 For the Windows desktop release, build the Electron package:
 
 ```bash
-npm run build:electron
+npm run electron:build:win
 ```
 
 This runs the Next.js production build, prepares the standalone output, copies the files Electron needs, and generates installer/update artifacts in `release/`.
@@ -81,7 +81,7 @@ Use this to confirm:
 
 ## 7. Check the release artifacts
 
-After `npm run build:electron`, inspect `release/` and confirm you have:
+After `npm run electron:build:win`, inspect `release/` and confirm you have:
 
 - the Windows installer,
 - the update metadata files,

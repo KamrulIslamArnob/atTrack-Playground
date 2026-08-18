@@ -36,7 +36,13 @@ export function getOrCreateLocalUser(): LocalUser {
 
   if (existing) {
     let email = existing.email;
-    if (!email || email === "owner@attrack.local" || email.endsWith("@attrack.local")) {
+    // Only write when the stored value is actually wrong. OWNER_EMAIL falls back to
+    // "owner@attrack.local", which is exactly the placeholder this branch replaces —
+    // so without the first check the condition could never go false, and every
+    // request fired a WAL write setting the column to the value it already held.
+    // That is one pointless write per page view against a data folder the user may
+    // well have put on OneDrive or a network share.
+    if (email !== OWNER_EMAIL && (!email || email.endsWith("@attrack.local"))) {
       email = OWNER_EMAIL;
       db.prepare("UPDATE users SET email = ? WHERE id = ?").run(email, existing.id);
     }

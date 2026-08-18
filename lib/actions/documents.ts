@@ -257,6 +257,7 @@ export interface JobDocument {
   name: string;
   type: string;
   generated_kind: string | null;
+  file_path: string;
   created_at: string;
 }
 
@@ -270,7 +271,7 @@ export async function getJobDocuments(jobId: string): Promise<JobDocument[]> {
 
   const { data, error } = await supabase
     .from("job_documents")
-    .select("document:documents(id, name, type, generated_kind, created_at)")
+    .select("document:documents(id, name, type, generated_kind, file_path, created_at)")
     .eq("job_id", jobId);
 
   if (error) {

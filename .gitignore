@@ -122,3 +122,6 @@ debug.log
 .sentryclirc
 .netlify/
 
+
+# pdf.js worker, copied out of node_modules by scripts/copy-pdf-worker.js on install
+public/pdf.worker.min.mjs

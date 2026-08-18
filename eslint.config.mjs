@@ -35,6 +35,9 @@ const eslintConfig = defineConfig([
     "electron/**",
     "scripts/**",
     ".data/**",
+    // Static assets, not source. scripts/copy-pdf-worker.js drops a ~1 MB minified
+    // pdf.js worker in here on install; linting it is meaningless noise.
+    "public/**",
     "next-env.d.ts",
   ]),
 ]);

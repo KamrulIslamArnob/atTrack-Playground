@@ -4,6 +4,10 @@
   "description": "Personal career workspace for managing job applications, documents, interviews, and AI-assisted preparation.",
   "author": "atTrack",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KamrulIslamArnob/atTrack-Playground.git"
+  },
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -12,6 +16,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/copy-pdf-worker.js",
     "icons:build": "node scripts/generate-desktop-icons.js",
     "electron:dev": "node scripts/prepare-electron-build.js && electron electron/main.js",
     "electron:build:win": "node scripts/prepare-electron-build.js && electron-builder --win --publish never",

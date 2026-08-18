@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,25 +186,37 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
         )}
 
         <div className="mt-2 space-y-2">
-          {documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between rounded-2xl border border-border p-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <FileText className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{doc.name}</p>
-                  {doc.generated_kind && (
-                    <p className="text-xs text-muted-foreground">{doc.generated_kind.replace(/_/g, " ")}</p>
-                  )}
-                </div>
+          {documents.map((doc) => {
+            // /documents/[id] redirects to the builder page or the resume
+            // viewer itself server-side, so only the external-link case
+            // needs a different href here (opened in a new tab, in place).
+            const isExternal = doc.generated_kind === "external_link";
+            const href = isExternal ? doc.file_path : `/documents/${doc.id}`;
+            return (
+              <div key={doc.id} className="flex items-center justify-between rounded-2xl border border-border p-3">
+                <Link
+                  href={href}
+                  target={isExternal ? "_blank" : undefined}
+                  rel={isExternal ? "noopener noreferrer" : undefined}
+                  className="flex min-w-0 items-center gap-2 hover:text-green-800 dark:hover:text-lime-400"
+                >
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{doc.name}</p>
+                    {doc.generated_kind && (
+                      <p className="text-xs text-muted-foreground">{doc.generated_kind.replace(/_/g, " ")}</p>
+                    )}
+                  </div>
+                </Link>
+                <button
+                  onClick={() => handleUnlink(doc.id)}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
               </div>
-              <button
-                onClick={() => handleUnlink(doc.id)}
-                className="flex size-7 shrink-0 items-center justify-center rounded-2xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-          ))}
+            );
+          })}
           {documents.length === 0 && (
             <p className="text-xs text-muted-foreground">No documents linked to this job yet.</p>
           )}

@@ -556,27 +556,29 @@ export function OnboardingWizard({
                           setCustomModel(p.defaultModel);
                         }
                       }}
-                      className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         isSelected
                           ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
                           : "border-border bg-card text-foreground hover:bg-muted/40"
                       }`}
                     >
-                      {p.badge && (
-                        <span
-                          className={`absolute top-2 right-2 text-[9px] font-semibold px-1.5 py-0.2 rounded-sm ${
-                            p.badge === "Free tier"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : p.badge === "Local"
-                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                              : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                          }`}
-                        >
-                          {p.badge}
+                      <span className="flex w-full items-start justify-between gap-1.5">
+                        <span className="line-clamp-2 break-words text-xs font-semibold leading-tight">
+                          {p.name}
                         </span>
-                      )}
-                      <span className="text-xs font-semibold truncate w-full">{p.name}</span>
-                      <span className="text-[10px] text-muted-foreground truncate w-full mt-0.5">
+                        {p.badge && (
+                          <span
+                            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium leading-none ${
+                              p.badge === "Free tier"
+                                ? "border-success-border bg-success-surface text-success"
+                                : "border-info-border bg-info-surface text-info"
+                            }`}
+                          >
+                            {p.badge}
+                          </span>
+                        )}
+                      </span>
+                      <span className="line-clamp-2 w-full break-words text-[10px] leading-tight text-muted-foreground">
                         {p.defaultModel}
                       </span>
                     </button>

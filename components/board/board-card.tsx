@@ -51,13 +51,13 @@ export function BoardCardItem({
 
   return (
     <motion.div
-      layout={!shouldReduceMotion}
+      layout={!isDragging && !shouldReduceMotion}
       initial={shouldReduceMotion ? undefined : { opacity: 0 }}
       animate={{ opacity: isDragging ? 0.35 : 1 }}
       exit={shouldReduceMotion ? undefined : { opacity: 0 }}
       transition={{ duration: 0.15 }}
       draggable
-      onDragStartCapture={(e) => {
+      onDragStartCapture={(e: React.DragEvent) => {
         e.dataTransfer.setData("text/plain", card.id);
         e.dataTransfer.effectAllowed = "move";
         onDragStart?.();
@@ -213,14 +213,25 @@ export function BoardCardItem({
           <div className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
             <Tooltip>
               <TooltipTrigger>
-                <span
+                <div
                   className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap shrink-0 cursor-help border",
-                    band.className
+                    "inline-flex items-stretch overflow-hidden rounded-full border text-[10px] font-semibold tracking-tight shadow-2xs whitespace-nowrap shrink-0 cursor-help",
+                    band.borderClass
                   )}
                 >
-                  {band.label} {Math.round(card.match_score!)}
-                </span>
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 font-semibold transition-colors",
+                      band.labelBgClass,
+                      band.labelColorClass
+                    )}
+                  >
+                    {band.label}
+                  </span>
+                  <span className="flex items-center justify-center bg-white dark:bg-card px-1.5 py-0.5 font-bold tabular-nums text-foreground border-l border-inherit">
+                    {Math.round(card.match_score!)}
+                  </span>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs p-2.5 text-left">
                 <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">

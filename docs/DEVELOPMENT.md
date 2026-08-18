@@ -33,7 +33,7 @@ npm run electron:dev
 | `npm run start` | Run the production server. |
 | `npm run lint` | Run ESLint. |
 | `npm run electron:dev` | Test the packaged-style Electron integration locally. |
-| `npm run build:electron` | Build Windows Electron release assets into `release/`. |
+| `npm run electron:build:win` | Build Windows Electron release assets into `release/`. |
 | `npx tsx lib/db/selfcheck.ts` | Run the SQLite query-layer self-check. |
 
 ## Architecture overview
@@ -167,7 +167,7 @@ Updating or reinstalling the app should not delete user data because installer f
 ### Building release assets
 
 ```bash
-npm run build:electron
+npm run electron:build:win
 ```
 
 This produces Windows installer/update assets in `release/`. Do not commit generated release artifacts unless a release workflow explicitly requires them.
@@ -177,7 +177,7 @@ This produces Windows installer/update assets in `release/`. Do not commit gener
 The app uses `electron-updater` and GitHub Releases metadata. A typical release flow is:
 
 1. Bump `version` in `package.json`.
-2. Run `npm run build:electron`.
+2. Run `npm run electron:build:win`.
 3. Create a GitHub Release tagged with the version.
 4. Upload the generated installer and update metadata from `release/`.
 

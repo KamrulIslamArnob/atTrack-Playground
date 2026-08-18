@@ -6,6 +6,11 @@ import { DEFAULT_RESUME_APPEARANCE, type ResumeDoc } from "@/lib/types/resume-bu
  * Task 2 implements (**bold**, *italic*, ` | `,
  * [live](url "Label")-shaped badges, [cat](Label)/[type](Label) chips).
  *
+ * Identity fields (name, title, portfolio/GitHub/LinkedIn links, email) are
+ * the real owner's — everything else is placeholder/dummy content for the
+ * user to overwrite per application. Never seed real phone numbers, work
+ * history, skills, education, or achievements here.
+ *
  * Returns a fresh object every call — never share/mutate a module-level
  * singleton, callers own their copy (e.g. to seed a new document row).
  */
@@ -16,7 +21,7 @@ export function seedResumeDoc(): ResumeDoc {
       name: "Kamrul Islam Arnob",
       title: "Software Engineer",
       summary:
-        "Software developer combining full-stack web development with AI integration. Experienced in designing UI/UX, building APIs with FastAPI and Node.js, and managing databases for production applications.",
+        "Motivated software engineer with experience building and shipping full-stack applications. Skilled at collaborating with cross-functional teams to design, develop, and deliver reliable products.",
       topLinks: [
         { id: crypto.randomUUID(), variant: "port", icon: "globe", label: "Portfolio", url: "https://arnob.codes" },
         { id: crypto.randomUUID(), variant: "contact", icon: "github", label: "GitHub", url: "https://github.com/KamrulIslamArnob" },
@@ -25,7 +30,7 @@ export function seedResumeDoc(): ResumeDoc {
       ],
       bottomLinks: [
         { id: crypto.randomUUID(), variant: "contact", icon: "envelope", label: "connect.arnob@gmail.com", url: "mailto:connect.arnob@gmail.com" },
-        { id: crypto.randomUUID(), variant: "contact", icon: "phone", label: "+880 1984 933215", url: "tel:8801984933215" },
+        { id: crypto.randomUUID(), variant: "contact", icon: "phone", label: "+1 555-010-1234", url: "tel:15550101234" },
       ],
     },
 
@@ -34,14 +39,14 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left1: "Programming Hero (Phitron Team)",
-          right1: "Semi-Hybrid | Dhaka, Bangladesh [type](Full-Time)",
-          left2: "Senior Executive, Marketing",
-          right2: "Mar 2023 – July 2026",
+          left1: "Example Company Inc.",
+          right1: "Remote | City, Country [type](Full-Time)",
+          left2: "Software Engineer",
+          right2: "Jan 2023 – Present",
           bullets: [
-            'Acted as **Product Manager** for Phitron\'s course platform and blog, managing content architecture, publishing workflows, UX feedback loops, and feature prioritization. [live](https://phitron.io/ "phitron.io")',
-            "Scaled short-form video output **3x**, directed **2 original short films**, and managed the end-to-end **Meta Ads strategy** across **5 enrollment cycles**.",
-            '[cred](https://www.linkedin.com/posts/kamrulislamarnob_honored-to-receive-the-master-of-content-activity-7400166555340304384-ukSU "Credentials") Awarded **"Master of Content & Creativity 2025"** - recognized for technical creativity, execution quality, and measurable business impact.',
+            'Developed and maintained key features for a **customer-facing web application**, collaborating with design and product teams. [live](https://example.com "example.com")',
+            "Improved application performance by **20%** through code optimization and caching strategies.",
+            '[cred](https://example.com/credential "Credentials") Recognized with an **internal excellence award** for contributions to a major product launch.',
           ],
         },
       ],
@@ -53,36 +58,36 @@ export function seedResumeDoc(): ResumeDoc {
         {
           id: crypto.randomUUID(),
           label: "Languages & Frameworks",
-          value: "Python, FastAPI, React, Next.js, Node.js (Express.js), TypeScript, C#, ASP.NET Core",
+          value: "JavaScript, Python, Java, React, Node.js",
         },
         {
           id: crypto.randomUUID(),
           label: "AI & Machine Learning",
-          value: "LangGraph, LangChain, RAG Systems, AI Agent Workflows",
+          value: "Machine Learning Basics, Data Analysis",
         },
         {
           id: crypto.randomUUID(),
           label: "Databases & Storage",
-          value: "[cat](RDBMS) PostgreSQL, MySQL [cat](No-SQL) MongoDB, Redis, Firebase, Supabase",
+          value: "[cat](RDBMS) PostgreSQL, MySQL [cat](No-SQL) MongoDB, Redis",
         },
         {
           id: crypto.randomUUID(),
           label: "UI/UX & Design",
-          value: "UI/UX Design (Intermediate), Figma (Intermediate)",
+          value: "Wireframing, Figma (Beginner)",
         },
         {
           id: crypto.randomUUID(),
           label: "Backend & Architecture",
-          value: "OOP, SOLID Principles, REST, Clean Architecture, CQRS, Event-driven architecture",
+          value: "REST APIs, MVC, Unit Testing",
         },
         {
           id: crypto.randomUUID(),
           label: "Tools & Infrastructure",
-          value: "Git, GitHub, Docker, Google Workspace",
+          value: "Git, GitHub, Docker",
         },
       ],
       callout:
-        "**AI-Driven Development:** Practices context engineering and spec-first development with AI coding agents (Claude Code/Codex), scoping context deliberately, defining requirements before implementation, and verifying every agent-generated change before merge.",
+        "**Continuous Learner:** Actively expands technical skills through online courses, personal projects, and open-source contributions.",
     },
 
     projects: {
@@ -90,28 +95,26 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left: "**AI-Powered University Tutoring System** | *LangChain | LangGraph | Python*",
-          right:
-            '[repo](https://github.com/KamrulIslamArnob/COSMOS-Backend "Repository Link") [api](https://cosmos-backend-2b614852.fastapicloud.dev/docs#/default/health_check_health_get "API Doc") [live](https://cosmos-ai-powerd-intelligent-tutori.vercel.app/ "Live")',
+          left: "**Personal Portfolio Website** | *React | Tailwind CSS*",
+          right: '[repo](https://github.com/example/portfolio "Repository Link") [live](https://example.com "Live")',
           bullets: [
-            "Architected an **AI-powered tutoring platform** for UIU to enable **RAG-based queries** across institutional question banks, course materials, and academic resources via a **LangGraph-orchestrated agentic workflow** using **LangChain** and **Python**.",
+            "Built and deployed a responsive personal portfolio site showcasing projects and skills.",
           ],
         },
         {
           id: crypto.randomUUID(),
-          left: "**Multi-Tenant SaaS E-commerce Platform** | *.NET Microservices | CQRS | PostgreSQL | Redis*",
-          right:
-            '[repo](https://github.com/KamrulIslamArnob/Dukan-multi-tenant-saas-ecommerce-platform "Repository Link") [live](https://www.arnob.codes/projects/dukan "Architecture")',
+          left: "**Task Management App** | *Node.js | Express | MongoDB*",
+          right: '[repo](https://github.com/example/task-manager "Repository Link")',
           bullets: [
-            "Engineered a **multi-tenant e-commerce platform** using **3 .NET microservices** adhering to the **CQRS pattern**, handling merchant store onboarding, catalog/inventory management, checkout workflows, and administrative oversight. Integrated real-time **SignalR push notifications**, automated **email dispatch**, **MinIO object storage**, automated **WebP image optimization**, and **Redis caching** over **PostgreSQL**.",
+            "Built a full-stack task management application with user authentication and real-time updates.",
           ],
         },
         {
           id: crypto.randomUUID(),
-          left: "**Fera : Rehab Center Management System** | *Next.js | TypeScript | Firebase*",
-          right: '[live](https://rehab-center-management-system.vercel.app/login "Live")',
+          left: "**E-Commerce Demo Store** | *Next.js | TypeScript | Stripe*",
+          right: '[live](https://example.com/demo-store "Live")',
           bullets: [
-            "Built production **ERP software** for rehab center operations, actively deployed across **3 facilities** with **~90 daily staff users** running core operational workflows; self-taught **Next.js** and **Firebase Firestore** directly from official docs with no prior production experience.",
+            "Implemented a demo e-commerce storefront with product catalog, cart, and checkout flow.",
           ],
         },
       ],
@@ -122,29 +125,21 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left1: "United International University (UIU)",
-          right1: "CGPA: 3.66/4.00",
-          left2: "B.Sc. in Computer Science & Engineering; Data Science (Major)",
-          right2: "Feb 2022 – May 2026",
+          left1: "Example University",
+          right1: "GPA: 3.50/4.00",
+          left2: "B.Sc. in Computer Science",
+          right2: "Sep 2019 – May 2023",
           bullets: [
-            "Achieved **5x 50%** & **7x 25%** result-based scholarships.",
-            "**2x Winner of 'CSE Project Show'.**",
+            "Graduated with honors.",
+            "Active member of the Computer Science Society.",
           ],
         },
         {
           id: crypto.randomUUID(),
-          left1: "Birshreshtha Munshi Abdur Rouf Public College",
+          left1: "Example High School",
           right1: "GPA: 5.00/5.00",
-          left2: "Higher Secondary School Certificate (Science)",
-          right2: "Apr 2018 – Dec 2020",
-          bullets: [],
-        },
-        {
-          id: crypto.randomUUID(),
-          left1: "Government Laboratory High School",
-          right1: "GPA: 5.00/5.00",
-          left2: "Secondary School Certificate (Science)",
-          right2: "Feb 2008 – Jan 2018",
+          left2: "Higher Secondary Certificate (Science)",
+          right2: "2017 – 2019",
           bullets: [],
         },
       ],
@@ -155,11 +150,11 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left: '[cred](https://drive.google.com/file/d/1Xit40VQszZoJqjJFVxu72qZ07UDrNf0U/view?usp=sharing "Credentials") **Enterprise .NET & Microservices Architecture Program**',
+          left: '[cred](https://example.com/credential "Credentials") **Full-Stack Web Development Program**',
           right: "",
           bullets: [],
           note:
-            "Demonstrated proficiency in ASP.NET Core, Entity Framework Core, ADO.NET, Clean Architecture, MediatR, SignalR, Microservices, Redis, Kafka, Elasticsearch, Docker, CI/CD & Deployment, and Unit & Integration Testing.",
+            "Covered front-end and back-end development, databases, APIs, and deployment practices.",
         },
       ],
     },
@@ -169,25 +164,13 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left: '[cred](https://www.linkedin.com/posts/kamrulislamarnob_i-missed-most-hackathons-during-my-university-activity-7418303421549662208-_Vkv "Credentials") **"Best Code Quality" Award at UIU Hackday 2026** | *United International University*',
-          right: "2026",
-          bullets: [],
-        },
-        {
-          id: crypto.randomUUID(),
-          left: '[cred](https://www.linkedin.com/posts/kamrulislamarnob_system-analysis-design-lab-summer-share-7293666500702310400-U7GY/ "Credentials") **1st Runner Up in Software Engineering Lab** | *United International University*',
+          left: '[cred](https://example.com/award-1 "Credentials") **"Employee of the Month" Award** | *Example Company Inc.*',
           right: "2024",
           bullets: [],
         },
         {
           id: crypto.randomUUID(),
-          left: '[cred](https://www.linkedin.com/posts/kamrulislamarnob_through-the-whirlwind-of-a-demanding-semester-ugcPost-7250035070525157376-BJLt/ "Credentials") **Champion at the System Analysis & Design Laboratory** | *United International University*',
-          right: "2023",
-          bullets: [],
-        },
-        {
-          id: crypto.randomUUID(),
-          left: '[cred](https://www.linkedin.com/posts/kamrulislamarnob_programming-uiuappforum-activity-7007337589649154048-Vb-M "Credentials") **1st Runner-Up in Programming for Beginners** | *United International University*',
+          left: '[cred](https://example.com/award-2 "Credentials") **1st Runner-Up, University Hackathon** | *Example University*',
           right: "2022",
           bullets: [],
         },
@@ -199,20 +182,14 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left: '[cred](https://www.coursera.org/account/accomplishments/verify/Z7LWGBXLZQMH "Credentials") **Supervised Machine Learning: Regression and Classification** | *DeepLearning.AI*',
-          right: "May 2024",
+          left: '[cred](https://example.com/cert-1 "Credentials") **Introduction to Machine Learning** | *Example Learning Platform*',
+          right: "May 2023",
           bullets: [],
         },
         {
           id: crypto.randomUUID(),
-          left: '[cred](https://ostad.app/share/certificate/c17328-kamrul-islam-arnob "Credentials") **Web Development with PHP & Laravel** | *Ostad*',
-          right: "Mar 2024",
-          bullets: [],
-        },
-        {
-          id: crypto.randomUUID(),
-          left: '[cred](https://www.udemy.com/certificate/UC-1eb6d865-1197-417b-b827-97969611112f/ "Credentials") **Learn Coding with Java from Scratch: Essential Training 2023** | *Udemy*',
-          right: "Dec 2022",
+          left: '[cred](https://example.com/cert-2 "Credentials") **Web Development Fundamentals** | *Example Academy*',
+          right: "Mar 2022",
           bullets: [],
         },
       ],
@@ -223,43 +200,18 @@ export function seedResumeDoc(): ResumeDoc {
       entries: [
         {
           id: crypto.randomUUID(),
-          left: "**UIU App Forum** | *Coordinator of Student Development & Innovation Hub*",
-          right: "Jun 2022 – Nov 2025",
+          left: "**University Tech Club** | *Team Lead*",
+          right: "Sep 2021 – May 2023",
           bullets: [
-            "Advanced through **4 progressive roles** over 3.5 years to oversee the Software, Student Development, and Data Science departments.",
-            "Transitioned from General Secretary to coordinating the Student Development section, aligning operations with student needs and institutional objectives to foster **campus-wide tech innovation**.",
+            "Led a team of **5 members** to organize workshops and coding events for students.",
           ],
         },
         {
           id: crypto.randomUUID(),
-          left: "**Science Club of Rouf College** | *Advisor & Former General Secretary*",
-          right: "Nov 2019 – Present",
+          left: "**Volunteer Coding Mentor** | *Mentor*",
+          right: "Jan 2021 – Present",
           bullets: [
-            "Progressed through **3 executive roles** over 5+ years, currently serving as a strategic Advisor overseeing core team operations.",
-          ],
-        },
-        {
-          id: crypto.randomUUID(),
-          left: "**BASIS Students' Forum UIU Chapter** | *Co-Convener*",
-          right: "Dec 2023 – Jan 2025",
-          bullets: [
-            "Served as a **primary liaison**, bridging communication and initiatives between UIU students and the national BASIS chapter.",
-          ],
-        },
-        {
-          id: crypto.randomUUID(),
-          left: "**UIU Finance Forum** | *Co-Head of Design*",
-          right: "Mar 2023 – Aug 2024",
-          bullets: [
-            '[cred](https://drive.google.com/file/d/1RRz0a9WwbuWtrfvbVl_IywGZEeFOaQSC/view "Credentials") Co-led visual branding and creative direction for the Microsoft-authorized event, **"The Excelist 2022"**',
-          ],
-        },
-        {
-          id: crypto.randomUUID(),
-          left: "**Science Club of Laboratorians** | *Strategic Coordinator*",
-          right: "Apr 2019 – Jan 2020",
-          bullets: [
-            "Founded and coordinated a targeted program to promote **financial literacy** among underprivileged high school students.",
+            "Mentored beginner programmers in weekly study sessions.",
           ],
         },
       ],

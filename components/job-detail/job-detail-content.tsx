@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
+import { CheckIcon } from "@/components/ui/check";
 import { ArrowLeftIcon } from "@/components/ui/arrow-left";
 import { CopyIcon } from "@/components/ui/copy";
 import { SparklesIcon } from "@/components/ui/sparkles";
@@ -242,21 +243,29 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                   return (
                     <DropdownMenuItem
                       key={t}
-                      disabled={isSelected}
                       onClick={() => handleTierChange(t)}
                       className={cn(
-                        "flex items-center justify-between cursor-pointer",
-                        isSelected && "font-semibold bg-accent"
+                        "flex items-center justify-between cursor-pointer py-1.5 px-2.5 rounded-lg transition-colors",
+                        isSelected
+                          ? "bg-muted text-foreground font-semibold hover:bg-muted focus:bg-muted data-[highlighted]:bg-muted"
+                          : "hover:bg-muted/60 focus:bg-muted/60 data-[highlighted]:bg-muted/60 text-foreground"
                       )}
                     >
                       <div className="flex items-center gap-2">
                         <span
-                          className="size-2.5 rounded-full shrink-0"
+                          className="size-2 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/20"
                           style={{ backgroundColor: cfg.dotColor }}
                         />
-                        <span>{cfg.label}</span>
+                        <span className="text-xs font-medium text-foreground">
+                          {cfg.label}
+                        </span>
                       </div>
-                      <span className="text-[11px] text-muted-foreground">{cfg.description}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-muted-foreground font-normal">
+                          {cfg.description}
+                        </span>
+                        {isSelected && <CheckIcon className="size-3.5 text-foreground ml-1 shrink-0 stroke-[2.5]" />}
+                      </div>
                     </DropdownMenuItem>
                   );
                 })}
@@ -265,7 +274,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => handleTierChange(null)}
-                      className="text-xs text-muted-foreground cursor-pointer"
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       Remove tier
                     </DropdownMenuItem>
@@ -283,10 +292,10 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                       variant="outline"
                       size="sm"
                       disabled={stagePending}
-                      className="h-8 gap-1.5 rounded-xl border border-border/80 px-3 text-xs font-medium text-foreground hover:bg-accent/60 hover:text-foreground cursor-pointer"
+                      className="h-8 gap-1.5 rounded-xl border border-border/80 px-3 text-xs font-medium text-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                     >
                       <span
-                        className="size-2 rounded-full shrink-0"
+                        className="size-2 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/20"
                         style={{ backgroundColor: currentList?.color || "var(--primary)" }}
                       />
                       <span>{currentList?.name ?? JOB_STATUS_LABELS[job.status as JobStatus] ?? "Stage"}</span>
@@ -303,22 +312,27 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                     return (
                       <DropdownMenuItem
                         key={l.id}
-                        disabled={isSelected || stagePending}
+                        disabled={stagePending}
                         onClick={() => handleMoveStage(l.id)}
                         className={cn(
-                          "flex items-center justify-between cursor-pointer py-1.5",
-                          isSelected && "font-semibold bg-accent"
+                          "flex items-center justify-between cursor-pointer py-1.5 px-2.5 rounded-lg transition-colors",
+                          isSelected
+                            ? "bg-muted text-foreground font-semibold hover:bg-muted focus:bg-muted data-[highlighted]:bg-muted"
+                            : "hover:bg-muted/60 focus:bg-muted/60 data-[highlighted]:bg-muted/60 text-foreground"
                         )}
                       >
                         <div className="flex items-center gap-2">
                           <span
-                            className="size-2.5 rounded-full shrink-0"
+                            className="size-2 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/20"
                             style={{ backgroundColor: l.color || "var(--primary)" }}
                           />
-                          <span>{l.name}</span>
+                          <span className="text-xs font-medium text-foreground">
+                            {l.name}
+                          </span>
                         </div>
                         {isSelected && (
-                          <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-foreground bg-background border border-border/80 shadow-2xs rounded-full px-2 py-0.5">
+                            <CheckIcon className="size-3 text-foreground shrink-0 stroke-[2.5]" />
                             Current
                           </span>
                         )}
@@ -334,9 +348,25 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
             )}
 
             {band && (
-              <span className={cn("inline-flex h-8 items-center rounded-xl px-3 text-xs font-medium", band.className)}>
-                {band.label} fit {Math.round(job.match_score!)}%
-              </span>
+              <div
+                className={cn(
+                  "inline-flex h-8 items-stretch overflow-hidden rounded-xl border text-xs font-semibold shadow-2xs",
+                  band.borderClass
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex items-center px-2.5 font-semibold",
+                    band.labelBgClass,
+                    band.labelColorClass
+                  )}
+                >
+                  {band.label}
+                </span>
+                <span className="flex items-center justify-center bg-white dark:bg-card px-2 font-bold tabular-nums text-foreground border-l border-inherit">
+                  {Math.round(job.match_score!)}%
+                </span>
+              </div>
             )}
 
             {job.application_url && (

@@ -52,15 +52,20 @@ interface ColumnDef {
   icon?: React.ComponentType<{ className?: string }>;
   isDraggable?: boolean;
   className?: string;
+  /** Share of table width (%) this column gets when the user hasn't dragged a custom width. Sums to 100 with ACTIONS_DEFAULT_PCT. */
+  defaultPct: number;
 }
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { key: "index", label: "", icon: Hash, isDraggable: false, className: "w-12 text-xs" },
-  { key: "name", label: "Name", icon: FileText, className: "min-w-[220px]" },
-  { key: "type", label: "Type", icon: Tag, className: "min-w-[120px]" },
-  { key: "uploaded", label: "Uploaded", icon: Calendar, className: "min-w-[140px]" },
-  { key: "ai_extracted", label: "AI Extracted", icon: SparklesIcon, className: "min-w-[180px]" },
+  { key: "index", label: "", icon: Hash, isDraggable: false, className: "text-xs", defaultPct: 6 },
+  { key: "name", label: "Name", icon: FileText, defaultPct: 32 },
+  { key: "type", label: "Type", icon: Tag, defaultPct: 13 },
+  { key: "uploaded", label: "Uploaded", icon: Calendar, defaultPct: 15 },
+  { key: "ai_extracted", label: "AI Extracted", icon: SparklesIcon, defaultPct: 19 },
 ];
+
+// Remaining share after the columns above, reserved for the fixed Actions column.
+const ACTIONS_DEFAULT_PCT = 15;
 
 const DEFAULT_COLUMN_KEYS: SortKey[] = ALL_COLUMNS.map((c) => c.key);
 
@@ -134,7 +139,8 @@ interface SortHeaderProps {
   isDragging?: boolean;
   isDragOver?: boolean;
   bgColor?: string;
-  width?: number;
+  /** CSS width value, e.g. "140px" (user-resized) or "32%" (proportional default). */
+  width?: string;
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -175,8 +181,7 @@ function SortHeader({
       onDragEnd={isDraggable ? onDragEnd : undefined}
       onContextMenu={onContextMenu}
       style={{
-        width: width ? `${width}px` : undefined,
-        minWidth: width ? `${width}px` : undefined,
+        width,
         backgroundColor: bgColor || undefined,
       }}
       className={cn(
@@ -787,7 +792,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       {/* Table */}
       {rows.length > 0 ? (
         <div className="overflow-x-auto rounded-2xl border border-border relative">
-          <table className="w-full border-collapse text-sm select-none">
+          <table className="w-full table-fixed border-collapse text-sm select-none">
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 {columnOrder.map((key) => {
@@ -807,7 +812,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                       isDragging={draggedCol === key}
                       isDragOver={dragOverCol === key}
                       bgColor={columnColors[key]}
-                      width={columnWidths[key]}
+                      width={columnWidths[key] ? `${columnWidths[key]}px` : `${col.defaultPct}%`}
                       onDragStart={(e) => handleDragStart(e, key)}
                       onDragOver={(e) => handleDragOver(e, key)}
                       onDrop={(e) => handleDrop(e, key)}
@@ -817,7 +822,11 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                     />
                   );
                 })}
-                <th scope="col" className="px-4 py-2.5 font-semibold uppercase text-[11px] text-muted-foreground text-right tracking-wide">
+                <th
+                  scope="col"
+                  style={{ width: `${ACTIONS_DEFAULT_PCT}%` }}
+                  className="px-4 py-2.5 font-semibold uppercase text-[11px] text-muted-foreground text-right tracking-wide"
+                >
                   Actions
                 </th>
               </tr>
@@ -847,11 +856,10 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                           onContextMenu={(e) => handleContextMenu(e, key, doc.id, doc.name)}
                           style={{
                             width: colWidth ? `${colWidth}px` : undefined,
-                            minWidth: colWidth ? `${colWidth}px` : undefined,
                             backgroundColor: colBg && !rowBg ? colBg : undefined,
                           }}
                           className={cn(
-                            "border-r border-border px-3 py-3 last:border-r-0",
+                            "border-r border-border px-3 py-3 last:border-r-0 overflow-hidden",
                             col.className
                           )}
                         >
@@ -859,23 +867,29 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right overflow-hidden">
                       <div className="flex items-center justify-end gap-1">
                         {doc.type === "resume" && !doc.is_default && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1"
-                            onClick={() => handleSetDefault(doc.id)}
-                            disabled={pendingId === doc.id}
-                          >
-                            {pendingId === doc.id ? (
-                              <Spinner className="size-3" />
-                            ) : (
-                              <Star className="size-3.5" />
-                            )}
-                            Set default
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="inline-flex" />}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1 px-2"
+                                onClick={() => handleSetDefault(doc.id)}
+                                disabled={pendingId === doc.id}
+                              >
+                                {pendingId === doc.id ? (
+                                  <Spinner className="size-3" />
+                                ) : (
+                                  <Star className="size-3.5" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-[11px] font-medium py-1 px-2">
+                              Set as default resume
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                          {!doc.builder_data && (
                           <>

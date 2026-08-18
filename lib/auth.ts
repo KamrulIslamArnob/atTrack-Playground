@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createDbClient as createClient } from "@/lib/db/client";
 
 export interface UserProfile {
@@ -26,8 +27,16 @@ export interface AuthResult {
  *
  * Kept named `getUser()` and returning `{ supabase, userId, ... }` because every
  * server component and server action is written against that shape.
+ *
+ * Wrapped in React `cache()` because it is the hottest function in the app and
+ * costs two synchronous SQLite reads per call — and it is called once per action
+ * module, not once per request. Rendering /jobs used to call it four times
+ * (layout, getBoard, getBoardLists, getJobsList) and opening the job-detail sheet
+ * five. `node:sqlite` blocks the single server event loop, so those were eight to
+ * ten hard stops before any real data was read. cache() dedupes them to one per
+ * request. Same idiom as lib/log/request.ts.
  */
-export async function getUser(): Promise<AuthResult> {
+export const getUser = cache(async function getUser(): Promise<AuthResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,7 +64,7 @@ export async function getUser(): Promise<AuthResult> {
     role: profile?.role ?? "user",
     isBanned: false,
   };
-}
+});
 
 /**
  * The local owner is the only user, so they own the admin views too — this no

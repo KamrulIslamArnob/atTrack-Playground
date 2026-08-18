@@ -2,6 +2,7 @@
 
 import { getDb } from "@/lib/db/sqlite";
 import { getUser } from "@/lib/auth";
+import { RESTRICTED_AI_TABLES } from "@/lib/ai/tools/db-utils";
 
 export interface SqlQueryResult {
   success: boolean;
@@ -68,8 +69,14 @@ export async function executeLocalSqlQuery(sqlText: string): Promise<SqlQueryRes
       };
     }
 
-    // Security check: block restricted tables (raw text match, robust against subqueries/CTEs)
-    const restrictedTablePattern = /\b(users|smtp_config|ai_providers)\b/i;
+    // Security check: block restricted tables (raw text match, robust against subqueries/CTEs).
+    // Built from RESTRICTED_AI_TABLES rather than a hand-written list — this copy had
+    // drifted and was missing extension_config, whose `secret` column is the bearer
+    // token the browser extension authenticates with.
+    const restrictedTablePattern = new RegExp(
+      `\\b(${[...RESTRICTED_AI_TABLES].join("|")})\\b`,
+      "i"
+    );
     if (restrictedTablePattern.test(cleanSql)) {
       return {
         success: false,

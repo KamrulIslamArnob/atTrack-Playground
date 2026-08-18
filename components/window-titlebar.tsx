@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
+// h-9 below, in px — the one other place that needs this number (SheetContent,
+// to clear the same reserved strip) imports it here instead of re-deriving it.
+export const ELECTRON_TITLEBAR_HEIGHT = "36px";
+
 export function WindowTitlebar({ className }: { className?: string }) {
   const [isElectron, setIsElectron] = useState(false);
 

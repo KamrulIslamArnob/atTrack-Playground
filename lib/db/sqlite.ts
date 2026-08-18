@@ -21,7 +21,28 @@ declare global {
   var __attrackDb: DatabaseSync | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 7;
+const CURRENT_SCHEMA_VERSION = 8;
+
+// Triggers that schema.sql redefines in place. `CREATE TRIGGER IF NOT EXISTS` is a
+// no-op when an older definition already exists, so any trigger whose body or
+// column list changes has to be dropped here first, before schema.sql is applied.
+//
+// Version 8 narrowed the omni-search triggers from `AFTER UPDATE ON <table>` to
+// `AFTER UPDATE OF <the columns the index actually reads>`. Before that, writing
+// board_position on a card drag — or updated_at, or a match score — deleted and
+// re-tokenized the job's whole description and notes, and the DELETE scanned every
+// row of the FTS index because entity_type/entity_id are UNINDEXED. Measured at
+// 12x on a small database, and it grows with the index.
+const REDEFINED_TRIGGERS = [
+  "trg_omni_jobs_upd",
+  "trg_omni_contacts_upd",
+  "trg_omni_companies_upd",
+  "trg_omni_applications_upd",
+  "trg_omni_interviews_upd",
+  "trg_omni_documents_upd",
+  "trg_omni_deadlines_upd",
+  "trg_omni_positions_upd",
+];
 
 function loadSqliteVec(db: DatabaseSync): boolean {
   try {
@@ -68,6 +89,7 @@ function open(): DatabaseSync {
       path.join(process.cwd(), "lib", "db", "schema.sql"),
       "utf8"
     );
+    for (const name of REDEFINED_TRIGGERS) db.exec(`DROP TRIGGER IF EXISTS ${name}`);
     db.exec(schema);
     const applied = addMissingColumns(db);
     dropDeadTables(db);

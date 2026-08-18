@@ -52,7 +52,7 @@ npm run build           # Production Next.js build
 npm run start           # Run production build
 npm run lint            # ESLint
 npm run electron:dev    # Build standalone output and run Electron locally
-npm run build:electron  # Build Windows Electron installer assets
+npm run electron:build:win  # Build Windows Electron installer assets
 npx tsx lib/db/selfcheck.ts
 ```
 

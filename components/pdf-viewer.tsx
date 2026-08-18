@@ -5,7 +5,8 @@ import * as pdfjsLib from "pdfjs-dist";
 import { Spinner } from "@/components/ui/spinner";
 import { ZoomIn, ZoomOut } from "lucide-react";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Local worker, not a CDN — see lib/utils/pdf-extract.ts for why.
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 interface PdfViewerProps {
   url: string;

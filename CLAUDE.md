@@ -32,7 +32,7 @@ npx tsc --noEmit        # Type-check
 npm run build           # Production Next build
 npm run start           # Serve the production build
 npm run electron:dev    # Build and launch Electron locally
-npm run build:electron  # Build Windows installer/update artifacts in release/
+npm run electron:build:win  # Build Windows installer/update artifacts in release/
 ```
 
 There is no configured automated test script. Run the type-check, lint, and build relevant to every change; use the browser or Electron flow for UI behavior.

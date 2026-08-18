@@ -220,14 +220,11 @@ export function ElasticJogScroller({
   const activeLabel = activeStage?.name || stages[0]?.name || "Board";
 
   return (
-    <aside
+    <div
       aria-label="Horizontal board scroller"
-      className={cn(
-        "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex justify-center select-none",
-        className
-      )}
+      className={cn("inline-flex items-center select-none", className)}
     >
-      <motion.div
+      <div
         role="slider"
         tabIndex={0}
         aria-label="Horizontal scroll navigator"
@@ -237,12 +234,9 @@ export function ElasticJogScroller({
         aria-valuetext={`${activeLabel} (${Math.round(scrollProgress * 100)}%)`}
         onKeyDown={handleKeyDown}
         onWheel={handleWheel}
-        initial={{ opacity: 0, y: 12, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 420, damping: 26 }}
         className={cn(
-          "pointer-events-auto flex items-center gap-2 rounded-full border border-border/80 bg-background/80 dark:bg-card/75 px-1.5 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.1)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.35)] backdrop-blur-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:border-border hover:shadow-xl",
-          isDragging && "ring-2 ring-primary/40 shadow-2xl scale-[1.02]"
+          "flex items-center gap-2 h-8 px-1 py-1 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-lg",
+          isDragging && "scale-[1.02]"
         )}
       >
         {/* Precision Knurled Rotary Jog Dial */}
@@ -253,7 +247,7 @@ export function ElasticJogScroller({
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           title="Drag to spin & scrub horizontally"
-          className="group relative flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted/90 via-card to-muted border border-border/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4),0_1px_3px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_2px_rgba(255,255,255,0.08),0_1px_3px_rgba(0,0,0,0.4)] cursor-grab active:cursor-grabbing touch-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="group relative flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/90 shadow-[inset_0_1px_2px_rgba(0,0,0,0.12)] cursor-grab active:cursor-grabbing touch-none hover:bg-muted"
         >
           {/* Rotating Mechanical Dial with 12 Radials */}
           <motion.div
@@ -273,7 +267,7 @@ export function ElasticJogScroller({
                     className={cn(
                       "w-0.5 rounded-full transition-colors",
                       isMajor
-                        ? "h-1 bg-primary/90"
+                        ? "h-0.5 bg-primary/90"
                         : "h-0.5 bg-muted-foreground/30 group-hover:bg-muted-foreground/50"
                     )}
                   />
@@ -282,23 +276,23 @@ export function ElasticJogScroller({
             })}
 
             {/* Inner Gyro Disc */}
-            <Disc3 className="size-3 text-primary/80 group-hover:text-primary transition-colors" />
+            <Disc3 className="size-2.5 text-primary/80 group-hover:text-primary transition-colors" />
           </motion.div>
 
-          {/* Center Glass Hub */}
-          <div className="size-2 rounded-full bg-background/95 border border-border/80 shadow-xs z-10 flex items-center justify-center">
+          {/* Center Hub */}
+          <div className="size-1.5 rounded-full bg-background/95 shadow-xs z-10 flex items-center justify-center">
             <span className="size-0.5 rounded-full bg-primary/80" />
           </div>
         </div>
 
-        {/* Minimal Single-Row Elastic Scrubber Track */}
+        {/* Minimal Borderless Scrubber Track */}
         <div
           ref={trackRef}
           onPointerDown={handleTrackPointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          className="relative h-2 w-[140px] sm:w-[190px] md:w-[230px] rounded-full bg-muted/80 hover:bg-muted cursor-pointer overflow-hidden border border-border/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.12)] transition-colors touch-none"
+          className="relative h-2 w-[120px] sm:w-[160px] md:w-[200px] rounded-full bg-muted/70 hover:bg-muted cursor-pointer overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] transition-colors touch-none"
         >
           {/* Stage Divider Dots */}
           {stages.map((st, i) => {
@@ -334,7 +328,7 @@ export function ElasticJogScroller({
             className="absolute top-0 bottom-0 rounded-full bg-gradient-to-r from-primary via-primary/95 to-primary/85 shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
           />
         </div>
-      </motion.div>
-    </aside>
+      </div>
+    </div>
   );
 }

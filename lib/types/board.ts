@@ -335,6 +335,9 @@ export const DEFAULT_LIST_COLORS: Record<ListKind, string> = {
 export function matchScoreBand(score: number | null): {
   label: string;
   className: string;
+  borderClass: string;
+  labelBgClass: string;
+  labelColorClass: string;
 } | null {
   if (score === null) return null;
   if (score >= 80)
@@ -342,16 +345,25 @@ export function matchScoreBand(score: number | null): {
       label: "Strong",
       className:
         "bg-success-surface border border-success-border text-success",
+      borderClass: "border-success-border",
+      labelBgClass: "bg-success-surface",
+      labelColorClass: "text-success",
     };
   if (score >= 50)
     return {
       label: "Fair",
       className:
         "bg-warning-surface border border-warning-border text-warning",
+      borderClass: "border-warning-border",
+      labelBgClass: "bg-warning-surface",
+      labelColorClass: "text-warning",
     };
   return {
     label: "Weak",
     className:
       "bg-destructive-surface border border-destructive-border text-destructive",
+    borderClass: "border-destructive-border",
+    labelBgClass: "bg-destructive-surface",
+    labelColorClass: "text-destructive",
   };
 }

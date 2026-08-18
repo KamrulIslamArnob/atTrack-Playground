@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 // Filesystem replacement for Supabase Storage, shaped like `supabase.storage`.
@@ -173,6 +173,38 @@ function bucketApi(bucket: string) {
         if ((err as NodeJS.ErrnoException).code === "ENOENT") return { data: [], error: null };
         return { data: null as never, error: { message: (err as Error).message } };
       }
+    },
+
+    /**
+     * Best-effort orphan cleanup: unlinks files under `prefix` older than
+     * `maxAgeMs`. Deletion calls elsewhere (dialog close, cancel, unmount)
+     * are fire-and-forget and skipped entirely on a crash/force-close, so
+     * this is the backstop — called opportunistically on next upload rather
+     * than on a schedule (single-user local app, no cron infra to add).
+     */
+    async sweepStale(prefix: string, maxAgeMs: number): Promise<void> {
+      const dir = objectPath(bucket, prefix);
+      let entries;
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+        throw err;
+      }
+      const now = Date.now();
+      await Promise.all(
+        entries
+          .filter((e) => e.isFile())
+          .map(async (e) => {
+            const target = path.join(dir, e.name);
+            try {
+              const info = await stat(target);
+              if (now - info.mtimeMs > maxAgeMs) await unlink(target);
+            } catch (err) {
+              if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+            }
+          })
+      );
     },
 
     getPublicUrl(key: string): { data: { publicUrl: string } } {

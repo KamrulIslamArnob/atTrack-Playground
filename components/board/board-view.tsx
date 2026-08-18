@@ -358,12 +358,22 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   return (
     <div className="flex flex-col flex-1 min-h-full w-full px-6 pt-4 pb-0">
       <JobViewHeader currentView="board" onViewChange={onViewChange}>
+        <ElasticJogScroller
+          scrollRef={scrollRef}
+          stages={optimisticLists.map((l) => ({
+            id: l.id,
+            name: l.name,
+            count: sortedCards.filter((c) => c.list_id === l.id).length,
+            color: l.color,
+          }))}
+        />
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="hidden h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer sm:inline-flex">
-            <LayersIcon className="size-3.5" aria-hidden="true" />
-            Group: <span className="text-foreground">{GROUP_LABELS[groupBy]}</span>
-            <ChevronDownIcon className="size-3.5" aria-hidden="true" />
+          <DropdownMenuTrigger className="group hidden h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-primary hover:text-white hover:border-primary data-[state=open]:bg-primary data-[state=open]:text-white data-[state=open]:border-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer sm:inline-flex">
+            <LayersIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
+            <span className="text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">Group:</span>
+            <span className="font-semibold text-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">{GROUP_LABELS[groupBy]}</span>
+            <ChevronDownIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuRadioGroup
@@ -380,10 +390,11 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer">
-            <ArrowUpDown className="size-3.5" aria-hidden="true" />
-            Sort: <span className="text-foreground">{SORT_LABELS[sort]}</span>
-            <ChevronDownIcon className="size-3.5" aria-hidden="true" />
+          <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-primary hover:text-white hover:border-primary data-[state=open]:bg-primary data-[state=open]:text-white data-[state=open]:border-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer">
+            <ArrowUpDown className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
+            <span className="text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">Sort:</span>
+            <span className="font-semibold text-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white">{SORT_LABELS[sort]}</span>
+            <ChevronDownIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-white group-data-[state=open]:text-white" aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortOption)}>
@@ -396,31 +407,6 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {canScroll && (
-          <div className="inline-flex h-8 overflow-hidden rounded-lg border border-border bg-card">
-            <button
-              type="button"
-              aria-label="Scroll board left"
-              onClick={() =>
-                scrollRef.current?.scrollBy({ left: -COLUMN_SCROLL_WIDTH, behavior: "smooth" })
-              }
-              className="flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer"
-            >
-              <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
-            </button>
-            <span className="w-px bg-border" aria-hidden="true" />
-            <button
-              type="button"
-              aria-label="Scroll board right"
-              onClick={() =>
-                scrollRef.current?.scrollBy({ left: COLUMN_SCROLL_WIDTH, behavior: "smooth" })
-              }
-              className="flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:outline-none cursor-pointer"
-            >
-              <ChevronRightIcon className="size-3.5" aria-hidden="true" />
-            </button>
-          </div>
-        )}
         <ImportChoice lists={optimisticLists} />
       </JobViewHeader>
 
@@ -568,17 +554,6 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
           <div className="w-4 shrink-0 pointer-events-none" aria-hidden="true" />
         </div>
       </div>
-
-      {/* Interactive Spinny Elastic Jog Scroller Widget */}
-      <ElasticJogScroller
-        scrollRef={scrollRef}
-        stages={optimisticLists.map((l) => ({
-          id: l.id,
-          name: l.name,
-          count: sortedCards.filter((c) => c.list_id === l.id).length,
-          color: l.color,
-        }))}
-      />
 
       <ImportChoice
         open={addJobListId !== null}

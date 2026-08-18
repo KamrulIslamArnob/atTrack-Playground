@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Archive,
+  ArrowDownToLine,
   Briefcase,
   GripVertical,
   MoreHorizontal,
@@ -150,6 +151,7 @@ export function BoardColumn({
   const [draftName, setDraftName] = useState(list.name);
   const [onHoldOpen, setOnHoldOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const dragCounter = useRef(0);
   const shouldReduceMotion = useReducedMotion();
 
   const activeCards = cards.filter((c) => !c.state || c.state === "active");
@@ -167,9 +169,11 @@ export function BoardColumn({
   };
 
   const renderCardItems = (items: BoardCard[]) => {
+    const isShowingIndicator = isDropTarget && draggingId !== null;
+
     if (groupBy === "none") {
       return (
-        <AnimatePresence mode="popLayout" initial={false}>
+        <div className="flex flex-col gap-2">
           {items.map((card) => (
             <BoardCardItem
               key={card.id}
@@ -178,45 +182,100 @@ export function BoardColumn({
               accent={accent}
               isDragging={draggingId === card.id}
               onDragStart={() => onDragStartCard(card.id)}
-              onDragEnd={onDragEndCard}
+              onDragEnd={() => {
+                dragCounter.current = 0;
+                onDragEndCard();
+              }}
               onMoveTo={(listId) => onMoveCard(card.id, listId)}
               onOpen={() => onOpenCard(card.id)}
             />
           ))}
-        </AnimatePresence>
+
+          {/* Animated Drop Indicator Slot when hovering column */}
+          {isShowingIndicator && (
+            <motion.div
+              key="drop-slot-bottom"
+              initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.96, height: 0 }}
+              animate={{ opacity: 1, scale: 1, height: "auto" }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.96, height: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 28 }}
+              className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-4 px-4 text-xs font-semibold tracking-tight pointer-events-none select-none my-1 shadow-xs"
+              style={{
+                borderColor: `${accent}95`,
+                backgroundColor: `${accent}18`,
+                color: accent,
+              }}
+            >
+              <ArrowDownToLine className="size-4 animate-bounce text-current" />
+              <span>Drop here</span>
+            </motion.div>
+          )}
+        </div>
       );
     }
 
-    return groupCards(items, groupBy).map(([label, groupedCards]) => (
-      <div key={label} className="space-y-1.5">
-        <div className="flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <span className="truncate">{label}</span>
-          <span className="tabular-nums font-semibold">{groupedCards.length}</span>
-        </div>
-        <div className="flex flex-col gap-2">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {groupedCards.map((card) => (
-              <BoardCardItem
-                key={card.id}
-                card={card}
-                lists={lists}
-                accent={accent}
-                isDragging={draggingId === card.id}
-                onDragStart={() => onDragStartCard(card.id)}
-                onDragEnd={onDragEndCard}
-                onMoveTo={(listId) => onMoveCard(card.id, listId)}
-                onOpen={() => onOpenCard(card.id)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
+    return (
+      <div className="flex flex-col gap-2">
+        {groupCards(items, groupBy).map(([label, groupedCards]) => (
+          <div key={label} className="space-y-1.5">
+            <div className="flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="truncate">{label}</span>
+              <span className="tabular-nums font-semibold">{groupedCards.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {groupedCards.map((card) => (
+                <BoardCardItem
+                  key={card.id}
+                  card={card}
+                  lists={lists}
+                  accent={accent}
+                  isDragging={draggingId === card.id}
+                  onDragStart={() => onDragStartCard(card.id)}
+                  onDragEnd={() => {
+                    dragCounter.current = 0;
+                    onDragEndCard();
+                  }}
+                  onMoveTo={(listId) => onMoveCard(card.id, listId)}
+                  onOpen={() => onOpenCard(card.id)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+        {isShowingIndicator && (
+          <motion.div
+            key="drop-slot-bottom-grouped"
+            initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.96, height: 0 }}
+            animate={{ opacity: 1, scale: 1, height: "auto" }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.96, height: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 28 }}
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-4 px-4 text-xs font-semibold tracking-tight pointer-events-none select-none my-1 shadow-xs"
+            style={{
+              borderColor: `${accent}95`,
+              backgroundColor: `${accent}18`,
+              color: accent,
+            }}
+          >
+            <ArrowDownToLine className="size-4 animate-bounce text-current" />
+            <span>Drop here</span>
+          </motion.div>
+        )}
       </div>
-    ));
+    );
   };
 
   return (
     <section
       aria-label={`${list.name}, ${cards.length} ${cards.length === 1 ? "job" : "jobs"}`}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        dragCounter.current += 1;
+        if (e.dataTransfer.types.includes(LIST_DRAG_TYPE)) {
+          onListDragOverColumn();
+        } else {
+          onDragOverColumn();
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
@@ -227,11 +286,15 @@ export function BoardColumn({
         }
       }}
       onDragLeave={() => {
-        onDragLeaveColumn();
-        onListDragLeaveColumn();
+        dragCounter.current = Math.max(0, dragCounter.current - 1);
+        if (dragCounter.current === 0) {
+          onDragLeaveColumn();
+          onListDragLeaveColumn();
+        }
       }}
       onDrop={(e) => {
         e.preventDefault();
+        dragCounter.current = 0;
         if (e.dataTransfer.types.includes(LIST_DRAG_TYPE)) {
           onListDropColumn();
         } else {
@@ -368,9 +431,29 @@ export function BoardColumn({
         {renderCardItems(activeCards)}
 
         {activeCards.length === 0 && (
-          <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">
-            {list.kind === "wishlist" ? "Save a job here" : "Drag a card here"}
-          </p>
+          isDropTarget && draggingId !== null ? (
+            <motion.div
+              key="drop-empty-slot"
+              layout={!shouldReduceMotion}
+              initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 450, damping: 26 }}
+              className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 px-4 text-xs font-semibold tracking-tight pointer-events-none select-none transition-colors"
+              style={{
+                borderColor: `${accent}95`,
+                backgroundColor: `${accent}20`,
+                color: accent,
+              }}
+            >
+              <ArrowDownToLine className="size-4 animate-bounce text-current" />
+              <span>Drop here</span>
+            </motion.div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">
+              {list.kind === "wishlist" ? "Save a job here" : "Drag a card here"}
+            </p>
+          )
         )}
 
         {hasInactiveCards && (

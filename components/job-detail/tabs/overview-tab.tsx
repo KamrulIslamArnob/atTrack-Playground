@@ -157,8 +157,10 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
   const tone = job.match_score == null ? null : scoreTone(job.match_score);
 
   // The keyword list is stashed as a reserved note rather than its own column.
+  // `notes` is freeform JSON with no DB-enforced shape, so a malformed row
+  // (bad import, stale write) must not crash the whole tab — guard `title`.
   const keywordNote = (job.notes ?? []).find(
-    (n) => n.title.toLowerCase() === "keywords" || n.title === "__keywords__"
+    (n) => n.title?.toLowerCase() === "keywords" || n.title === "__keywords__"
   );
   const keywords = keywordNote ? keywordNote.bullets : [];
 

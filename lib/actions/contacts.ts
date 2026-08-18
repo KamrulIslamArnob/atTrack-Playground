@@ -82,16 +82,26 @@ function generateContactAvatarSlug(
     .replace(/^-+|-+$/g, "");
 }
 
-/** Extract the storage path from a Supabase public URL so we can delete it. */
+const AVATAR_URL_PREFIX = "/api/files/avatar/";
+
+/**
+ * Inverse of storage.getPublicUrl() for the avatar bucket, so a replaced avatar
+ * can be deleted.
+ *
+ * This used to parse the value with `new URL()`, left over from when storage was
+ * Supabase and the URL was absolute. Local storage returns a *relative* path, so
+ * `new URL()` threw `Invalid URL` on every call, the catch swallowed it, and no
+ * old avatar was ever removed — they accumulated in the user's data folder
+ * forever. Mirror getPublicUrl's encoding instead of re-parsing.
+ */
 function extractStoragePath(publicUrl: string): string | null {
+  if (!publicUrl.startsWith(AVATAR_URL_PREFIX)) return null;
+  const encoded = publicUrl.slice(AVATAR_URL_PREFIX.length);
+  if (!encoded) return null;
   try {
-    // Supabase public URLs look like:
-    // https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
-    const url = new URL(publicUrl);
-    const match = url.pathname.match(/\/object\/public\/avatar\/(.+)$/);
-    return match ? match[1] : null;
+    return encoded.split("/").map(decodeURIComponent).join("/");
   } catch {
-    return null;
+    return null; // malformed percent-encoding
   }
 }
 

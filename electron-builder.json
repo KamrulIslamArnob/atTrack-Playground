@@ -12,6 +12,8 @@
   ],
   "publish": {
     "provider": "github",
+    "owner": "KamrulIslamArnob",
+    "repo": "atTrack-Playground",
     "releaseType": "release"
   },
   "afterPack": "scripts/electron-after-pack.js",

@@ -112,6 +112,14 @@ async function main() {
       height: 36,
     },
     trafficLightPosition: { x: 12, y: 12 },
+    // Hidden-titlebar windows don't get Windows 11's automatic DWM corner
+    // rounding the way normally-framed windows do — request it explicitly.
+    // (No effect while the window is maximized; Windows squares off every
+    // app's corners then, same as Explorer/Chrome/VS Code.)
+    roundedCorners: true,
+    // Matches --background (light theme, globals.css) so the window doesn't
+    // flash white/black at the rounded-corner mask edges before first paint.
+    backgroundColor: "#ffffff",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

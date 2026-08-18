@@ -6,6 +6,8 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { useIsElectron } from "@/lib/hooks/use-is-electron"
+import { ELECTRON_TITLEBAR_HEIGHT } from "@/components/window-titlebar"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -41,17 +43,32 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  style,
   ...props
 }: SheetPrimitive.Popup.Props & {
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const isElectron = useIsElectron()
+  // Electron's window controls overlay lives in the top ELECTRON_TITLEBAR_HEIGHT
+  // strip (see WindowTitlebar). Any side that reaches the top edge (right/left
+  // full-height, or an explicit top sheet) must start below it — and, for the
+  // full-height sides, shrink by the same amount, or `bottom-0` + `height:100%`
+  // fight over the box's height and the bottom end overflows off-window,
+  // unreachable no matter how far the content scrolls.
+  const electronOffset =
+    isElectron && side !== "bottom"
+      ? side === "top"
+        ? { top: ELECTRON_TITLEBAR_HEIGHT }
+        : { top: ELECTRON_TITLEBAR_HEIGHT, height: `calc(100% - ${ELECTRON_TITLEBAR_HEIGHT})` }
+      : undefined
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}
+        style={{ ...electronOffset, ...style }}
         className={cn(
           "fixed z-50 flex flex-col bg-popover bg-clip-padding text-sm text-popover-foreground shadow-e4 transition-[transform,opacity] duration-300 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-full data-[side=left]:sm:w-3/4 data-[side=left]:data-ending-style:-translate-x-full data-[side=left]:data-starting-style:-translate-x-full data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-full data-[side=right]:sm:w-3/4 data-[side=right]:data-ending-style:translate-x-full data-[side=right]:data-starting-style:translate-x-full data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:-translate-y-full data-[side=top]:data-starting-style:-translate-y-full data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
           className
