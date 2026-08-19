@@ -87,8 +87,23 @@ function spawnServer({ standaloneDir, port, env }) {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  child.stdout.on("data", (chunk) => process.stdout.write(`[server] ${chunk}`));
-  child.stderr.on("data", (chunk) => process.stderr.write(`[server] ${chunk}`));
+  // Forward the server's output, but NEVER let a slow/full console
+  // backpressure the child: if Electron's own stdout is not being drained
+  // (packaged GUI launches have no console), naively piping these streams
+  // fills the OS pipe buffers and the Next server blocks on its first write
+  // to stdout — wedging the whole app. Drop chunks instead of blocking.
+  const forward = (stream, label) => {
+    let blocked = false;
+    stream.on("data", (chunk) => {
+      if (blocked) return;
+      blocked = !process.stdout.write(`${label} ${chunk}`);
+    });
+    process.stdout.on("drain", () => {
+      blocked = false;
+    });
+  };
+  forward(child.stdout, "[server]");
+  forward(child.stderr, "[server-err]");
 
   return child;
 }

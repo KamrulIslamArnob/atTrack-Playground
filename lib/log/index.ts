@@ -66,9 +66,20 @@ function devStream(): { write(line: string): void } {
 }
 
 function buildLogger(): Logger {
-  const streams: { stream: NodeJS.WritableStream | { write(s: string): void } }[] = [
-    { stream: IS_DEV ? devStream() : process.stdout },
-  ];
+  const streams: { stream: NodeJS.WritableStream | { write(s: string): void } }[] = [];
+
+  // stdout is a dev/terminal-only sink. Pino writes to multistream targets
+  // synchronously, and on Windows a pipe write to process.stdout BLOCKS when
+  // the pipe buffer is full. A packaged Electron app is a GUI process with no
+  // console draining its stdout, so once the buffer filled (every HTTP request
+  // emits one line) the next log write froze the entire server event loop —
+  // requests hung forever, which surfaced as "avatar upload never completes".
+  // The dated file sink below is the production log home; stdout only joins
+  // when something is actually there to read it (dev, or `next start` in a
+  // terminal).
+  if (IS_DEV || process.stdout.isTTY) {
+    streams.push({ stream: IS_DEV ? devStream() : process.stdout });
+  }
 
   // A read-only or full disk must not take the app down with it. Losing the
   // file sink is survivable; losing the process is not.

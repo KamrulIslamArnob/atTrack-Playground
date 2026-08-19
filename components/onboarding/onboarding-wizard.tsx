@@ -130,6 +130,10 @@ export function OnboardingWizard({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarJustUploaded, setAvatarJustUploaded] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  // Local data-URL copy of the picked file: kept so the circle can fall back
+  // to it if the served /api/files URL fails to load, instead of dropping to
+  // a blank initial (which read to users as "the upload never happened").
+  const avatarLocalPreviewRef = useRef<string | null>(null);
 
   const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -151,7 +155,12 @@ export function OnboardingWizard({
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setAvatarPreview(reader.result);
+        const dataUrl = reader.result;
+        avatarLocalPreviewRef.current = dataUrl;
+        // Don't clobber a server URL that already won the race.
+        setAvatarPreview((current) =>
+          current && current.startsWith("/api/files/") ? current : dataUrl
+        );
       }
     };
     reader.readAsDataURL(file);
@@ -468,7 +477,7 @@ export function OnboardingWizard({
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ type: "spring", stiffness: 300, damping: 15 }}
                           className="size-full object-cover"
-                          onError={() => setAvatarPreview(null)}
+                          onError={() => setAvatarPreview(avatarLocalPreviewRef.current)}
                         />
                       ) : (
                         <motion.span
