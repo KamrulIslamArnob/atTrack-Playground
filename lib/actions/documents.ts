@@ -332,7 +332,11 @@ export async function openDocumentFolder(id: string): Promise<void> {
   if (doc.file_path.startsWith("/")) {
     absPath = path.join(process.cwd(), "public", path.normalize(doc.file_path));
   } else if (!path.isAbsolute(absPath)) {
-    const storageDir = process.env.STORAGE_DIR ?? path.join(process.cwd(), ".data", "storage");
+    const storageDir =
+      process.env.STORAGE_DIR ??
+      (process.env.SQLITE_DIR
+        ? path.join(process.env.SQLITE_DIR, "storage")
+        : path.join(process.cwd(), ".data", "storage"));
     const candidateStoragePath = path.join(storageDir, doc.file_path);
     if (fs.existsSync(candidateStoragePath)) {
       absPath = candidateStoragePath;
@@ -342,9 +346,14 @@ export async function openDocumentFolder(id: string): Promise<void> {
   }
 
   absPath = path.normalize(absPath);
+  const allowedStorageDir =
+    process.env.STORAGE_DIR ??
+    (process.env.SQLITE_DIR
+      ? path.join(process.env.SQLITE_DIR, "storage")
+      : path.join(process.cwd(), ".data", "storage"));
   const allowedRoots = [
     path.normalize(path.join(process.cwd(), "public")),
-    path.normalize(process.env.STORAGE_DIR ?? path.join(process.cwd(), ".data", "storage")),
+    path.normalize(allowedStorageDir),
     path.normalize(process.cwd()),
   ];
   const isAllowed = allowedRoots.some((root) => absPath.startsWith(root));

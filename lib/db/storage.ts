@@ -16,10 +16,11 @@ import path from "node:path";
 //   avatar       public   -> served from /api/files without a token
 
 export function getStorageDir(): string {
-  return (
-    process.env.STORAGE_DIR ??
-    path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "storage")
-  );
+  if (process.env.STORAGE_DIR) {
+    return process.env.STORAGE_DIR;
+  }
+  const baseDataDir = process.env.SQLITE_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), ".data");
+  return path.join(baseDataDir, "storage");
 }
 
 import { getResolvedEncryptionKey } from "../encryption.ts";
