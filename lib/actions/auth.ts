@@ -60,28 +60,35 @@ export async function updateProfile(formData: FormData) {
   redirect("/settings?message=" + encodeURIComponent("Profile updated successfully."));
 }
 
-import sharp from "sharp";
-
 async function processAndOptimizeUserAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
-  const inputBuffer = Buffer.from(await file.arrayBuffer());
+  try {
+    const sharpModule = await import("sharp");
+    const sharp = sharpModule.default || sharpModule;
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
 
-  let quality = 85;
-  let outputBuffer = await sharp(inputBuffer)
-    .resize(400, 400, { fit: "cover", position: "center" })
-    .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
-    .webp({ quality, effort: 4 })
-    .toBuffer();
-
-  while (outputBuffer.length > 100 * 1024 && quality > 20) {
-    quality -= 10;
-    outputBuffer = await sharp(inputBuffer)
+    let quality = 85;
+    let outputBuffer = await sharp(inputBuffer)
       .resize(400, 400, { fit: "cover", position: "center" })
       .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
       .webp({ quality, effort: 4 })
       .toBuffer();
-  }
 
-  return { buffer: outputBuffer, format: "webp" };
+    while (outputBuffer.length > 100 * 1024 && quality > 20) {
+      quality -= 10;
+      outputBuffer = await sharp(inputBuffer)
+        .resize(400, 400, { fit: "cover", position: "center" })
+        .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
+        .webp({ quality, effort: 4 })
+        .toBuffer();
+    }
+
+    return { buffer: outputBuffer, format: "webp" };
+  } catch {
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const format = ext === "jpg" ? "jpeg" : ext;
+    return { buffer: inputBuffer, format };
+  }
 }
 
 export interface SaveAvatarResult {
@@ -95,79 +102,75 @@ export interface SaveAvatarResult {
  *  which redirects) and the onboarding wizard (which stays in its own modal
  *  and animates the result instead of navigating away). */
 export async function saveAvatar(formData: FormData): Promise<SaveAvatarResult> {
-  const { supabase, userId } = await getUser();
-
-  const file = formData.get("avatar") as File;
-
-  if (!file || file.size === 0) {
-    return { success: false, error: "No file selected." };
-  }
-
-  if (file.size > 500 * 1024) {
-    return { success: false, error: "File size must be less than 500KB." };
-  }
-
-  let processedBuffer: Buffer;
-  let format = "webp";
   try {
-    const processed = await processAndOptimizeUserAvatar(file);
-    processedBuffer = processed.buffer;
-    format = processed.format;
-  } catch {
-    processedBuffer = Buffer.from(await file.arrayBuffer());
-    const ext = (file.name.split(".").pop() || "png").toLowerCase();
-    format = ext === "jpg" ? "jpeg" : ext;
-  }
+    const { supabase, userId } = await getUser();
 
-  const filePath = `${userId}/avatar.${format}`;
+    const file = formData.get("avatar") as File;
 
-  // Clean up all previous avatar files for this user so only the latest one remains
-  try {
-    const { data: existingFiles } = await supabase.storage.from("avatar").list(userId);
-    if (existingFiles && existingFiles.length > 0) {
-      const toDelete = existingFiles
-        .map((f) => `${userId}/${f.name}`)
-        .filter((p) => p !== filePath);
-      if (toDelete.length > 0) {
-        await supabase.storage.from("avatar").remove(toDelete);
-      }
+    if (!file || file.size === 0) {
+      return { success: false, error: "No file selected." };
     }
-  } catch {
-    // Best-effort cleanup
+
+    if (file.size > 500 * 1024) {
+      return { success: false, error: "File size must be less than 500KB." };
+    }
+
+    const { buffer: processedBuffer, format } = await processAndOptimizeUserAvatar(file);
+    const filePath = `${userId}/avatar.${format}`;
+
+    // Clean up all previous avatar files for this user so only the latest one remains
+    try {
+      const { data: existingFiles } = await supabase.storage.from("avatar").list(userId);
+      if (existingFiles && existingFiles.length > 0) {
+        const toDelete = existingFiles
+          .map((f) => `${userId}/${f.name}`)
+          .filter((p) => p !== filePath);
+        if (toDelete.length > 0) {
+          await supabase.storage.from("avatar").remove(toDelete);
+        }
+      }
+    } catch {
+      // Best-effort cleanup
+    }
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatar")
+      .upload(filePath, processedBuffer, {
+        contentType: `image/${format}`,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      return { success: false, error: "Failed to upload avatar." };
+    }
+
+    const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(filePath);
+    const versionedAvatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .upsert({ id: userId, avatar_url: versionedAvatarUrl }, { onConflict: "id" });
+
+    if (updateError) {
+      return { success: false, error: "Failed to update profile with avatar." };
+    }
+
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath("/settings");
+      revalidatePath("/overview");
+    } catch {
+      // revalidatePath requires Next.js request context; fails in test environments.
+      // The core function still succeeds — cache invalidation is a nice-to-have.
+    }
+
+    return { success: true, avatarUrl: versionedAvatarUrl };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save avatar.",
+    };
   }
-
-  const { error: uploadError } = await supabase.storage
-    .from("avatar")
-    .upload(filePath, processedBuffer, {
-      contentType: `image/${format}`,
-      upsert: true,
-    });
-
-  if (uploadError) {
-    return { success: false, error: "Failed to upload avatar." };
-  }
-
-  const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(filePath);
-  const versionedAvatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .upsert({ id: userId, avatar_url: versionedAvatarUrl }, { onConflict: "id" });
-
-  if (updateError) {
-    return { success: false, error: "Failed to update profile with avatar." };
-  }
-
-  try {
-    revalidatePath("/", "layout");
-    revalidatePath("/settings");
-    revalidatePath("/overview");
-  } catch {
-    // revalidatePath requires Next.js request context; fails in test environments.
-    // The core function still succeeds — cache invalidation is a nice-to-have.
-  }
-
-  return { success: true, avatarUrl: versionedAvatarUrl };
 }
 
 export async function deleteAvatar(): Promise<{ success: boolean; error?: string }> {

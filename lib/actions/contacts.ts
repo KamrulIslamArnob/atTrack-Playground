@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
-import sharp from "sharp";
 import { moduleLogger } from "@/lib/log";
 import { requestId } from "@/lib/log/request";
 import { logActivity, logResourceActivity } from "./activity-log";
@@ -107,26 +106,35 @@ function extractStoragePath(publicUrl: string): string | null {
 }
 
 async function processAndOptimizeAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
-  const inputBuffer = Buffer.from(await file.arrayBuffer());
+  try {
+    const sharpModule = await import("sharp");
+    const sharp = sharpModule.default || sharpModule;
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
 
-  let quality = 85;
-  let outputBuffer = await sharp(inputBuffer)
-    .resize(400, 400, { fit: "cover", position: "center" })
-    .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
-    .webp({ quality, effort: 4 })
-    .toBuffer();
-
-  // Enforce strict size limit: guaranteed under 100 KB
-  while (outputBuffer.length > 100 * 1024 && quality > 20) {
-    quality -= 10;
-    outputBuffer = await sharp(inputBuffer)
+    let quality = 85;
+    let outputBuffer = await sharp(inputBuffer)
       .resize(400, 400, { fit: "cover", position: "center" })
       .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
       .webp({ quality, effort: 4 })
       .toBuffer();
-  }
 
-  return { buffer: outputBuffer, format: "webp" };
+    // Enforce strict size limit: guaranteed under 100 KB
+    while (outputBuffer.length > 100 * 1024 && quality > 20) {
+      quality -= 10;
+      outputBuffer = await sharp(inputBuffer)
+        .resize(400, 400, { fit: "cover", position: "center" })
+        .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
+        .webp({ quality, effort: 4 })
+        .toBuffer();
+    }
+
+    return { buffer: outputBuffer, format: "webp" };
+  } catch {
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const format = ext === "jpg" ? "jpeg" : ext;
+    return { buffer: inputBuffer, format };
+  }
 }
 
 export async function uploadContactAvatar(formData: FormData): Promise<string> {
