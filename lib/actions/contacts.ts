@@ -105,36 +105,15 @@ function extractStoragePath(publicUrl: string): string | null {
   }
 }
 
-async function processAndOptimizeAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
-  try {
-    const sharpModule = await import("sharp");
-    const sharp = sharpModule.default || sharpModule;
-    const inputBuffer = Buffer.from(await file.arrayBuffer());
-
-    let quality = 85;
-    let outputBuffer = await sharp(inputBuffer)
-      .resize(400, 400, { fit: "cover", position: "center" })
-      .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
-      .webp({ quality, effort: 4 })
-      .toBuffer();
-
-    // Enforce strict size limit: guaranteed under 100 KB
-    while (outputBuffer.length > 100 * 1024 && quality > 20) {
-      quality -= 10;
-      outputBuffer = await sharp(inputBuffer)
-        .resize(400, 400, { fit: "cover", position: "center" })
-        .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
-        .webp({ quality, effort: 4 })
-        .toBuffer();
-    }
-
-    return { buffer: outputBuffer, format: "webp" };
-  } catch {
-    const inputBuffer = Buffer.from(await file.arrayBuffer());
-    const ext = (file.name.split(".").pop() || "png").toLowerCase();
-    const format = ext === "jpg" ? "jpeg" : ext;
-    return { buffer: inputBuffer, format };
+async function processContactAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
+  const inputBuffer = Buffer.from(await file.arrayBuffer());
+  let ext = (file.name ? file.name.split(".").pop() : "") || "png";
+  ext = ext.toLowerCase().trim();
+  if (ext === "jpg") ext = "jpeg";
+  if (!["png", "jpeg", "webp", "gif", "svg"].includes(ext)) {
+    ext = "png";
   }
+  return { buffer: inputBuffer, format: ext };
 }
 
 export async function uploadContactAvatar(formData: FormData): Promise<string> {
@@ -149,7 +128,7 @@ export async function uploadContactAvatar(formData: FormData): Promise<string> {
   const oldAvatarUrl = (formData.get("old_avatar_url") as string) || "";
 
   const slug = generateContactAvatarSlug(name, companyName, role, email);
-  const { buffer: processedBuffer, format } = await processAndOptimizeAvatar(file);
+  const { buffer: processedBuffer, format } = await processContactAvatar(file);
   const newFilePath = `${userId}/contacts/${slug}.${format}`;
 
   // Delete the previous avatar file if it exists and is different from the new path,

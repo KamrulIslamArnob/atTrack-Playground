@@ -60,35 +60,15 @@ export async function updateProfile(formData: FormData) {
   redirect("/settings?message=" + encodeURIComponent("Profile updated successfully."));
 }
 
-async function processAndOptimizeUserAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
-  try {
-    const sharpModule = await import("sharp");
-    const sharp = sharpModule.default || sharpModule;
-    const inputBuffer = Buffer.from(await file.arrayBuffer());
-
-    let quality = 85;
-    let outputBuffer = await sharp(inputBuffer)
-      .resize(400, 400, { fit: "cover", position: "center" })
-      .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
-      .webp({ quality, effort: 4 })
-      .toBuffer();
-
-    while (outputBuffer.length > 100 * 1024 && quality > 20) {
-      quality -= 10;
-      outputBuffer = await sharp(inputBuffer)
-        .resize(400, 400, { fit: "cover", position: "center" })
-        .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
-        .webp({ quality, effort: 4 })
-        .toBuffer();
-    }
-
-    return { buffer: outputBuffer, format: "webp" };
-  } catch {
-    const inputBuffer = Buffer.from(await file.arrayBuffer());
-    const ext = (file.name.split(".").pop() || "png").toLowerCase();
-    const format = ext === "jpg" ? "jpeg" : ext;
-    return { buffer: inputBuffer, format };
+async function processUserAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
+  const inputBuffer = Buffer.from(await file.arrayBuffer());
+  let ext = (file.name ? file.name.split(".").pop() : "") || "png";
+  ext = ext.toLowerCase().trim();
+  if (ext === "jpg") ext = "jpeg";
+  if (!["png", "jpeg", "webp", "gif", "svg"].includes(ext)) {
+    ext = "png";
   }
+  return { buffer: inputBuffer, format: ext };
 }
 
 export interface SaveAvatarResult {
@@ -115,7 +95,7 @@ export async function saveAvatar(formData: FormData): Promise<SaveAvatarResult> 
       return { success: false, error: "File size must be less than 500KB." };
     }
 
-    const { buffer: processedBuffer, format } = await processAndOptimizeUserAvatar(file);
+    const { buffer: processedBuffer, format } = await processUserAvatar(file);
     const filePath = `${userId}/avatar.${format}`;
 
     // Clean up all previous avatar files for this user so only the latest one remains
