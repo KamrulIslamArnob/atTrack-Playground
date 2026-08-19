@@ -80,8 +80,36 @@ export function isPublicBucket(bucket: string): boolean {
   return PUBLIC_BUCKETS.has(bucket);
 }
 
-export async function readObject(bucket: string, key: string): Promise<Buffer> {
-  return readFile(objectPath(bucket, key));
+export async function readObject(
+  bucket: string,
+  key: string
+): Promise<{ buffer: Buffer; resolvedKey: string }> {
+  const primaryPath = objectPath(bucket, key);
+  try {
+    const buffer = await readFile(primaryPath);
+    return { buffer, resolvedKey: key };
+  } catch (err) {
+    if (bucket === "avatar") {
+      // Robust fallback: If specific extension wasn't found (e.g. url asked for .webp but on disk it is .png/.jpeg),
+      // search user's avatar directory for the existing avatar file.
+      try {
+        const dir = path.dirname(primaryPath);
+        const entries = await readdir(dir, { withFileTypes: true });
+        const match = entries.find((e) => e.isFile() && e.name.startsWith("avatar."));
+        if (match) {
+          const fallbackPath = path.join(dir, match.name);
+          const buffer = await readFile(fallbackPath);
+          const normalizedKey = key.replace(/\\/g, "/");
+          const segments = normalizedKey.split("/");
+          segments[segments.length - 1] = match.name;
+          return { buffer, resolvedKey: segments.join("/") };
+        }
+      } catch {
+        // pass through
+      }
+    }
+    throw err;
+  }
 }
 
 async function toBuffer(body: unknown): Promise<Buffer> {
@@ -136,7 +164,7 @@ function bucketApi(bucket: string) {
 
     async download(key: string): Promise<{ data: Blob; error: StorageError | null }> {
       try {
-        const buf = await readObject(bucket, key);
+        const { buffer: buf } = await readObject(bucket, key);
         // Callers do `await data.arrayBuffer()`, which Blob provides.
         return { data: new Blob([new Uint8Array(buf)]), error: null };
       } catch (err) {

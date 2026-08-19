@@ -83,11 +83,12 @@ export const GET = withRoute("/api/files/[bucket]/[...key]", async (
   }
 
   try {
-    const buf = await readObject(bucket, key);
-    return new Response(new Uint8Array(buf), {
+    const { buffer: buf, resolvedKey } = await readObject(bucket, key);
+    return new Response(new Blob([new Uint8Array(buf)]), {
+      status: 200,
       headers: {
-        "Content-Type": contentTypeFor(key),
-        "Content-Length": String(buf.byteLength),
+        "Content-Type": contentTypeFor(resolvedKey),
+        "Content-Length": String(buf.length),
         "Cache-Control": isPublicBucket(bucket)
           ? "public, max-age=0, must-revalidate"
           : "private, no-store",

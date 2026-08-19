@@ -36,34 +36,60 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
     : "U";
 
   const validateFile = (file: File): boolean => {
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, GIF, or WebP image");
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const validExts = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
+    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+      toast.error("Please select a JPG, PNG, GIF, WebP, or SVG image");
       return false;
     }
-    if (file.size > 500 * 1024) {
-      toast.error("File size must be less than 500KB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
       return false;
     }
     return true;
   };
 
-  const handleFile = useCallback((file: File) => {
-    if (validateFile(file)) {
-      setSelectedFile(file);
-      setImageError(false);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const uploadFile = useCallback(async (file: File) => {
+    if (!validateFile(file)) return;
+
+    // Instant local preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    setIsUploading(true);
+    setImageError(false);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const result = await saveAvatar(formData);
+      if (result.success && result.avatarUrl) {
+        toast.success("Profile photo updated");
+        setCurrentAvatarUrl(result.avatarUrl);
+        setPreview(null);
+        setSelectedFile(null);
+        setImageError(false);
+        window.dispatchEvent(new CustomEvent("avatar-updated", { detail: result.avatarUrl }));
+        router.refresh();
+      } else {
+        toast.error(result.error ?? "Failed to upload avatar.");
+        setPreview(null);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar.");
+      setPreview(null);
+    } finally {
+      setIsUploading(false);
     }
-  }, []);
+  }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFile(file);
+      uploadFile(file);
       setDialogOpen(false);
     }
   };
@@ -83,45 +109,10 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
     setIsDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleFile(file);
+      uploadFile(file);
       setDialogOpen(false);
     }
-  }, [handleFile]);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedFile) return;
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("avatar", selectedFile);
-      const result = await saveAvatar(formData);
-      if (result.success && result.avatarUrl) {
-        toast.success("Profile photo updated");
-        setCurrentAvatarUrl(result.avatarUrl);
-        setPreview(null);
-        setSelectedFile(null);
-        setImageError(false);
-        window.dispatchEvent(new CustomEvent("avatar-updated", { detail: result.avatarUrl }));
-        router.refresh();
-      } else {
-        toast.error(result.error ?? "Failed to upload avatar.");
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to upload avatar.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleCancelPreview = () => {
-    setPreview(null);
-    setSelectedFile(null);
-    setImageError(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  }, [uploadFile]);
 
   const handleDeleteAvatar = async () => {
     setIsDeleting(true);
@@ -149,7 +140,7 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-6">
           <div className="relative">
             {displayUrl ? (
@@ -164,10 +155,18 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
                 {initials}
               </div>
             )}
+
+            {isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs">
+                <Loader2 className="size-6 animate-spin" />
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => setDialogOpen(true)}
-              className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full bg-card text-foreground ring-2 ring-background transition-colors hover:bg-muted"
+              disabled={isUploading}
+              className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full bg-card text-foreground ring-2 ring-background transition-colors hover:bg-muted disabled:opacity-50"
             >
               <Camera className="size-4" />
             </button>
@@ -176,59 +175,35 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
           <div>
             <p className="text-sm font-medium">Profile photo</p>
             <p className="text-xs text-muted-foreground">
-              JPG, PNG, GIF or WebP. Max 500KB.
+              JPG, PNG, GIF, WebP or SVG. Max 5MB.
             </p>
-            {preview && (
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isUploading ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Camera className="size-4" />
-                  )}
-                  Save avatar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelPreview}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {!preview && (
-          <div className="flex items-center gap-2">
-            {currentAvatarUrl && (
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDeleteAvatar}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                title="Remove photo"
-              >
-                {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-                Remove
-              </button>
-            )}
+        <div className="flex items-center gap-2">
+          {currentAvatarUrl && (
             <button
               type="button"
-              onClick={() => setDialogOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              disabled={isDeleting || isUploading}
+              onClick={handleDeleteAvatar}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              title="Remove photo"
             >
-              <UploadIcon className="size-4" />
-              Upload
+              {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              Remove
             </button>
-          </div>
-        )}
-      </form>
+          )}
+          <button
+            type="button"
+            disabled={isUploading}
+            onClick={() => setDialogOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {isUploading ? <Loader2 className="size-4 animate-spin" /> : <UploadIcon className="size-4" />}
+            Upload
+          </button>
+        </div>
+      </div>
 
       <input
         ref={fileInputRef}

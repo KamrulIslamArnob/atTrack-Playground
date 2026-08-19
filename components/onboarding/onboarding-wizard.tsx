@@ -135,13 +135,15 @@ export function OnboardingWizard({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, GIF, or WebP image");
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const validExts = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
+    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+      toast.error("Please select a JPG, PNG, GIF, WebP, or SVG image");
       return;
     }
-    if (file.size > 500 * 1024) {
-      toast.error("File size must be less than 500KB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
       return;
     }
 

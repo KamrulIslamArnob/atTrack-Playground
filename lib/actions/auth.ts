@@ -91,8 +91,8 @@ export async function saveAvatar(formData: FormData): Promise<SaveAvatarResult> 
       return { success: false, error: "No file selected." };
     }
 
-    if (file.size > 500 * 1024) {
-      return { success: false, error: "File size must be less than 500KB." };
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: "File size must be less than 5MB." };
     }
 
     const { buffer: processedBuffer, format } = await processUserAvatar(file);

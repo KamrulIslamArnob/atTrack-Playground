@@ -58,16 +58,6 @@ for (const name of vecPackages) {
   });
 }
 
-// Copy sharp and @img native modules for image optimization in standalone server
-const imgDir = path.join(nodeModules, "@img");
-if (existsSync(imgDir)) {
-  cpSync(imgDir, path.join(standalone, "node_modules", "@img"), { recursive: true });
-}
-const sharpDir = path.join(nodeModules, "sharp");
-if (existsSync(sharpDir)) {
-  cpSync(sharpDir, path.join(standalone, "node_modules", "sharp"), { recursive: true });
-}
-
 console.log(
-  `Built standalone server and copied .next/static, public/, @img, sharp, and ${vecPackages.join(", ")} into it`
+  `Built standalone server and copied .next/static, public/, and ${vecPackages.join(", ")} into it`
 );

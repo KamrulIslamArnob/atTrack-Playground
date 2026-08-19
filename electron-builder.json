@@ -55,7 +55,8 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "artifactName": "AtTrack-Setup-${version}-win.exe"
+    "artifactName": "AtTrack-Setup-${version}-win.exe",
+    "include": "build/installer.nsh"
   },
   "dmg": {
     "sign": false,
