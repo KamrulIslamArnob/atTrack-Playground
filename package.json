@@ -11,7 +11,7 @@
   "private": true,
   "main": "electron/main.js",
   "scripts": {
-    "dev": "next dev -p 3308",
+    "dev": "next dev -p 3788",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

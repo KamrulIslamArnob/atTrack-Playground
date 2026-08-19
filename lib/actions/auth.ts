@@ -60,6 +60,30 @@ export async function updateProfile(formData: FormData) {
   redirect("/settings?message=" + encodeURIComponent("Profile updated successfully."));
 }
 
+import sharp from "sharp";
+
+async function processAndOptimizeUserAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
+  const inputBuffer = Buffer.from(await file.arrayBuffer());
+
+  let quality = 85;
+  let outputBuffer = await sharp(inputBuffer)
+    .resize(400, 400, { fit: "cover", position: "center" })
+    .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
+    .webp({ quality, effort: 4 })
+    .toBuffer();
+
+  while (outputBuffer.length > 100 * 1024 && quality > 20) {
+    quality -= 10;
+    outputBuffer = await sharp(inputBuffer)
+      .resize(400, 400, { fit: "cover", position: "center" })
+      .sharpen({ sigma: 1.0, m1: 0.5, m2: 2.0 })
+      .webp({ quality, effort: 4 })
+      .toBuffer();
+  }
+
+  return { buffer: outputBuffer, format: "webp" };
+}
+
 export interface SaveAvatarResult {
   success: boolean;
   avatarUrl?: string;
@@ -83,22 +107,52 @@ export async function saveAvatar(formData: FormData): Promise<SaveAvatarResult> 
     return { success: false, error: "File size must be less than 500KB." };
   }
 
-  const fileExt = file.name.split(".").pop();
-  const filePath = `${userId}/avatar.${fileExt}`;
+  let processedBuffer: Buffer;
+  let format = "webp";
+  try {
+    const processed = await processAndOptimizeUserAvatar(file);
+    processedBuffer = processed.buffer;
+    format = processed.format;
+  } catch {
+    processedBuffer = Buffer.from(await file.arrayBuffer());
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    format = ext === "jpg" ? "jpeg" : ext;
+  }
+
+  const filePath = `${userId}/avatar.${format}`;
+
+  // Clean up all previous avatar files for this user so only the latest one remains
+  try {
+    const { data: existingFiles } = await supabase.storage.from("avatar").list(userId);
+    if (existingFiles && existingFiles.length > 0) {
+      const toDelete = existingFiles
+        .map((f) => `${userId}/${f.name}`)
+        .filter((p) => p !== filePath);
+      if (toDelete.length > 0) {
+        await supabase.storage.from("avatar").remove(toDelete);
+      }
+    }
+  } catch {
+    // Best-effort cleanup
+  }
 
   const { error: uploadError } = await supabase.storage
     .from("avatar")
-    .upload(filePath, file, { upsert: true });
+    .upload(filePath, processedBuffer, {
+      contentType: `image/${format}`,
+      upsert: true,
+    });
 
   if (uploadError) {
     return { success: false, error: "Failed to upload avatar." };
   }
 
   const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(filePath);
+  const versionedAvatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
 
   const { error: updateError } = await supabase
     .from("profiles")
-    .upsert({ id: userId, avatar_url: urlData.publicUrl }, { onConflict: "id" });
+    .upsert({ id: userId, avatar_url: versionedAvatarUrl }, { onConflict: "id" });
 
   if (updateError) {
     return { success: false, error: "Failed to update profile with avatar." };
@@ -113,7 +167,32 @@ export async function saveAvatar(formData: FormData): Promise<SaveAvatarResult> 
     // The core function still succeeds — cache invalidation is a nice-to-have.
   }
 
-  return { success: true, avatarUrl: urlData.publicUrl };
+  return { success: true, avatarUrl: versionedAvatarUrl };
+}
+
+export async function deleteAvatar(): Promise<{ success: boolean; error?: string }> {
+  const { supabase, userId } = await getUser();
+
+  try {
+    const { data: existingFiles } = await supabase.storage.from("avatar").list(userId);
+    if (existingFiles && existingFiles.length > 0) {
+      const toDelete = existingFiles.map((f) => `${userId}/${f.name}`);
+      await supabase.storage.from("avatar").remove(toDelete);
+    }
+  } catch {}
+
+  await supabase
+    .from("profiles")
+    .update({ avatar_url: null })
+    .eq("id", userId);
+
+  try {
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    revalidatePath("/overview");
+  } catch {}
+
+  return { success: true };
 }
 
 export async function uploadAvatar(formData: FormData) {

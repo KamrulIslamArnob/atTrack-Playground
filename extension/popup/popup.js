@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const firecrawlKeyInput = document.getElementById("firecrawlKeyInput");
   const secretInput = document.getElementById("secretInput");
 
-  let currentServerUrl = "http://127.0.0.1:3308";
+  let currentServerUrl = "http://127.0.0.1:3788";
   let currentFirecrawlKey = "";
   let activeSkills = [];
   let activeContact = null;

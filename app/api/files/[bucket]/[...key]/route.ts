@@ -35,10 +35,17 @@ function contentTypeFor(key: string): string {
 // `nextUrl.searchParams`, which `new URL(request.url)` gives identically.
 export const GET = withRoute("/api/files/[bucket]/[...key]", async (
   request: Request,
-  context: { params: Promise<{ bucket: string; key: string[] }> }
+  context: { params: Promise<{ bucket: string; key: string[] | string }> }
 ) => {
-  const { bucket, key: segments } = await context.params;
-  const key = segments.map(decodeURIComponent).join("/");
+  const { bucket, key: rawSegments } = await context.params;
+  const segments = Array.isArray(rawSegments)
+    ? rawSegments
+    : typeof rawSegments === "string"
+    ? [rawSegments]
+    : [];
+
+  const rawKey = segments.map(decodeURIComponent).join("/");
+  const key = rawKey.replace(/^\/+/, "");
 
   // Reject traversal before the value reaches the filesystem layer.
   if (!key || key.includes("..")) {
@@ -73,12 +80,12 @@ export const GET = withRoute("/api/files/[bucket]/[...key]", async (
 
   try {
     const buf = await readObject(bucket, key);
-    return new NextResponse(new Uint8Array(buf), {
+    return new Response(new Uint8Array(buf), {
       headers: {
         "Content-Type": contentTypeFor(key),
         "Content-Length": String(buf.byteLength),
         "Cache-Control": isPublicBucket(bucket)
-          ? "public, max-age=3600"
+          ? "public, max-age=0, must-revalidate"
           : "private, no-store",
       },
     });

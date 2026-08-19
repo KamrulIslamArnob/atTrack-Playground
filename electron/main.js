@@ -5,6 +5,7 @@ const os = require("node:os");
 const { loadSettings, saveSettings } = require("./settings");
 const { findPreferredPort, waitForReady, spawnServer, stopServer } = require("./server");
 const { createTray } = require("./tray");
+const { ensureSanitizedDataDir, resolveNestedDataDir } = require("./data-dir");
 
 // Determines %APPDATA%\AtTrack (userData) instead of %APPDATA%\Electron/whatever the
 // packaged exe's internal name is — must be called before any app.getPath() use.
@@ -178,6 +179,14 @@ async function main() {
     }
     settings.dataDir = chosen;
     currentSettings = settings;
+  } else {
+    // Sanitize and nest existing data directory if needed, auto-migrating any loose files
+    const sanitized = ensureSanitizedDataDir(settings.dataDir);
+    if (sanitized && sanitized !== settings.dataDir) {
+      settings.dataDir = sanitized;
+      currentSettings = settings;
+      saveSettings(settings);
+    }
   }
 
   if (!settings.encryptionKey) {
@@ -197,8 +206,8 @@ async function main() {
   // — makes the app's address predictable across relaunches so the Chrome
   // extension can find it automatically instead of the user reading a random
   // port out of Settings and retyping it every time the app restarts.
-  const preferred = settings.lastPort || 3308;
-  const port = await findPreferredPort([preferred, 3308, 3309, 3310, 3311, 3312]);
+  const preferred = settings.lastPort || 3788;
+  const port = await findPreferredPort([preferred, 3788, 3789, 3790, 3791, 3792]);
   currentPort = port;
   settings.lastPort = port;
 
@@ -290,8 +299,8 @@ async function main() {
     return {
       startAtLogin: currentSettings?.startAtLogin ?? loginItem.openAtLogin ?? false,
       closeToTray: currentSettings?.closeToTray ?? true,
-      port: currentPort || 3308,
-      serverUrl: `http://127.0.0.1:${currentPort || 3308}`,
+      port: currentPort || 3788,
+      serverUrl: `http://127.0.0.1:${currentPort || 3788}`,
       isPackaged,
     };
   });
@@ -310,8 +319,8 @@ async function main() {
     return {
       startAtLogin: currentSettings.startAtLogin,
       closeToTray: currentSettings.closeToTray,
-      port: currentPort || 3308,
-      serverUrl: `http://127.0.0.1:${currentPort || 3308}`,
+      port: currentPort || 3788,
+      serverUrl: `http://127.0.0.1:${currentPort || 3788}`,
       isPackaged: app.isPackaged,
     };
   });
@@ -380,8 +389,8 @@ async function main() {
         storageDir: "[Storage Directory]",
       },
       network: {
-        port: currentPort || 3308,
-        serverUrl: `http://127.0.0.1:${currentPort || 3308}`,
+        port: currentPort || 3788,
+        serverUrl: `http://127.0.0.1:${currentPort || 3788}`,
         host: "127.0.0.1",
         isOnline: true,
         dbStatus: "Connected",
@@ -462,14 +471,18 @@ function setupAutoUpdater() {
 }
 
 async function promptForDataDir() {
+  const defaultDir = app.isPackaged
+    ? path.join(path.dirname(app.getPath("exe")), "data")
+    : path.join(app.getPath("documents"), "atTrack");
+
   const { canceled, filePaths } = await dialog.showOpenDialog({
     title: "Choose a folder for atTrack data",
-    defaultPath: path.join(app.getPath("documents"), "atTrack"),
+    defaultPath: defaultDir,
     properties: ["openDirectory", "createDirectory"],
     buttonLabel: "Use this folder",
   });
   if (canceled || !filePaths[0]) return null;
-  return filePaths[0];
+  return ensureSanitizedDataDir(filePaths[0]) || filePaths[0];
 }
 
 function promptForGeminiKey() {

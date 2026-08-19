@@ -1,14 +1,21 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { ThemeLogo } from "@/components/ui/theme-logo";
 import { completeOnboarding } from "@/lib/actions/onboarding";
-import { testProviderConnection } from "@/lib/actions/ai-providers";
+import { testProviderConnection, fetchProviderModels, type FetchedModel } from "@/lib/actions/ai-providers";
 import { saveAvatar } from "@/lib/actions/auth";
 import { extractTextFromPDF } from "@/lib/utils/pdf-extract";
-import type { ProviderType } from "@/lib/types/ai-providers";
+import {
+  ALL_AI_PRESETS,
+  AI_PRESET_CATEGORIES,
+  type AiPreset,
+  type PresetCategory,
+  type ProviderType,
+} from "@/lib/types/ai-providers";
+import { Badge } from "@/components/ui/badge";
 import {
   User,
   Briefcase,
@@ -17,6 +24,7 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Upload,
   Bot,
   Layers,
@@ -25,6 +33,9 @@ import {
   Loader2,
   AlertCircle,
   Camera,
+  Search,
+  RefreshCw,
+  Plug,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,82 +44,17 @@ interface OnboardingWizardProps {
   isOpen: boolean;
   profileName?: string | null;
   userEmail?: string | null;
+  initialAvatarUrl?: string | null;
   onFinished?: () => void;
 }
 
 type Step = 1 | 2 | 3 | 4;
 
-const AI_PRESETS: {
-  id: string;
-  name: string;
-  providerType: ProviderType;
-  defaultModel: string;
-  defaultBaseUrl?: string;
-  badge?: string;
-  placeholder: string;
-  helpUrl: string;
-}[] = [
-  {
-    id: "gemini",
-    name: "Google Gemini",
-    providerType: "gemini",
-    defaultModel: "gemini-2.5-flash",
-    badge: "Free tier",
-    placeholder: "AIzaSy...",
-    helpUrl: "https://aistudio.google.com/app/apikey",
-  },
-  {
-    id: "anthropic",
-    name: "Anthropic Claude",
-    providerType: "anthropic",
-    defaultModel: "claude-3-5-sonnet-20241022",
-    placeholder: "sk-ant-...",
-    helpUrl: "https://console.anthropic.com/settings/keys",
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    providerType: "openai_compatible",
-    defaultModel: "gpt-4o-mini",
-    defaultBaseUrl: "https://api.openai.com/v1",
-    placeholder: "sk-...",
-    helpUrl: "https://platform.openai.com/api-keys",
-  },
-  {
-    id: "ollama",
-    name: "Local / Ollama",
-    providerType: "openai_compatible",
-    defaultModel: "llama3.2:latest",
-    defaultBaseUrl: "http://127.0.0.1:11434/v1",
-    badge: "Local",
-    placeholder: "ollama (optional)",
-    helpUrl: "https://ollama.com",
-  },
-  {
-    id: "custom",
-    name: "Custom Endpoint",
-    providerType: "openai_compatible",
-    defaultModel: "deepseek-chat",
-    defaultBaseUrl: "https://api.deepseek.com/v1",
-    badge: "Custom API",
-    placeholder: "sk-...",
-    helpUrl: "https://openrouter.ai",
-  },
-];
-
-const CUSTOM_ENDPOINT_PRESETS = [
-  { label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat" },
-  { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct" },
-  { label: "Groq", baseUrl: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile" },
-  { label: "Together AI", baseUrl: "https://api.together.xyz/v1", model: "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
-  { label: "LM Studio", baseUrl: "http://localhost:1234/v1", model: "local-model" },
-  { label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini" },
-] as const;
-
 export function OnboardingWizard({
   isOpen,
   profileName,
   userEmail,
+  initialAvatarUrl,
   onFinished,
 }: OnboardingWizardProps) {
   const router = useRouter();
@@ -134,19 +80,38 @@ export function OnboardingWizard({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3: AI Engine (BYOK & Custom Endpoints)
+  const [selectedCategory, setSelectedCategory] = useState<PresetCategory>("major");
   const [selectedPresetId, setSelectedPresetId] = useState<string>("gemini");
   const [apiKey, setApiKey] = useState("");
-  const [customModel, setCustomModel] = useState("");
-  const [baseUrl, setBaseUrl] = useState("http://127.0.0.1:11434/v1");
-  const [customProviderName, setCustomProviderName] = useState("");
+  const [customModel, setCustomModel] = useState("gemini-2.5-flash");
+  const [baseUrl, setBaseUrl] = useState("");
   const [testingKey, setTestingKey] = useState(false);
   const [keyVerified, setKeyVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
+  // Dynamic model fetching state
+  const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [modelSearch, setModelSearch] = useState("");
+  const [onlyFreeModels, setOnlyFreeModels] = useState(false);
+  const modelPickerRef = useRef<HTMLDivElement>(null);
+
   // Step 4: First Try / Seed Data
   const [seedDemoData, setSeedDemoData] = useState(true);
 
-  const selectedPreset = AI_PRESETS.find((p) => p.id === selectedPresetId) ?? AI_PRESETS[0];
+  const selectedPreset: AiPreset =
+    ALL_AI_PRESETS.find((p) => p.id === selectedPresetId) ?? ALL_AI_PRESETS[0];
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (modelPickerRef.current && !modelPickerRef.current.contains(e.target as Node)) {
+        setShowModelPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const isValidEmailFormat = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -161,7 +126,7 @@ export function OnboardingWizard({
   };
   const isStep1Valid = !step1Errors.fullName && !step1Errors.email && !step1Errors.targetRole;
 
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialAvatarUrl || null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarJustUploaded, setAvatarJustUploaded] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -170,9 +135,9 @@ export function OnboardingWizard({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ["image/jpeg", "image/png", "image/gif"];
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!validTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, or GIF image");
+      toast.error("Please select a JPG, PNG, GIF, or WebP image");
       return;
     }
     if (file.size > 500 * 1024) {
@@ -180,13 +145,22 @@ export function OnboardingWizard({
       return;
     }
 
+    // Instant local preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatarPreview(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+
     setAvatarUploading(true);
     try {
       const formData = new FormData();
       formData.append("avatar", file);
       const result = await saveAvatar(formData);
       if (result.success && result.avatarUrl) {
-        setAvatarPreview(`${result.avatarUrl}?t=${Date.now()}`);
+        setAvatarPreview(result.avatarUrl);
         setAvatarJustUploaded(true);
         setTimeout(() => setAvatarJustUploaded(false), 700);
       } else {
@@ -233,13 +207,54 @@ export function OnboardingWizard({
     }
   };
 
+  const isLocalEndpoint =
+    selectedPreset.isLocal ||
+    baseUrl.includes("localhost") ||
+    baseUrl.includes("127.0.0.1") ||
+    baseUrl.includes("0.0.0.0") ||
+    baseUrl.includes("11434") ||
+    baseUrl.includes("1234");
+
+  const handleSelectPreset = (preset: AiPreset) => {
+    setSelectedPresetId(preset.id);
+    setKeyVerified(null);
+    setVerifyError(null);
+    setFetchedModels([]);
+    setShowModelPicker(false);
+    setBaseUrl(preset.defaultBaseUrl || (preset.providerType === "openai_compatible" ? "https://api.openai.com/v1" : ""));
+    setCustomModel(preset.defaultModel);
+  };
+
+  const handleFetchModels = async () => {
+    setIsFetchingModels(true);
+    try {
+      const res = await fetchProviderModels({
+        provider_type: selectedPreset.providerType,
+        base_url: selectedPreset.providerType === "openai_compatible" ? (baseUrl || selectedPreset.defaultBaseUrl) : undefined,
+        api_key: apiKey.trim() || (isLocalEndpoint ? "local" : undefined),
+      });
+
+      if (res.models && res.models.length > 0) {
+        setFetchedModels(res.models);
+        setShowModelPicker(true);
+        const freeCount = res.models.filter((m) => m.isFree).length;
+        if (freeCount > 0) {
+          toast.success(`Fetched ${res.models.length} models (${freeCount} free)`);
+        } else {
+          toast.success(`Fetched ${res.models.length} models`);
+        }
+      } else {
+        toast.error(res.error || "Could not fetch models.");
+      }
+    } catch {
+      toast.error("Could not fetch models.");
+    } finally {
+      setIsFetchingModels(false);
+    }
+  };
+
   const handleTestApiKey = async () => {
     const key = apiKey.trim();
-    const isLocalEndpoint =
-      selectedPreset.id === "ollama" ||
-      baseUrl.includes("localhost") ||
-      baseUrl.includes("127.0.0.1") ||
-      baseUrl.includes("0.0.0.0");
 
     if (!key && !isLocalEndpoint && selectedPreset.providerType !== "gemini") {
       toast.error("Enter an API key to test");
@@ -259,7 +274,7 @@ export function OnboardingWizard({
       const res = await testProviderConnection({
         provider_type: selectedPreset.providerType,
         model: modelToTest,
-        api_key: key || (isLocalEndpoint ? "ollama" : "dummy-key"),
+        api_key: key || (isLocalEndpoint ? "local" : undefined),
         base_url: urlToTest,
       });
 
@@ -267,8 +282,8 @@ export function OnboardingWizard({
         setKeyVerified(true);
         toast.success(
           res.latencyMs
-            ? `AI connection verified (${res.latencyMs}ms)`
-            : "AI connection verified successfully"
+            ? `Connection verified (${res.latencyMs}ms)`
+            : "Connection verified successfully"
         );
       } else {
         setKeyVerified(false);
@@ -288,25 +303,17 @@ export function OnboardingWizard({
   const handleFinish = async () => {
     setSubmitting(true);
     try {
-      const isLocalEndpoint =
-        selectedPreset.id === "ollama" ||
-        baseUrl.includes("localhost") ||
-        baseUrl.includes("127.0.0.1") ||
-        baseUrl.includes("0.0.0.0");
-
       const hasAi =
         Boolean(apiKey.trim()) ||
         isLocalEndpoint ||
-        (selectedPreset.id === "custom" && Boolean(baseUrl.trim()));
+        selectedPreset.providerType === "gemini" ||
+        Boolean(baseUrl.trim());
 
       const aiPayload = hasAi
         ? {
-            name:
-              selectedPreset.id === "custom"
-                ? (customProviderName.trim() || "Custom AI Endpoint")
-                : selectedPreset.name,
+            name: selectedPreset.name,
             providerType: selectedPreset.providerType,
-            apiKey: apiKey.trim() || (isLocalEndpoint ? "ollama" : "custom"),
+            apiKey: apiKey.trim() || (isLocalEndpoint ? "local" : ""),
             model: customModel.trim() || selectedPreset.defaultModel,
             baseUrl:
               selectedPreset.providerType === "openai_compatible"
@@ -459,6 +466,7 @@ export function OnboardingWizard({
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ type: "spring", stiffness: 300, damping: 15 }}
                           className="size-full object-cover"
+                          onError={() => setAvatarPreview(null)}
                         />
                       ) : (
                         <motion.span
@@ -496,14 +504,14 @@ export function OnboardingWizard({
                   <input
                     ref={avatarInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/gif"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
                     className="hidden"
                     onChange={handleAvatarSelect}
                   />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-foreground">Profile photo</p>
-                  <p className="text-[11px] text-muted-foreground">Optional — JPG, PNG or GIF, max 500KB</p>
+                  <p className="text-[11px] text-muted-foreground">Optional — JPG, PNG, GIF or WebP, max 500KB</p>
                 </div>
               </div>
 
@@ -690,58 +698,60 @@ export function OnboardingWizard({
               <div>
                 <h3 className="font-heading text-lg font-semibold tracking-tight">Connect AI engine</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Bring your own API key or connect custom API endpoints (OpenRouter, DeepSeek, Groq, Ollama, local models). Keys stay encrypted locally.
+                  Bring your own API key or connect custom API endpoints (OpenAI, Gemini, Claude, Groq, Ollama, DeepSeek, OpenRouter). Keys stay encrypted locally.
                 </p>
               </div>
 
-              {/* Provider Selection Cards */}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                {AI_PRESETS.map((p) => {
+              {/* Category Selector Tabs */}
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-border/60 pb-2">
+                {AI_PRESET_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      selectedCategory === cat.id
+                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Provider Selection Cards for Active Category */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {ALL_AI_PRESETS.filter((p) => p.category === selectedCategory).map((p) => {
                   const isSelected = selectedPresetId === p.id;
                   return (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedPresetId(p.id);
-                        setKeyVerified(null);
-                        setVerifyError(null);
-                        if (p.id === "ollama") {
-                          setBaseUrl("http://127.0.0.1:11434/v1");
-                          setCustomModel("llama3.2:latest");
-                        } else if (p.id === "custom") {
-                          if (!baseUrl || baseUrl.includes("11434")) {
-                            setBaseUrl("https://api.deepseek.com/v1");
-                            setCustomModel("deepseek-chat");
-                          }
-                        } else if (p.defaultBaseUrl) {
-                          setBaseUrl(p.defaultBaseUrl);
-                          setCustomModel(p.defaultModel);
-                        }
-                      }}
-                      className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      onClick={() => handleSelectPreset(p)}
+                      className={`flex flex-col items-start gap-0.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                         isSelected
                           ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
                           : "border-border bg-card text-foreground hover:bg-muted/40"
                       }`}
                     >
                       <span className="flex w-full items-start justify-between gap-1.5">
-                        <span className="line-clamp-2 break-words text-xs font-semibold leading-tight">
+                        <span className="truncate text-xs font-semibold leading-tight">
                           {p.name}
                         </span>
                         {p.badge && (
                           <span
-                            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium leading-none ${
-                              p.badge === "Free tier"
-                                ? "border-success-border bg-success-surface text-success"
-                                : "border-info-border bg-info-surface text-info"
+                            className={`shrink-0 rounded-full border px-1.5 py-0.2 text-[9px] font-medium leading-none ${
+                              p.badge === "Free tier" || p.badge === "Local"
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : "border-border bg-muted text-muted-foreground"
                             }`}
                           >
                             {p.badge}
                           </span>
                         )}
                       </span>
-                      <span className="line-clamp-2 w-full break-words text-[10px] leading-tight text-muted-foreground">
+                      <span className="truncate w-full text-[10px] leading-tight text-muted-foreground font-mono">
                         {p.defaultModel}
                       </span>
                     </button>
@@ -749,218 +759,199 @@ export function OnboardingWizard({
                 })}
               </div>
 
-              {/* Configuration Form */}
+              {/* Configuration Form in Exact Sequence */}
               <div className="space-y-3 pt-1">
-                {selectedPreset.id === "custom" && (
-                  <div className="space-y-3">
-                    {/* Quick Presets */}
-                    <div>
-                      <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">
-                        Quick Presets:
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {CUSTOM_ENDPOINT_PRESETS.map((cp) => (
+                {/* 1. API Key (optional for local endpoints) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-foreground">
+                      API Key {isLocalEndpoint && <span className="text-muted-foreground font-normal">(Optional for local endpoints)</span>}
+                    </label>
+                    {selectedPreset.helpUrl && (
+                      <a
+                        href={selectedPreset.helpUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Get an API key</span>
+                        <ChevronRight className="size-3" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value);
+                        setKeyVerified(null);
+                        setVerifyError(null);
+                      }}
+                      placeholder={isLocalEndpoint ? "local (optional)" : selectedPreset.placeholder}
+                      className="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestApiKey}
+                      disabled={testingKey}
+                      className="h-9 px-3 text-xs font-semibold rounded-lg border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                    >
+                      {testingKey ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : keyVerified ? (
+                        <Check className="size-3.5 text-emerald-500" />
+                      ) : (
+                        <Plug className="size-3.5" />
+                      )}
+                      <span>{testingKey ? "Testing..." : keyVerified ? "Verified" : "Test"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Base URL / API Endpoint */}
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Base URL / API Endpoint {selectedPreset.providerType === "openai_compatible" && <span className="text-destructive">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => {
+                      setBaseUrl(e.target.value);
+                      setKeyVerified(null);
+                      setVerifyError(null);
+                      setFetchedModels([]);
+                      setShowModelPicker(false);
+                    }}
+                    placeholder={selectedPreset.defaultBaseUrl || "https://api.openai.com/v1"}
+                    className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                {/* 3. Model Selection (Dynamic Fetch) */}
+                <div className="relative" ref={modelPickerRef}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-foreground">
+                      Model Selection <span className="text-destructive">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleFetchModels}
+                      disabled={isFetchingModels}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-50 cursor-pointer"
+                    >
+                      {isFetchingModels ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                      <span>Fetch Models</span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={customModel}
+                      onChange={(e) => {
+                        setCustomModel(e.target.value);
+                        setKeyVerified(null);
+                        setVerifyError(null);
+                      }}
+                      onFocus={() => {
+                        if (fetchedModels.length > 0) setShowModelPicker(true);
+                      }}
+                      placeholder="e.g. gpt-4o-mini, gemini-2.5-flash, deepseek-chat"
+                      className="w-full h-9 pr-8 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (fetchedModels.length === 0) {
+                          handleFetchModels();
+                        } else {
+                          setShowModelPicker((prev) => !prev);
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Toggle model dropdown"
+                    >
+                      <ChevronDown className="size-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Searchable Model Picker Dropdown */}
+                  {showModelPicker && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 rounded-xl border border-border bg-card p-2 shadow-xl space-y-2 animate-in fade-in-50">
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                          <input
+                            type="text"
+                            value={modelSearch}
+                            onChange={(e) => setModelSearch(e.target.value)}
+                            placeholder="Filter models..."
+                            className="w-full rounded-lg border border-border bg-background py-1 pl-8 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
+                        </div>
+                        {fetchedModels.some((m) => m.isFree) && (
                           <button
-                            key={cp.label}
                             type="button"
-                            onClick={() => {
-                              setBaseUrl(cp.baseUrl);
-                              setCustomModel(cp.model);
-                              setCustomProviderName(cp.label);
-                              setKeyVerified(null);
-                              setVerifyError(null);
-                            }}
-                            className={`px-2.5 py-1 text-xs rounded-lg border transition-colors cursor-pointer ${
-                              baseUrl === cp.baseUrl
-                                ? "border-primary bg-primary/10 text-primary font-medium"
-                                : "border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted"
+                            onClick={() => setOnlyFreeModels(!onlyFreeModels)}
+                            className={`rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+                              onlyFreeModels
+                                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : "border-border text-muted-foreground hover:bg-muted"
                             }`}
                           >
-                            {cp.label}
+                            Free Only
                           </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-foreground mb-1">
-                          Base URL / API Endpoint <span className="text-destructive">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={baseUrl}
-                          onChange={(e) => {
-                            setBaseUrl(e.target.value);
-                            setKeyVerified(null);
-                            setVerifyError(null);
-                          }}
-                          placeholder="https://api.deepseek.com/v1"
-                          className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-foreground mb-1">
-                          Model Identifier <span className="text-destructive">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={customModel}
-                          onChange={(e) => {
-                            setCustomModel(e.target.value);
-                            setKeyVerified(null);
-                            setVerifyError(null);
-                          }}
-                          placeholder="e.g. deepseek-chat, gpt-4o, llama-3.3-70b"
-                          className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-medium text-foreground">
-                          API Key <span className="text-muted-foreground font-normal">(Optional for local endpoints)</span>
-                        </label>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          value={apiKey}
-                          onChange={(e) => {
-                            setApiKey(e.target.value);
-                            setKeyVerified(null);
-                            setVerifyError(null);
-                          }}
-                          placeholder="sk-..."
-                          className="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleTestApiKey}
-                          disabled={testingKey}
-                          className="h-9 px-3.5 text-xs font-semibold rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-                        >
-                          {testingKey ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : keyVerified ? (
-                            <Check className="size-3.5 text-emerald-500" />
-                          ) : (
-                            <Sparkles className="size-3.5" />
-                          )}
-                          <span>{testingKey ? "Testing..." : keyVerified ? "Verified" : "Test"}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedPreset.id === "ollama" && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
-                          Ollama Base URL
-                        </label>
-                        <input
-                          type="text"
-                          value={baseUrl}
-                          onChange={(e) => {
-                            setBaseUrl(e.target.value);
-                            setKeyVerified(null);
-                            setVerifyError(null);
-                          }}
-                          placeholder="http://127.0.0.1:11434/v1"
-                          className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
-                          Local Model Name
-                        </label>
-                        <input
-                          type="text"
-                          value={customModel}
-                          onChange={(e) => {
-                            setCustomModel(e.target.value);
-                            setKeyVerified(null);
-                            setVerifyError(null);
-                          }}
-                          placeholder="llama3.2:latest"
-                          className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleTestApiKey}
-                        disabled={testingKey}
-                        className="h-9 px-3.5 text-xs font-semibold rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-                      >
-                        {testingKey ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : keyVerified ? (
-                          <Check className="size-3.5 text-emerald-500" />
-                        ) : (
-                          <Sparkles className="size-3.5" />
                         )}
-                        <span>{testingKey ? "Testing..." : keyVerified ? "Verified" : "Test Local Connection"}</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                      </div>
 
-                {selectedPreset.id !== "custom" && selectedPreset.id !== "ollama" && (
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-medium text-foreground">
-                          {selectedPreset.name} API Key
-                        </label>
-                        <a
-                          href={selectedPreset.helpUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] text-primary hover:underline"
-                        >
-                          Get an API key
-                        </a>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          value={apiKey}
-                          onChange={(e) => {
-                            setApiKey(e.target.value);
-                            setKeyVerified(null);
-                            setVerifyError(null);
-                          }}
-                          placeholder={selectedPreset.placeholder}
-                          className="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleTestApiKey}
-                          disabled={testingKey}
-                          className="h-9 px-3.5 text-xs font-semibold rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-                        >
-                          {testingKey ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : keyVerified ? (
-                            <Check className="size-3.5 text-emerald-500" />
-                          ) : (
-                            <Sparkles className="size-3.5" />
-                          )}
-                          <span>{testingKey ? "Testing..." : keyVerified ? "Verified" : "Test"}</span>
-                        </button>
+                      <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                        {fetchedModels
+                          .filter((m) => {
+                            if (onlyFreeModels && !m.isFree) return false;
+                            if (!modelSearch.trim()) return true;
+                            const query = modelSearch.toLowerCase();
+                            return m.id.toLowerCase().includes(query) || (m.name && m.name.toLowerCase().includes(query));
+                          })
+                          .map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                setCustomModel(m.id);
+                                setShowModelPicker(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted hover:text-foreground cursor-pointer ${
+                                customModel === m.id ? "bg-muted font-medium text-foreground" : "text-foreground"
+                              }`}
+                            >
+                              <div className="truncate max-w-[280px]">
+                                <span className="font-mono text-foreground">{m.id}</span>
+                                {m.name && m.name !== m.id && (
+                                  <span className="ml-1 text-[11px] text-muted-foreground truncate block">
+                                    {m.name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0 ml-2">
+                                {m.isFree && (
+                                  <span className="border border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold px-1 py-0.2 rounded-md">
+                                    FREE
+                                  </span>
+                                )}
+                                {m.contextLength && (
+                                  <span className="text-[10px] text-muted-foreground font-mono">
+                                    {Math.round(m.contextLength / 1024)}k
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          ))}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {verifyError && (
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs animate-in fade-in-50">

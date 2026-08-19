@@ -20,6 +20,13 @@ export function seedSampleJobsAndContacts({ userId, positionId }: SeedOptions): 
 } {
   const db = getDb();
 
+  // Clear previous demo records first so re-running never stacks duplicates
+  try {
+    deleteSampleData(userId);
+  } catch (err) {
+    console.warn("[seed-demo] Could not clear existing sample data:", err);
+  }
+
   // Ensure standard board lists exist
   const defaults: [string, string, string, number][] = [
     ["Wishlist", "wishlist", "#38bdf8", 1],
@@ -291,11 +298,36 @@ export function deleteSampleData(userId: string): { removedCount: number } {
 
   if (demoJobIds.length > 0) {
     const placeholders = demoJobIds.map(() => "?").join(",");
+    try {
+      db.prepare(`DELETE FROM applications WHERE job_id IN (${placeholders})`).run(...demoJobIds);
+    } catch {}
+    try {
+      db.prepare(`DELETE FROM interviews WHERE job_id IN (${placeholders})`).run(...demoJobIds);
+    } catch {}
+    try {
+      db.prepare(`DELETE FROM job_contacts WHERE job_id IN (${placeholders})`).run(...demoJobIds);
+    } catch {}
+    try {
+      db.prepare(`DELETE FROM job_documents WHERE job_id IN (${placeholders})`).run(...demoJobIds);
+    } catch {}
+    try {
+      db.prepare(`DELETE FROM job_deadlines WHERE job_id IN (${placeholders})`).run(...demoJobIds);
+    } catch {}
     db.prepare(`DELETE FROM jobs WHERE id IN (${placeholders}) AND user_id = ?`).run(...demoJobIds, userId);
   }
 
-  // Delete demo contacts
-  db.prepare("DELETE FROM contacts WHERE user_id = ? AND notes LIKE ?").run(userId, `%${DEMO_MARKER}%`);
+  // Delete demo contacts (and unbind job_contacts)
+  const demoContacts = db
+    .prepare("SELECT id FROM contacts WHERE user_id = ? AND notes LIKE ?")
+    .all(userId, `%${DEMO_MARKER}%`) as { id: string }[];
+  const demoContactIds = demoContacts.map((c) => c.id);
+  if (demoContactIds.length > 0) {
+    const cPlaceholders = demoContactIds.map(() => "?").join(",");
+    try {
+      db.prepare(`DELETE FROM job_contacts WHERE contact_id IN (${cPlaceholders})`).run(...demoContactIds);
+    } catch {}
+    db.prepare(`DELETE FROM contacts WHERE id IN (${cPlaceholders}) AND user_id = ?`).run(...demoContactIds, userId);
+  }
 
   // Delete demo companies if they have no remaining jobs
   const sampleCompanyNames = ["Stripe", "Linear", "Vercel"];

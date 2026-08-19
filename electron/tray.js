@@ -34,7 +34,7 @@ function createTray({ getPort, getSettings, onToggleSetting, onShowApp, onQuit }
   tray.setToolTip("atTrack - Local Job Tracker");
 
   function updateMenu() {
-    const port = getPort() || 3308;
+    const port = getPort() || 3788;
     const url = `http://127.0.0.1:${port}`;
     const settings = getSettings() || {};
     const startAtLogin = Boolean(settings.startAtLogin);

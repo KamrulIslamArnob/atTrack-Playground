@@ -4,10 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
 import { JobDetailContent } from "@/components/job-detail/job-detail-content";
 import { getJobDetail } from "@/lib/actions/job-detail";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import type { BoardList } from "@/lib/types/board";
+import { AlertCircle, RefreshCw, X } from "lucide-react";
 
 interface JobDetailSheetProps {
   jobId: string | null;
@@ -25,26 +27,46 @@ interface JobDetailSheetProps {
 export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDetailSheetProps) {
   const router = useRouter();
   const [data, setData] = useState<JobDetailData | null>(null);
-  // Derived, not stored: avoids a synchronous setState at the top of the
-  // fetch effect (react-hooks/set-state-in-effect) — the spinner shows
-  // whenever the loaded data doesn't match the currently open job yet.
-  const isLoading = jobId !== null && data?.job.id !== jobId;
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDetail = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const fresh = await getJobDetail(id);
+      if (!fresh) {
+        setError("Job details could not be loaded or the job has been deleted.");
+        setData(null);
+      } else {
+        setData(fresh);
+        setError(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load job details.");
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!jobId) return;
-    let cancelled = false;
-    getJobDetail(jobId).then((fresh) => {
-      if (!cancelled) setData(fresh);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [jobId]);
+    if (!jobId) {
+      setData(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    fetchDetail(jobId);
+  }, [jobId, fetchDetail]);
 
   const handleRefresh = useCallback(() => {
-    if (jobId) getJobDetail(jobId).then((fresh) => setData(fresh));
+    if (jobId) {
+      fetchDetail(jobId);
+    }
     router.refresh(); // keeps the board's cards (match score, resume pill, etc.) in sync
-  }, [jobId, router]);
+  }, [jobId, fetchDetail, router]);
 
   return (
     <Sheet open={jobId !== null} onOpenChange={onOpenChange}>
@@ -53,9 +75,43 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
         <SheetDescription className="sr-only">
           View and edit this job&apos;s details, notes, documents, contacts, and AI tools.
         </SheetDescription>
-        {isLoading || !data ? (
-          <div className="flex flex-1 items-center justify-center p-12">
-            <Spinner className="size-6" />
+
+        {isLoading ? (
+          <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-12">
+            <Spinner className="size-7 text-primary" />
+            <p className="text-xs text-muted-foreground animate-pulse">Loading job details...</p>
+          </div>
+        ) : error || !data ? (
+          <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <AlertCircle className="size-6" />
+            </div>
+            <div className="space-y-1 max-w-sm">
+              <h4 className="text-sm font-semibold text-foreground">Couldn&apos;t load job details</h4>
+              <p className="text-xs text-muted-foreground">{error || "The selected job could not be retrieved from the database."}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {jobId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fetchDetail(jobId)}
+                  className="cursor-pointer gap-1.5"
+                >
+                  <RefreshCw className="size-3.5" />
+                  Retry
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="cursor-pointer gap-1.5"
+              >
+                <X className="size-3.5" />
+                Close
+              </Button>
+            </div>
           </div>
         ) : (
           <JobDetailContent

@@ -15,8 +15,12 @@ import path from "node:path";
 //   job-imports  private  -> same
 //   avatar       public   -> served from /api/files without a token
 
-const STORAGE_DIR =
-  process.env.STORAGE_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "storage");
+export function getStorageDir(): string {
+  return (
+    process.env.STORAGE_DIR ??
+    path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "storage")
+  );
+}
 
 import { getResolvedEncryptionKey } from "../encryption.ts";
 
@@ -48,7 +52,7 @@ function safeKey(key: string): string {
 }
 
 function objectPath(bucket: string, key: string): string {
-  return path.join(/*turbopackIgnore: true*/ STORAGE_DIR, safeKey(bucket), safeKey(key));
+  return path.join(/*turbopackIgnore: true*/ getStorageDir(), safeKey(bucket), safeKey(key));
 }
 
 export function signObjectToken(bucket: string, key: string, expiresAt: number): string {
@@ -165,7 +169,7 @@ function bucketApi(bucket: string) {
       try {
         const dir = prefix
           ? objectPath(bucket, prefix)
-          : path.join(/*turbopackIgnore: true*/ STORAGE_DIR, safeKey(bucket));
+          : path.join(/*turbopackIgnore: true*/ getStorageDir(), safeKey(bucket));
         const entries = await readdir(dir, { withFileTypes: true });
         return {
           data: entries.filter((e) => e.isFile()).map((e) => ({ name: e.name })),
@@ -228,4 +232,5 @@ export function createStorageApi() {
   return { from: bucketApi };
 }
 
-export const storageDir = STORAGE_DIR;
+export const storageDir = getStorageDir();
+

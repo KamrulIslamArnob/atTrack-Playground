@@ -5,7 +5,7 @@
 
 import { DatabaseSync } from "node:sqlite";
 
-const BASE = process.env.ATTRACK_URL ?? "http://localhost:3308";
+const BASE = process.env.ATTRACK_URL ?? "http://localhost:3788";
 const DB = process.env.SQLITE_PATH ?? ".data/attrack.db";
 const SID = "verify_sess_1";
 

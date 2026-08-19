@@ -9,6 +9,10 @@ import { getJobDeadlines } from "@/lib/actions/deadlines";
 import type { JobDetailData } from "@/lib/types/job-detail";
 import type { JobState, JobTier } from "@/lib/types/job";
 
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.job-detail");
+
 /**
  * Single fetch backing job-detail-content.tsx — called directly from the
  * client (Sheet, opened from the board) and from the server (/jobs/[id]).
@@ -16,68 +20,90 @@ import type { JobState, JobTier } from "@/lib/types/job";
  * shape, not one per tab.
  */
 export async function getJobDetail(jobId: string): Promise<JobDetailData | null> {
-  const { supabase, userId } = await getUser();
+  try {
+    const { supabase, userId } = await getUser();
 
-  const { data: job } = await supabase
-    .from("jobs")
-    .select(
-      `*, company:companies(id, name, website, location, logo_url, color, founded_year, company_type, country),
-       position:positions(name), resume:documents!jobs_resume_id_fkey(name)`
-    )
-    .eq("id", jobId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!job) return null;
-
-  const [
-    { data: applications },
-    { data: interviews },
-    { data: resumes },
-    contacts,
-    documents,
-    smtpReady,
-    { data: profile },
-    boardLists,
-    { data: resumeDoc },
-    deadlines,
-  ] = await Promise.all([
-    supabase
-      .from("applications")
-      .select("id, status, applied_at, created_at, resume_name")
-      .eq("job_id", jobId)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("interviews")
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
       .select(
-        "id, scheduled_at, type, location, meeting_url, interviewer_name, interviewer_email, notes, status"
+        `*, company:companies(id, name, website, location, logo_url, color, founded_year, company_type, country),
+         position:positions(name), resume:documents!jobs_resume_id_fkey(name)`
       )
-      .eq("job_id", jobId)
+      .eq("id", jobId)
       .eq("user_id", userId)
-      .order("scheduled_at", { ascending: true }),
-    supabase
-      .from("documents")
-      .select("id, name")
-      .eq("user_id", userId)
-      .eq("type", "resume")
-      .order("created_at", { ascending: false }),
-    getJobContacts(jobId),
-    getJobDocuments(jobId),
-    isSmtpConfigured(),
-    supabase.from("profiles").select("full_name, headline").eq("id", userId).maybeSingle(),
-    getBoardLists().catch(() => []),
-    // Resume content for AI Tools — fetched in parallel instead of sequentially.
-    job.resume_id
-      ? supabase
-          .from("documents")
-          .select("content")
-          .eq("id", job.resume_id)
-          .eq("user_id", userId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    getJobDeadlines(jobId).catch(() => []),
-  ]);
+      .maybeSingle();
+
+    if (jobError) {
+      log.error({ err: jobError, jobId }, "Error querying job for detail sheet");
+      return null;
+    }
+
+    if (!job) return null;
+
+    const [
+      applicationsRes,
+      interviewsRes,
+      resumesRes,
+      contacts,
+      documents,
+      smtpReady,
+      profileRes,
+      boardLists,
+      resumeDocRes,
+      deadlines,
+    ] = await Promise.all([
+      supabase
+        .from("applications")
+        .select("id, status, applied_at, created_at, resume_name")
+        .eq("job_id", jobId)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("interviews")
+        .select(
+          "id, scheduled_at, type, location, meeting_url, interviewer_name, interviewer_email, notes, status"
+        )
+        .eq("job_id", jobId)
+        .eq("user_id", userId)
+        .order("scheduled_at", { ascending: true }),
+      supabase
+        .from("documents")
+        .select("id, name")
+        .eq("user_id", userId)
+        .eq("type", "resume")
+        .order("created_at", { ascending: false }),
+      getJobContacts(jobId).catch((err) => {
+        log.warn({ err, jobId }, "Failed to fetch job contacts, falling back to empty");
+        return [];
+      }),
+      getJobDocuments(jobId).catch((err) => {
+        log.warn({ err, jobId }, "Failed to fetch job documents, falling back to empty");
+        return [];
+      }),
+      isSmtpConfigured().catch(() => false),
+      supabase
+        .from("profiles")
+        .select("full_name, headline")
+        .eq("id", userId)
+        .maybeSingle(),
+      getBoardLists().catch(() => []),
+      // Resume content for AI Tools — fetched in parallel instead of sequentially.
+      job.resume_id
+        ? supabase
+            .from("documents")
+            .select("content")
+            .eq("id", job.resume_id)
+            .eq("user_id", userId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      getJobDeadlines(jobId).catch(() => []),
+    ]);
+
+    const applications = applicationsRes?.data ?? [];
+    const interviews = interviewsRes?.data ?? [];
+    const resumes = resumesRes?.data ?? [];
+    const profile = profileRes?.data ?? null;
+    const resumeDoc = resumeDocRes?.data ?? null;
 
   const company = Array.isArray(job.company) ? job.company[0] : job.company;
   const position = Array.isArray(job.position) ? job.position[0] : job.position;
@@ -150,4 +176,8 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
     applicantHeadline: profile?.headline ?? null,
     resumeContent,
   };
+  } catch (err) {
+    log.error({ err, jobId }, "Unexpected error in getJobDetail");
+    return null;
+  }
 }

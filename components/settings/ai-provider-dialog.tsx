@@ -2,13 +2,23 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  createProvider, updateProvider, testProviderConnection, fetchProviderModels, type FetchedModel, } from "@/lib/actions/ai-providers";
+  createProvider,
+  updateProvider,
+  testProviderConnection,
+  fetchProviderModels,
+  type FetchedModel,
+} from "@/lib/actions/ai-providers";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { X, Plug, CheckCircle2, AlertCircle } from "lucide-react";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
 import { SearchIcon } from "@/components/ui/search";
@@ -17,13 +27,16 @@ import { toast } from "sonner";
 import {
   PROVIDER_TYPES,
   PROVIDER_TYPE_LABELS,
-  OPENAI_COMPATIBLE_PRESETS,
+  ALL_AI_PRESETS,
+  AI_PRESET_CATEGORIES,
+  type AiPreset,
+  type PresetCategory,
   type AiProviderSummary,
   type ProviderType,
 } from "@/lib/types/ai-providers";
 
 const MODEL_PLACEHOLDER: Record<ProviderType, string> = {
-  gemini: "models/gemini-2.0-flash",
+  gemini: "gemini-2.5-flash",
   anthropic: "claude-3-7-sonnet-20250219",
   openai_compatible: "gpt-4o-mini",
 };
@@ -36,11 +49,14 @@ interface AiProviderDialogProps {
 
 export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialogProps) {
   const [name, setName] = useState(provider?.name ?? "");
-  const [providerType, setProviderType] = useState<ProviderType>(provider?.provider_type ?? "gemini");
-  const [baseUrl, setBaseUrl] = useState(provider?.base_url ?? "");
+  const [providerType, setProviderType] = useState<ProviderType>(provider?.provider_type ?? "openai_compatible");
+  const [baseUrl, setBaseUrl] = useState(provider?.base_url ?? "https://api.openai.com/v1");
   const [model, setModel] = useState(provider?.model ?? "");
   const [apiKey, setApiKey] = useState("");
   const [pending, setPending] = useState(false);
+
+  // Preset category tab
+  const [activeCategory, setActiveCategory] = useState<PresetCategory>("major");
 
   // Connection test state
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -66,6 +82,23 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isLocalEndpoint =
+    baseUrl.includes("localhost") ||
+    baseUrl.includes("127.0.0.1") ||
+    baseUrl.includes("0.0.0.0") ||
+    baseUrl.includes("11434") ||
+    baseUrl.includes("1234");
+
+  const handleApplyPreset = (preset: AiPreset) => {
+    setName(preset.name);
+    setProviderType(preset.providerType);
+    setBaseUrl(preset.defaultBaseUrl || (preset.providerType === "openai_compatible" ? "https://api.openai.com/v1" : ""));
+    setModel(preset.defaultModel);
+    setFetchedModels([]);
+    setShowModelPicker(false);
+    setTestResult(null);
+  };
+
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
     setTestResult(null);
@@ -73,7 +106,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     const res = await testProviderConnection({
       id: provider?.id,
       provider_type: providerType,
-      base_url: baseUrl,
+      base_url: providerType === "openai_compatible" ? baseUrl : undefined,
       model: model || MODEL_PLACEHOLDER[providerType],
       api_key: apiKey || undefined,
     });
@@ -101,7 +134,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     const res = await fetchProviderModels({
       id: provider?.id,
       provider_type: providerType,
-      base_url: baseUrl,
+      base_url: providerType === "openai_compatible" ? baseUrl : undefined,
       api_key: apiKey || undefined,
     });
 
@@ -128,11 +161,17 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
       ? await updateProvider(provider.id, {
           name,
           provider_type: providerType,
-          base_url: baseUrl,
+          base_url: providerType === "openai_compatible" ? baseUrl : undefined,
           model,
           api_key: apiKey || undefined,
         })
-      : await createProvider({ name, provider_type: providerType, base_url: baseUrl, model, api_key: apiKey });
+      : await createProvider({
+          name,
+          provider_type: providerType,
+          base_url: providerType === "openai_compatible" ? baseUrl : undefined,
+          model,
+          api_key: apiKey,
+        });
 
     if (result.error) {
       toast.error(result.error);
@@ -140,12 +179,12 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
       return;
     }
 
-    // create always verifies; update only re-verifies when the key changed —
-    // `verified` is undefined there, so an unrelated edit (name, model) stays quiet.
     if (result.verified === true) {
       toast.success(`${provider ? "Provider updated" : "Provider added"} and verified.`);
     } else if (result.verified === false) {
-      toast.warning(`${provider ? "Provider updated" : "Provider added"}, but the connection test failed: ${result.verifyError ?? "unknown error"}. AI features stay locked until it passes.`);
+      toast.warning(
+        `${provider ? "Provider updated" : "Provider added"}, but connection test failed: ${result.verifyError ?? "unknown error"}. AI features stay locked until it passes.`
+      );
     } else {
       toast.success("Provider updated.");
     }
@@ -162,31 +201,88 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     return m.id.toLowerCase().includes(query) || (m.name && m.name.toLowerCase().includes(query));
   });
 
+  const categoryPresets = ALL_AI_PRESETS.filter((p) => p.category === activeCategory);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-heading text-lg font-semibold">{provider ? "Edit provider" : "Add provider"}</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
+          <div>
+            <h2 className="font-heading text-lg font-semibold">{provider ? "Edit provider" : "Add AI provider"}</h2>
+            <p className="text-xs text-muted-foreground">Configure model credentials and endpoint details.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-muted cursor-pointer">
             <X className="size-4" />
           </button>
         </div>
 
+        {/* Quick Preset Selector */}
+        {!provider && (
+          <div className="mb-4 rounded-2xl border border-border/80 bg-muted/20 p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">Quick Presets</span>
+              <div className="flex gap-1">
+                {AI_PRESET_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`px-2 py-0.5 text-[11px] rounded-lg transition-colors cursor-pointer ${
+                      activeCategory === cat.id
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {cat.label.split(" ")[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {categoryPresets.map((preset) => {
+                const isActive = name === preset.name || (baseUrl && baseUrl === preset.defaultBaseUrl);
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleApplyPreset(preset)}
+                    className={`flex items-center justify-between p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary font-medium shadow-xs"
+                        : "border-border/60 bg-background text-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    <span className="truncate">{preset.name}</span>
+                    {preset.badge && (
+                      <span className="text-[9px] px-1 py-0.2 rounded-md bg-muted text-muted-foreground shrink-0 font-normal">
+                        {preset.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="provider-name">Name</Label>
+          {/* Provider Name */}
+          <div className="space-y-1.5">
+            <Label htmlFor="provider-name" className="text-xs font-medium">Provider Display Name</Label>
             <Input
               id="provider-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. My OpenRouter key"
-              className="h-10"
+              placeholder="e.g. OpenAI, OpenRouter, Local Ollama"
+              className="h-9 text-xs"
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="provider-type">Type</Label>
+          {/* Provider Type */}
+          <div className="space-y-1.5">
+            <Label htmlFor="provider-type" className="text-xs font-medium">Protocol Type</Label>
             <Select
               value={providerType}
               onValueChange={(v) => {
@@ -196,12 +292,12 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                 setTestResult(null);
               }}
             >
-              <SelectTrigger id="provider-type" className="h-10 w-full">
+              <SelectTrigger id="provider-type" className="h-9 w-full text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {PROVIDER_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
+                  <SelectItem key={t} value={t} className="text-xs">
                     {PROVIDER_TYPE_LABELS[t]}
                   </SelectItem>
                 ))}
@@ -209,9 +305,54 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
             </Select>
           </div>
 
+          {/* SEQUENCE 1: API Key (optional for local endpoints) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="provider-api-key" className="text-xs font-medium">
+                API Key {isLocalEndpoint && <span className="text-muted-foreground font-normal">(Optional for local endpoints)</span>}
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                id="provider-api-key"
+                type="password"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  setTestResult(null);
+                }}
+                placeholder={provider ? "••••••••••••" : isLocalEndpoint ? "local (optional)" : "sk-..."}
+                className="h-9 text-xs font-mono flex-1"
+                autoComplete="one-time-code"
+                required={!provider && !isLocalEndpoint && providerType !== "gemini"}
+              />
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={isTestingConnection}
+                className="h-9 px-3 text-xs font-medium rounded-xl border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                {isTestingConnection ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
+                <span>Test</span>
+              </button>
+            </div>
+            {provider && <p className="text-[11px] text-muted-foreground">Leave blank to keep the current key.</p>}
+            {testResult && (
+              <div
+                className={`flex items-center gap-1.5 text-xs font-medium pt-1 ${
+                  testResult.success ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                }`}
+              >
+                {testResult.success ? <CheckCircle2 className="size-3.5" /> : <AlertCircle className="size-3.5" />}
+                <span className="truncate">{testResult.message}</span>
+              </div>
+            )}
+          </div>
+
+          {/* SEQUENCE 2: Base URL / API Endpoint */}
           {providerType === "openai_compatible" && (
-            <div className="space-y-2">
-              <Label htmlFor="provider-base-url">Base URL</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="provider-base-url" className="text-xs font-medium">Base URL / API Endpoint</Label>
               <Input
                 id="provider-base-url"
                 value={baseUrl}
@@ -221,43 +362,24 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                   setShowModelPicker(false);
                 }}
                 placeholder="https://api.openai.com/v1"
-                className="h-10"
+                className="h-9 text-xs font-mono"
                 required
               />
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {OPENAI_COMPATIBLE_PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => {
-                      setBaseUrl(preset.baseUrl);
-                      setFetchedModels([]);
-                      setShowModelPicker(false);
-                    }}
-                    className={`rounded-lg border px-2 py-1 text-xs transition-colors ${
-                      baseUrl === preset.baseUrl
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 
-          <div className="space-y-2 relative" ref={modelPickerRef}>
+          {/* SEQUENCE 3: Model Selection (Dynamic Fetch) */}
+          <div className="space-y-1.5 relative" ref={modelPickerRef}>
             <div className="flex items-center justify-between">
-              <Label htmlFor="provider-model">Model</Label>
+              <Label htmlFor="provider-model" className="text-xs font-medium">Model Selection</Label>
               <button
                 type="button"
                 onClick={handleFetchModels}
                 disabled={isFetchingModels}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-green-800 dark:text-lime-400 hover:underline disabled:opacity-50"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-50 cursor-pointer"
               >
                 {isFetchingModels ? <Spinner className="size-3" /> : <RefreshCWIcon className="size-3" />}
-                Fetch Models
+                <span>Fetch Models</span>
               </button>
             </div>
 
@@ -265,14 +387,12 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
               <Input
                 id="provider-model"
                 value={model}
-                onChange={(e) => {
-                  setModel(e.target.value);
-                }}
+                onChange={(e) => setModel(e.target.value)}
                 onFocus={() => {
                   if (fetchedModels.length > 0) setShowModelPicker(true);
                 }}
                 placeholder={MODEL_PLACEHOLDER[providerType]}
-                className="h-10 pr-9"
+                className="h-9 pr-8 text-xs font-mono"
                 required
               />
               <button
@@ -284,15 +404,16 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                     setShowModelPicker((prev) => !prev);
                   }
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer"
                 title="Toggle models dropdown"
               >
-                <ChevronDownIcon className="size-4" />
+                <ChevronDownIcon className="size-3.5" />
               </button>
             </div>
 
+            {/* Dropdown Menu for Fetched Models */}
             {showModelPicker && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 rounded-2xl border border-border bg-card p-2 overflow-hidden space-y-2">
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 rounded-2xl border border-border bg-card p-2 shadow-xl space-y-2 animate-in fade-in-50">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
@@ -308,7 +429,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                     <button
                       type="button"
                       onClick={() => setOnlyFreeModels(!onlyFreeModels)}
-                      className={`rounded-xl border px-2 py-1 text-[11px] font-medium transition-colors ${
+                      className={`rounded-xl border px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
                         onlyFreeModels
                           ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                           : "border-border text-muted-foreground hover:bg-muted"
@@ -319,7 +440,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                   )}
                 </div>
 
-                <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
                   {filteredModels.length === 0 ? (
                     <p className="p-3 text-center text-xs text-muted-foreground">No matching models found.</p>
                   ) : (
@@ -331,11 +452,11 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                           setModel(m.id);
                           setShowModelPicker(false);
                         }}
-                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted hover:text-foreground ${
+                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted hover:text-foreground cursor-pointer ${
                           model === m.id ? "bg-muted font-medium text-foreground" : "text-foreground"
                         }`}
                       >
-                        <div className="truncate max-w-[240px]">
+                        <div className="truncate max-w-[260px]">
                           <span className="font-mono text-foreground">{m.id}</span>
                           {m.name && m.name !== m.id && (
                             <span className="ml-1 text-[11px] text-muted-foreground truncate block">
@@ -350,7 +471,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
                             </Badge>
                           )}
                           {m.contextLength && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] text-muted-foreground font-mono">
                               {Math.round(m.contextLength / 1024)}k
                             </span>
                           )}
@@ -363,62 +484,21 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="provider-api-key">API key</Label>
-            <Input
-              id="provider-api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                setTestResult(null);
-              }}
-              placeholder={provider ? "••••••••••••" : "sk-..."}
-              className="h-10"
-              autoComplete="one-time-code"
-              required={!provider}
-            />
-            {provider && <p className="text-[11px] text-muted-foreground">Leave blank to keep the current key.</p>}
-          </div>
-
-          <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-2.5">
-            <button
-              type="button"
-              onClick={handleTestConnection}
-              disabled={isTestingConnection}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              {isTestingConnection ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
-              Test Connection
-            </button>
-
-            {testResult && (
-              <div
-                className={`flex items-center gap-1.5 text-xs font-medium ${
-                  testResult.success ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                }`}
-              >
-                {testResult.success ? <CheckCircle2 className="size-4" /> : <AlertCircle className="size-4" />}
-                <span className="truncate max-w-[180px]">{testResult.message}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
             >
               {pending && <Spinner className="mr-2" />}
-              {provider ? "Save" : "Add provider"}
+              {provider ? "Save changes" : "Add provider"}
             </button>
           </div>
         </form>
@@ -426,4 +506,3 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
     </div>
   );
 }
-

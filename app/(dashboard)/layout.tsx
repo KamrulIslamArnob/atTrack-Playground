@@ -53,6 +53,7 @@ export default async function DashboardLayout({
           isOpen={true}
           profileName={profile?.full_name}
           userEmail={user.email}
+          initialAvatarUrl={profile?.avatar_url}
         />
       )}
     </div>

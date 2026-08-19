@@ -3,7 +3,7 @@ const http = require("http");
 async function runTests() {
   console.log("=== Testing atTrack Extension API Endpoints ===");
 
-  const port = process.env.PORT || 3308;
+  const port = process.env.PORT || 3788;
   const baseUrl = `http://127.0.0.1:${port}`;
 
   // Test 1: GET /api/extension/status

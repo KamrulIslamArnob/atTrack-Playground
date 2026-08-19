@@ -262,6 +262,25 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
 
   const [width, setWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null | undefined>(avatarUrl);
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setCurrentAvatarUrl(avatarUrl);
+    setAvatarError(false);
+  }, [avatarUrl]);
+
+  useEffect(() => {
+    const handleAvatarUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (typeof customEvent.detail === "string") {
+        setCurrentAvatarUrl(customEvent.detail || null);
+        setAvatarError(false);
+      }
+    };
+    window.addEventListener("avatar-updated", handleAvatarUpdate);
+    return () => window.removeEventListener("avatar-updated", handleAvatarUpdate);
+  }, []);
 
   useEffect(() => {
     if (!resizable) return;
@@ -457,26 +476,20 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
         )}
 
         {/* Top Section: User Profile */}
-        <div
-          className={cn(
-            "app-drag-region border-b border-border h-[68px] flex items-center shrink-0",
-            isCollapsed ? "px-2.5 justify-center" : "px-4"
-          )}
-        >
+        {/* User Info Header */}
+        <div className={cn("border-b border-border/50 transition-all duration-200", isCollapsed ? "p-3" : "p-4")}>
           {isCollapsed ? (
             <button
               onClick={handleCopyEmail}
-              className="relative group rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="relative mx-auto flex size-9 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95 group"
               title={`${fullName} (${user.email || "No email"}) — Click to copy email`}
             >
-              {avatarUrl ? (
-                <Image
-                  src={avatarUrl}
+              {currentAvatarUrl && !avatarError ? (
+                <img
+                  src={currentAvatarUrl}
                   alt={fullName}
-                  width={36}
-                  height={36}
-                  unoptimized
                   className="size-9 shrink-0 rounded-full object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
@@ -488,14 +501,12 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
           ) : (
             <div className="flex items-center gap-3">
               <div className="relative">
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
+                {currentAvatarUrl && !avatarError ? (
+                  <img
+                    src={currentAvatarUrl}
                     alt={fullName}
-                    width={36}
-                    height={36}
-                    unoptimized
                     className="size-9 shrink-0 rounded-full object-cover"
+                    onError={() => setAvatarError(true)}
                   />
                 ) : (
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">

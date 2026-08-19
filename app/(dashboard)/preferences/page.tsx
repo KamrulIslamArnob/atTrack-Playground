@@ -276,7 +276,7 @@ export default function PerformancePreferencesPage() {
           <CardContent className="space-y-2.5">
             <div className="flex flex-wrap items-baseline justify-between gap-1.5">
               <div className="text-2xl font-bold font-mono tracking-tight text-violet-600 dark:text-violet-400">
-                :{data?.network.port ?? 3308}
+                :{data?.network.port ?? 3788}
               </div>
               <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] py-0 px-1.5 shrink-0 font-medium">
                 <CheckCircle2 className="size-3 mr-1" />

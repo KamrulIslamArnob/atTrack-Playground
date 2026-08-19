@@ -25,7 +25,7 @@ function loadSettings() {
     return {
       startAtLogin: false,
       closeToTray: true,
-      lastPort: 3308,
+      lastPort: 3788,
     };
   }
 
@@ -33,7 +33,7 @@ function loadSettings() {
   const settings = {
     startAtLogin: false,
     closeToTray: true,
-    lastPort: 3308,
+    lastPort: 3788,
     ...raw,
   };
   for (const field of SECRET_FIELDS) {

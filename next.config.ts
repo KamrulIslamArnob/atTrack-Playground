@@ -43,9 +43,13 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: [
+    "localhost:3788",
+    "127.0.0.1:3788",
+    "localhost:3789",
+    "127.0.0.1:3789",
     "localhost:3308",
     "127.0.0.1:3308",
-    "192.168.0.154:3308",
+    "192.168.0.154:3788",
     "192.168.0.154",
   ],
   async redirects() {
@@ -99,11 +103,17 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "10mb",
       allowedOrigins: [
+        "localhost:3788",
+        "127.0.0.1:3788",
+        "localhost:3789",
+        "127.0.0.1:3789",
+        "localhost:3790",
+        "127.0.0.1:3790",
         "localhost:3308",
         "127.0.0.1:3308",
         "localhost:3000",
         "localhost:3147",
-        "192.168.0.154:3308",
+        "192.168.0.154:3788",
         "192.168.0.154",
       ],
     },

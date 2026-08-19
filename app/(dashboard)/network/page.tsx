@@ -1,12 +1,24 @@
 import { PageHeader } from "@/components/page-header";
 import { CrmView } from "@/components/crm/crm-view";
-import { getCrmCompanies } from "@/lib/actions/companies";
-import { getContacts } from "@/lib/actions/contacts";
+import { getCrmCompanies, type CrmCompany } from "@/lib/actions/companies";
+import { getContacts, type Contact } from "@/lib/actions/contacts";
 
 export const metadata = { title: "Network | atTrack" };
 
 export default async function NetworkPage() {
-  const [companies, contacts] = await Promise.all([getCrmCompanies(), getContacts()]);
+  let companies: CrmCompany[] = [];
+  let contacts: Contact[] = [];
+
+  try {
+    const [compRes, contRes] = await Promise.all([
+      getCrmCompanies().catch(() => []),
+      getContacts().catch(() => []),
+    ]);
+    companies = compRes ?? [];
+    contacts = contRes ?? [];
+  } catch (err) {
+    console.error("[NetworkPage] Failed to fetch data:", err);
+  }
 
   return (
     <div className="space-y-4 pb-16">

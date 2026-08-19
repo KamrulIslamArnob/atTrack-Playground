@@ -96,7 +96,8 @@ const AVATAR_URL_PREFIX = "/api/files/avatar/";
  */
 function extractStoragePath(publicUrl: string): string | null {
   if (!publicUrl.startsWith(AVATAR_URL_PREFIX)) return null;
-  const encoded = publicUrl.slice(AVATAR_URL_PREFIX.length);
+  const cleanUrl = publicUrl.split("?")[0];
+  const encoded = cleanUrl.slice(AVATAR_URL_PREFIX.length);
   if (!encoded) return null;
   try {
     return encoded.split("/").map(decodeURIComponent).join("/");
@@ -165,7 +166,7 @@ export async function uploadContactAvatar(formData: FormData): Promise<string> {
   }
 
   const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(newFilePath);
-  return urlData.publicUrl;
+  return `${urlData.publicUrl}?v=${Date.now()}`;
 }
 
 /** The user's whole contact library — for the "+Link Contact" picker. */

@@ -5,7 +5,7 @@ async function runBenchmarkTests() {
   console.log("🚀 BENCHMARK: Multi-Layer Universal Scraper Engine");
   console.log("=================================================");
 
-  const port = process.env.PORT || 3308;
+  const port = process.env.PORT || 3788;
   const baseUrl = `http://127.0.0.1:${port}`;
 
   // 1. Health & Server Status Check

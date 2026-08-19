@@ -73,7 +73,7 @@ export const GET = withRoute("/api/performance", async () => {
 
     const dataDir = process.env.SQLITE_DIR || path.join(process.cwd(), ".data");
     const storageDir = process.env.STORAGE_DIR || path.join(dataDir, "storage");
-    const port = Number(process.env.PORT || 3308);
+    const port = Number(process.env.PORT || 3788);
 
     const appCpuPercent = getAppCpuUsage(cpuCount);
     const systemCpuPercent = getSystemCpuUsage();

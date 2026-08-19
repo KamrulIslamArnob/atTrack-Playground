@@ -1,12 +1,12 @@
 // atTrack Chrome Extension Background Service Worker (Manifest V3)
 
-const DEFAULT_SERVER_URL = "http://127.0.0.1:3308";
+const DEFAULT_SERVER_URL = "http://127.0.0.1:3788";
 
-// Electron tries 3308 first and only falls back to a nearby port if
+// Electron tries 3788 first and only falls back to a nearby port if
 // something else already holds it (electron/main.js findPreferredPort) —
 // probing the same short ladder is how the extension finds the app with zero
 // manual setup, on install and on every relaunch after a port changes.
-const CANDIDATE_PORTS = [3308, 3309, 3310, 3311, 3312];
+const CANDIDATE_PORTS = [3788, 3789, 3790, 3791, 3792];
 
 // Ensure default settings on install — try to find the real app immediately
 // instead of assuming the default port; falls back to it if nothing answers

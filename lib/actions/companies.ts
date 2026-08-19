@@ -91,34 +91,39 @@ export async function updateCompanyTier(companyId: string, tier: JobTier | null)
 }
 
 export async function getCrmCompanies(): Promise<CrmCompany[]> {
-  const { supabase, userId } = await getUser();
+  try {
+    const { supabase, userId } = await getUser();
 
-  const [{ data: companies }, { data: jobs }, { data: contacts }] = await Promise.all([
-    supabase.from("companies").select("id, name, website, location, color, tier, logo_url").eq("user_id", userId).order("name", { ascending: true }),
-    supabase.from("jobs").select("company_id").eq("user_id", userId),
-    supabase.from("contacts").select("company_id").eq("user_id", userId),
-  ]);
+    const [{ data: companies }, { data: jobs }, { data: contacts }] = await Promise.all([
+      supabase.from("companies").select("id, name, website, location, color, tier, logo_url").eq("user_id", userId).order("name", { ascending: true }),
+      supabase.from("jobs").select("company_id").eq("user_id", userId),
+      supabase.from("contacts").select("company_id").eq("user_id", userId),
+    ]);
 
-  const jobCounts = new Map<string, number>();
-  for (const j of jobs ?? []) {
-    if (j.company_id) jobCounts.set(j.company_id, (jobCounts.get(j.company_id) ?? 0) + 1);
+    const jobCounts = new Map<string, number>();
+    for (const j of jobs ?? []) {
+      if (j?.company_id) jobCounts.set(j.company_id, (jobCounts.get(j.company_id) ?? 0) + 1);
+    }
+    const contactCounts = new Map<string, number>();
+    for (const c of contacts ?? []) {
+      if (c?.company_id) contactCounts.set(c.company_id, (contactCounts.get(c.company_id) ?? 0) + 1);
+    }
+
+    return (companies ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      website: c.website ?? null,
+      location: c.location ?? null,
+      color: c.color ?? null,
+      logo_url: c.logo_url ?? null,
+      tier: (c.tier as JobTier) ?? null,
+      job_count: jobCounts.get(c.id) ?? 0,
+      contact_count: contactCounts.get(c.id) ?? 0,
+    }));
+  } catch (err) {
+    log.error({ err, reqId: requestId() }, "Error fetching CRM companies:");
+    return [];
   }
-  const contactCounts = new Map<string, number>();
-  for (const c of contacts ?? []) {
-    if (c.company_id) contactCounts.set(c.company_id, (contactCounts.get(c.company_id) ?? 0) + 1);
-  }
-
-  return (companies ?? []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    website: c.website ?? null,
-    location: c.location ?? null,
-    color: c.color ?? null,
-    logo_url: c.logo_url ?? null,
-    tier: (c.tier as JobTier) ?? null,
-    job_count: jobCounts.get(c.id) ?? 0,
-    contact_count: contactCounts.get(c.id) ?? 0,
-  }));
 }
 
 export interface CompanyJob {

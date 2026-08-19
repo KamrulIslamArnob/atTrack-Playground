@@ -85,16 +85,20 @@ export async function createProvider(params: {
   if (!PROVIDER_TYPES.includes(params.provider_type)) {
     return { error: "Invalid provider type." };
   }
-  if (params.provider_type === "openai_compatible" && !params.base_url?.trim()) {
-    return { error: "Base URL is required for OpenAI-compatible providers." };
-  }
+  const isLocal =
+    params.base_url?.includes("localhost") ||
+    params.base_url?.includes("127.0.0.1") ||
+    params.base_url?.includes("0.0.0.0") ||
+    params.base_url?.includes("11434") ||
+    params.base_url?.includes("1234");
+
   if (!params.name.trim()) {
     return { error: "Name is required." };
   }
   if (!params.model.trim()) {
     return { error: "Model is required." };
   }
-  if (!params.api_key.trim()) {
+  if (!params.api_key?.trim() && !isLocal && params.provider_type !== "gemini") {
     return { error: "API key is required." };
   }
 
@@ -106,7 +110,7 @@ export async function createProvider(params: {
       provider_type: params.provider_type,
       base_url: params.provider_type === "openai_compatible" ? params.base_url!.trim() : null,
       model: params.model.trim(),
-      encrypted_api_key: encrypt(params.api_key.trim()),
+      encrypted_api_key: encrypt((params.api_key || "").trim()),
       updated_at: new Date().toISOString(),
     })
     .select("id")
@@ -354,8 +358,13 @@ async function attemptProviderConnection(params: {
     }
   }
 
-  const isOllama = baseUrl?.includes("localhost") || baseUrl?.includes("127.0.0.1");
-  if (!apiKey && !isOllama && params.provider_type !== "gemini") {
+  const isLocal =
+    baseUrl?.includes("localhost") ||
+    baseUrl?.includes("127.0.0.1") ||
+    baseUrl?.includes("0.0.0.0") ||
+    baseUrl?.includes("11434") ||
+    baseUrl?.includes("1234");
+  if (!apiKey && !isLocal && params.provider_type !== "gemini") {
     return { success: false, error: "API key is required to test connection." };
   }
 
@@ -497,8 +506,8 @@ export async function fetchProviderModels(params: {
           !m.supportedGenerationMethods || m.supportedGenerationMethods.includes("generateContent")
         )
         .map((m: { name: string; displayName?: string; description?: string; inputTokenLimit?: number }) => ({
-          id: m.name,
-          name: m.displayName || m.name,
+          id: m.name.replace(/^models\//, ""),
+          name: m.displayName || m.name.replace(/^models\//, ""),
           description: m.description,
           contextLength: m.inputTokenLimit,
           isFree: false,
@@ -539,13 +548,22 @@ export async function fetchProviderModels(params: {
       const headers: Record<string, string> = {};
       if (apiKey) headers["authorization"] = `Bearer ${apiKey}`;
 
-      const res = await fetch(`${cleanBase}/models`, {
+      let res = await fetch(`${cleanBase}/models`, {
         headers,
         signal: AbortSignal.timeout(10000),
       }).catch((err) => {
         log.error({ err }, "Fetch models error:");
         return null;
       });
+
+      // Special check for Ollama /api/tags if /v1/models failed
+      if ((!res || !res.ok) && (cleanBase.includes("11434") || cleanBase.includes("ollama"))) {
+        const host = cleanBase.replace(/\/v1$/, "");
+        res = await fetch(`${host}/api/tags`, {
+          headers,
+          signal: AbortSignal.timeout(6000),
+        }).catch(() => null);
+      }
 
       if (!res || !res.ok) {
         const fallback = getFallbackModelsForBaseUrl(cleanBase);
@@ -560,12 +578,12 @@ export async function fetchProviderModels(params: {
       const rawData = Array.isArray(json.data) ? json.data : Array.isArray(json.models) ? json.models : [];
 
       const models: FetchedModel[] = rawData.map((m: {
-        id: string;
+        id?: string;
         name?: string;
         pricing?: { prompt?: string; completion?: string };
         context_length?: number;
       }) => {
-        const id = m.id;
+        const id = m.id || m.name || "";
         const promptCost = m.pricing?.prompt;
         const completionCost = m.pricing?.completion;
         const isFree =
@@ -579,7 +597,7 @@ export async function fetchProviderModels(params: {
           isFree,
           contextLength: m.context_length,
         };
-      });
+      }).filter((m: FetchedModel) => Boolean(m.id));
 
       models.sort((a, b) => {
         if (a.isFree && !b.isFree) return -1;
@@ -604,10 +622,11 @@ export async function fetchProviderModels(params: {
 function getFallbackModels(providerType: ProviderType): FetchedModel[] {
   if (providerType === "gemini") {
     return [
-      { id: "models/gemini-2.0-flash", name: "Gemini 2.0 Flash", isFree: false },
-      { id: "models/gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite", isFree: false },
-      { id: "models/gemini-1.5-pro", name: "Gemini 1.5 Pro", isFree: false },
-      { id: "models/gemini-1.5-flash", name: "Gemini 1.5 Flash", isFree: false },
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", isFree: false },
+      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", isFree: false },
+      { id: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite", isFree: false },
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", isFree: false },
+      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", isFree: false },
     ];
   }
   if (providerType === "anthropic") {
@@ -640,6 +659,22 @@ function getFallbackModelsForBaseUrl(baseUrl: string): FetchedModel[] {
       { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B Instant", isFree: false },
       { id: "mixtral-8x7b-32768", name: "Mixtral 8x7b 32k", isFree: false },
       { id: "deepseek-r1-distill-llama-70b", name: "DeepSeek R1 Distill Llama 70B", isFree: false },
+      { id: "gemma2-9b-it", name: "Gemma 2 9B IT", isFree: false },
+    ];
+  }
+  if (url.includes("api.x.ai") || url.includes("x.ai")) {
+    return [
+      { id: "grok-2-latest", name: "Grok 2", isFree: false },
+      { id: "grok-2-vision-latest", name: "Grok 2 Vision", isFree: false },
+      { id: "grok-beta", name: "Grok Beta", isFree: false },
+    ];
+  }
+  if (url.includes("nvidia.com")) {
+    return [
+      { id: "meta/llama-3.3-70b-instruct", name: "Llama 3.3 70B Instruct", isFree: false },
+      { id: "nvidia/llama-3.1-nemotron-70b-instruct", name: "Nemotron 70B Instruct", isFree: false },
+      { id: "deepseek-ai/deepseek-r1", name: "DeepSeek R1", isFree: false },
+      { id: "mistralai/mistral-large-2-instruct", name: "Mistral Large 2", isFree: false },
     ];
   }
   if (url.includes("deepseek")) {
@@ -648,15 +683,45 @@ function getFallbackModelsForBaseUrl(baseUrl: string): FetchedModel[] {
       { id: "deepseek-reasoner", name: "DeepSeek R1 (Reasoner)", isFree: false },
     ];
   }
+  if (url.includes("11434") || url.includes("ollama")) {
+    return [
+      { id: "llama3.2:latest", name: "Llama 3.2 Latest", isFree: true },
+      { id: "llama3.1:8b", name: "Llama 3.1 8B", isFree: true },
+      { id: "deepseek-r1:8b", name: "DeepSeek R1 8B", isFree: true },
+      { id: "qwen2.5-coder:7b", name: "Qwen 2.5 Coder 7B", isFree: true },
+      { id: "mistral:latest", name: "Mistral Latest", isFree: true },
+      { id: "phi4:latest", name: "Phi 4 Latest", isFree: true },
+    ];
+  }
+  if (url.includes("1234") || url.includes("lmstudio")) {
+    return [
+      { id: "local-model", name: "Loaded Local Model", isFree: true },
+    ];
+  }
+  if (url.includes("opencodezen")) {
+    return [
+      { id: "opencodezen-coder", name: "OpenCodeZen Coder", isFree: false },
+      { id: "default", name: "Default Model", isFree: false },
+    ];
+  }
+  if (url.includes("nowsporter")) {
+    return [
+      { id: "nowsporter-model", name: "Now Sporter Model", isFree: false },
+      { id: "default", name: "Default Model", isFree: false },
+    ];
+  }
   if (url.includes("openai.com")) {
     return [
       { id: "gpt-4o-mini", name: "GPT-4o Mini", isFree: false },
       { id: "gpt-4o", name: "GPT-4o", isFree: false },
       { id: "o1", name: "o1", isFree: false },
       { id: "o3-mini", name: "o3-mini", isFree: false },
+      { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", isFree: false },
     ];
   }
-  return [];
+  return [
+    { id: "default", name: "Default Model", isFree: false },
+  ];
 }
 
 export async function exportAiProviders(): Promise<{

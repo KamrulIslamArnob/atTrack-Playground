@@ -12,7 +12,7 @@ export function StartupServiceCard() {
   const [isElectron, setIsElectron] = useState<boolean | null>(null);
   const [startAtLogin, setStartAtLogin] = useState(false);
   const [closeToTray, setCloseToTray] = useState(true);
-  const [port, setPort] = useState<number>(3308);
+  const [port, setPort] = useState<number>(3788);
   const [copied, setCopied] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -45,7 +45,7 @@ export function StartupServiceCard() {
     } else {
       setIsElectron(false);
       // Browser mode: detect host port
-      const currentPort = Number(window.location.port) || 3308;
+      const currentPort = Number(window.location.port) || 3788;
       setPort(currentPort);
     }
   }, []);
