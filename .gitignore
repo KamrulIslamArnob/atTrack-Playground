@@ -17,12 +17,24 @@
 /.next/
 /.next_trash/
 /.next_*/
-/out/
-
-# production (ignore release installers, NOT build assets)
+# production & release installers
 /release/
+release/
+release/**
+/dist/
+dist/
+/out/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.blockmap
+*.nsis.7z
+builder-debug.yml
+builder-effective-config.yaml
 /build/installer/*.dmg
 /build/installer/*.exe
+/build/installer/*.zip
 
 # misc
 .DS_Store
