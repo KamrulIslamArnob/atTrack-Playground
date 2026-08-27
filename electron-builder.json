@@ -1,6 +1,6 @@
 {
-  "appId": "com.attrack.desktop",
-  "productName": "AtTrack",
+  "appId": "com.betterjob.desktop",
+  "productName": "BetterJob",
   "directories": {
     "output": "release",
     "buildResources": "build"
@@ -55,7 +55,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "artifactName": "AtTrack-Setup-${version}-win.exe",
+    "artifactName": "BetterJob-Setup-${version}-win.exe",
     "include": "build/installer.nsh"
   },
   "dmg": {
@@ -68,6 +68,6 @@
       "width": 540,
       "height": 380
     },
-    "artifactName": "AtTrack-${version}-mac.dmg"
+    "artifactName": "BetterJob-${version}-mac.dmg"
   }
 }
