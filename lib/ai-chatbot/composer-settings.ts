@@ -89,25 +89,25 @@ export const PERMISSION_MODE_CONFIG: Record<
 > = {
   bypass: {
     label: "Bypass permissions",
-    description: "Execute directly: database writes and reads run automatically",
+    description: "Execute directly: database and connected tools run automatically",
     badge: "Auto",
     icon: "zap",
   },
   ask: {
     label: "Ask before changes",
-    description: "Confirm database writes and updates before modifying data",
+    description: "Confirm writes and external actions on database and connectors",
     badge: "Safe",
     icon: "shield",
   },
   strict: {
     label: "Strict confirmation",
-    description: "Prompt for approval on all tool and database operations",
+    description: "Prompt for approval on all tool, connector, and database operations",
     badge: "Strict",
     icon: "lock",
   },
   readonly: {
     label: "Read only",
-    description: "Safe mode: inspect data without permitting any writes",
+    description: "Safe mode: inspect data without permitting any writes or mutations",
     badge: "View",
     icon: "eye",
   },

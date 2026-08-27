@@ -8,10 +8,13 @@ import type { ToolDefinition } from "./types";
 import { getDb } from "@/lib/db/sqlite";
 import { tableExists, resolveOwnerColumn, getColumns } from "./db-utils";
 import { createPendingDbDelete } from "@/lib/ai-chatbot/db-approval";
+import { stageConnectorOperation } from "@/lib/ai/connectors";
 
 export const deleteDatabaseTool: ToolDefinition = {
   name: "delete_database",
   sourceId: "db_query",
+  connectorId: "database",
+  actionType: "delete",
   description:
     "Deletes rows from ANY table in the user's own workspace database. SAFETY: this NEVER deletes on the call that proposes it. It returns the exact matching rows and creates an Allow/Deny confirmation card for the user. Pass `table` and either `ids` (array of ids), `id` (single id), or `title`/`name` to look up matching rows. The delete ONLY runs after the user clicks Allow.",
   parameters: {
@@ -30,14 +33,6 @@ export const deleteDatabaseTool: ToolDefinition = {
     required: ["table"],
   },
   execute: async (args, ctx) => {
-    const mode = (ctx.permissionMode as string) ?? "bypass";
-    if (mode === "readonly") {
-      return {
-        content: `Delete blocked: you are in Read-only (View) mode. Switch to "Ask before changes" or "Bypass permissions" to allow deletions. No data was changed.`,
-        citations: [],
-      };
-    }
-
     const table = typeof args.table === "string" ? args.table.trim() : "";
     if (!tableExists(table)) {
       return { content: `Table "${table}" does not exist.`, citations: [] };
@@ -89,57 +84,71 @@ export const deleteDatabaseTool: ToolDefinition = {
       ownerCol ? ` AND "${ownerCol}" = ?` : ""
     }`;
 
-    // Bypass: execute directly without approval
-    if (mode === "bypass") {
-      const placeholders2 = foundIds.map(() => "?").join(",");
-      const params2: unknown[] = [...foundIds];
-      const delSql = `DELETE FROM "${table}" WHERE id IN (${placeholders2})${ownerCol ? ` AND "${ownerCol}" = ?` : ""}`;
-      if (ownerCol) params2.push(ctx.userId);
-      const { executeApprovedDelete } = await import("@/lib/ai-chatbot/db-approval");
-      // Reuse the same execution helper by constructing a temporary pending object
-      const deleted = (() => {
-        const db2 = getDb();
-        const info = db2.prepare(delSql).run(...(params2 as never[]));
-        return Number(info.changes);
-      })();
-      // Log
-      try {
-        const { logResourceActivity } = await import("@/lib/actions/activity-log");
-        for (const id of foundIds) {
-          void logResourceActivity(ctx.userId, "chat_delete", table, id, { bypass: true });
-        }
-      } catch {}
+    const stagedDelete = stageConnectorOperation({
+      connectorId: "database",
+      action: "delete",
+      permissionMode: ctx.permissionMode,
+      userId: ctx.userId,
+      targetResource: table,
+      details: { ids: foundIds },
+      buildApproval: () => {
+        const approvalId = createPendingDbDelete({
+          userId: ctx.userId,
+          table,
+          ownerCol,
+          ids: foundIds,
+          label: table,
+          preview: summary,
+          sql,
+        });
+        return {
+          approvalId,
+          label: table,
+          preview: summary,
+          sql,
+          expiresAt: Date.now() + 60_000,
+          kind: "delete",
+          table,
+          action: "delete",
+        };
+      },
+    });
+
+    if (stagedDelete.status === "blocked") {
+      return stagedDelete.result;
+    }
+
+    if (stagedDelete.status === "stage_approval") {
       return {
-        content: `Deleted ${deleted} row(s) from "${table}" directly (Bypass permissions).`,
+        content:
+          `About to delete ${found.length} row(s) from "${table}":\n${summary}\n\n` +
+          `SQL: ${sql}\n\n` +
+          `This has NOT run yet. The chat is now waiting for your approval — click Allow to delete, or Deny to cancel.`,
         citations: [table],
+        approval: stagedDelete.approval,
       };
     }
 
-    const approvalId = createPendingDbDelete({
-      userId: ctx.userId,
-      table,
-      ownerCol,
-      ids: foundIds,
-      label: table,
-      preview: summary,
-      sql,
-    });
-
+    // Bypass permissions (Auto mode): execute directly
+    const placeholders2 = foundIds.map(() => "?").join(",");
+    const params2: unknown[] = [...foundIds];
+    const delSql = `DELETE FROM "${table}" WHERE id IN (${placeholders2})${ownerCol ? ` AND "${ownerCol}" = ?` : ""}`;
+    if (ownerCol) params2.push(ctx.userId);
+    const deleted = (() => {
+      const db2 = getDb();
+      const info = db2.prepare(delSql).run(...(params2 as never[]));
+      return Number(info.changes);
+    })();
+    // Log
+    try {
+      const { logResourceActivity } = await import("@/lib/actions/activity-log");
+      for (const id of foundIds) {
+        void logResourceActivity(ctx.userId, "chat_delete", table, id, { bypass: true });
+      }
+    } catch {}
     return {
-      content:
-        `About to delete ${found.length} row(s) from "${table}":\n${summary}\n\n` +
-        `SQL: ${sql}\n\n` +
-        `This has NOT run yet. The chat is now waiting for your approval — click Allow to delete, or Deny to cancel.`,
+      content: `Deleted ${deleted} row(s) from "${table}" directly (Bypass permissions).`,
       citations: [table],
-      approval: {
-        approvalId,
-        label: table,
-        preview: summary,
-        sql,
-        expiresAt: Date.now() + 60_000,
-        kind: "delete",
-        table,
-      },
     };
   },
 };

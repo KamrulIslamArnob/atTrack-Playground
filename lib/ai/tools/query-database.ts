@@ -19,6 +19,8 @@ import {
 export const queryDatabaseTool: ToolDefinition = {
   name: "query_database",
   sourceId: "db_query",
+  connectorId: "database",
+  actionType: "read",
   description:
     "Read any table in the user's own workspace database. Use when the user wants a count, aggregate, filtered view, or raw lookup that the other tools don't directly provide. Pass `table` (any table name) and optionally `columns` (subset to return), `filterText` (case-insensitive substring match across text columns), and `limit` (1-100, default 25). Results are always scoped to the user's own data. This tool is READ-ONLY — it never writes, updates, or deletes.",
   parameters: {

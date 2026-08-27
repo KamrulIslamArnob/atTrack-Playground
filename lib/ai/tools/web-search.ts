@@ -9,6 +9,8 @@ import { fetchUrlAsText } from "@/lib/ai/providers";
  */
 export const webSearchTool: ToolDefinition = {
   name: "web_search",
+  connectorId: "web_search",
+  actionType: "read",
   description:
     "Fetch the text content of a specific web URL the user mentioned (e.g. a job posting or article). Use only when the user supplies a concrete URL. Does not perform open-web search queries.",
   parameters: {

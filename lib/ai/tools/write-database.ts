@@ -8,6 +8,7 @@
 import type { ToolDefinition } from "./types";
 import type { ChatArtifact, JobArtifactSnapshot, ContactArtifactSnapshot, LinkArtifactSnapshot, MemoryArtifactSnapshot, InterviewArtifactSnapshot } from "@/lib/types/chat-artifact";
 import { createPendingWrite, buildWriteSqlPreview } from "@/lib/ai-chatbot/write-approval";
+import { stageConnectorOperation } from "@/lib/ai/connectors";
 import { getDb } from "@/lib/db/sqlite";
 import { createDbClient } from "@/lib/db/client";
 import { ensureApplication } from "@/lib/actions/board";
@@ -187,6 +188,8 @@ function isAppliedKindList(userId: string, listId: unknown): boolean {
 export const writeDatabaseTool: ToolDefinition = {
   name: "write_database",
   sourceId: "db_query",
+  connectorId: "database",
+  actionType: "write",
   description:
     "Create or update a row in ANY table of the user's own workspace database. Executes immediately, no confirmation needed. Pass `action` ('insert' | 'update'), `table` (any table), `id` (required for update, ignored for insert), and `values` (column -> value). `user_id`/ownership and `id`/`created_at`/`updated_at` are always server-managed. For jobs, never set `status` — it's derived automatically from `list_id`; set `list_id` to move a job between board columns (look the list's id up with query_database on board_lists first), and moving into an Applied-kind list automatically creates the matching application record.",
   parameters: {
@@ -203,15 +206,6 @@ export const writeDatabaseTool: ToolDefinition = {
     required: ["action", "table", "values"],
   },
   execute: async (args, ctx) => {
-    const mode = (ctx.permissionMode as string) ?? "bypass";
-    // Read-only blocks all writes immediately — no pending, just inform.
-    if (mode === "readonly") {
-      return {
-        content: `Write blocked: you are in Read-only (View) mode. Switch to "Ask before changes" or "Bypass permissions" to allow modifications. No data was changed.`,
-        citations: [],
-      };
-    }
-
     const action = args.action === "insert" || args.action === "update" ? args.action : null;
     const table = typeof args.table === "string" ? args.table.trim() : "";
     if (!action || !tableExists(table)) {
@@ -305,22 +299,25 @@ export const writeDatabaseTool: ToolDefinition = {
       const generatesId = idType !== undefined && idType !== "INTEGER";
       if (generatesId) values.id = crypto.randomUUID();
 
-      const needsApproval = mode === "ask" || mode === "strict";
-      if (needsApproval) {
-        const sqlPreview = buildWriteSqlPreview(table, "insert", values);
-        const preview = `INSERT ${table}:\n${JSON.stringify(values, null, 2).slice(0, 900)}${dropped.length ? `\n(ignored: ${dropped.join(", ")})` : ""}`;
-        const approvalId = createPendingWrite({
-          userId: ctx.userId,
-          table,
-          action: "insert",
-          values,
-          preview,
-          sql: sqlPreview,
-        });
-        return {
-          content: `Ready to create ${table} row: ${JSON.stringify(values)}.\n\nThis has NOT run yet — waiting for your approval (Ask before changes). Click Allow to create, or Deny to cancel.`,
-          citations: [table],
-          approval: {
+      const stagedInsert = stageConnectorOperation({
+        connectorId: "database",
+        action: "write",
+        permissionMode: ctx.permissionMode,
+        userId: ctx.userId,
+        targetResource: table,
+        details: values,
+        buildApproval: () => {
+          const sqlPreview = buildWriteSqlPreview(table, "insert", values);
+          const preview = `INSERT ${table}:\n${JSON.stringify(values, null, 2).slice(0, 900)}${dropped.length ? `\n(ignored: ${dropped.join(", ")})` : ""}`;
+          const approvalId = createPendingWrite({
+            userId: ctx.userId,
+            table,
+            action: "insert",
+            values,
+            preview,
+            sql: sqlPreview,
+          });
+          return {
             approvalId,
             label: table,
             preview,
@@ -329,8 +326,12 @@ export const writeDatabaseTool: ToolDefinition = {
             kind: "write",
             table,
             action: "insert",
-          },
-        };
+          };
+        },
+      });
+
+      if (stagedInsert.status !== "allowed") {
+        return stagedInsert.result;
       }
 
       const cols = Object.keys(values);
@@ -362,23 +363,27 @@ export const writeDatabaseTool: ToolDefinition = {
     if (Object.keys(values).length === 0) {
       return { content: "Nothing to update after dropping unknown/blocked fields.", citations: [table] };
     }
-    const needsApprovalUpdate = mode === "ask" || mode === "strict";
-    if (needsApprovalUpdate) {
-      const sqlPreview = buildWriteSqlPreview(table, "update", values, rowId, ctx.userId);
-      const preview = `UPDATE ${table} ${rowId}:\n${JSON.stringify(values, null, 2).slice(0, 900)}${dropped.length ? `\n(ignored: ${dropped.join(", ")})` : ""}`;
-      const approvalId = createPendingWrite({
-        userId: ctx.userId,
-        table,
-        action: "update",
-        id: rowId,
-        values,
-        preview,
-        sql: sqlPreview,
-      });
-      return {
-        content: `Ready to update ${table} row ${rowId}: ${JSON.stringify(values)}.\n\nThis has NOT run yet — waiting for your approval (Ask before changes). Click Allow to update, or Deny to cancel.`,
-        citations: [table],
-        approval: {
+
+    const stagedUpdate = stageConnectorOperation({
+      connectorId: "database",
+      action: "write",
+      permissionMode: ctx.permissionMode,
+      userId: ctx.userId,
+      targetResource: table,
+      details: { id: rowId, ...values },
+      buildApproval: () => {
+        const sqlPreview = buildWriteSqlPreview(table, "update", values, rowId, ctx.userId);
+        const preview = `UPDATE ${table} ${rowId}:\n${JSON.stringify(values, null, 2).slice(0, 900)}${dropped.length ? `\n(ignored: ${dropped.join(", ")})` : ""}`;
+        const approvalId = createPendingWrite({
+          userId: ctx.userId,
+          table,
+          action: "update",
+          id: rowId,
+          values,
+          preview,
+          sql: sqlPreview,
+        });
+        return {
           approvalId,
           label: table,
           preview,
@@ -387,8 +392,12 @@ export const writeDatabaseTool: ToolDefinition = {
           kind: "write",
           table,
           action: "update",
-        },
-      };
+        };
+      },
+    });
+
+    if (stagedUpdate.status !== "allowed") {
+      return stagedUpdate.result;
     }
 
     const setCols = Object.keys(values);

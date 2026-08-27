@@ -63,6 +63,10 @@ export interface ToolDefinition {
   personas?: string[];
   /** ContextSource id that gates this tool (omit = always available, e.g. web_search). */
   sourceId?: string;
+  /** Connector id this tool connects with (e.g. "database", "web_search", "email", "github"). */
+  connectorId?: string;
+  /** Type of action executed by this tool (read, write, delete, execute). */
+  actionType?: "read" | "write" | "delete" | "execute";
   /** Read-only by design. Never mutates user data. */
   execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>;
 }
