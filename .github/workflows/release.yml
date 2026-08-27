@@ -1,4 +1,4 @@
-name: Build & Release
+name: Build & Release (Windows)
 
 on:
   push:
@@ -14,21 +14,8 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-            arch: x64
-          - os: macos-latest
-            platform: mac
-            arch: universal
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-
-    runs-on: ${{ matrix.os }}
+  build-windows-release:
+    runs-on: windows-latest
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -47,50 +34,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ── macOS: optional signing & notarization credentials ──────────────
-      - name: Import Apple Certificate (macOS)
-        if: matrix.platform == 'mac' && env.MAC_CERTS != ''
-        uses: apple-actions/import-codesign-certs@v2
-        env:
-          MAC_CERTS: ${{ secrets.MAC_CERTS }}
-        with:
-          p12-file-base64: ${{ secrets.MAC_CERTS }}
-          p12-password: ${{ secrets.MAC_CERTS_PASSWORD }}
-
-      - name: Set Apple Notarization Credentials (macOS)
-        if: matrix.platform == 'mac' && env.APPLE_ID != ''
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-        run: |
-          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> $GITHUB_ENV
-          echo "APPLE_APP_SPECIFIC_PASSWORD=${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" >> $GITHUB_ENV
-          echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}" >> $GITHUB_ENV
-
-      # ── Windows: optional signing certificate ────────────────────────────
-      - name: Set Windows Signing Certificate (Windows)
-        if: matrix.platform == 'win' && env.WIN_CSC_LINK != ''
+      # ── Optional Windows Signing Certificate ─────────────────────────────
+      - name: Set Windows Signing Certificate
+        if: env.WIN_CSC_LINK != ''
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        shell: bash
         run: |
           echo "CSC_LINK=${{ secrets.WIN_CSC_LINK }}" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=${{ secrets.WIN_CSC_KEY_PASSWORD }}" >> $GITHUB_ENV
 
-      # ── Package Extension (Ubuntu runner only, once) ─────────────────────
-      - name: Zip Chrome Extension (Linux)
-        if: matrix.platform == 'linux'
+      # ── Zip Chrome Extension ─────────────────────────────────────────────
+      - name: Package Chrome Extension
+        shell: pwsh
         run: |
-          mkdir -p release
-          zip -r release/betterjob-chrome-extension.zip extension/
+          New-Item -ItemType Directory -Force -Path release
+          Compress-Archive -Path extension/* -DestinationPath release/betterjob-chrome-extension.zip -Force
 
-      # ── Build standalone Next server & Package Electron App ─────────────
+      # ── Build Standalone Next.js App & Package Electron Windows Installer 
       - name: Prepare Standalone Build
         run: node scripts/prepare-electron-build.js
 
-      - name: Build Electron App (${{ matrix.platform }})
-        run: npx electron-builder --${{ matrix.platform }} --publish always
+      - name: Build Electron Windows App (.exe)
+        run: npx electron-builder --win --publish always
 
-      # ── Upload artifacts to GitHub Release ──────────────────────────────
-      - name: Publish GitHub Release Assets
+      # ── Publish GitHub Release ───────────────────────────────────────────
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tag_name != ''
         with:
@@ -100,9 +69,6 @@ jobs:
           generate_release_notes: true
           files: |
             release/*.exe
-            release/*.dmg
-            release/*.AppImage
-            release/*.deb
             release/*.zip
             release/*.blockmap
             release/latest*.yml

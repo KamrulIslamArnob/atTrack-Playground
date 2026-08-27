@@ -61,11 +61,9 @@ Get the native desktop app — zero setup required, always offline-ready.
 
 <div align="center">
 
-[![Download for Windows](https://img.shields.io/badge/Windows-Download_.exe-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
-[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
-[![Download for Linux](https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
+[![Download for Windows](https://img.shields.io/badge/Windows-Download_.exe_(Installer)-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
 
-[**View All Releases & Assets &rarr;**](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
+[**Download Latest Windows Release &rarr;**](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
 
 </div>
 
