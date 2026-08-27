@@ -33,8 +33,16 @@ import {
 } from "@/lib/ai-chatbot/workspace";
 import type { ContextSource } from "@/lib/ai-chatbot/types";
 import { getCustomSources, setSourceConfig, buildSourcePayload } from "@/lib/ai-chatbot/source-permissions";
+import { getActiveLocalFolder } from "@/lib/ai-chatbot/local-folders";
+import { getComposerSettings } from "@/lib/ai-chatbot/composer-settings";
 import type { ChatMessage, DbApproval } from "@/lib/ai-chatbot/use-chat";
 import DbDeleteApprovalCard from "@/components/ai-chatbot/db-delete-approval-card";
+import type { ChatArtifact } from "@/lib/types/chat-artifact";
+import { JobChatCard } from "@/components/ai-chatbot/artifacts/job-chat-card";
+import { ContactChatCard } from "@/components/ai-chatbot/artifacts/contact-chat-card";
+import { LinkChatCard } from "@/components/ai-chatbot/artifacts/link-chat-card";
+import { MemoryChatCard } from "@/components/ai-chatbot/artifacts/memory-chat-card";
+import { InterviewChatCard } from "@/components/ai-chatbot/artifacts/interview-chat-card";
 import { useChatQueue } from "@/lib/ai-chatbot/chat-queue-context";
 import { listProviders, hasAnyProviderConfigured } from "@/lib/actions/ai-providers";
 import { modelSupportsImages, isReasoningModel } from "@/lib/ai/model-capabilities";
@@ -161,11 +169,32 @@ export default function AIChatbotPage() {
       const hasAttachments = Boolean(attachments && attachments.length > 0);
       if (!currentId || (!value && !hasAttachments)) return;
 
+      const composerSettings = getComposerSettings();
+      const activeFolder = getActiveLocalFolder();
+
       const { sourceConfig } = buildSourcePayload(sources);
+      if (activeFolder) {
+        sourceConfig.localFolder = {
+          id: activeFolder.id,
+          name: activeFolder.name,
+          path: activeFolder.path,
+          noteCount: activeFolder.noteCount,
+        };
+        if (!sourceConfig.obsidian?.vaultPath) {
+          sourceConfig.obsidian = {
+            vaultPath: activeFolder.path,
+          };
+        }
+      }
+
       const enabled =
         activeConnectedIds.length > 0
-          ? activeConnectedIds
+          ? [...activeConnectedIds]
           : sources.filter((s) => s.enabled).map((s) => s.id);
+
+      if (activeFolder && !enabled.includes("obsidian")) {
+        enabled.push("obsidian");
+      }
 
       const bodyPayload = {
         model: selectedModel.id,
@@ -175,6 +204,9 @@ export default function AIChatbotPage() {
         webSearchActive: isWebSearchActive,
         enabledSources: enabled,
         sourceConfig,
+        reasoningEffort: composerSettings.reasoningEffort,
+        permissionMode: composerSettings.permissionMode,
+        localFolder: activeFolder ? { name: activeFolder.name, path: activeFolder.path } : undefined,
       };
 
       await enqueueChat(currentId, value, attachments, bodyPayload);
@@ -767,7 +799,6 @@ export default function AIChatbotPage() {
           });
         }
       }
-
       // 3. Grounded workspace source citations
       if (m.sources && m.sources.length > 0) {
         for (const [idx, src] of m.sources.entries()) {
@@ -778,6 +809,7 @@ export default function AIChatbotPage() {
             title: src,
             mediaType: "text/plain",
           });
+
         }
       }
 
@@ -788,6 +820,58 @@ export default function AIChatbotPage() {
           text: m.content,
           status: isSending ? { type: "running" } : { type: "complete" },
         });
+      }
+
+      // 5. Inline artifact cards from write_database (job, contact, memory, link, interview)
+      if (m.toolSteps && m.toolSteps.length > 0) {
+        const allArtifacts: ChatArtifact[] = [];
+        for (const step of m.toolSteps as unknown as Array<Record<string, unknown>>) {
+          const s = step as { artifact?: ChatArtifact; artifacts?: ChatArtifact[] };
+          if (s.artifact) allArtifacts.push(s.artifact);
+          if (Array.isArray(s.artifacts)) allArtifacts.push(...s.artifacts);
+        }
+        const seenArt = new Set<string>();
+        const dedupedArts = allArtifacts.filter((a) => {
+          const key = `${a.kind}:${a.rowId}`;
+          if (seenArt.has(key)) return false;
+          seenArt.add(key);
+          return true;
+        });
+        for (const art of dedupedArts) {
+          let node: React.ReactNode = null;
+          switch (art.kind) {
+            case "job":
+              node = <JobChatCard snapshot={art.snapshot as any} artifactId={art.id} />;
+              break;
+            case "contact":
+              node = <ContactChatCard snapshot={art.snapshot as any} />;
+              break;
+            case "link":
+              node = <LinkChatCard snapshot={art.snapshot as any} />;
+              break;
+            case "memory":
+              node = <MemoryChatCard snapshot={art.snapshot as any} />;
+              break;
+            case "interview":
+              node = <InterviewChatCard snapshot={art.snapshot as any} />;
+              break;
+            default:
+              node = (
+                <div className="rounded-xl border bg-card p-3.5 text-sm">
+                  <p className="font-medium">{art.title}</p>
+                  {art.subtitle && <p className="text-xs text-muted-foreground">{art.subtitle}</p>}
+                </div>
+              );
+          }
+          if (node) {
+            parts.push({
+              type: "data",
+              id: `artifact-${art.id}`,
+              data: art,
+              dataRendererUI: <div className="my-2 max-w-[520px] w-full">{node}</div>,
+            } as unknown as AssistantMessagePart);
+          }
+        }
       }
 
       return {

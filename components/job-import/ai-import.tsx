@@ -259,7 +259,7 @@ export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              atTrack fetches the page and merges it with anything else you&apos;ve added — useful when a social post links to a longer listing.
+              BetterJob fetches the page and merges it with anything else you&apos;ve added — useful when a social post links to a longer listing.
             </p>
           </div>
 
@@ -359,7 +359,7 @@ export function AiImport({ onClose, lists = [], listId }: AiImportProps) {
                 <FileJson className="size-5 shrink-0" />
                 <div>
                   <p className="font-semibold text-foreground">
-                    atTrack Job JSON detected ({detectedJson.count} job{detectedJson.count === 1 ? "" : "s"})
+                    BetterJob Job JSON detected ({detectedJson.count} job{detectedJson.count === 1 ? "" : "s"})
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     Bypass AI tokens and directly import/sync with smart duplicate merge

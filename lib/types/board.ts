@@ -122,9 +122,9 @@ export function getEffectiveDeadlineInfo(
       deadlineKind = stageMatch.type ?? "deadline";
       targetListName = currentList?.name;
     } else {
-      // 3. Otherwise pick the earliest upcoming deadline / milestone
+      // 3. Otherwise pick the latest / most recent timeline milestone or deadline
       const sorted = [...uncompletedDeadlines].sort(
-        (a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        (a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()
       );
       activeDeadlineStr = sorted[0].due_date;
       deadlineTitle = sorted[0].title;

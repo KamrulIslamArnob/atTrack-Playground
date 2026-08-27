@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import {
   ArrowUp,
   Square,
-  Slash,
   Mail,
   Code2,
   Briefcase,
@@ -21,7 +20,12 @@ import {
   DollarSign,
   Terminal,
   Zap,
+  CornerDownLeft,
 } from "lucide-react";
+import { LocalFolderSelector } from "@/components/ai-chatbot/composer/local-folder-selector";
+import { PermissionModeSelector } from "@/components/ai-chatbot/composer/permission-mode-selector";
+import { ReasoningEffortPopover } from "@/components/ai-chatbot/composer/reasoning-effort-popover";
+import { ContextUsagePopover } from "@/components/ai-chatbot/composer/context-usage-popover";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { XIcon } from "@/components/ui/x";
 import { MenuIcon } from "@/components/ui/menu";
@@ -552,6 +556,14 @@ function ChatInput({
 
   const hasValue = Boolean((input || "").trim() || attachments.length > 0);
 
+  // Estimate tokens from current draft so context popover shows live usage even in legacy composer
+  const draftTokens = useMemo(() => {
+    const textLen = (input || "").length;
+    const base = Math.ceil(textLen / 4);
+    const attachOverhead = attachments.length * 256; // rough image/text attach cost
+    return base + attachOverhead;
+  }, [input, attachments.length]);
+
   const triggerFilePicker = useCallback(() => {
     if (!model.supportsImages) {
       toast.warning(`${model.name} does not support images`);
@@ -828,23 +840,35 @@ function ChatInput({
               )}
             </AnimatePresence>
 
+            {/* Top Local Workspace Folder Selector Header */}
+            <div className="px-2 pt-1">
+              <LocalFolderSelector />
+            </div>
+
             {/* Main Textarea */}
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleTextareaChange}
-              onKeyUp={handleTextareaKeyUp}
-              onClick={handleTextareaClick}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={
-                selectedPersona.id === "general"
-                  ? "Ask Tracky anything, type @ for memory, or / for skills..."
-                  : `Ask ${selectedPersona.name}, type @ for memory, / for skills...`
-              }
-              rows={1}
-              className="w-full resize-none border-0 bg-transparent px-3.5 pt-3 pb-1 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-50 text-foreground placeholder:text-muted-foreground"
-            />
+            <div className="relative flex items-center w-full">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleTextareaChange}
+                onKeyUp={handleTextareaKeyUp}
+                onClick={handleTextareaClick}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                placeholder={
+                  selectedPersona.id === "general"
+                    ? "Describe a task or ask a question, type @ for memory, / for skills..."
+                    : `Ask ${selectedPersona.name}, type @ for memory, / for skills...`
+                }
+                rows={1}
+                className="w-full resize-none border-0 bg-transparent px-3.5 pt-3 pb-1 pr-7 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-50 text-foreground placeholder:text-muted-foreground"
+              />
+              {input.trim() && (
+                <div className="absolute right-3.5 top-3.5 text-muted-foreground/40 pointer-events-none hidden sm:block">
+                  <CornerDownLeft className="size-3.5" />
+                </div>
+              )}
+            </div>
 
             {/* Hidden File Input */}
             <input
@@ -871,12 +895,8 @@ function ChatInput({
                   </button>
                 )}
 
-                {/* Model Selector */}
-                <ModelSelector
-                  selectedModelId={model.id}
-                  availableModels={availableModels}
-                  onSelectModel={onSelectModel}
-                />
+                {/* Permission Mode Autonomy Selector */}
+                <PermissionModeSelector />
 
                 {/* Persona Selector */}
                 <PersonaSelector
@@ -929,8 +949,21 @@ function ChatInput({
                 )}
               </div>
 
-              {/* Submit or Stop Button */}
-              <div>
+              {/* Right tools & Submit/Stop */}
+              <div className="flex items-center gap-1.5">
+                {/* Model Selector */}
+                <ModelSelector
+                  selectedModelId={model.id}
+                  availableModels={availableModels}
+                  onSelectModel={onSelectModel}
+                />
+
+                {/* Reasoning Effort Popover */}
+                <ReasoningEffortPopover />
+
+                {/* Context Window & Token Usage Popover */}
+                <ContextUsagePopover model={model} contextTokens={draftTokens} />
+
                 {isLoading ? (
                   <button
                     type="button"

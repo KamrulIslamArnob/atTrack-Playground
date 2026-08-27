@@ -23,7 +23,7 @@ export default function RootError({
       <div className="w-full max-w-md text-center">
         <div className="flex items-center justify-center gap-2.5 opacity-90 transition-opacity hover:opacity-100">
           <ThemeLogo width={28} height={28} className="drop-shadow-sm" />
-          <span className="font-heading text-xl font-semibold tracking-tight">atTrack</span>
+          <span className="font-heading text-xl font-semibold tracking-tight">BetterJob</span>
         </div>
 
         <div className="mt-10 flex justify-center">

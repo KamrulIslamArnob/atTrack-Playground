@@ -151,13 +151,15 @@ export function BoardColumn({
   const [draftName, setDraftName] = useState(list.name);
   const [onHoldOpen, setOnHoldOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [rejectedOpen, setRejectedOpen] = useState(false);
   const dragCounter = useRef(0);
   const shouldReduceMotion = useReducedMotion();
 
   const activeCards = cards.filter((c) => !c.state || c.state === "active");
   const onHoldCards = cards.filter((c) => c.state === "on_hold");
   const archivedCards = cards.filter((c) => c.state === "archived");
-  const hasInactiveCards = onHoldCards.length > 0 || archivedCards.length > 0;
+  const rejectedCards = cards.filter((c) => c.state === "rejected");
+  const hasInactiveCards = onHoldCards.length > 0 || archivedCards.length > 0 || rejectedCards.length > 0;
 
   const Icon = LIST_KIND_ICONS[list.kind] ?? Briefcase;
   const accent = DEFAULT_LIST_COLORS[list.kind] ?? list.color ?? "var(--primary)";
@@ -522,6 +524,39 @@ export function BoardColumn({
                   className="flex flex-col gap-2 overflow-hidden"
                 >
                   {renderCardItems(archivedCards)}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {rejectedCards.length > 0 && (
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={() => setRejectedOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground active:scale-95 cursor-pointer"
+            >
+              <div className="flex items-center gap-1.5">
+                <ThumbsDown className="size-3.5" />
+                <span>Rejected ({rejectedCards.length})</span>
+              </div>
+              {rejectedOpen ? (
+                <ChevronDownIcon className="size-3.5" />
+              ) : (
+                <ChevronRightIcon className="size-3.5" />
+              )}
+            </button>
+            <AnimatePresence initial={false}>
+              {rejectedOpen && (
+                <motion.div
+                  initial={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+                  className="flex flex-col gap-2 overflow-hidden"
+                >
+                  {renderCardItems(rejectedCards)}
                 </motion.div>
               )}
             </AnimatePresence>

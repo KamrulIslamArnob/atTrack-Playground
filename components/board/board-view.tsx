@@ -31,13 +31,15 @@ import {
   renameList,
   reorderLists,
 } from "@/lib/actions/board";
-import type { BoardCard, BoardList } from "@/lib/types/board";
+import { getEffectiveDeadlineInfo, type BoardCard, type BoardList } from "@/lib/types/board";
+import { parseLocalDate } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface BoardViewProps {
   lists: BoardList[];
   cards: BoardCard[];
   onViewChange?: (view: "board" | "list") => void;
+  initialSort?: SortOption;
 }
 
 type SortOption = "recent" | "tier" | "fit" | "deadline" | "title" | "company" | "oldest";
@@ -59,7 +61,7 @@ const GROUP_LABELS: Record<GroupOption, string> = {
   resume: "Resume",
 };
 
-export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
+export function BoardView({ lists, cards, onViewChange, initialSort = "deadline" }: BoardViewProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const { confirm, dialog } = useConfirm();
@@ -99,7 +101,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
   const [addJobListId, setAddJobListId] = useState<string | null>(null);
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortOption>("recent");
+  const [sort, setSort] = useState<SortOption>(initialSort);
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -183,15 +185,24 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
         return [...optimisticCards].sort((a, b) => (b.match_score ?? -1) - (a.match_score ?? -1));
       case "deadline":
         return [...optimisticCards].sort((a, b) => {
-          const getVal = (d: string | null | undefined) => {
-            if (!d) return Infinity;
-            const norm = d.trim().toLowerCase();
+          const getVal = (c: BoardCard) => {
+            const info = getEffectiveDeadlineInfo(c, optimisticLists);
+            if (info) {
+              if (info.dateString === "ASAP") return -Infinity;
+              if (info.dateString === "Unknown") return Infinity;
+              return info.date.getTime();
+            }
+            if (!c.deadline) return Infinity;
+            const norm = c.deadline.trim().toLowerCase();
             if (norm === "asap") return -Infinity;
             if (norm === "unknown") return Infinity;
-            const t = new Date(d).getTime();
+            const t = parseLocalDate(c.deadline).getTime();
             return isNaN(t) ? Infinity : t;
           };
-          return getVal(a.deadline) - getVal(b.deadline);
+          const valA = getVal(a);
+          const valB = getVal(b);
+          if (valA !== valB) return valA - valB;
+          return (a.board_position ?? 0) - (b.board_position ?? 0);
         });
       case "title":
         return [...optimisticCards].sort((a, b) => a.title.localeCompare(b.title));
@@ -207,7 +218,7 @@ export function BoardView({ lists, cards, onViewChange }: BoardViewProps) {
       default:
         return optimisticCards;
     }
-  }, [optimisticCards, sort]);
+  }, [optimisticCards, sort, optimisticLists]);
 
   const filteredAndSortedCards = useMemo(() => {
     let list = sortedCards;

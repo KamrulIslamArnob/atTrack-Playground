@@ -2,7 +2,7 @@ import { getLinksAndCategories } from "@/lib/actions/links";
 import { LinksView } from "@/components/links/links-view";
 
 export const metadata = {
-  title: "Resources | atTrack",
+  title: "Resources | BetterJob",
   description: "Organize and quick-launch professional links, career resources, and job portals.",
 };
 

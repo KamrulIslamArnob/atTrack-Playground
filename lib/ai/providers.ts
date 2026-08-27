@@ -8,7 +8,10 @@ import { moduleLogger } from "@/lib/log";
 import { AI_EVENTS, aiEvent, aiWarn, newTraceId } from "@/lib/log/ai-events";
 import { fetchWithLog } from "@/lib/log/fetch";
 import { estimateCost } from "@/lib/ai/pricing";
+import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import type { ToolApproval } from "./tools/types";
+import type { ChatArtifact } from "@/lib/types/chat-artifact";
+import type { PermissionMode } from "@/lib/ai-chatbot/composer-settings";
 
 // createAdminClient/decrypt/logAiUsage stay dynamic imports: they drag the DB
 // client and a "use server" module into the graph of every path that loads this
@@ -328,17 +331,17 @@ type HopCaller = (provider: ResolvedProvider, input: GenerateTextInput) => Promi
 
 export async function callGemini(provider: ResolvedProvider, input: GenerateTextInput): Promise<GenerateTextResult> {
   const ai = new GoogleGenAI({ apiKey: provider.api_key });
-  const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
 
   const parts: Part[] = (input.images ?? []).map((img) => ({
     inlineData: { mimeType: img.mimeType, data: img.data },
   }));
-  parts.push({ text: prompt });
+  parts.push({ text: input.userPrompt });
 
   const response = await ai.models.generateContent({
     model: provider.model,
     contents: [{ role: "user", parts }],
     config: {
+      ...(input.systemPrompt ? { systemInstruction: input.systemPrompt } : {}),
       ...(input.temperature != null ? { temperature: input.temperature } : {}),
       ...(input.maxOutputTokens != null ? { maxOutputTokens: input.maxOutputTokens } : {}),
     },
@@ -733,17 +736,17 @@ export async function generateTextStream(
         try {
           if (provider.provider_type === "gemini") {
             const ai = new GoogleGenAI({ apiKey: provider.api_key });
-            const prompt = [input.systemPrompt, input.userPrompt].filter(Boolean).join("\n\n");
             
             const parts: Part[] = (input.images ?? []).map((img) => ({
               inlineData: { mimeType: img.mimeType, data: img.data },
             }));
-            parts.push({ text: prompt });
+            parts.push({ text: input.userPrompt });
 
             const response = await ai.models.generateContentStream({
               model: provider.model,
               contents: [{ role: "user", parts }],
               config: {
+                ...(input.systemPrompt ? { systemInstruction: input.systemPrompt } : {}),
                 ...(input.temperature != null ? { temperature: input.temperature } : {}),
                 ...(input.maxOutputTokens != null ? { maxOutputTokens: input.maxOutputTokens } : {}),
               },
@@ -901,17 +904,19 @@ export async function generateTextStream(
             err,
           });
           if (enqueuedChunk) {
-            // Mid-stream failure
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
+            // Mid-stream failure — clean to user-facing quota/timeout guidance
+            const clean = cleanAiErrorMessage(message);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: clean })}\n\n`));
             controller.close();
             return;
           }
         }
       }
 
-      // If all providers in chain failed before any token was enqueued
+      // If all providers in chain failed before any token was enqueued — clean once so UI gets quota guidance
+      const cleanFinal = cleanAiErrorMessage(`All providers failed: ${errors.join("; ")}`);
       controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ error: `All providers failed: ${errors.join("; ")}` })}\n\n`)
+        encoder.encode(`data: ${JSON.stringify({ error: cleanFinal })}\n\n`)
       );
       controller.close();
     },
@@ -1002,7 +1007,7 @@ export interface ProviderToolRoundResult {
 export interface ToolCallRecord {
   name: string;
   args: Record<string, unknown>;
-  result?: { content: string; citations: string[]; approval?: ToolApproval };
+  result?: { content: string; citations: string[]; approval?: ToolApproval; artifact?: ChatArtifact; artifacts?: ChatArtifact[] };
   status: "called" | "done" | "error";
   error?: string;
 }
@@ -1015,13 +1020,14 @@ export interface ToolExecutionContext {
   /** Per-turn id, threaded through so tools can tell "this turn" apart from
    *  "a later turn" (see delete_database's confirm gate). */
   traceId?: string;
+  permissionMode?: PermissionMode;
 }
 
 type ToolExecutor = (
   name: string,
   args: Record<string, unknown>,
   ctx: ToolExecutionContext
-) => Promise<{ content: string; citations: string[] }>;
+) => Promise<{ content: string; citations: string[]; approval?: ToolApproval; artifact?: ChatArtifact; artifacts?: ChatArtifact[] }>;
 
 const MAX_TOOL_ROUNDS = 4;
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
-import { format, addDays, subDays, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import {
   Clock, Pin, CheckCircle2, Circle, Trash2, Edit2, Save, Hourglass, CalendarClock } from "lucide-react";
@@ -22,7 +21,7 @@ import {
 } from "@/lib/actions/deadlines";
 import type { JobDeadline, ListKind } from "@/lib/types/board";
 import type { JobDetailData } from "@/lib/types/job-detail";
-import { cn } from "@/lib/utils";
+import { cn, format, addDays, subDays, differenceInDays } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface DeadlinesTabProps {
@@ -611,18 +610,18 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
                     <div className="flex items-center gap-3 min-w-0">
                       <button
                         onClick={() => handleToggleCompleted(item)}
-                        className="text-muted-foreground hover:text-green-800 dark:hover:text-lime-400 transition-colors shrink-0"
-                        title={item.is_completed ? "Mark incomplete" : "Mark completed"}
+                        className="transition-colors shrink-0 cursor-pointer"
+                        title={item.is_completed ? "Set as active timeline state" : "Mark completed / inactive"}
                       >
                         {item.is_completed ? (
-                          <CheckCircle2 className="size-5 text-emerald-500" />
+                          <CheckCircle2 className="size-5 text-muted-foreground/60 hover:text-primary transition-colors" />
                         ) : (
-                          <Circle className="size-5" />
+                          <Circle className="size-5 text-emerald-600 dark:text-emerald-400 fill-emerald-500/20" />
                         )}
                       </button>
 
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {/* Type Indicator Icon */}
                           {isMilestone ? (
                             <span title="Stage Milestone" className="inline-flex items-center text-purple-500 shrink-0">
@@ -643,13 +642,20 @@ export function DeadlinesTab({ data, onRefresh }: DeadlinesTabProps) {
                             {item.title}
                           </h4>
 
+                          {!item.is_completed && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shrink-0 shadow-2xs">
+                              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Active
+                            </span>
+                          )}
+
                           {isMilestone && (
                             <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300 shrink-0">
                               Milestone
                             </span>
                           )}
 
-                          {item.is_pinned && (
+                          {!item.is_completed && item.is_pinned && (
                             <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-lime-500/50 bg-lime-400/25 text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200 shrink-0">
                               <Pin className="size-2.5" /> Pinned
                             </span>

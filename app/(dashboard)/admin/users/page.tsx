@@ -22,7 +22,7 @@ import { ShieldCheckIcon } from "@/components/ui/shield-check";
 import { UserPlusIcon } from "@/components/ui/user-plus";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PageHeader } from "@/components/page-header";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function AdminUsersPage() {

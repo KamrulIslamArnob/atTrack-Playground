@@ -31,7 +31,7 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Board", href: "/board", keywords: "kanban pipeline stages drag wishlist columns" },
   { title: "Jobs", href: "/jobs", keywords: "job listings saved interested preparing" },
   { title: "Applications", href: "/applications", keywords: "application drafts submitted sent" },
-  { title: "Interviews", href: "/interviews", keywords: "interview schedule upcoming completed" },
+  { title: "Interviews", href: "/jobs", keywords: "interview schedule upcoming completed rounds prep" },
   { title: "Network", href: "/network", keywords: "contacts companies network crm hiring managers recruiters alumni" },
   { title: "Document", href: "/documents", keywords: "document resume cv cover letter file upload" },
   { title: "Resources", href: "/resources", keywords: "social links resources portals bookmarks directory" },

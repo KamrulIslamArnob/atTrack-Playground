@@ -21,6 +21,7 @@ import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { ToolExecutionStatus, type ToolExecutionStep } from "./tool-execution-status";
+import { ArtifactRenderer } from "./artifacts/artifact-renderer";
 import type { SqlQueryResult } from "@/lib/actions/database-query";
 
 // Strong custom ease-out: starts fast, settles gracefully.
@@ -460,6 +461,11 @@ const MessageItem = React.memo(function MessageItem({
               )}
               {isStreaming && <StreamCaret reduceMotion={reduceMotion} />}
             </div>
+          )}
+
+          {/* Inline artifact cards (job, contact, memory, link, interview) — rendered from write_database tool snapshots */}
+          {toolSteps && toolSteps.some((s) => s.artifact || (s.artifacts && s.artifacts.length > 0)) && (
+            <ArtifactRenderer steps={toolSteps} />
           )}
 
           {/* Live elapsed/token progress. Sits below the content and outside the

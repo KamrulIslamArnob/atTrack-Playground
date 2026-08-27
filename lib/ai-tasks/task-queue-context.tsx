@@ -22,6 +22,9 @@ interface AITaskQueueContextType {
   setIsPanelOpen: (open: boolean) => void;
   setIsMinimized: (minimized: boolean) => void;
   toggleMinimize: () => void;
+  activeViewingJobId: string | null;
+  activeViewingTab: string | null;
+  setActiveViewing: (jobId: string | null, tab: string | null) => void;
   enqueueJobUpdateTask: (params: {
     jobId: string;
     jobTitle: string;
@@ -76,17 +79,73 @@ function summarizeExtraction(extraction: ExtractionResult): { summary: string; c
   return { summary, changesCount: count };
 }
 
+const STORAGE_KEY_TASKS = "attrack-queue-tasks";
+const STORAGE_KEY_OPEN = "attrack-queue-open";
+
 export function AITaskQueueProvider({ children }: { children: React.ReactNode }) {
+  // Hydration-safe: start with server-matching empty state, hydrate from localStorage in effect
   const [tasks, setTasks] = useState<AITask[]>([]);
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [activeViewingJobId, setActiveViewingJobId] = useState<string | null>(null);
+  const [activeViewingTab, setActiveViewingTab] = useState<string | null>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const router = useRouter();
+
+  const setActiveViewing = useCallback((jobId: string | null, tab: string | null) => {
+    setActiveViewingJobId(jobId);
+    setActiveViewingTab(tab);
+  }, []);
+
+  // Hydrate from localStorage once on client (avoids server/client mismatch)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_TASKS);
+      if (raw) {
+        const parsed = JSON.parse(raw) as AITask[];
+        const hydrated = parsed.map((t) =>
+          t.status === "processing" || t.status === "queued"
+            ? { ...t, status: "failed" as const, error: "Task interrupted — click Retry to restart", completedAt: Date.now() }
+            : t
+        );
+        if (hydrated.length > 0) setTasks(hydrated);
+      }
+    } catch {}
+    try {
+      const open = localStorage.getItem(STORAGE_KEY_OPEN);
+      if (open === "true") setIsPanelOpen(true);
+    } catch {}
+    setHasHydrated(true);
+  }, []);
 
   const tasksRef = useRef<AITask[]>([]);
 
   useEffect(() => {
     tasksRef.current = tasks;
   }, [tasks]);
+
+  // Persist open state — only after hydration to avoid overwriting persisted value with initial false
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY_OPEN, String(isPanelOpen));
+    } catch {}
+  }, [isPanelOpen, hasHydrated]);
+
+  // Persist tasks (cap 20, prune applied/dismissed >24h) — only after hydration
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      const now = Date.now();
+      const pruned = tasks
+        .filter((t) => {
+          if ((t.status === "applied" || t.status === "dismissed") && t.completedAt && now - t.completedAt > 24 * 60 * 60 * 1000) return false;
+          return true;
+        })
+        .slice(0, 20);
+      localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(pruned));
+    } catch {}
+  }, [tasks, hasHydrated]);
 
   const updateTask = useCallback((id: string, patch: Partial<AITask>) => {
     setTasks((prev) =>
@@ -262,8 +321,12 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
         createdAt: Date.now(),
       };
 
+      const wasEmpty = tasksRef.current.length === 0;
       setTasks((prev) => [newTask, ...prev]);
-      setIsPanelOpen(true);
+      // Auto-open on first task or when no prior tasks; otherwise just badge
+      if (wasEmpty) {
+        setIsPanelOpen(true);
+      }
       setIsMinimized(false);
 
       // Start task asynchronously
@@ -302,8 +365,11 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
         createdAt: Date.now(),
       };
 
+      const wasEmptyAi = tasksRef.current.length === 0;
       setTasks((prev) => [newTask, ...prev]);
-      setIsPanelOpen(true);
+      if (wasEmptyAi) {
+        setIsPanelOpen(true);
+      }
       setIsMinimized(false);
 
       setTimeout(() => {
@@ -419,6 +485,9 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
       setIsPanelOpen,
       setIsMinimized,
       toggleMinimize,
+      activeViewingJobId,
+      activeViewingTab,
+      setActiveViewing,
       enqueueJobUpdateTask,
       enqueueAiToolTask,
       applyTask,
@@ -432,6 +501,9 @@ export function AITaskQueueProvider({ children }: { children: React.ReactNode })
       pendingConfirmationCount,
       isPanelOpen,
       isMinimized,
+      activeViewingJobId,
+      activeViewingTab,
+      setActiveViewing,
       toggleMinimize,
       enqueueJobUpdateTask,
       enqueueAiToolTask,

@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { execFile } from "node:child_process";
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 import { getUser } from "@/lib/auth";
+import { getStorageDir } from "@/lib/db/storage";
 import { moduleLogger } from "@/lib/log";
 import { requestId } from "@/lib/log/request";
 import { logActivity, logResourceActivity } from "./activity-log";
@@ -22,6 +26,15 @@ export interface Contact {
   notes: string | null;
   company_id: string | null;
   company_name: string | null;
+}
+
+/**
+ * A contact as linked to one specific job. `relationship` lives on the
+ * job_contacts row, not on the contact — the same person can be the
+ * Referral on this job and just an Employee contact on another.
+ */
+export interface JobContact extends Contact {
+  relationship: string | null;
 }
 
 interface RawContactRow {
@@ -94,8 +107,9 @@ const AVATAR_URL_PREFIX = "/api/files/avatar/";
  * forever. Mirror getPublicUrl's encoding instead of re-parsing.
  */
 function extractStoragePath(publicUrl: string): string | null {
-  if (!publicUrl.startsWith(AVATAR_URL_PREFIX)) return null;
-  const cleanUrl = publicUrl.split("?")[0];
+  const pathPart = publicUrl.replace(/^https?:\/\/[^/]+/, "");
+  if (!pathPart.startsWith(AVATAR_URL_PREFIX)) return null;
+  const cleanUrl = pathPart.split("?")[0];
   const encoded = cleanUrl.slice(AVATAR_URL_PREFIX.length);
   if (!encoded) return null;
   try {
@@ -128,8 +142,9 @@ export async function uploadContactAvatar(formData: FormData): Promise<string> {
   const oldAvatarUrl = (formData.get("old_avatar_url") as string) || "";
 
   const slug = generateContactAvatarSlug(name, companyName, role, email);
+  const randomSuffix = Math.random().toString(36).substring(2, 9);
   const { buffer: processedBuffer, format } = await processContactAvatar(file);
-  const newFilePath = `${userId}/contacts/${slug}.${format}`;
+  const newFilePath = `${userId}/contacts/${slug}-${randomSuffix}.${format}`;
 
   // Delete the previous avatar file if it exists and is different from the new path,
   // preventing orphaned duplicate files from accumulating in storage.
@@ -156,6 +171,35 @@ export async function uploadContactAvatar(formData: FormData): Promise<string> {
   return `${urlData.publicUrl}?v=${Date.now()}`;
 }
 
+/** Open the native OS folder where contact avatar pictures are stored. */
+export async function openContactAvatarFolder(avatarUrl?: string | null): Promise<{ success: boolean; path: string }> {
+  const { userId } = await getUser();
+  let targetFolder = path.join(getStorageDir(), "avatar", userId, "contacts");
+
+  if (avatarUrl) {
+    const storageRelPath = extractStoragePath(avatarUrl);
+    if (storageRelPath) {
+      targetFolder = path.dirname(path.join(getStorageDir(), "avatar", storageRelPath));
+    }
+  }
+
+  try {
+    await mkdir(targetFolder, { recursive: true });
+
+    if (process.platform === "win32") {
+      execFile("explorer.exe", [targetFolder]);
+    } else if (process.platform === "darwin") {
+      execFile("open", [targetFolder]);
+    } else {
+      execFile("xdg-open", [targetFolder]);
+    }
+    return { success: true, path: targetFolder };
+  } catch (err) {
+    log.error({ err, reqId: requestId() }, "Failed to open native contact avatars folder");
+    throw new Error("Couldn't open avatar folder.");
+  }
+}
+
 /** The user's whole contact library — for the "+Link Contact" picker. */
 export async function getContacts(): Promise<Contact[]> {
   const { supabase, userId } = await getUser();
@@ -174,7 +218,7 @@ export async function getContacts(): Promise<Contact[]> {
   return ((data ?? []) as unknown as RawContactRow[]).map(toContact);
 }
 
-export async function getJobContacts(jobId: string): Promise<Contact[]> {
+export async function getJobContacts(jobId: string): Promise<JobContact[]> {
   const { supabase, userId } = await getUser();
 
   const { data: job } = await supabase.from("jobs").select("id").eq("id", jobId).eq("user_id", userId).maybeSingle();
@@ -182,7 +226,7 @@ export async function getJobContacts(jobId: string): Promise<Contact[]> {
 
   const { data, error } = await supabase
     .from("job_contacts")
-    .select("contact:contacts(id, name, role, email, phone, position, linkedin_url, github_url, social_links, avatar_url, notes, company_id, company:companies(name))")
+    .select("relationship, contact:contacts(id, name, role, email, phone, position, linkedin_url, github_url, social_links, avatar_url, notes, company_id, company:companies(name))")
     .eq("job_id", jobId);
 
   if (error) {
@@ -190,10 +234,9 @@ export async function getJobContacts(jobId: string): Promise<Contact[]> {
     return [];
   }
 
-  return ((data ?? []) as unknown as { contact: RawContactRow | null }[])
-    .map((row) => row.contact)
-    .filter((c): c is RawContactRow => c !== null)
-    .map(toContact);
+  return ((data ?? []) as unknown as { relationship: string | null; contact: RawContactRow | null }[])
+    .filter((row): row is { relationship: string | null; contact: RawContactRow } => row.contact !== null)
+    .map((row) => ({ ...toContact(row.contact), relationship: row.relationship ?? null }));
 }
 
 /** Creates a contact and links it to the job in one step ("+ Create Contact"). */
@@ -209,12 +252,17 @@ export async function createContact(
   const name = (formData.get("name") as string)?.trim();
   if (!name) throw new Error("Contact name is required.");
 
+  // A brand-new contact's initial relationship to this job starts out the
+  // same as its global role — the two only diverge once the contact gets
+  // linked to a second job with a different relationship there.
+  const role = (formData.get("role") as string) || null;
+
   const { data: contact, error } = await supabase
     .from("contacts")
     .insert({
       user_id: userId,
       name,
-      role: (formData.get("role") as string) || null,
+      role,
       email: (formData.get("email") as string) || null,
       phone: (formData.get("phone") as string) || null,
       position: (formData.get("position") as string) || null,
@@ -229,7 +277,7 @@ export async function createContact(
 
   if (error) throw new Error("Failed to create contact.");
 
-  await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contact.id });
+  await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contact.id, relationship: role });
 
   void logResourceActivity(userId, "contact.create", "contact", contact.id, { jobId });
 
@@ -242,11 +290,13 @@ export async function linkContact(jobId: string, contactId: string): Promise<voi
 
   const [{ data: job }, { data: contact }] = await Promise.all([
     supabase.from("jobs").select("id").eq("id", jobId).eq("user_id", userId).single(),
-    supabase.from("contacts").select("id").eq("id", contactId).eq("user_id", userId).single(),
+    supabase.from("contacts").select("id, role").eq("id", contactId).eq("user_id", userId).single(),
   ]);
   if (!job || !contact) throw new Error("Job or contact not found.");
 
-  await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contactId });
+  // Default this job's relationship to the contact's current global role;
+  // the user can retag it per-job afterward without touching the contact.
+  await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contactId, relationship: contact.role ?? null });
 
   revalidatePath("/jobs/" + jobId);
 }
@@ -258,6 +308,30 @@ export async function unlinkContact(jobId: string, contactId: string): Promise<v
   if (!job) throw new Error("Job not found.");
 
   await supabase.from("job_contacts").delete().eq("job_id", jobId).eq("contact_id", contactId);
+
+  revalidatePath("/jobs/" + jobId);
+}
+
+/** Retags a contact's relationship on this one job — leaves contacts.role (the
+ *  contact's global tag) untouched, so the same person can be "Referral" here
+ *  and something else on their other linked jobs. */
+export async function updateJobContactRelationship(
+  jobId: string,
+  contactId: string,
+  relationship: string | null
+): Promise<void> {
+  const { supabase, userId } = await getUser();
+
+  const { data: job } = await supabase.from("jobs").select("id").eq("id", jobId).eq("user_id", userId).single();
+  if (!job) throw new Error("Job not found.");
+
+  const { error } = await supabase
+    .from("job_contacts")
+    .update({ relationship: relationship || null })
+    .eq("job_id", jobId)
+    .eq("contact_id", contactId);
+
+  if (error) throw new Error("Failed to update relationship.");
 
   revalidatePath("/jobs/" + jobId);
 }
@@ -317,6 +391,20 @@ export async function updateContactNotes(id: string, notes: string | null): Prom
 
 export async function deleteContact(id: string): Promise<void> {
   const { supabase, userId } = await getUser();
+
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("avatar_url")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (contact?.avatar_url) {
+    const oldPath = extractStoragePath(contact.avatar_url);
+    if (oldPath) {
+      await supabase.storage.from("avatar").remove([oldPath]);
+    }
+  }
 
   const { error } = await supabase.from("contacts").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error("Failed to delete contact.");

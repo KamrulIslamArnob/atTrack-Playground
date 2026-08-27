@@ -2,8 +2,11 @@ import { PageHeader } from "@/components/page-header";
 import { CrmView } from "@/components/crm/crm-view";
 import { getCrmCompanies, type CrmCompany } from "@/lib/actions/companies";
 import { getContacts, type Contact } from "@/lib/actions/contacts";
+import { moduleLogger } from "@/lib/log";
 
-export const metadata = { title: "Network | atTrack" };
+const log = moduleLogger("network");
+
+export const metadata = { title: "Network | BetterJob" };
 
 export default async function NetworkPage() {
   let companies: CrmCompany[] = [];
@@ -17,15 +20,12 @@ export default async function NetworkPage() {
     companies = compRes ?? [];
     contacts = contRes ?? [];
   } catch (err) {
-    console.error("[NetworkPage] Failed to fetch data:", err);
+    log.error({ err }, "Failed to fetch network data");
   }
 
   return (
     <div className="space-y-4 pb-16">
-      <PageHeader
-        title="Network"
-        subtitle="The people and companies in your job search. Recruiters, hiring managers, referrals — everyone you're talking to."
-      />
+      <PageHeader title="Network" />
 
       <CrmView companies={companies} contacts={contacts} />
     </div>

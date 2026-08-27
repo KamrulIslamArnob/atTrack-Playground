@@ -29,7 +29,7 @@ export const CHAT_PERSONAS: ChatPersona[] = [
     badge: "Versatile",
     iconName: "Sparkles",
     description: "All-purpose career, coding, and productivity assistant",
-    systemPrompt: "Your name is Tracky. You are the helpful, precise, and professional career & software engineering co-pilot in atTrack.",
+    systemPrompt: "Your name is Tracky. You are the helpful, precise, and professional career & software engineering co-pilot in BetterJob.",
     heading: "What would you like to accomplish today?",
     subheading: "Ask questions, generate content, or explore career strategies.",
     preferredSources: ["jobs", "resumes", "contacts"],
@@ -257,9 +257,9 @@ export function generateSessionTitle(firstMessage: string): string {
 
 export function exportSessionToMarkdown(session: ChatSession): string {
   let md = `# ${session.title}\n\n`;
-  md += `*Exported from atTrack AI Chatbot on ${new Date().toLocaleDateString()}*\n\n---\n\n`;
+  md += `*Exported from BetterJob AI Chatbot on ${new Date().toLocaleDateString()}*\n\n---\n\n`;
   session.messages.forEach((msg) => {
-    const roleName = msg.role === "user" ? "User" : "atTrack AI";
+    const roleName = msg.role === "user" ? "User" : "BetterJob AI";
     md += `### ${roleName}\n${msg.content}\n\n`;
   });
   return md;

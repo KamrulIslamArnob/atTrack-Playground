@@ -62,132 +62,168 @@ export function SmtpConfigForm({ config, onSetupGuide }: SmtpConfigFormProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex-1 min-w-0">
-        {isEditing ? (
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
-                Use your Gmail App Password for secure sending.
-              </p>
-              <button
-                type="button"
-                onClick={onSetupGuide}
-                className="text-xs text-green-800 dark:text-lime-400 hover:underline"
-              >
-                How to get an App Password
-              </button>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_100px]">
-              <div className="space-y-2">
-                <Label htmlFor="smtp-host">SMTP Host</Label>
-                <Input
-                  id="smtp-host"
-                  value={host}
-                  className="h-10 bg-muted"
-                  readOnly
-                  tabIndex={-1}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="smtp-port">Port</Label>
-                <Input
-                  id="smtp-port"
-                  value={port}
-                  className="h-10 bg-muted"
-                  readOnly
-                  tabIndex={-1}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="smtp-email">Gmail address</Label>
-                <Input
-                  id="smtp-email"
-                  type="email"
-                  name="smtp-email-field"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  placeholder="you@gmail.com"
-                  className="h-10"
-                  autoComplete="one-time-code"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="smtp-password">App Password</Label>
-                <Input
-                  id="smtp-password"
-                  type="password"
-                  name="smtp-password-field"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={config ? "••••••••••••" : "16-character app password"}
-                  className="h-10"
-                  autoComplete="one-time-code"
-                  required={!config}
-                />
-              </div>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {config ? "Leave password blank to keep current." : "Never your regular Gmail password. Spaces are removed automatically."}
+    <div className="pt-1">
+      {isEditing ? (
+        <form onSubmit={handleSave} className="space-y-4 animate-in fade-in-50 duration-150">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Use a Google App Password rather than your primary password.
             </p>
-            <div className="flex justify-end gap-2">
-              {config && (
-                <button
-                  type="button"
-                  onClick={() => { setIsEditing(false); setPassword(""); }}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <XIcon className="size-4" />
-                  Cancel
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={pending}
-                className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-              >
-                {pending && <Spinner className="mr-2" />}
-                {config ? "Update" : "Save configuration"}
-              </button>
+            <button
+              type="button"
+              onClick={onSetupGuide}
+              className="text-xs font-medium text-primary hover:underline cursor-pointer"
+            >
+              How to get an App Password
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="smtp-email" className="text-xs font-medium text-foreground">
+                Gmail address
+              </Label>
+              <Input
+                id="smtp-email"
+                type="email"
+                name="smtp-email-field"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="you@gmail.com"
+                className="h-8.5 text-xs"
+                autoComplete="one-time-code"
+                required
+              />
             </div>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Gmail address</p>
-                <p className="text-sm font-medium">{config?.user_email || "—"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">SMTP server</p>
-                <p className="text-sm font-medium">{config?.host}:{config?.port}</p>
-              </div>
+            <div className="space-y-1">
+              <Label htmlFor="smtp-password" className="text-xs font-medium text-foreground">
+                App Password
+              </Label>
+              <Input
+                id="smtp-password"
+                type="password"
+                name="smtp-password-field"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={config ? "••••••••••••" : "16-character password"}
+                className="h-8.5 text-xs"
+                autoComplete="one-time-code"
+                required={!config}
+              />
             </div>
           </div>
-        )}
-      </div>
 
-      {!isEditing && (
-        <div className="ml-4 flex shrink-0 items-center gap-2">
-          <button
-            onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            <Pencil className="size-4" />
-            {config ? "Edit" : "Set up"}
-          </button>
-          {config && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_100px]">
+            <div className="space-y-1">
+              <Label htmlFor="smtp-host" className="text-xs font-medium text-foreground">
+                SMTP host
+              </Label>
+              <Input
+                id="smtp-host"
+                value={host}
+                className="h-8.5 bg-muted/60 text-xs text-muted-foreground"
+                readOnly
+                tabIndex={-1}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="smtp-port" className="text-xs font-medium text-foreground">
+                Port
+              </Label>
+              <Input
+                id="smtp-port"
+                value={port}
+                className="h-8.5 bg-muted/60 text-xs text-muted-foreground"
+                readOnly
+                tabIndex={-1}
+              />
+            </div>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">
+            {config
+              ? "Leave the password field blank to keep your currently saved credentials."
+              : "Never enter your personal account password. Spaces are removed automatically."}
+          </p>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+            {config && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false);
+                  setPassword("");
+                }}
+                className="micro-press inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
+              >
+                <XIcon className="size-3" />
+                <span>Cancel</span>
+              </button>
+            )}
             <button
+              type="submit"
+              disabled={pending}
+              className="micro-press inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 cursor-pointer disabled:opacity-50"
+            >
+              {pending && <Spinner className="size-3" />}
+              <span>{config ? "Save changes" : "Save configuration"}</span>
+            </button>
+          </div>
+        </form>
+      ) : config ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 min-w-0">
+            <div className="rounded-lg border border-border/40 bg-background/50 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 leading-none">
+                Gmail address
+              </p>
+              <p className="mt-0.5 truncate text-xs font-medium text-foreground">
+                {config.user_email}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border/40 bg-background/50 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 leading-none">
+                SMTP server
+              </p>
+              <p className="mt-0.5 truncate text-xs font-medium text-foreground">
+                {config.host}:{config.port}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="micro-press inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
+            >
+              <Pencil className="size-3" />
+              <span>Edit</span>
+            </button>
+            <button
+              type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+              className="micro-press inline-flex items-center justify-center rounded-lg border border-border/80 bg-background size-7 text-destructive transition-colors hover:bg-destructive/10 cursor-pointer disabled:opacity-50"
+              title="Remove SMTP configuration"
             >
-              {deleting ? <Spinner className="size-4" /> : <Trash2 className="size-4" />}
+              {deleting ? <Spinner className="size-3" /> : <Trash2 className="size-3" />}
             </button>
-          )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            No SMTP account configured. Connect Gmail to send job inquiries, applications, and follow-ups directly from BetterJob.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="micro-press shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
+          >
+            <Pencil className="size-3" />
+            <span>Set up SMTP</span>
+          </button>
         </div>
       )}
     </div>

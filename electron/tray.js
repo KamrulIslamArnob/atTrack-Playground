@@ -31,7 +31,7 @@ function createTray({ getPort, getSettings, onToggleSetting, onShowApp, onQuit }
 
   const icon = getTrayIcon();
   tray = new Tray(icon);
-  tray.setToolTip("atTrack - Local Job Tracker");
+  tray.setToolTip("BetterJob — A better way to reach your next job.");
 
   function updateMenu() {
     const port = getPort() || 3788;
@@ -42,12 +42,12 @@ function createTray({ getPort, getSettings, onToggleSetting, onShowApp, onQuit }
 
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: `● atTrack Active (Port: ${port})`,
+        label: `● BetterJob Active (Port: ${port})`,
         enabled: false,
       },
       { type: "separator" },
       {
-        label: "Open atTrack App",
+        label: "Open BetterJob App",
         click: () => onShowApp(),
       },
       {
@@ -75,7 +75,7 @@ function createTray({ getPort, getSettings, onToggleSetting, onShowApp, onQuit }
       },
       { type: "separator" },
       {
-        label: "Quit atTrack",
+        label: "Quit BetterJob",
         click: () => onQuit(),
       },
     ]);

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { getBoard } from "@/lib/actions/board";
-import { buttonVariants } from "@/components/ui/button";
 import { ImportChoice } from "@/components/import-choice";
 import {
   PipelineStages,
@@ -14,7 +13,7 @@ import {
   type MatchScoreBand,
 } from "@/components/overview-charts";
 import { DEFAULT_LIST_COLORS, matchScoreBand } from "@/lib/types/board";
-import { Briefcase, Calendar, Target, Camera, Activity } from "lucide-react";
+import { Briefcase, Calendar, Target, Activity } from "lucide-react";
 import { ArrowRightIcon } from "@/components/ui/arrow-right";
 import { TrendingUpIcon } from "@/components/ui/trending-up";
 import { SendIcon } from "@/components/ui/send";
@@ -245,16 +244,16 @@ export default async function OverviewPage() {
 
       {/* Quick Metrics Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <QuickStat icon={Briefcase} label="Total Jobs" value={totalJobs ?? 0} tone="primary" />
+        <QuickStat icon={Briefcase} label="Total jobs" value={totalJobs ?? 0} tone="primary" />
         <QuickStat icon={SendIcon} label="Applied" value={totalApplications ?? 0} tone="chart-2" />
         <QuickStat icon={Calendar} label="Interviews" value={totalInterviews ?? 0} tone="chart-3" />
-        <QuickStat icon={Target} label="Avg Match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} tone="chart-4" />
-        <QuickStat icon={TrendingUpIcon} label="Offer Rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
-        <QuickStat icon={Activity} label="Response Rate" value={responseRate != null ? `${responseRate}%` : "—"} tone="chart-5" />
+        <QuickStat icon={Target} label="Average match" value={averageMatchScore != null ? `${averageMatchScore}%` : "—"} tone="chart-4" />
+        <QuickStat icon={TrendingUpIcon} label="Offer rate" value={offerRate != null ? `${offerRate}%` : "—"} tone="success" />
+        <QuickStat icon={Activity} label="Response rate" value={responseRate != null ? `${responseRate}%` : "—"} tone="chart-5" />
       </div>
 
       {/* Primary Zone: Connected Pipeline Stepper */}
-      <div className="rounded-2xl bg-card p-4 sm:p-5">
+      <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs">
         {allJobs.length > 0 ? (
           <PipelineStages stages={pipelineStages} total={allJobs.length} />
         ) : (
@@ -270,10 +269,10 @@ export default async function OverviewPage() {
         {/* Left Column: Velocity & Schedule */}
         <div className="space-y-6 lg:col-span-7">
           {/* Trend Chart */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs">
             <div className="mb-4">
-              <h2 className="font-heading text-base font-semibold sm:text-lg">Activity Trend</h2>
-              <p className="text-xs text-muted-foreground">Applications and interviews in last 30 days</p>
+              <h2 className="font-heading text-base font-semibold sm:text-lg tracking-tight text-foreground">Activity trend</h2>
+              <p className="text-xs text-muted-foreground">Applications and interviews in the last 30 days</p>
             </div>
             {hasApplicationTrend ? (
               <>
@@ -305,13 +304,13 @@ export default async function OverviewPage() {
           </div>
 
           {/* Upcoming Interviews */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-heading text-base font-semibold sm:text-lg">Upcoming Interviews</h2>
+                <h2 className="font-heading text-base font-semibold sm:text-lg tracking-tight text-foreground">Upcoming interviews</h2>
                 <p className="text-xs text-muted-foreground">Next scheduled meetings and technical rounds</p>
               </div>
-              <Link href="/interviews" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+              <Link href="/jobs" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
                 Schedule <ArrowRightIcon className="size-3" />
               </Link>
             </div>
@@ -320,17 +319,17 @@ export default async function OverviewPage() {
                 {upcomingInterviews.map((interview) => (
                   <div
                     key={interview.id}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3 transition-colors hover:bg-muted/60 hover:border-primary/30"
+                    className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/20 p-3 transition-colors hover:bg-muted/40 hover:border-primary/30"
                   >
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success-surface">
+                    <div className="flex size-8.5 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
                       <Calendar className="size-4 text-success" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold truncate">{interview.job.title}</p>
+                      <p className="text-sm font-semibold truncate text-foreground">{interview.job.title}</p>
                       <p className="text-xs text-muted-foreground truncate">{interview.job.company}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="rounded-full bg-success-surface border border-success-border px-2 py-0.5 text-[10px] font-medium text-success">
+                      <span className="rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-[10px] font-medium text-success">
                         {interview.type}
                       </span>
                       <span className="text-[11px] tabular-nums text-muted-foreground">
@@ -354,35 +353,35 @@ export default async function OverviewPage() {
         {/* Right Column: Quality & Distributions */}
         <div className="space-y-6 lg:col-span-5">
           {/* Match Quality */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs">
             <div className="mb-2">
-              <h2 className="font-heading text-base font-semibold sm:text-lg">Match Quality</h2>
+              <h2 className="font-heading text-base font-semibold sm:text-lg tracking-tight text-foreground">Match quality</h2>
               <p className="text-xs text-muted-foreground">Distribution across scoring tiers</p>
             </div>
             <MatchScoreDistributionChart data={matchScoreDistribution} />
           </div>
 
           {/* Consolidated Demographic Breakdown */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-5">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs space-y-5">
             <div>
-              <h3 className="font-heading text-sm font-semibold mb-2">Work location</h3>
+              <h3 className="font-heading text-sm font-semibold mb-2 tracking-tight text-foreground">Work location</h3>
               <BreakdownBar items={workLocationBreakdown} total={allJobs.length} />
             </div>
-            <div className="border-t border-border pt-4">
-              <h3 className="font-heading text-sm font-semibold mb-2">Employment type</h3>
+            <div className="border-t border-border/60 pt-4">
+              <h3 className="font-heading text-sm font-semibold mb-2 tracking-tight text-foreground">Employment type</h3>
               <BreakdownBar items={employmentTypeBreakdown} total={allJobs.length} />
             </div>
           </div>
 
           {/* Practice Tests (conditional) */}
           {totalTests > 0 && (
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="font-heading text-sm font-semibold">Practice Tests</h3>
+                  <h3 className="font-heading text-sm font-semibold tracking-tight text-foreground">Practice tests</h3>
                   <p className="text-[11px] text-muted-foreground">Recent technical assessment scores</p>
                 </div>
-                <Link href="/interviews" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+                <Link href="/jobs" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
                   Practice <ArrowRightIcon className="size-3" />
                 </Link>
               </div>
@@ -391,7 +390,7 @@ export default async function OverviewPage() {
                   <p className="text-xl font-bold tabular-nums">{avgScore ?? 0}%</p>
                   <p className="text-[10px] text-muted-foreground">Average</p>
                 </div>
-                <div className="h-8 w-px bg-border" />
+                <div className="h-8 w-px bg-border/60" />
                 <div>
                   <p className="text-xl font-bold tabular-nums">
                     {Math.round(Math.max(...(mcqResults ?? []).map((r) => r.score / r.total)) * 100)}%

@@ -1,17 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Database,
-  Briefcase,
-  Users,
-  Link2,
   Copy,
   Download,
   Upload,
@@ -29,9 +23,36 @@ import {
 } from "@/lib/actions/data-management";
 import { JsonImportDialog } from "@/components/job-import/json-import-dialog";
 import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
-import { cn } from "@/lib/utils";
+import { Switch } from "@/components/settings/startup-service-card";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
+const BACKUP_TARGETS = [
+  {
+    key: "jobs",
+    label: "Jobs and applications",
+    hint: "Postings, board columns, milestones, and notes",
+    copy: "copyJobs",
+    export: "exportJobs",
+    import: "jobsImportOpen",
+  },
+  {
+    key: "crm",
+    label: "Contacts and companies",
+    hint: "People, recruiters, and company profiles",
+    copy: "copyCrm",
+    export: "exportCrm",
+    import: "crmImportOpen",
+  },
+  {
+    key: "links",
+    label: "Links and resources",
+    hint: "Portals, categorized bookmarks, and shortcuts",
+    copy: "copyLinks",
+    export: "exportLinks",
+    import: "linksImportOpen",
+  },
+] as const;
 
 export function DataBackupCard() {
   const router = useRouter();
@@ -61,9 +82,9 @@ export function DataBackupCard() {
     try {
       const data = await exportAllJobsData();
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      toast.success(`Copied ${data.count} jobs & board configuration to clipboard!`);
+      toast.success(`Copied ${data.count} jobs`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to copy jobs data");
+      toast.error(err instanceof Error ? err.message : "Couldn't copy jobs");
     } finally {
       setCopyingCategory(null);
     }
@@ -75,9 +96,9 @@ export function DataBackupCard() {
       const data = await exportAllJobsData();
       const dateStr = new Date().toISOString().split("T")[0];
       downloadJsonFile(data, `attrack-jobs-backup-${dateStr}.json`);
-      toast.success(`Exported ${data.count} jobs to JSON file`);
+      toast.success(`Exported ${data.count} jobs`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to export jobs data");
+      toast.error(err instanceof Error ? err.message : "Couldn't export jobs");
     } finally {
       setExportingCategory(null);
     }
@@ -89,11 +110,9 @@ export function DataBackupCard() {
     try {
       const data = await exportCrmData();
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      toast.success(
-        `Copied CRM data (${data.companiesCount} companies, ${data.contactsCount} contacts) to clipboard!`
-      );
+      toast.success(`Copied ${data.companiesCount} companies, ${data.contactsCount} contacts`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to copy CRM data");
+      toast.error(err instanceof Error ? err.message : "Couldn't copy CRM data");
     } finally {
       setCopyingCategory(null);
     }
@@ -105,9 +124,9 @@ export function DataBackupCard() {
       const data = await exportCrmData();
       const dateStr = new Date().toISOString().split("T")[0];
       downloadJsonFile(data, `attrack-crm-backup-${dateStr}.json`);
-      toast.success(`Exported CRM data to JSON file`);
+      toast.success("CRM data exported");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to export CRM data");
+      toast.error(err instanceof Error ? err.message : "Couldn't export CRM data");
     } finally {
       setExportingCategory(null);
     }
@@ -119,11 +138,9 @@ export function DataBackupCard() {
     try {
       const data = await exportLinksData();
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      toast.success(
-        `Copied Links data (${data.linksCount} links, ${data.categoriesCount} categories) to clipboard!`
-      );
+      toast.success(`Copied ${data.linksCount} links, ${data.categoriesCount} categories`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to copy links data");
+      toast.error(err instanceof Error ? err.message : "Couldn't copy links");
     } finally {
       setCopyingCategory(null);
     }
@@ -135,235 +152,82 @@ export function DataBackupCard() {
       const data = await exportLinksData();
       const dateStr = new Date().toISOString().split("T")[0];
       downloadJsonFile(data, `attrack-links-backup-${dateStr}.json`);
-      toast.success(`Exported links to JSON file`);
+      toast.success("Links exported");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to export links data");
+      toast.error(err instanceof Error ? err.message : "Couldn't export links");
     } finally {
       setExportingCategory(null);
     }
   };
 
+  const handlers = {
+    jobs: { copy: handleCopyJobs, export: handleExportJobs, open: () => setJobsImportOpen(true), copying: copyingCategory === "jobs", exporting: exportingCategory === "jobs" },
+    crm: { copy: handleCopyCrm, export: handleExportCrm, open: () => setCrmImportOpen(true), copying: copyingCategory === "crm", exporting: exportingCategory === "crm" },
+    links: { copy: handleCopyLinks, export: handleExportLinks, open: () => setLinksImportOpen(true), copying: copyingCategory === "links", exporting: exportingCategory === "links" },
+  };
+
   return (
     <>
-      <Card className="rounded-3xl border-border/80 shadow-sm overflow-hidden">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                <Database className="size-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">Data Backup & Portability</CardTitle>
-                <CardDescription className="text-xs">
-                  One-click copy, export JSON files, or restore backups to easily sync your data between devices.
-                </CardDescription>
-              </div>
-            </div>
+      {/* JSON import shortcuts toggle */}
+      <div className="flex items-center justify-between gap-4 py-3 px-1">
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-foreground">Show import shortcuts</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Displays quick JSON import shortcuts on board, contact, and link views
+          </p>
+        </div>
+        <Switch
+          checked={jsonSyncEnabled}
+          onCheckedChange={() => setJsonSyncEnabled(!jsonSyncEnabled)}
+          label="Toggle JSON import shortcuts across application"
+        />
+      </div>
 
-            <div className="flex items-center gap-3 self-end sm:self-center bg-muted/40 px-3 py-1.5 rounded-2xl border border-border">
-              <span className="text-xs font-medium text-foreground cursor-pointer select-none">
-                Enable JSON Import Buttons
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={jsonSyncEnabled}
-                aria-label="Toggle JSON Import Buttons across application"
-                onClick={() => {
-                  const next = !jsonSyncEnabled;
-                  setJsonSyncEnabled(next);
-                  toast.success(
-                    next
-                      ? "JSON import buttons enabled across all pages"
-                      : "JSON import buttons hidden from all pages"
-                  );
-                }}
-                className={cn(
-                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95",
-                  jsonSyncEnabled ? "bg-primary" : "bg-muted-foreground/30"
-                )}
+      {BACKUP_TARGETS.map((t) => {
+        const h = handlers[t.key];
+        return (
+          <div
+            key={t.key}
+            className="flex flex-col gap-2.5 py-3 px-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+          >
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-foreground">{t.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t.hint}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={h.copying}
+                onClick={h.copy}
+                className="h-8 px-2.5 text-xs gap-1.5"
               >
-                <span
-                  className={cn(
-                    "pointer-events-none inline-block size-4 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-out",
-                    jsonSyncEnabled ? "translate-x-4" : "translate-x-0"
-                  )}
-                />
-              </button>
+                {h.copying ? <Spinner className="size-3.5" /> : <Copy className="size-3.5" />}
+                Copy
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={h.exporting}
+                onClick={h.export}
+                className="h-8 px-2.5 text-xs gap-1.5"
+              >
+                {h.exporting ? <Spinner className="size-3.5" /> : <Download className="size-3.5" />}
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={h.open}
+                className="h-8 px-2.5 text-xs gap-1.5"
+              >
+                <Upload className="size-3.5" />
+                Import
+              </Button>
             </div>
           </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {/* Section 1: Jobs & Board */}
-          <div className="rounded-2xl border border-border/80 bg-muted/20 p-4 transition-all hover:bg-muted/30">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  <Briefcase className="size-4.5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm text-foreground">Jobs & Applications</h3>
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">
-                      Full Job Package
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Job postings, board columns, timeline milestones, interview rounds, and notes.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={copyingCategory === "jobs"}
-                  onClick={handleCopyJobs}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted"
-                >
-                  {copyingCategory === "jobs" ? <Spinner className="size-3.5" /> : <Copy className="size-3.5" />}
-                  Copy JSON
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={exportingCategory === "jobs"}
-                  onClick={handleExportJobs}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted"
-                >
-                  {exportingCategory === "jobs" ? <Spinner className="size-3.5" /> : <Download className="size-3.5" />}
-                  Export
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setJobsImportOpen(true)}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <Upload className="size-3.5" />
-                  Import
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: CRM & Networking */}
-          <div className="rounded-2xl border border-border/80 bg-muted/20 p-4 transition-all hover:bg-muted/30">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                  <Users className="size-4.5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm text-foreground">CRM & Networking</h3>
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">
-                      Companies & Contacts
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Companies, network contacts, emails, phone numbers, roles, and interactions.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={copyingCategory === "crm"}
-                  onClick={handleCopyCrm}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted"
-                >
-                  {copyingCategory === "crm" ? <Spinner className="size-3.5" /> : <Copy className="size-3.5" />}
-                  Copy JSON
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={exportingCategory === "crm"}
-                  onClick={handleExportCrm}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted"
-                >
-                  {exportingCategory === "crm" ? <Spinner className="size-3.5" /> : <Download className="size-3.5" />}
-                  Export
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setCrmImportOpen(true)}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <Upload className="size-3.5" />
-                  Import
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Links & Bookmarks */}
-          <div className="rounded-2xl border border-border/80 bg-muted/20 p-4 transition-all hover:bg-muted/30">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <Link2 className="size-4.5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm text-foreground">Links & Bookmarks</h3>
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">
-                      Links & Shortcuts
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Saved recruitment portals, career links, custom categories, tags, and quick shortcuts.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={copyingCategory === "links"}
-                  onClick={handleCopyLinks}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted"
-                >
-                  {copyingCategory === "links" ? <Spinner className="size-3.5" /> : <Copy className="size-3.5" />}
-                  Copy JSON
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={exportingCategory === "links"}
-                  onClick={handleExportLinks}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted"
-                >
-                  {exportingCategory === "links" ? <Spinner className="size-3.5" /> : <Download className="size-3.5" />}
-                  Export
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setLinksImportOpen(true)}
-                  className="rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <Upload className="size-3.5" />
-                  Import
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        );
+      })}
 
       {/* Jobs Import Dialog */}
       <JsonImportDialog open={jobsImportOpen} onOpenChange={setJobsImportOpen} />
@@ -372,19 +236,18 @@ export function DataBackupCard() {
       <GenericJsonImportModal
         open={crmImportOpen}
         onOpenChange={setCrmImportOpen}
-        title="Import CRM Data (Companies & Contacts)"
-        description="Paste CRM JSON or drop a backup file to import companies and contacts with smart duplicate merge."
-        icon={<Users className="size-5" />}
+        title="Import CRM data"
+        description="Companies and contacts, merged by name."
         samplePlaceholder='{ "companies": [ ... ], "contacts": [ ... ] }'
         onImport={async (json) => {
           const res = await importCrmFromJson(json);
           if (res.success) {
             toast.success(
-              `CRM import complete: ${res.companiesCreated + res.companiesUpdated} companies, ${res.contactsCreated + res.contactsUpdated} contacts processed.`
+              `Imported ${res.companiesCreated + res.companiesUpdated} companies, ${res.contactsCreated + res.contactsUpdated} contacts`
             );
             router.refresh();
           } else {
-            toast.error(res.errors[0] || "Failed to import CRM data.");
+            toast.error(res.errors[0] || "Couldn't import CRM data");
           }
           return res.success;
         }}
@@ -394,19 +257,18 @@ export function DataBackupCard() {
       <GenericJsonImportModal
         open={linksImportOpen}
         onOpenChange={setLinksImportOpen}
-        title="Import Links & Bookmarks"
-        description="Paste links JSON or drop a backup file to import saved links, categories, and quick shortcuts."
-        icon={<Link2 className="size-5" />}
+        title="Import links"
+        description="Saved links, categories, and shortcuts."
         samplePlaceholder='{ "categories": [ ... ], "links": [ ... ], "shortcuts": [ ... ] }'
         onImport={async (json) => {
           const res = await importLinksFromJson(json);
           if (res.success) {
             toast.success(
-              `Links import complete: ${res.linksCreated + res.linksUpdated} links, ${res.categoriesCreated} categories processed.`
+              `Imported ${res.linksCreated + res.linksUpdated} links, ${res.categoriesCreated} categories`
             );
             router.refresh();
           } else {
-            toast.error(res.errors[0] || "Failed to import links data.");
+            toast.error(res.errors[0] || "Couldn't import links");
           }
           return res.success;
         }}
@@ -420,7 +282,6 @@ interface GenericJsonImportModalProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  icon: React.ReactNode;
   samplePlaceholder: string;
   onImport: (rawJson: string) => Promise<boolean>;
 }
@@ -430,7 +291,6 @@ function GenericJsonImportModal({
   onOpenChange,
   title,
   description,
-  icon,
   samplePlaceholder,
   onImport,
 }: GenericJsonImportModalProps) {
@@ -474,7 +334,7 @@ function GenericJsonImportModal({
         setJsonText("");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Import failed");
+      setError(err instanceof Error ? err.message : "Couldn't import file");
     } finally {
       setLoading(false);
     }
@@ -484,15 +344,8 @@ function GenericJsonImportModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100%-2rem)] sm:max-w-xl max-h-[88vh] flex flex-col rounded-3xl p-6 overflow-hidden">
         <DialogHeader className="shrink-0 pb-1">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-              {icon}
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="text-lg font-semibold truncate">{title}</DialogTitle>
-              <DialogDescription className="text-xs mt-0.5 truncate">{description}</DialogDescription>
-            </div>
-          </div>
+          <DialogTitle className="truncate text-lg font-semibold">{title}</DialogTitle>
+          <DialogDescription className="mt-0.5 truncate text-xs">{description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 space-y-3.5 py-2 pr-1">
@@ -511,18 +364,18 @@ function GenericJsonImportModal({
           >
             <UploadCloud className="size-5 text-muted-foreground mb-1" />
             <p className="text-xs font-medium text-foreground">
-              Drop <code className="font-mono text-primary font-semibold">.json</code> file here
+              Drop <code className="font-mono font-semibold text-primary">.json</code> file here
             </p>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-foreground">Paste Raw JSON Data</label>
+              <label className="text-xs font-medium text-foreground">Paste JSON</label>
               {jsonText && (
                 <button
                   type="button"
                   onClick={() => setJsonText("")}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                  className="text-xs text-muted-foreground underline hover:text-foreground cursor-pointer"
                 >
                   Clear
                 </button>
@@ -544,25 +397,14 @@ function GenericJsonImportModal({
             </div>
           )}
 
-          <div className="rounded-xl bg-muted/50 p-2.5 text-[11px] text-muted-foreground space-y-0.5">
-            <p className="font-medium text-foreground flex items-center gap-1.5">
-              <RefreshCw className="size-3 text-primary shrink-0" />
-              Smart Duplicate Handling
-            </p>
-            <p className="leading-normal">
-              Existing records with matching names or URLs will be updated with imported data, preserving custom properties.
-            </p>
-          </div>
+          <p className="flex items-start gap-1.5 rounded-xl bg-muted/50 p-2.5 text-xs leading-normal text-muted-foreground">
+            <RefreshCw className="mt-0.5 size-3 shrink-0 text-primary" />
+            Matching records are updated with imported data, keeping custom fields.
+          </p>
         </div>
 
-        <div className="shrink-0 flex items-center justify-end gap-2 pt-3 border-t border-border mt-2 bg-popover">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="rounded-xl text-xs cursor-pointer"
-          >
+        <div className="shrink-0 flex items-center justify-end gap-2 pt-3 mt-2 border-t border-border">
+          <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
@@ -570,10 +412,10 @@ function GenericJsonImportModal({
             size="sm"
             disabled={loading || !jsonText.trim()}
             onClick={handleSubmit}
-            className="rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+            className="gap-1.5"
           >
             {loading ? <Spinner className="size-3.5" /> : <FileJson className="size-3.5" />}
-            Import JSON
+            Import
           </Button>
         </div>
       </DialogContent>

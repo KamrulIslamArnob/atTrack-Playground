@@ -78,7 +78,7 @@ export function EntryCard({
   return (
     <div
       className={cn(
-        "group relative rounded-xl border border-border p-3 transition-all",
+        "group relative rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-border transition-all duration-200 p-4 shadow-2xs",
         isDragging && "opacity-50",
         dragOver === "above" && "border-t-2 border-t-primary",
         dragOver === "below" && "border-b-2 border-b-primary",
@@ -93,11 +93,11 @@ export function EntryCard({
       aria-roledescription="entry"
       aria-label={ariaLabel}
     >
-      {/* Hover toolbar */}
+      {/* Hover Floating Island Toolbar */}
       <div
         className={cn(
-          "absolute -top-3 right-3 flex items-center gap-0.5 rounded-md border border-border bg-card shadow-sm transition-opacity",
-          isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
+          "absolute -top-3.5 right-4 flex items-center gap-0.5 rounded-lg border border-border bg-card/95 backdrop-blur-md shadow-md p-0.5 transition-all duration-150 z-10",
+          isHovered ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
         )}
       >
         <button
@@ -106,45 +106,45 @@ export function EntryCard({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           aria-label={`Drag to reorder ${ariaLabel}`}
-          className="inline-flex items-center justify-center size-6 rounded-l-md hover:bg-muted cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-ring"
+          className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <GripVertical className="size-3.5 text-muted-foreground" />
+          <GripVertical className="size-3.5" />
         </button>
         <button
           type="button"
           aria-label={`Move ${ariaLabel} up`}
           disabled={index === 0}
           onClick={onMoveUp}
-          className="inline-flex items-center justify-center size-6 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-ring"
+          className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <ChevronUpIcon className="size-3.5 text-muted-foreground" />
+          <ChevronUpIcon className="size-3.5" />
         </button>
         <button
           type="button"
           aria-label={`Move ${ariaLabel} down`}
           disabled={index === total - 1}
           onClick={onMoveDown}
-          className="inline-flex items-center justify-center size-6 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-ring"
+          className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <ChevronDownIcon className="size-3.5 text-muted-foreground" />
+          <ChevronDownIcon className="size-3.5" />
         </button>
         {onAddAfter && (
           <button
             type="button"
             aria-label={`Add entry after ${ariaLabel}`}
             onClick={onAddAfter}
-            className="inline-flex items-center justify-center size-6 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+            className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <PlusIcon className="size-3.5 text-muted-foreground" />
+            <PlusIcon className="size-3.5" />
           </button>
         )}
         <button
           type="button"
           aria-label={`Remove ${ariaLabel}`}
           onClick={onDelete}
-          className="inline-flex items-center justify-center size-6 rounded-r-md hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="inline-flex items-center justify-center size-6 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Trash2 className="size-3.5 text-destructive" />
+          <Trash2 className="size-3.5" />
         </button>
       </div>
 

@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -64,7 +64,6 @@ import { JOB_STATUS_LABELS, JOB_TIERS, type JobStatus, type JobTier } from "@/li
 import { getContactAvatarColorClass, cn } from "@/lib/utils";
 import {
   Briefcase,
-  Building2,
   Mail,
   MoreHorizontal,
   Pencil,
@@ -260,27 +259,69 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
     );
   };
 
+  const CRM_TABS = [
+    { id: "contacts" as const, label: "Contacts", count: contacts.length },
+    { id: "companies" as const, label: "Companies", count: companies.length },
+  ];
+
   return (
     <>
-      <Tabs value={view} onValueChange={(v) => setView((v as "contacts" | "companies") ?? "contacts")}>
-        <div className="-mx-6 flex items-center justify-between gap-2 border-b border-border px-6">
-          <TabsList variant="line" className="h-auto shrink-0 gap-1 p-0">
-            <TabsTrigger
-              value="contacts"
-              className="px-3 py-2.5 text-sm font-semibold data-active:text-primary data-active:after:bg-primary"
-            >
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger
-              value="companies"
-              className="px-3 py-2.5 text-sm font-semibold data-active:text-primary data-active:after:bg-primary"
-            >
-              Companies
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      <div className="space-y-4 w-full">
+      {/* Segmented pill tab strip */}
+      <div
+        role="tablist"
+        aria-label="Network categories"
+        className="inline-flex items-center gap-1 overflow-x-auto rounded-xl bg-muted/60 p-1 [scrollbar-width:none] w-full sm:w-fit"
+      >
+        {CRM_TABS.map((tab) => {
+          const isSelected = view === tab.id;
 
-        <TabsContent value="contacts" className="mt-4">
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              type="button"
+              aria-selected={isSelected}
+              aria-controls={`crm-tabpanel-${tab.id}`}
+              onClick={() => setView(tab.id)}
+              className={cn(
+                "relative flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium tracking-tight transition-colors duration-150 cursor-pointer select-none",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.98]",
+                isSelected
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+              )}
+            >
+              {isSelected && (
+                <motion.div
+                  layoutId="active-crm-tab"
+                  className="absolute inset-0 rounded-lg bg-background shadow-xs"
+                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                />
+              )}
+
+              <span className="relative z-10 flex items-center gap-2">
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span
+                    className={cn(
+                      "flex size-4 items-center justify-center rounded-full text-[10px] font-bold tabular-nums transition-colors duration-150",
+                      isSelected
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted-foreground/15 text-muted-foreground"
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {view === "contacts" && (
+        <div id="crm-tabpanel-contacts" role="tabpanel" className="animate-in fade-in-50 duration-150">
           <ContactsView
             contacts={contacts}
             setContacts={setContacts}
@@ -291,9 +332,11 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
             onOpenImportJson={jsonSyncEnabled ? () => setCrmImportOpen(true) : undefined}
             onTagDeleted={handleTagDeleted}
           />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="companies" className="mt-4 space-y-4">
+      {view === "companies" && (
+        <div id="crm-tabpanel-companies" role="tabpanel" className="space-y-4 animate-in fade-in-50 duration-150">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 flex-1 min-w-48 max-w-lg">
               <div className="relative flex-1 min-w-44">
@@ -415,8 +458,9 @@ export function CrmView({ companies: initialCompanies, contacts: initialContacts
               />
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
+    </div>
 
       {/* Edit Company Dialog */}
       <CompanyEditDialog
@@ -604,12 +648,12 @@ function ContactsView({
             {contacts.length === 0 ? "No contacts yet." : "No contacts match your search."}
           </p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Add contacts with Notion-style tags, company associations, and social media links.
+            Add contacts with tags, company associations, and social media links.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
             {paginated.map((contact, index) => (
               <ContactCard
                 key={contact.id}
@@ -713,7 +757,7 @@ function CompanyRow({
         tier === "1" && "border-amber-500/40 bg-gradient-to-r from-amber-500/[0.05] via-transparent to-transparent dark:border-amber-500/30",
         tier === "2" && "border-blue-500/40 bg-gradient-to-r from-blue-500/[0.05] via-transparent to-transparent dark:border-blue-500/30",
         tier === "3" && "border-purple-500/40 bg-gradient-to-r from-purple-500/[0.05] via-transparent to-transparent dark:border-purple-500/30",
-        !tier && "border-border hover:border-border/80 hover:bg-card/90"
+        !tier && "border-0 bg-muted shadow-none hover:bg-muted/80"
       )}
     >
       <div className="flex w-full items-center justify-between px-3.5 py-2.5 gap-2.5">
@@ -1413,7 +1457,7 @@ function ManageTagsDialog({
 
         <div className="space-y-4 pt-2">
           <p className="text-xs text-muted-foreground">
-            Manage your Notion-style tags. Deleting a tag will automatically remove it from all assigned contacts.
+            Manage your tags. Deleting a tag will automatically remove it from all assigned contacts.
           </p>
 
           <div className="max-h-[350px] overflow-y-auto space-y-2 pr-1">

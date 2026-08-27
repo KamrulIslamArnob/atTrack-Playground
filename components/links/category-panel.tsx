@@ -26,6 +26,7 @@ interface CategoryPanelProps {
   onPanMove?: (pointerId: number, clientX: number) => void;
   onPanEnd?: (pointerId: number) => void;
   isFullWidth?: boolean;
+  layout?: "grid" | "columns";
 }
 
 export function CategoryPanel({
@@ -42,47 +43,54 @@ export function CategoryPanel({
   onPanMove,
   onPanEnd,
   isFullWidth = false,
+  layout = "grid",
 }: CategoryPanelProps) {
+  const isColumns = layout === "columns" && !isFullWidth;
+
   return (
     <div
       id={`category-panel-${category.id}`}
       className={cn(
-        "flex flex-col justify-between rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-2xs transition-all duration-150 ease-out",
-        isFullWidth
-          ? "w-full"
-          : "min-w-[320px] sm:min-w-[360px] md:min-w-[380px] max-w-[420px] flex-none"
+        "flex flex-col justify-between rounded-2xl border border-border/70 bg-muted/35 p-3.5 sm:p-4 transition-all duration-200 ease-out shadow-2xs",
+        isColumns
+          ? "min-w-[320px] sm:min-w-[360px] md:min-w-[380px] max-w-[420px] flex-none"
+          : "w-full"
       )}
     >
       <div>
         {/* Category Header with Drag-to-Scroll support */}
         <div
           onPointerDown={(e) => {
+            if (!isColumns) return;
             if ((e.target as HTMLElement).closest("button, a, input, [role='menuitem']")) return;
             e.currentTarget.setPointerCapture(e.pointerId);
             onPanStart?.(e.pointerId, e.clientX);
           }}
           onPointerMove={(e) => {
+            if (!isColumns) return;
             onPanMove?.(e.pointerId, e.clientX);
           }}
           onPointerUp={(e) => {
+            if (!isColumns) return;
             try {
               e.currentTarget.releasePointerCapture(e.pointerId);
             } catch {}
             onPanEnd?.(e.pointerId);
           }}
           onPointerCancel={(e) => {
+            if (!isColumns) return;
             onPanEnd?.(e.pointerId);
           }}
           className={cn(
-            "flex items-center justify-between mb-3.5 pb-2.5 border-b border-border/50 select-none",
-            !isFullWidth && "cursor-grab active:cursor-grabbing touch-none"
+            "flex items-center justify-between mb-3 pb-2.5 border-b border-border/50 select-none",
+            isColumns && "cursor-grab active:cursor-grabbing touch-none"
           )}
         >
           <div className="flex items-center gap-2 min-w-0">
             <h3 className="font-semibold text-sm sm:text-base text-foreground tracking-tight truncate">
               {category.name}
             </h3>
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground shrink-0 tabular-nums">
+            <span className="inline-flex items-center rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground shrink-0 tabular-nums border border-border/60 shadow-2xs">
               {links.length}
             </span>
           </div>
@@ -93,15 +101,15 @@ export function CategoryPanel({
               variant="ghost"
               size="icon"
               onClick={() => onAddLink(category.id)}
-              className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.95] transition-all"
+              className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/80 active:scale-[0.95] transition-all cursor-pointer"
               title={`Add link to ${category.name}`}
             >
-              <Plus className="size-4" />
+              <Plus className="size-3.5" />
             </Button>
 
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.95] transition-all">
-                <MoreHorizontal className="size-4" />
+              <DropdownMenuTrigger className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/80 active:scale-[0.95] transition-all cursor-pointer">
+                <MoreHorizontal className="size-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 rounded-xl">
                 <DropdownMenuItem onClick={() => onRenameCategory(category)} className="gap-2 cursor-pointer">
@@ -135,8 +143,18 @@ export function CategoryPanel({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-6 my-1 text-center">
-            <p className="text-xs text-muted-foreground">No links in this category yet</p>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-8 px-4 text-center bg-background/50">
+            <p className="text-xs font-medium text-muted-foreground">No links in this category yet</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onAddLink(category.id)}
+              className="mt-2.5 h-7 text-xs gap-1.5 rounded-lg border-border/80 bg-card hover:bg-muted"
+            >
+              <Plus className="size-3" />
+              Add link
+            </Button>
           </div>
         )}
       </div>

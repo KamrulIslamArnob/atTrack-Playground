@@ -1,4 +1,4 @@
-export type JobState = "active" | "on_hold" | "archived";
+export type JobState = "active" | "on_hold" | "archived" | "rejected";
 
 // Job pipeline statuses (pre-application only)
 export type JobStatus = "saved" | "interested" | "preparing";
@@ -93,6 +93,26 @@ export interface JobNote {
   id: string;
   title: string;
   bullets: string[];
+}
+
+// How a job was found. Small fixed vocabulary with an escape hatch, same shape
+// as CONTACT_ROLES (lib/types/contacts.ts) — deliberately kept short rather
+// than growing into a sprawling taxonomy.
+export const DISCOVERY_CHANNELS = [
+  { value: "job_board", label: "Job board" },
+  { value: "company_site", label: "Company site" },
+  { value: "referral", label: "Referral" },
+  { value: "social_post", label: "Social post" },
+  { value: "recruiter_outreach", label: "Recruiter outreach" },
+  { value: "event", label: "Event / career fair" },
+  { value: "other", label: "Other" },
+] as const;
+
+export type DiscoveryChannel = (typeof DISCOVERY_CHANNELS)[number]["value"];
+
+export function discoveryChannelLabel(channel: string | null): string | null {
+  if (!channel) return null;
+  return DISCOVERY_CHANNELS.find((c) => c.value === channel)?.label ?? channel;
 }
 
 export interface JobFormData {

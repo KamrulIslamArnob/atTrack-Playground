@@ -21,6 +21,7 @@ import { ZapIcon } from "@/components/ui/zap";
 import { toast } from "sonner";
 import type { ExtractionResult } from "@/lib/ai/schema";
 import type { BoardList } from "@/lib/types/board";
+import { DISCOVERY_CHANNELS } from "@/lib/types/job";
 import { JobNotesEditor, type JobNote } from "@/components/job-notes-editor";
 import { cn, generateUUID } from "@/lib/utils";
 
@@ -88,6 +89,7 @@ export function AddJobDialog({
   const [employmentType, setEmploymentType] = useState(initialData?.employment_type ?? "Full-time");
   const [tier, setTier] = useState<string>("none");
   const [status, setStatus] = useState("saved");
+  const [discoveryChannel, setDiscoveryChannel] = useState<string>("none");
   const [contact, setContact] = useState(initialData?.contact ?? null);
   const [skills, setSkills] = useState<string[]>(initialData?.skills ?? []);
   const [benefits, setBenefits] = useState<string[]>(initialData?.benefits ?? []);
@@ -120,6 +122,7 @@ export function AddJobDialog({
     formData.append("employment_type", employmentType);
     formData.append("tier", tier === "none" ? "" : tier);
     formData.append("status", status);
+    formData.append("discovery_channel", discoveryChannel === "none" ? "" : discoveryChannel);
     formData.append("skills", JSON.stringify(skills));
     formData.append("benefits", JSON.stringify(benefits));
     formData.append("is_unpaid", isUnpaid ? "true" : "false");
@@ -157,6 +160,7 @@ export function AddJobDialog({
       setEmploymentType("Full-time");
       setTier("none");
       setStatus("saved");
+      setDiscoveryChannel("none");
       setContact(null);
       setDeadlineMode(null);
       setApplicationDeadline("");
@@ -309,6 +313,34 @@ export function AddJobDialog({
                       <SelectItem value="hybrid">Hybrid</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="discovery_channel">How you found it</Label>
+                  <Select value={discoveryChannel} onValueChange={(v) => setDiscoveryChannel(v ?? "none")}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not set</SelectItem>
+                      {DISCOVERY_CHANNELS.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="source_url">Source link</Label>
+                  <Input
+                    id="source_url"
+                    name="source_url"
+                    type="url"
+                    placeholder="Link to the post or listing"
+                    className="h-10"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

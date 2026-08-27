@@ -25,7 +25,7 @@ export default function GlobalError({
             !
           </div>
           <h1 className="mt-6 font-heading text-xl font-semibold tracking-tight">
-            Couldn&apos;t load atTrack
+            Couldn&apos;t load BetterJob
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             Something went wrong. Try again, or restart the app.

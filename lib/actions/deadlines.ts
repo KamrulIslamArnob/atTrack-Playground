@@ -15,7 +15,8 @@ export async function getJobDeadlines(jobId: string): Promise<JobDeadline[]> {
     .select("id, job_id, title, type, stage_kind, due_date, is_pinned, is_completed, notes, created_at")
     .eq("job_id", jobId)
     .eq("user_id", userId)
-    .order("due_date", { ascending: true });
+    .order("is_completed", { ascending: true })
+    .order("due_date", { ascending: false });
 
   if (error) {
     log.error({ err: error }, "[Deadlines] Error fetching deadlines:");
@@ -48,6 +49,13 @@ export async function createJobDeadline(
 
   const itemType = payload.type || "deadline";
 
+  // Mark all previous timeline items for this job as completed/inactive so only the newest state is active
+  await supabase
+    .from("job_deadlines")
+    .update({ is_completed: 1, is_pinned: 0 })
+    .eq("job_id", jobId)
+    .eq("user_id", userId);
+
   const { data, error } = await supabase
     .from("job_deadlines")
     .insert({
@@ -58,7 +66,7 @@ export async function createJobDeadline(
       type: itemType,
       stage_kind: payload.stage_kind || "custom",
       due_date: payload.due_date,
-      is_pinned: 0,
+      is_pinned: 1,
       is_completed: 0,
       notes: payload.notes || null,
     })
@@ -122,21 +130,41 @@ export async function toggleDeadlineCompleted(
 ): Promise<void> {
   const { supabase, userId } = await getUser();
 
-  const { data, error } = await supabase
+  // Find job_id for this deadline
+  const { data: item } = await supabase
     .from("job_deadlines")
-    .update({ is_completed: isCompleted ? 1 : 0 })
+    .select("job_id")
     .eq("id", deadlineId)
     .eq("user_id", userId)
-    .select("job_id")
     .single();
 
-  if (error) {
-    throw new Error(`Failed to toggle deadline: ${error.message}`);
+  const jobId = item?.job_id;
+
+  if (!isCompleted && jobId) {
+    // Activating this timeline item: Deactivate all other milestones/deadlines for this job
+    await supabase
+      .from("job_deadlines")
+      .update({ is_completed: 1, is_pinned: 0 })
+      .eq("job_id", jobId)
+      .eq("user_id", userId);
+
+    await supabase
+      .from("job_deadlines")
+      .update({ is_completed: 0, is_pinned: 1 })
+      .eq("id", deadlineId)
+      .eq("user_id", userId);
+  } else {
+    // Marking as completed
+    await supabase
+      .from("job_deadlines")
+      .update({ is_completed: 1, is_pinned: 0 })
+      .eq("id", deadlineId)
+      .eq("user_id", userId);
   }
 
   revalidatePath("/board");
   revalidatePath("/jobs");
-  if (data?.job_id) revalidatePath(`/jobs/${data.job_id}`);
+  if (jobId) revalidatePath(`/jobs/${jobId}`);
 }
 
 export async function toggleDeadlinePinned(

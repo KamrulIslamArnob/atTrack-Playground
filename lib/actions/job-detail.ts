@@ -61,7 +61,7 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       supabase
         .from("interviews")
         .select(
-          "id, scheduled_at, type, location, meeting_url, interviewer_name, interviewer_email, notes, status"
+          "id, scheduled_at, type, location, meeting_url, interviewer_name, interviewer_email, notes, prep_notes, status, duration_minutes"
         )
         .eq("job_id", jobId)
         .eq("user_id", userId)
@@ -133,6 +133,8 @@ export async function getJobDetail(jobId: string): Promise<JobDetailData | null>
       section_deadline: job.section_deadline ?? null,
       section_deadline_list_id: job.section_deadline_list_id ?? null,
       source: job.source ?? null,
+      discovery_channel: job.discovery_channel ?? null,
+      source_url: job.source_url ?? null,
       status: job.status ?? "saved",
       notes: Array.isArray(job.notes) ? job.notes : null,
       skills: Array.isArray(job.skills) ? job.skills : null,

@@ -36,8 +36,11 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
     try {
       const fresh = await getJobDetail(id);
       if (!fresh) {
-        setError("Job details could not be loaded or the job has been deleted.");
+        // Job was deleted or doesn't exist: silently close the sheet and sync board
         setData(null);
+        setError(null);
+        onOpenChange(false);
+        router.refresh();
       } else {
         setData(fresh);
         setError(null);
@@ -48,7 +51,7 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onOpenChange, router]);
 
   useEffect(() => {
     if (!jobId) {
@@ -68,21 +71,35 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
     router.refresh(); // keeps the board's cards (match score, resume pill, etc.) in sync
   }, [jobId, fetchDetail, router]);
 
+  const handleDelete = useCallback(() => {
+    setData(null);
+    setError(null);
+    onOpenChange(false);
+    router.refresh();
+  }, [onOpenChange, router]);
+
   return (
     <Sheet open={jobId !== null} onOpenChange={onOpenChange}>
-      <SheetContent className="data-[side=right]:w-full data-[side=right]:max-w-full overflow-y-auto overflow-x-hidden p-0 data-[side=right]:sm:max-w-3xl data-[side=right]:md:max-w-4xl data-[side=right]:lg:max-w-6xl data-[side=right]:xl:max-w-7xl data-[side=right]:2xl:max-w-[1440px]">
+      <SheetContent
+        side="bottom"
+        className="w-full max-w-none overflow-hidden p-0 h-[88vh] max-h-[88vh] min-h-[88vh] data-[side=bottom]:h-[88vh] data-[side=bottom]:max-h-[88vh] data-[side=bottom]:min-h-[88vh] rounded-t-3xl rounded-b-none border-t border-border bg-card shadow-2xl data-[side=bottom]:rounded-t-3xl data-[side=bottom]:rounded-b-none flex flex-col"
+      >
         <SheetTitle className="sr-only">Job details</SheetTitle>
         <SheetDescription className="sr-only">
           View and edit this job&apos;s details, notes, documents, contacts, and AI tools.
         </SheetDescription>
+        {/* Bottom sheet drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1.5 w-12 rounded-full bg-border" />
+        </div>
 
         {isLoading ? (
-          <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-12">
+          <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-3 p-12">
             <Spinner className="size-7 text-primary" />
             <p className="text-xs text-muted-foreground animate-pulse">Loading job details...</p>
           </div>
         ) : error || !data ? (
-          <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
+          <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-4 p-8 text-center">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
               <AlertCircle className="size-6" />
             </div>
@@ -117,6 +134,7 @@ export function JobDetailSheet({ jobId, lists, onOpenChange, onMoveTo }: JobDeta
           <JobDetailContent
             data={data}
             onRefresh={handleRefresh}
+            onDelete={handleDelete}
             lists={lists}
             onMoveTo={onMoveTo ? (listId) => onMoveTo(data.job.id, listId) : undefined}
           />

@@ -214,7 +214,7 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
                       openQuickView(doc.id);
                     }
                   }}
-                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-colors hover:text-green-800 dark:hover:text-lime-400"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-colors hover:text-primary"
                 >
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-muted/80">
                     {isExternal ? (
@@ -228,7 +228,7 @@ export function DocumentsTab({ data, onRefresh }: DocumentsTabProps) {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground group-hover:text-green-800 dark:group-hover:text-lime-400">
+                    <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
                       {doc.name}
                     </p>
                     {doc.generated_kind ? (

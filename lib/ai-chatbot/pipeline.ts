@@ -41,6 +41,9 @@ export interface ChatPipelineInput {
   webSearchActive?: boolean;
   enabledSourceIds?: string[];
   sourceConfig?: Record<string, Record<string, unknown>>;
+  reasoningEffort?: string;
+  permissionMode?: string;
+  localFolder?: { name: string; path: string };
 }
 
 export interface LoadedChatContext {
@@ -178,11 +181,22 @@ export function buildChatContextBase(
 
   const conversationHistory = formatConversationHistory(historyMessages);
 
+  let mergedWorkspaceContext = typeof input.workspaceContext === "string" ? input.workspaceContext : null;
+  if (input.localFolder && input.localFolder.path) {
+    const folderInfo = `Active Local Folder Workspace: "${input.localFolder.name}" (${input.localFolder.path}). Use tool 'read_local_folder' to search, list, or read files from this directory.`;
+    mergedWorkspaceContext = mergedWorkspaceContext ? `${mergedWorkspaceContext}\n- ${folderInfo}` : `- ${folderInfo}`;
+  }
+
+  if (input.permissionMode === "readonly") {
+    const readonlyNotice = "Permission Mode: READ-ONLY. The user has set the chat to read-only mode — do not modify or delete records.";
+    mergedWorkspaceContext = mergedWorkspaceContext ? `${mergedWorkspaceContext}\n- ${readonlyNotice}` : `- ${readonlyNotice}`;
+  }
+
   const baseSystemPrompt = assembleChatSystemPrompt({
     persona: selectedPersona,
     personaPrompt: input.personaPrompt || null,
     conversationHistory,
-    workspaceContext: typeof input.workspaceContext === "string" ? input.workspaceContext : null,
+    workspaceContext: mergedWorkspaceContext,
     webSearchActive: Boolean(input.webSearchActive),
   });
 
@@ -520,9 +534,16 @@ export async function executeAgent(
   ctx: RetrievedChatContext,
   traceId: string = newTraceId()
 ): Promise<AgentExecutionResult> {
-  const agentTools = ctx.agent.tools
+  const rawAgentTools = ctx.agent.tools
     .map((name) => getTool(name))
     .filter((t): t is NonNullable<typeof t> => t !== undefined && isSourceAllowed(t.sourceId, ctx.input.enabledSourceIds));
+
+  // Read-only: hide write/delete tools from the model entirely so it cannot even propose them.
+  const permissionMode = (ctx.input.permissionMode as string) ?? "bypass";
+  const agentTools =
+    permissionMode === "readonly"
+      ? rawAgentTools.filter((t) => t.name !== "write_database" && t.name !== "delete_database")
+      : rawAgentTools;
 
   const toolDeclarations = agentTools.map((t) => ({
     name: t.name,
@@ -559,6 +580,7 @@ export async function executeAgent(
       personaId: ctx.input.personaId,
       sourceConfig: ctx.input.sourceConfig,
       traceId,
+      permissionMode: ctx.input.permissionMode as ToolExecutionContext["permissionMode"],
     };
 
     const executor = async (name: string, args: Record<string, unknown>, ectx: ToolExecutionContext) => {

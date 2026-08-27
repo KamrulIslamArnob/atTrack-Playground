@@ -11,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
-    "The terms that apply when you use atTrack to manage your job search.",
+    "The terms that apply when you use BetterJob to manage your job search.",
 };
 
 export default function TermsPage() {
@@ -21,12 +21,12 @@ export default function TermsPage() {
       <LegalShell
         badge="Terms & Conditions"
         title="Terms of service"
-        subtitle="The rules that apply when you use atTrack and its features."
+        subtitle="The rules that apply when you use BetterJob and its features."
         updated="August 4, 2026"
       >
         <LegalSection index="01" title="Acceptance of these terms">
           <LegalParagraph>
-            By creating an account or using atTrack in any way, you agree to these
+            By creating an account or using BetterJob in any way, you agree to these
             Terms and Conditions. If you do not agree, please do not use the
             service. These terms also reference our{" "}
             <a
@@ -41,14 +41,14 @@ export default function TermsPage() {
 
         <LegalSection index="02" title="The service">
           <LegalParagraph>
-            atTrack is a personal workspace for tracking a job search. It lets you
+            BetterJob is a personal workspace for tracking a job search. It lets you
             save jobs, manage applications and interviews, store resumes and
             other documents, track statistics, and use AI features including
             screenshot-based job extraction, an email composer, resume matching,
             and interview practice tests.
           </LegalParagraph>
           <LegalParagraph>
-            You are responsible for your own job search. atTrack provides tools
+            You are responsible for your own job search. BetterJob provides tools
             and conveniences, but applying for jobs, sending emails, and
             deciding which roles to pursue are your decisions.
           </LegalParagraph>
@@ -56,7 +56,7 @@ export default function TermsPage() {
 
         <LegalSection index="03" title="Accounts">
           <LegalParagraph>
-            You need an account to use atTrack. To create one you must be at least
+            You need an account to use BetterJob. To create one you must be at least
             13 years old. You are responsible for keeping your sign-in
             credentials confidential and for everything that happens under your
             account. Please keep the information on your profile accurate.
@@ -65,7 +65,7 @@ export default function TermsPage() {
 
         <LegalSection index="04" title="Your content">
           <LegalParagraph>
-            You retain ownership of the content you add to atTrack — your jobs,
+            You retain ownership of the content you add to BetterJob — your jobs,
             applications, notes, documents, and emails. You are responsible for
             the content you upload and for making sure you have the right to use
             it.
@@ -74,14 +74,14 @@ export default function TermsPage() {
             items={[
               <>Only upload documents and job postings that you are entitled to use.</>,
               <>Do not upload content that contains someone else&apos;s confidential or personal information without permission.</>,
-              <>You grant atTrack the limited right to store, process, and display your content in order to provide the service to you.</>,
+              <>You grant BetterJob the limited right to store, process, and display your content in order to provide the service to you.</>,
             ]}
           />
         </LegalSection>
 
         <LegalSection index="05" title="AI-generated content">
           <LegalParagraph>
-            atTrack&apos;s AI features generate content automatically: extracted job
+            BetterJob&apos;s AI features generate content automatically: extracted job
             details, email drafts, resume match scores, and practice questions.
             This content is produced by a third-party AI provider and is not
             reviewed by humans.
@@ -96,7 +96,7 @@ export default function TermsPage() {
 
         <LegalSection index="06" title="Acceptable use">
           <LegalParagraph>
-            You agree not to misuse atTrack. Specifically, you may not:
+            You agree not to misuse BetterJob. Specifically, you may not:
           </LegalParagraph>
           <LegalList
             items={[
@@ -111,7 +111,7 @@ export default function TermsPage() {
 
         <LegalSection index="07" title="Third-party services">
           <LegalParagraph>
-            atTrack stores your data locally and relies on outside services only
+            BetterJob stores your data locally and relies on outside services only
             for specific features: OpenRouter (AI processing) and your own SMTP
             provider for sending emails. These services have their own terms and
             privacy practices, which apply when their services are used.
@@ -120,7 +120,7 @@ export default function TermsPage() {
 
         <LegalSection index="08" title="Fees and payments">
           <LegalParagraph>
-            atTrack is currently provided free of charge. If paid features are
+            BetterJob is currently provided free of charge. If paid features are
             introduced in the future, they will be clearly communicated and
             governed by separate terms before you are charged.
           </LegalParagraph>
@@ -128,8 +128,8 @@ export default function TermsPage() {
 
         <LegalSection index="09" title="Intellectual property">
           <LegalParagraph>
-            The atTrack service, including its software, design, and branding,
-            belongs to atTrack. Your content remains yours. Nothing in these terms
+            The BetterJob service, including its software, design, and branding,
+            belongs to BetterJob. Your content remains yours. Nothing in these terms
             transfers any rights to the other party beyond what is needed to
             use the service.
           </LegalParagraph>
@@ -137,7 +137,7 @@ export default function TermsPage() {
 
         <LegalSection index="10" title="Termination">
           <LegalParagraph>
-            You can stop using atTrack at any time and delete all of your data
+            You can stop using BetterJob at any time and delete all of your data
             from Settings, which removes it as described in our Privacy Policy.
           </LegalParagraph>
           <LegalParagraph>
@@ -158,7 +158,7 @@ export default function TermsPage() {
 
         <LegalSection index="12" title="Limitation of liability">
           <LegalParagraph>
-            To the maximum extent permitted by law, atTrack shall not be liable
+            To the maximum extent permitted by law, BetterJob shall not be liable
             for indirect, incidental, special, consequential, or punitive
             damages, or for any loss of data or opportunities, arising from
             your use of the service.
@@ -168,7 +168,7 @@ export default function TermsPage() {
         <LegalSection index="13" title="Changes to these terms">
           <LegalParagraph>
             We may update these terms from time to time. We will update the
-            date at the top of this page when we do. Continuing to use atTrack
+            date at the top of this page when we do. Continuing to use BetterJob
             after changes are posted means you accept the updated terms.
           </LegalParagraph>
         </LegalSection>

@@ -11,7 +11,7 @@ export default function NotFound() {
         {/* Brand Logo */}
           <div className="flex items-center justify-center gap-2.5 opacity-90 transition-opacity hover:opacity-100">
           <ThemeLogo width={28} height={28} className="drop-shadow-sm" />
-          <span className="font-heading text-xl font-semibold tracking-tight">atTrack</span>
+          <span className="font-heading text-xl font-semibold tracking-tight">BetterJob</span>
         </div>
 
         {/* Premium Icon Container */}

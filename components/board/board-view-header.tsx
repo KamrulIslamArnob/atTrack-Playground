@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { KanbanSquare, List } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { InfoTooltip, StageTooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface JobViewHeaderProps {
@@ -97,19 +96,6 @@ export function JobViewHeader({
               </Link>
             )}
           </div>
-
-          {isBoard && (
-            <InfoTooltip
-              content={<StageTooltipContent />}
-              side="right"
-            />
-          )}
-
-          <p className="hidden xl:block text-sm font-normal text-muted-foreground truncate max-w-xl">
-            {isBoard
-              ? "Every job you're tracking, laid out in columns. Drag a card to move it to the next stage."
-              : "Every job you've saved, in one list. Search, filter, and open any of them."}
-          </p>
         </div>
       }
       hideBreadcrumbRow={hideBreadcrumbRow}

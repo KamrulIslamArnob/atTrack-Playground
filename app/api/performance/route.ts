@@ -82,7 +82,7 @@ export const GET = withRoute("/api/performance", async () => {
 
     const data: SystemPerformanceData = {
       appVersion: packageJson.version || "1.5.0",
-      appName: "atTrack",
+      appName: "BetterJob",
       isPackaged: process.env.NODE_ENV === "production",
       electronVersion: undefined,
       nodeVersion: process.version,

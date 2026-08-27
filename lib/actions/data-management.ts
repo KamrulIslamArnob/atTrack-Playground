@@ -96,6 +96,10 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
         id: ct.id as string,
         name: ct.name as string,
         role: (ct.role as string) || (ct.title as string) || null,
+        // This export doesn't join job_contacts, so the real per-job value
+        // isn't available here — fall back to the contact's global role,
+        // same default used when linking a contact to a job.
+        relationship: (ct.role as string) || (ct.title as string) || null,
         email: (ct.email as string) || null,
         phone: (ct.phone as string) || null,
         position: (ct.position as string) || null,
@@ -156,6 +160,8 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
         section_deadline: (j.section_deadline as string) || null,
         section_deadline_list_id: (j.section_deadline_list_id as string) || null,
         source: (j.source as string) || null,
+        discovery_channel: (j.discovery_channel as string) || null,
+        source_url: (j.source_url as string) || null,
         status: (j.status as string) || "saved",
         notes: Array.isArray(j.notes) ? (j.notes as Array<{ title: string; bullets: string[] }>) : null,
         skills: Array.isArray(j.skills) ? (j.skills as string[]) : null,

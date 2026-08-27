@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Plug, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Plug, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
 import { SearchIcon } from "@/components/ui/search";
 import { ChevronDownIcon } from "@/components/ui/chevron-down";
@@ -205,7 +205,7 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="w-full max-w-lg rounded-3xl bg-card p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="font-heading text-lg font-semibold">{provider ? "Edit provider" : "Add AI provider"}</h2>
@@ -216,46 +216,61 @@ export function AiProviderDialog({ provider, onClose, onSaved }: AiProviderDialo
           </button>
         </div>
 
-        {/* Quick Preset Selector */}
+        {/* Quick Preset Selector — gradient tint distinct from form blocks */}
         {!provider && (
-          <div className="mb-4 rounded-2xl border border-border/80 bg-muted/20 p-3 space-y-2.5">
+          <div className="mb-4 rounded-xl border border-primary/15 bg-gradient-brand-tint p-3.5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground">Quick Presets</span>
-              <div className="flex gap-1">
-                {AI_PRESET_CATEGORIES.map((cat) => (
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-primary" />
+                Quick Presets
+              </span>
+              <span className="text-[10px] text-muted-foreground">{ALL_AI_PRESETS.length} presets</span>
+            </div>
+
+            <div className="flex flex-wrap gap-1">
+              {AI_PRESET_CATEGORIES.map((cat) => {
+                const count = ALL_AI_PRESETS.filter((p) => p.category === cat.id).length;
+                return (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`px-2 py-0.5 text-[11px] rounded-lg transition-colors cursor-pointer ${
+                    className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
                       activeCategory === cat.id
-                        ? "bg-primary text-primary-foreground font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "text-primary hover:bg-primary/10"
                     }`}
                   >
-                    {cat.label.split(" ")[0]}
+                    {cat.label} ({count})
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
               {categoryPresets.map((preset) => {
                 const isActive = name === preset.name || (baseUrl && baseUrl === preset.defaultBaseUrl);
+                const isHighlightedBadge = preset.badge === "Free tier" || preset.badge === "Local";
                 return (
                   <button
                     key={preset.id}
                     type="button"
                     onClick={() => handleApplyPreset(preset)}
-                    className={`flex items-center justify-between p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                    className={`group flex items-center justify-between h-7 px-2.5 rounded-lg border text-left text-xs font-medium transition-colors micro-press cursor-pointer ${
                       isActive
-                        ? "border-primary bg-primary/10 text-primary font-medium shadow-xs"
-                        : "border-border/60 bg-background text-foreground hover:bg-muted/60"
+                        ? "border-primary bg-primary/10 text-primary shadow-xs"
+                        : "border-border/60 bg-card text-foreground hover:border-primary/30 hover:bg-gradient-brand-tint-strong hover:text-primary"
                     }`}
                   >
                     <span className="truncate">{preset.name}</span>
                     {preset.badge && (
-                      <span className="text-[9px] px-1 py-0.2 rounded-md bg-muted text-muted-foreground shrink-0 font-normal">
+                      <span
+                        className={`ml-1.5 shrink-0 rounded-md border px-1 py-0.2 text-[9px] font-semibold leading-none ${
+                          isHighlightedBadge
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "border-border bg-muted text-muted-foreground group-hover:border-primary/20"
+                        }`}
+                      >
                         {preset.badge}
                       </span>
                     )}

@@ -20,7 +20,7 @@ declare global {
   var __attrackDb: DatabaseSync | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 10;
+const CURRENT_SCHEMA_VERSION = 12;
 
 // Triggers that schema.sql redefines in place. `CREATE TRIGGER IF NOT EXISTS` is a
 // no-op when an older definition already exists, so any trigger whose body or
@@ -78,6 +78,7 @@ function open(): DatabaseSync {
   db.exec("PRAGMA threads = 4");
 
   loadSqliteVec(db);
+  fixJobsStateConstraint(db);
 
   const versionRow = db.prepare("PRAGMA user_version").get() as { user_version: number } | undefined;
   const currentVersion = versionRow?.user_version ?? 0;
@@ -101,6 +102,7 @@ function open(): DatabaseSync {
       "utf8"
     );
     for (const name of REDEFINED_TRIGGERS) db.exec(`DROP TRIGGER IF EXISTS ${name}`);
+    repairBrokenForeignKeys(db);
     db.exec(schema);
     const applied = addMissingColumns(db);
     dropDeadTables(db);
@@ -234,6 +236,310 @@ function fixOwnerForeignKeys(db: DatabaseSync) {
   )`);
 }
 
+/**
+ * Repairs tables and views that were corrupted by historical SQLite migrations
+ * renaming referenced tables (e.g. referencing `_migr_jobs_old`).
+ */
+function repairBrokenForeignKeys(db: DatabaseSync) {
+  try {
+    const broken = db
+      .prepare("SELECT type, name, sql FROM sqlite_master WHERE sql LIKE '%_migr_%'")
+      .all() as Array<{ type: string; name: string; sql: string }>;
+
+    if (broken.length === 0) return;
+
+    db.exec("PRAGMA foreign_keys = OFF;");
+    db.exec("BEGIN TRANSACTION;");
+    try {
+      db.exec("DROP VIEW IF EXISTS v_jobs;");
+
+      const rebuildTable = (name: string, newSchema: string, createIndexes: string) => {
+        const row = db
+          .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+          .get(name) as { sql: string } | undefined;
+        if (row?.sql && row.sql.includes("_migr_")) {
+          db.exec(`
+            ${newSchema.replace(`CREATE TABLE ${name}`, `CREATE TABLE ${name}_new`)}
+            INSERT INTO ${name}_new SELECT * FROM ${name};
+            DROP TABLE ${name};
+            ALTER TABLE ${name}_new RENAME TO ${name};
+            ${createIndexes}
+          `);
+        }
+      };
+
+      rebuildTable(
+        "applications",
+        `CREATE TABLE applications (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          status TEXT NOT NULL DEFAULT 'draft'
+            CHECK (status IN ('draft','submitted','acknowledged','interview','offer','accepted','rejected','withdrawn')),
+          applied_at TEXT,
+          resume_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
+          resume_name TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id);
+         CREATE INDEX IF NOT EXISTS idx_applications_user_status ON applications(user_id, status);
+         CREATE INDEX IF NOT EXISTS idx_applications_job ON applications(job_id);
+         CREATE INDEX IF NOT EXISTS idx_applications_resume_id ON applications(resume_id);`
+      );
+
+      rebuildTable(
+        "interviews",
+        `CREATE TABLE interviews (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          scheduled_at TEXT,
+          type TEXT CHECK (type IN ('phone','video','onsite','technical','behavioral','panel')),
+          location TEXT,
+          meeting_url TEXT,
+          interviewer_name TEXT,
+          interviewer_email TEXT,
+          notes TEXT,
+          prep_notes TEXT,
+          status TEXT DEFAULT 'scheduled'
+            CHECK (status IN ('scheduled','completed','cancelled','rescheduled')),
+          duration_minutes INTEGER,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_interviews_user ON interviews(user_id);
+         CREATE INDEX IF NOT EXISTS idx_interviews_user_scheduled ON interviews(user_id, scheduled_at);
+         CREATE INDEX IF NOT EXISTS idx_interviews_job ON interviews(job_id);`
+      );
+
+      rebuildTable(
+        "application_emails",
+        `CREATE TABLE application_emails (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          application_id TEXT REFERENCES applications(id) ON DELETE SET NULL,
+          recipient_email TEXT NOT NULL,
+          from_email TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          body TEXT NOT NULL,
+          resume_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
+          resume_name TEXT,
+          status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent','failed','bounced')),
+          error_message TEXT,
+          sent_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_application_emails_user ON application_emails(user_id);
+         CREATE INDEX IF NOT EXISTS idx_application_emails_job ON application_emails(job_id);
+         CREATE INDEX IF NOT EXISTS idx_application_emails_application ON application_emails(application_id);`
+      );
+
+      rebuildTable(
+        "mcq_results",
+        `CREATE TABLE mcq_results (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          score INTEGER NOT NULL,
+          total INTEGER NOT NULL,
+          answers TEXT NOT NULL,
+          questions TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_mcq_results_user ON mcq_results(user_id);
+         CREATE INDEX IF NOT EXISTS idx_mcq_results_job ON mcq_results(job_id);`
+      );
+
+      rebuildTable(
+        "job_contacts",
+        `CREATE TABLE job_contacts (
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          PRIMARY KEY (job_id, contact_id)
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_job_contacts_contact ON job_contacts(contact_id);`
+      );
+
+      rebuildTable(
+        "job_documents",
+        `CREATE TABLE job_documents (
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          PRIMARY KEY (job_id, document_id)
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_job_documents_document ON job_documents(document_id);`
+      );
+
+      rebuildTable(
+        "job_deadlines",
+        `CREATE TABLE job_deadlines (
+          id TEXT PRIMARY KEY,
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'deadline' CHECK (type IN ('deadline','milestone')),
+          stage_kind TEXT CHECK (stage_kind IN ('wishlist','preparing','applied','interview','offer','accepted','rejected','custom')),
+          due_date TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0,
+          is_completed INTEGER NOT NULL DEFAULT 0,
+          notes TEXT,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_job_deadlines_job ON job_deadlines(job_id);
+         CREATE INDEX IF NOT EXISTS idx_job_deadlines_user ON job_deadlines(user_id);`
+      );
+
+      rebuildTable(
+        "mcq_question_cache",
+        `CREATE TABLE mcq_question_cache (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+          job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          content_hash TEXT NOT NULL,
+          questions TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_mcq_question_cache_job ON mcq_question_cache(job_id);`
+      );
+
+      db.exec(`
+        CREATE VIEW IF NOT EXISTS v_jobs AS
+        SELECT
+          j.id,
+          j.user_id,
+          j.company_id,
+          c.name AS company_name,
+          c.website AS company_website,
+          c.location AS company_location,
+          j.title,
+          j.description,
+          j.location,
+          j.status,
+          j.state,
+          j.employment_type,
+          j.salary_range,
+          j.application_url,
+          j.application_email,
+          j.deadline,
+          j.match_score,
+          j.list_id,
+          j.position_id,
+          j.skills,
+          j.benefits,
+          j.salary_min,
+          j.salary_max,
+          j.salary_currency,
+          j.salary_period,
+          j.created_at,
+          j.updated_at
+        FROM jobs j
+        LEFT JOIN companies c ON j.company_id = c.id;
+      `);
+
+      db.exec("COMMIT;");
+      dbLog.info({ event: "db.migrate.repair_foreign_keys" }, "Repaired corrupted foreign keys");
+    } catch (err) {
+      try {
+        db.exec("ROLLBACK;");
+      } catch {}
+      throw err;
+    } finally {
+      db.exec("PRAGMA foreign_keys = ON;");
+    }
+  } catch (err) {
+    dbLog.warn({ err }, "Could not repair broken foreign keys");
+  }
+}
+
+/**
+ * Updates jobs table CHECK constraint to allow ('active','on_hold','archived','rejected')
+ * on existing SQLite databases.
+ */
+function fixJobsStateConstraint(db: DatabaseSync) {
+  try {
+    const row = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'jobs'")
+      .get() as { sql: string } | undefined;
+
+    if (!row?.sql) return;
+    if (row.sql.includes("'rejected'")) return; // already migrated
+
+    db.exec("PRAGMA foreign_keys = OFF;");
+    db.exec("BEGIN;");
+    try {
+      db.exec("ALTER TABLE jobs RENAME TO _migr_jobs_old;");
+      db.exec(`CREATE TABLE jobs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        company_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        location TEXT,
+        status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('saved','interested','preparing')),
+        state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active','on_hold','archived','rejected')),
+        employment_type TEXT DEFAULT 'Full-time',
+        salary_range TEXT,
+        application_url TEXT,
+        application_email TEXT,
+        application_process TEXT,
+        deadline TEXT,
+        source TEXT,
+        work_location TEXT,
+        notes TEXT,
+        match_score REAL,
+        matched_resume_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
+        match_reasoning TEXT,
+        list_id TEXT REFERENCES board_lists(id) ON DELETE SET NULL,
+        board_position REAL,
+        position_id TEXT REFERENCES positions(id) ON DELETE SET NULL,
+        resume_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
+        project_links TEXT,
+        color TEXT,
+        tier TEXT,
+        section_deadline TEXT,
+        section_deadline_list_id TEXT REFERENCES board_lists(id) ON DELETE SET NULL,
+        skills TEXT,
+        educational_requirements TEXT,
+        benefits TEXT,
+        work_schedule TEXT,
+        holiday_policy TEXT,
+        map_url TEXT,
+        is_unpaid INTEGER DEFAULT 0,
+        salary_min REAL,
+        salary_max REAL,
+        salary_currency TEXT,
+        salary_period TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );`);
+
+      const oldCols = (db.prepare("PRAGMA table_info(_migr_jobs_old)").all() as Array<{ name: string }>).map((c) => c.name);
+      const newCols = (db.prepare("PRAGMA table_info(jobs)").all() as Array<{ name: string }>).map((c) => c.name);
+      const commonCols = oldCols.filter((col) => newCols.includes(col)).join(", ");
+
+      db.exec(`INSERT INTO jobs (${commonCols}) SELECT ${commonCols} FROM _migr_jobs_old;`);
+      db.exec("DROP TABLE _migr_jobs_old;");
+      db.exec("COMMIT;");
+      dbLog.info({ event: "db.migrate.jobs_state" }, "Migrated jobs table CHECK constraint to include 'rejected'");
+    } catch (err) {
+      try {
+        db.exec("ROLLBACK;");
+      } catch {}
+      throw err;
+    } finally {
+      db.exec("PRAGMA foreign_keys = ON;");
+    }
+  } catch (err) {
+    dbLog.warn({ err }, "Could not migrate jobs state check constraint");
+  }
+}
+
 function fixTableFK(
   db: DatabaseSync,
   table: string,
@@ -338,6 +644,9 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "jobs", column: "tier", ddl: "ALTER TABLE jobs ADD COLUMN tier TEXT" },
   { table: "companies", column: "tier", ddl: "ALTER TABLE companies ADD COLUMN tier TEXT" },
   { table: "companies", column: "logo_url", ddl: "ALTER TABLE companies ADD COLUMN logo_url TEXT" },
+  { table: "jobs", column: "discovery_channel", ddl: "ALTER TABLE jobs ADD COLUMN discovery_channel TEXT" },
+  { table: "jobs", column: "source_url", ddl: "ALTER TABLE jobs ADD COLUMN source_url TEXT" },
+  { table: "job_contacts", column: "relationship", ddl: "ALTER TABLE job_contacts ADD COLUMN relationship TEXT" },
 ];
 
 /** Returns how many COLUMN_MIGRATIONS actually landed — zero on an

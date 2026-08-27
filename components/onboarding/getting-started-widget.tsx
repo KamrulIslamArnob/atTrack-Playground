@@ -234,7 +234,7 @@ export function GettingStartedWidget({
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Complete these steps to unlock the full power of atTrack.
+                      Complete these steps to unlock the full power of BetterJob.
                     </p>
                   </div>
                 </div>

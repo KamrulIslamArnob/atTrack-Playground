@@ -156,7 +156,7 @@ export function ImportChoice({
                   <div>
                     <p className="font-medium text-sm text-foreground">Import JSON / Backup</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Paste atTrack JSON or drop backup files
+                      Paste BetterJob JSON or drop backup files
                     </p>
                   </div>
                 </button>

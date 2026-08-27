@@ -259,7 +259,7 @@ export function buildWorkspaceContextBlock(
   };
 
   const lines: string[] = [];
-  lines.push("The user is working inside atTrack, a personal career workspace. Relevant local data:");
+  lines.push("The user is working inside BetterJob, a personal career workspace. Relevant local data:");
 
   if (isEnabled("jobs") && snapshot.jobs.length > 0) {
     const top = snapshot.jobs.slice(0, 15);

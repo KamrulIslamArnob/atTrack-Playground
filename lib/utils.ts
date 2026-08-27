@@ -163,5 +163,146 @@ export function safeJsonParse<T>(value: unknown, fallback: T): T {
   }
 }
 
+/**
+ * Formats relative distance to now (e.g. "5 minutes ago", "in 2 days", "just now").
+ * Zero-dependency native replacement for date-fns formatDistanceToNow.
+ */
+export function formatDistanceToNow(
+  date: Date | string | number,
+  options: { addSuffix?: boolean } = {}
+): string {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
 
+  const now = new Date();
+  const diffMs = d.getTime() - now.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  const diffMin = Math.round(diffSec / 60);
+  const diffHour = Math.round(diffMin / 60);
+  const diffDay = Math.round(diffHour / 24);
+  const diffMonth = Math.round(diffDay / 30.4375);
+  const diffYear = Math.round(diffDay / 365.25);
 
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+  if (Math.abs(diffSec) < 45) {
+    return options.addSuffix
+      ? diffSec <= 0
+        ? "just now"
+        : "in a few seconds"
+      : "less than a minute";
+  }
+  if (Math.abs(diffMin) < 45) {
+    return rtf.format(diffMin, "minute");
+  }
+  if (Math.abs(diffHour) < 22) {
+    return rtf.format(diffHour, "hour");
+  }
+  if (Math.abs(diffDay) < 26) {
+    return rtf.format(diffDay, "day");
+  }
+  if (Math.abs(diffMonth) < 11) {
+    return rtf.format(diffMonth, "month");
+  }
+  return rtf.format(diffYear, "year");
+}
+
+/**
+ * Formats a Date using standard tokens (yyyy, MM, MMM, dd, d, EEE, hh, mm, a, etc.).
+ * Zero-dependency native replacement for date-fns format.
+ */
+export function format(date: Date | string | number, formatStr: string): string {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const day = d.getDate();
+  const hours24 = d.getHours();
+  const hours12 = hours24 % 12 || 12;
+  const minutes = d.getMinutes();
+  const seconds = d.getSeconds();
+  const ampm = hours24 >= 12 ? "PM" : "AM";
+  const dayOfWeek = d.getDay();
+
+  const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const MONTHS_LONG = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const DAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  const tokens: Record<string, string> = {
+    yyyy: String(year),
+    yy: String(year).slice(-2),
+    MMMM: MONTHS_LONG[month],
+    MMM: MONTHS_SHORT[month],
+    MM: pad(month + 1),
+    M: String(month + 1),
+    dd: pad(day),
+    d: String(day),
+    EEEE: DAYS_LONG[dayOfWeek],
+    EEE: DAYS_SHORT[dayOfWeek],
+    hh: pad(hours12),
+    h: String(hours12),
+    HH: pad(hours24),
+    H: String(hours24),
+    mm: pad(minutes),
+    m: String(minutes),
+    ss: pad(seconds),
+    s: String(seconds),
+    a: ampm,
+  };
+
+  return formatStr.replace(
+    /(yyyy|yy|MMMM|MMM|MM|M|dd|d|EEEE|EEE|hh|h|HH|H|mm|m|ss|s|a)/g,
+    (match) => tokens[match] ?? match
+  );
+}
+
+export function addDays(date: Date | string | number, amount: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + amount);
+  return d;
+}
+
+export function subDays(date: Date | string | number, amount: number): Date {
+  return addDays(date, -amount);
+}
+
+export function differenceInDays(
+  dateLeft: Date | string | number,
+  dateRight: Date | string | number
+): number {
+  const dLeft = new Date(dateLeft);
+  const dRight = new Date(dateRight);
+  const utcLeft = Date.UTC(dLeft.getFullYear(), dLeft.getMonth(), dLeft.getDate());
+  const utcRight = Date.UTC(dRight.getFullYear(), dRight.getMonth(), dRight.getDate());
+  return Math.floor((utcLeft - utcRight) / (1000 * 60 * 60 * 24));
+}
+
+export function isPast(date: Date | string | number): boolean {
+  return new Date(date).getTime() < Date.now();
+}
+
+export function isToday(date: Date | string | number): boolean {
+  const d = new Date(date);
+  const now = new Date();
+  return (
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear()
+  );
+}
+
+export function isTomorrow(date: Date | string | number): boolean {
+  const d = new Date(date);
+  const tomorrow = addDays(new Date(), 1);
+  return (
+    d.getDate() === tomorrow.getDate() &&
+    d.getMonth() === tomorrow.getMonth() &&
+    d.getFullYear() === tomorrow.getFullYear()
+  );
+}

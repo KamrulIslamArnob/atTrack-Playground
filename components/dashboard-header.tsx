@@ -35,7 +35,7 @@ export function DashboardHeader({ user, avatarUrl, fullName, role, showRawDataba
       <header className="app-drag-region flex h-14 items-center justify-between rounded-2xl border border-border bg-card px-4 md:hidden">
         <Link href={homeHref} className="app-no-drag flex items-center gap-2">
           <ThemeLogo width={24} height={24} />
-          <span className="font-heading text-base font-semibold">atTrack</span>
+          <span className="font-heading text-base font-semibold">BetterJob</span>
         </Link>
 
         <button

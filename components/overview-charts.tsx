@@ -771,7 +771,7 @@ function HandDrawnConnectorArrow({
   const controlY = isWaveUp ? 12 : 38;
 
   return (
-    <g className="text-slate-400/80 dark:text-slate-500/80">
+    <g className="text-muted-foreground/35">
       {/* Hand-drawn curved shaft */}
       <path
         d={`M ${startX}% ${startY} Q ${midX}% ${controlY} ${endX}% ${endY}`}

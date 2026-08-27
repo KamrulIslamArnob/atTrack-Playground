@@ -12,7 +12,7 @@ import {
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How atTrack collects, uses, and protects your information while tracking your job search.",
+    "How BetterJob collects, uses, and protects your information while tracking your job search.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -22,26 +22,26 @@ export default function PrivacyPolicyPage() {
       <LegalShell
         badge="Privacy Policy"
         title="Your data stays yours"
-        subtitle="How atTrack collects, uses, and protects your information — explained in plain language."
+        subtitle="How BetterJob collects, uses, and protects your information — explained in plain language."
         updated="August 4, 2026"
       >
         <LegalSection index="01" title="Overview">
           <LegalParagraph>
-            atTrack is a personal workspace for tracking your job search. You use
+            BetterJob is a personal workspace for tracking your job search. You use
             it to save jobs, manage applications and interviews, upload
             documents, and use AI features that help you draft emails, match
             your resume, and practice for interviews.
           </LegalParagraph>
           <LegalParagraph>
             This policy explains what information we collect, why we collect
-            it, and the choices you have. By creating an account or using atTrack,
+            it, and the choices you have. By creating an account or using BetterJob,
             you agree to the practices described here.
           </LegalParagraph>
         </LegalSection>
 
         <LegalSection index="02" title="Information we collect">
           <LegalParagraph>
-            <strong>Profile information.</strong> atTrack runs entirely on your
+            <strong>Profile information.</strong> BetterJob runs entirely on your
             own machine and has no accounts: there is no sign-up, no sign-in, and
             no password. You may add a full name, headline, phone number,
             location, and website to your profile, and upload an avatar image.
@@ -100,7 +100,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="04" title="AI features and automated processing">
           <LegalParagraph>
-            atTrack&apos;s AI features — screenshot import, the email composer,
+            BetterJob&apos;s AI features — screenshot import, the email composer,
             resume matching, and practice tests — work by sending your input to
             a third-party AI provider (OpenRouter, which routes requests to
             large language models) so it can generate a result.
@@ -132,7 +132,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="05" title="Third-party services">
           <LegalParagraph>
-            atTrack stores everything locally and contacts outside services only
+            BetterJob stores everything locally and contacts outside services only
             when you use a feature that requires one:
           </LegalParagraph>
           <LegalList
@@ -191,7 +191,7 @@ export default function PrivacyPolicyPage() {
           />
           <LegalNote>
             <strong>Deleting your data.</strong> To delete everything you must
-            confirm by typing your profile name. atTrack then permanently removes
+            confirm by typing your profile name. BetterJob then permanently removes
             your jobs, applications, interviews, documents, practice results,
             email configuration, extraction logs, board lists, and uploaded files
             (including your avatar, resumes, and job screenshots). This action
@@ -201,7 +201,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="09" title="Cookies and local storage">
           <LegalParagraph>
-            atTrack sets no session or authentication cookies — there is nothing
+            BetterJob sets no session or authentication cookies — there is nothing
             to sign in to. Your theme preference is stored in your browser&apos;s
             local storage. We do not use advertising or cross-site tracking
             cookies.
@@ -210,7 +210,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection index="10" title="Children's privacy">
           <LegalParagraph>
-            atTrack is not directed to children under the age of 13, and we do not
+            BetterJob is not directed to children under the age of 13, and we do not
             knowingly collect personal information from children. If you believe
             a child has provided us with personal information, please contact
             us so we can remove it.

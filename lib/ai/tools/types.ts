@@ -2,6 +2,9 @@
 // A tool is a self-contained unit: a JSON-Schema param spec + an execute().
 // Add a tool by creating lib/ai/tools/<name>.ts and registering it in registry.ts.
 
+import type { PermissionMode } from "@/lib/ai-chatbot/composer-settings";
+import type { ChatArtifact } from "@/lib/types/chat-artifact";
+
 export interface ToolContext {
   userId: string;
   personaId?: string;
@@ -11,6 +14,8 @@ export interface ToolContext {
    *  delete_database to prove a confirming call happened in a LATER turn
    *  than the one that proposed the delete, not the same tool round. */
   traceId?: string;
+  /** Composer permission mode for this turn (bypass/ask/strict/readonly). */
+  permissionMode?: PermissionMode;
 }
 
 export interface ToolApproval {
@@ -24,6 +29,11 @@ export interface ToolApproval {
   sql: string;
   /** Epoch millisecond timestamp when this approval auto-expires (default 60 seconds). */
   expiresAt?: number;
+  /** Kind of operation requiring approval (for UI). */
+  kind?: "delete" | "write" | "tool";
+  /** For write approvals: table and action for display. */
+  table?: string;
+  action?: string;
 }
 
 export interface ToolResult {
@@ -35,6 +45,11 @@ export interface ToolResult {
    *  any side effect runs (e.g. a DELETE). The pipeline emits an `approval`
    *  SSE frame carrying this so the client can render an Allow/Deny card. */
   approval?: ToolApproval;
+  /** Inline artifact card snapshot created by this tool call (e.g. job card).
+   *  Rendered in chat below the markdown, persisted inside message.toolSteps JSON. */
+  artifact?: ChatArtifact;
+  /** Multiple cards (e.g. batch insert) — preferred over single `artifact`. */
+  artifacts?: ChatArtifact[];
 }
 
 export interface ToolDefinition {

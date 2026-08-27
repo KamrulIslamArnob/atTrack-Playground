@@ -7,41 +7,146 @@ export interface NotificationButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   iconClassName?: string;
   useCustomSvg?: boolean;
+  badgeCount?: number;
+  isActive?: boolean;
+  isOpen?: boolean;
 }
 
 /**
- * Animated Notification Button component incorporating bell-ringing animation
- * based on design from Uiverse.io by vinodjangid07.
+ * Queue button — stacked sheets affordance.
+ * Depth maps to count: 0 → single sheet, 1 → 2 sheets, 2+ → 3 sheets
+ * so the pile visibly grows as tasks stack up.
  */
 export function NotificationButton({
   className,
   iconClassName,
   useCustomSvg = true,
   children,
+  badgeCount,
+  isActive,
+  isOpen,
   ...props
 }: NotificationButtonProps) {
+  const count = typeof badgeCount === "number" ? badgeCount : 0;
+  const showBadge = count > 0;
+  const displayCount = showBadge && count > 99 ? "99+" : count;
+  const depth = count === 0 ? 1 : count === 1 ? 2 : 3;
+
   return (
     <button
       type="button"
       className={cn(
-        "notification-btn size-9 shrink-0 rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        "group relative flex size-9 shrink-0 items-center justify-center rounded-lg border transition-all duration-150 ease-out active:scale-[0.97]",
+        isOpen
+          ? "border-border bg-muted text-foreground shadow-sm"
+          : "border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground",
+        isActive && !isOpen && "border-primary/15 bg-primary/5 text-foreground",
         className
       )}
-      aria-label={props["aria-label"] || "Notifications"}
+      aria-label={props["aria-label"] || "Queue"}
+      aria-expanded={isOpen}
       {...props}
     >
       {children ? (
         children
       ) : useCustomSvg ? (
-        /* SVG bell icon from Uiverse.io by vinodjangid07 */
-        <svg
-          viewBox="0 0 448 512"
-          className={cn("bell size-4 fill-current", iconClassName)}
+        <span
+          className={cn(
+            "relative block transition-transform duration-150 ease-out",
+            "size-[20px] shrink-0",
+            "group-hover:[&_.queue-layer-back]:translate-x-[4px] group-hover:[&_.queue-layer-back]:translate-y-[3px]",
+            "group-hover:[&_.queue-layer-mid]:translate-x-[2px] group-hover:[&_.queue-layer-mid]:translate-y-[1.5px]",
+            iconClassName
+          )}
           aria-hidden="true"
         >
-          <path d="M224 0c-17.7 0-32 14.3-32 32V49.9C119.5 61.4 64 124.2 64 200v33.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V200c0-75.8-55.5-138.6-128-150.1V32c0-17.7-14.3-32-32-32zm0 96h8c57.4 0 104 46.6 104 104v33.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V200c0-57.4 46.6-104 104-104h8zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z" />
-        </svg>
+          {/* back sheet — only when depth === 3 */}
+          {depth >= 3 && (
+            <span
+              className={cn(
+                "queue-layer-back absolute inset-0 rounded-[6px] border bg-muted shadow-sm transition-all duration-200",
+                "translate-x-[3.5px] translate-y-[2.6px]",
+                isActive
+                  ? "border-primary/20 bg-primary/10"
+                  : isOpen
+                    ? "border-border bg-muted"
+                    : "border-border/70 bg-muted/80",
+                "group-hover:shadow"
+              )}
+            />
+          )}
+          {/* middle sheet — when depth >= 2 */}
+          {depth >= 2 && (
+            <span
+              className={cn(
+                "queue-layer-mid absolute inset-0 rounded-[6px] border shadow-sm transition-all duration-200",
+                "translate-x-[1.8px] translate-y-[1.3px]",
+                isActive
+                  ? "border-primary/20 bg-card"
+                  : "border-border bg-card",
+                isOpen && "border-border",
+                "group-hover:shadow"
+              )}
+            />
+          )}
+          {/* front sheet — always */}
+          <span
+            className={cn(
+              "absolute inset-0 flex items-center justify-center rounded-[6px] border shadow-sm transition-all duration-200",
+              isActive
+                ? "border-primary/25 bg-card"
+                : isOpen
+                  ? "border-border bg-card"
+                  : "border-border bg-card",
+              "group-hover:shadow"
+            )}
+          >
+            {/* task lines — 3 rows suggests a list that will stack */}
+            <span className="flex flex-col gap-[2.5px]">
+              <span
+                className={cn(
+                  "block h-[1.6px] rounded-full transition-colors",
+                  isActive ? "w-[11px] bg-foreground" : "w-[11px] bg-foreground/75"
+                )}
+              />
+              <span
+                className={cn(
+                  "block h-[1.6px] rounded-full transition-colors",
+                  isActive ? "w-[11px] bg-foreground" : "w-[11px] bg-foreground/75"
+                )}
+              />
+              <span
+                className={cn(
+                  "block h-[1.6px] rounded-full transition-colors",
+                  isActive ? "w-[7px] bg-primary" : "w-[7px] bg-muted-foreground/70"
+                )}
+              />
+            </span>
+          </span>
+
+          {/* active pulse — tiny dot on front sheet corner when running */}
+          {isActive && !showBadge && (
+            <span className="absolute -right-[2px] -top-[2px] size-2 rounded-full bg-primary ring-2 ring-card animate-pulse" />
+          )}
+        </span>
       ) : null}
+
+      {showBadge && (
+        <span
+          className={cn(
+            "absolute -right-1 -top-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none ring-2 ring-background transition-all",
+            "animate-in zoom-in-90 duration-150",
+            isActive || isOpen
+              ? "bg-primary text-primary-foreground"
+              : "bg-foreground text-background"
+          )}
+        >
+          {displayCount}
+        </span>
+      )}
     </button>
   );
 }
+
+// Alias for intent — same component, queue-first name
+export const QueueButton = NotificationButton;

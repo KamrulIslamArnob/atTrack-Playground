@@ -217,7 +217,7 @@ export function PromptBar({ variant = "Rounded" }: { variant?: "Rounded" | "Pill
 
               {rows.length === 0 && (
                 <div className="flex h-8 items-center px-2 text-xs text-muted-foreground">
-                  No matching results for "{query}"
+                  No matching results for &quot;{query}&quot;
                 </div>
               )}
             </div>

@@ -14,9 +14,13 @@ export function WindowTitlebar({ className }: { className?: string }) {
     if (typeof window !== "undefined" && window.electronAPI?.isElectron) {
       const timeout = setTimeout(() => {
         setIsElectron(true);
+        document.documentElement.classList.add("is-electron");
       }, 0);
 
-      return () => clearTimeout(timeout);
+      return () => {
+        clearTimeout(timeout);
+        document.documentElement.classList.remove("is-electron");
+      };
     }
   }, []);
 
@@ -32,7 +36,7 @@ export function WindowTitlebar({ className }: { className?: string }) {
       )}
     >
       <div className="flex items-center gap-2 font-medium">
-        <span className="truncate">atTrack</span>
+        <span className="truncate">BetterJob</span>
       </div>
       {/* Space reserved for Electron native titleBarOverlay window buttons */}
       <div className="w-36 h-full" />

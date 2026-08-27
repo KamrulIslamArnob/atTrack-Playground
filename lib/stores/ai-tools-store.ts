@@ -121,6 +121,7 @@ export const useAiToolsStore = create<AiToolsStore>()(
                 kind,
                 generating,
                 error,
+                result: generating ? null : current.result,
               },
             },
           };

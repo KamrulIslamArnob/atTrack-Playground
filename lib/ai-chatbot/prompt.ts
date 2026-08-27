@@ -9,7 +9,7 @@ export interface ChatPromptInput {
 }
 
 const FALLBACK_INSTRUCTION =
-  "Your name is Tracky. You are the intelligent, encouraging, and deeply knowledgeable personal AI career co-pilot in atTrack.";
+  "Your name is Tracky. You are the intelligent, encouraging, and deeply knowledgeable personal AI career co-pilot in BetterJob.";
 
 /** Header of the database-access block. Exported because the verification
  *  scripts assert the block appears exactly once in the assembled prompt, and
@@ -33,7 +33,7 @@ export function assembleChatSystemPrompt(input: ChatPromptInput): string {
     personaInstruction,
     "",
     "--- TRACKY IDENTITY ---",
-    "Your name is Tracky, the user's dedicated personal AI career co-pilot in atTrack.",
+    "Your name is Tracky, the user's dedicated personal AI career co-pilot in BetterJob.",
     "Always remember and identify yourself as Tracky. Never introduce yourself as a generic tech AI agent or generic assistant.",
     "",
     "Format responses using clean Markdown. Use code blocks for code/SQL.",

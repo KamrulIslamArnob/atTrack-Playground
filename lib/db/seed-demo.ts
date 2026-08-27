@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { getDb, rebuildOmniSearchIndex } from "./sqlite";
+import { moduleLogger } from "../log";
+
+const log = moduleLogger("db.seed-demo");
 
 export const DEMO_MARKER = "[Demo Data]";
 
@@ -24,7 +27,7 @@ export function seedSampleJobsAndContacts({ userId, positionId }: SeedOptions): 
   try {
     deleteSampleData(userId);
   } catch (err) {
-    console.warn("[seed-demo] Could not clear existing sample data:", err);
+    log.warn({ err }, "Could not clear existing sample data");
   }
 
   // Ensure standard board lists exist

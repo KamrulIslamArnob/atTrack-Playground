@@ -18,7 +18,7 @@ import { ZapIcon } from "@/components/ui/zap";
 import { ClockIcon } from "@/components/ui/clock";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PageHeader } from "@/components/page-header";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "@/lib/utils";
 import { formatAiUsageMessage, AI_ACTION_COLORS, AI_ACTION_LABELS } from "@/lib/ai-usage-messages";
 
 export default function AdminAiUsagePage() {

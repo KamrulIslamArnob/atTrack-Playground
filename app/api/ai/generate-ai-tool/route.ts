@@ -20,9 +20,12 @@ const SPAM_RULES = `STRICT RULES FOR SPAM AVOIDANCE:
 OUTPUT FORMAT:
 CRITICAL: DO NOT include any thinking process, reasoning text, scratchpad, or preamble (e.g. "Thinking Process:").
 Return ONLY a valid JSON object with this exact structure, no markdown wrappers, no code blocks:
-{"subject": "your subject line here", "body": "your email body here"}
+{
+  "subject": "<Concise, professional subject line tailored to the job and company>",
+  "body": "<Full text of the email or cover letter with proper paragraphs and salutation/sign-off>"
+}
 
-The body should use \n for line breaks. Do not wrap in quotes.`;
+The body should use \n for line breaks. Do not wrap in quotes. Write the actual email content based on the applicant and job details provided; NEVER output placeholder text.`;
 
 const PURPOSE: Record<AiToolKind, string> = {
   cover_letter:
@@ -107,7 +110,7 @@ ${context ? `\nADDITIONAL CONTEXT:\n${context}` : ""}
 APPLICANT: ${applicantName}${applicantHeadline ? `, ${applicantHeadline}` : ""}
 ${resumeContent ? `\nAPPLICANT'S RESUME/EXPERIENCE:\n${resumeContent.slice(0, 4000)}` : ""}
 
-Return ONLY the JSON object with "subject" and "body" fields.`;
+Write the complete personalized email for this position and applicant. Return ONLY the JSON object with "subject" and "body" fields.`;
 
   const chain = await resolveProviderChain(user.id, "text");
   if (chain.length === 0) {

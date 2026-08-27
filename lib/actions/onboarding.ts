@@ -8,6 +8,9 @@ import { seedSampleJobsAndContacts, deleteSampleData, hasDemoData } from "@/lib/
 import { createProvider } from "./ai-providers";
 import type { ProviderType } from "@/lib/types/ai-providers";
 import { scheduleResumeExtract } from "@/lib/ai/background";
+import { moduleLogger } from "@/lib/log";
+
+const log = moduleLogger("actions.onboarding");
 
 export interface OnboardingPayload {
   fullName?: string;
@@ -124,7 +127,7 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<{
           base_url: payload.aiProvider.baseUrl,
         });
       } catch (err) {
-        console.error("Failed to auto-configure AI provider during onboarding:", err);
+        log.error({ err }, "Failed to auto-configure AI provider during onboarding");
       }
     }
 
@@ -142,7 +145,7 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<{
     return { success: true, seededCount };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("Error in completeOnboarding:", err);
+    log.error({ err }, "Error in completeOnboarding");
     return { success: false, error: message };
   }
 }

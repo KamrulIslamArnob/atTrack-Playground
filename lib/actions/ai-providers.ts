@@ -135,7 +135,7 @@ export async function createProvider(params: {
   });
   await persistVerification(supabase, id, userId, verifyResult.success);
 
-  // Automatically assign newly created provider to unconfigured task routes
+  // Auto-append newly created provider to every task route so it appears in hierarchy without manual "Test"
   for (const taskType of ["text", "image", "scraping"] as const) {
     try {
       const { data: existingRoute } = await supabase
@@ -145,22 +145,34 @@ export async function createProvider(params: {
         .eq("task_type", taskType)
         .maybeSingle();
 
-      const currentIds = (existingRoute as unknown as { provider_ids: string[] } | null)?.provider_ids ?? [];
-      if (currentIds.length === 0) {
-        await supabase.from("ai_task_routes").upsert({
-          user_id: userId,
-          task_type: taskType,
-          provider_ids: [id],
-          updated_at: new Date().toISOString(),
-        });
+      const raw = (existingRoute as unknown as { provider_ids: unknown } | null)?.provider_ids;
+      const parsedIds: string[] = Array.isArray(raw)
+        ? (raw as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0)
+        : typeof raw === "string"
+          ? (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? (p as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0) : []; } catch { return []; } })()
+          : [];
+      const currentIds = parsedIds;
+      if (!currentIds.includes(id)) {
+        const nextIds = [...currentIds, id];
+        await supabase.from("ai_task_routes").upsert(
+          {
+            user_id: userId,
+            task_type: taskType,
+            provider_ids: nextIds,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,task_type" } as never
+        );
       }
     } catch {
       // Non-critical auto-route failure
     }
   }
 
-  revalidatePath("/settings");
-  revalidatePath("/preferences");
+  try {
+    revalidatePath("/settings");
+    revalidatePath("/preferences");
+  } catch {}
   return { id, verified: verifyResult.success, verifyError: verifyResult.error };
 }
 
@@ -213,11 +225,11 @@ export async function updateProvider(
       api_key: params.api_key,
     });
     await persistVerification(supabase, id, userId, verifyResult.success);
-    revalidatePath("/settings");
+    try { revalidatePath("/settings"); } catch {}
     return { verified: verifyResult.success, verifyError: verifyResult.error };
   }
 
-  revalidatePath("/settings");
+  try { revalidatePath("/settings"); } catch {}
   return {};
 }
 
@@ -246,7 +258,7 @@ export async function deleteProvider(id: string): Promise<{ error?: string }> {
     }
   }
 
-  revalidatePath("/settings");
+  try { revalidatePath("/settings"); } catch {}
   return {};
 }
 
@@ -296,7 +308,11 @@ export async function saveTaskRoute(taskType: TaskType, providerIds: string[]): 
     return { error: "Failed to save task routing." };
   }
 
-  revalidatePath("/settings");
+  try {
+    revalidatePath("/settings");
+  } catch {
+    // revalidatePath requires Next.js request context; test scripts or edge cases may lack it
+  }
   return {};
 }
 
@@ -698,7 +714,7 @@ function getFallbackModelsForBaseUrl(baseUrl: string): FetchedModel[] {
       { id: "local-model", name: "Loaded Local Model", isFree: true },
     ];
   }
-  if (url.includes("opencodezen")) {
+  if (url.includes("opencodezen") || url.includes("opencode.ai")) {
     return [
       { id: "opencodezen-coder", name: "OpenCodeZen Coder", isFree: false },
       { id: "default", name: "Default Model", isFree: false },
@@ -820,6 +836,47 @@ export async function importAiProviders(jsonString: string): Promise<{ error?: s
         });
       }
       count++;
+    }
+
+    // Auto-sync imported providers into every task hierarchy so they appear without manual "Test"
+    try {
+      const { data: allProv } = await supabase.from("ai_providers").select("id").eq("user_id", userId);
+      const allIds = ((allProv ?? []) as unknown as { id: string }[]).map((p) => p.id);
+      for (const taskType of TASK_TYPES) {
+        const { data: route } = await supabase
+          .from("ai_task_routes")
+          .select("provider_ids")
+          .eq("user_id", userId)
+          .eq("task_type", taskType)
+          .maybeSingle();
+        const raw = (route as unknown as { provider_ids: unknown } | null)?.provider_ids;
+        const current: string[] = Array.isArray(raw)
+          ? (raw as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0)
+          : typeof raw === "string"
+            ? (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? (p as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0) as string[] : []; } catch { return []; } })()
+            : [];
+        let changed = false;
+        const next = [...current];
+        for (const id of allIds) {
+          if (!next.includes(id)) {
+            next.push(id);
+            changed = true;
+          }
+        }
+        if (changed) {
+          await supabase.from("ai_task_routes").upsert(
+            {
+              user_id: userId,
+              task_type: taskType,
+              provider_ids: next,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,task_type" } as never
+          );
+        }
+      }
+    } catch {
+      // best-effort
     }
 
     revalidatePath("/settings");

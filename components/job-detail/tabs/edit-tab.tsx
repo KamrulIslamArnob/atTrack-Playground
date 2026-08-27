@@ -22,6 +22,7 @@ import { SparklesIcon } from "@/components/ui/sparkles";
 import { ClockIcon } from "@/components/ui/clock";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
 import type { JobDetailData } from "@/lib/types/job-detail";
+import { DISCOVERY_CHANNELS } from "@/lib/types/job";
 
 interface EditTabProps {
   data: JobDetailData;
@@ -71,6 +72,7 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
   const [workLocation, setWorkLocation] = useState(job.work_location ?? "");
   const [employmentType, setEmploymentType] = useState(job.employment_type ?? "Full-time");
   const [tier, setTier] = useState<string>(job.tier ?? "none");
+  const [discoveryChannel, setDiscoveryChannel] = useState<string>(job.discovery_channel ?? "none");
 
   // Rich structured attributes
   const [skills, setSkills] = useState<string[]>(job.skills ?? []);
@@ -95,6 +97,7 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
       formData.append("work_location", workLocation);
       formData.append("employment_type", employmentType);
       formData.append("tier", tier === "none" ? "" : tier);
+      formData.append("discovery_channel", discoveryChannel === "none" ? "" : discoveryChannel);
       formData.append("skills", JSON.stringify(skills));
       formData.append("benefits", JSON.stringify(benefits));
       formData.append("is_unpaid", isUnpaid ? "true" : "false");
@@ -271,6 +274,42 @@ export function EditTab({ data, companyName, onRefresh, onDirtyChange, onSaved }
           <div className="space-y-1.5">
             <Label htmlFor="source">Source</Label>
             <Input id="source" name="source" defaultValue={job.source ?? ""} className="h-9 text-xs" placeholder="e.g. LinkedIn, Company Portal" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border/60 pt-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="discovery_channel">How you found it</Label>
+            <Select
+              value={discoveryChannel}
+              onValueChange={(v) => {
+                setDiscoveryChannel(v ?? "none");
+                markDirty();
+              }}
+            >
+              <SelectTrigger className="h-9 text-xs w-full">
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not set</SelectItem>
+                {DISCOVERY_CHANNELS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="source_url">Source link</Label>
+            <Input
+              id="source_url"
+              name="source_url"
+              type="url"
+              defaultValue={job.source_url ?? ""}
+              className="h-9 text-xs"
+              placeholder="Link to the post or listing that tipped you off"
+            />
           </div>
         </div>
       </div>

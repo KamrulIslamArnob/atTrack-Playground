@@ -22,6 +22,9 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
   const [timeLeft, setTimeLeft] = useState(60);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isWrite = approval?.kind === "write";
+  const isDelete = !isWrite; // default to delete for backwards compatibility
+
   useEffect(() => {
     if (!approval) {
       setTimeLeft(60);
@@ -45,7 +48,10 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          toast.warning("Deletion request timed out after 60s without confirmation. Cancelled safely.");
+          const msg = isWrite
+            ? "Write request timed out after 60s without confirmation. Cancelled safely."
+            : "Deletion request timed out after 60s without confirmation. Cancelled safely.";
+          toast.warning(msg);
           if (onTimeout) {
             onTimeout(approval.approvalId);
           } else {
@@ -58,7 +64,7 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [approval, onDeny, onTimeout]);
+  }, [approval, onDeny, onTimeout, isWrite]);
 
   if (!approval) return null;
 
@@ -74,6 +80,18 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
 
   const progressPercent = (timeLeft / 60) * 100;
 
+  const kindLabel = isWrite ? (approval.action === "update" ? "Update" : "Create") : "Deletion";
+  const headerTitle = isWrite
+    ? `Confirm ${kindLabel} in ${approval.label}`
+    : `Confirm Deletion from ${approval.label}`;
+  const headerDesc = isWrite
+    ? `This will ${approval.action === "update" ? "update" : "create"} data in your local database. Please review the details below.`
+    : "Dangerous action: this will permanently remove data from your local database.";
+  const iconBg = isWrite ? "bg-primary/15 text-primary border-primary/20" : "bg-destructive/15 text-destructive border-destructive/20";
+  const cardBorder = isWrite ? "border-primary/30" : "border-destructive/40";
+  const allowLabel = isWrite ? (approval.action === "update" ? "Allow & Update" : "Allow & Create") : "Allow & Delete";
+  const previewTitle = isWrite ? "Data Preview:" : "Target Records:";
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -82,20 +100,20 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="w-full max-w-lg overflow-hidden rounded-2xl border border-destructive/40 bg-card p-6 shadow-2xl space-y-4"
+          className={cn("w-full max-w-lg overflow-hidden rounded-2xl border bg-card p-6 shadow-2xl space-y-4", cardBorder)}
         >
           {/* Header with Countdown Badge */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-destructive/15 text-destructive border border-destructive/20 shadow-xs">
-                <AlertTriangle className="size-5" />
+              <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl border shadow-xs", iconBg)}>
+                {isWrite ? <Database className="size-5" /> : <AlertTriangle className="size-5" />}
               </div>
               <div>
                 <h3 className="text-base font-semibold text-foreground">
-                  Confirm Deletion from {approval.label}
+                  {headerTitle}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Dangerous action: this will permanently remove data from your local database.
+                  {headerDesc}
                 </p>
               </div>
             </div>
@@ -131,7 +149,7 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
             <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                 <Database className="size-3.5 text-primary" />
-                <span>Target Records:</span>
+                <span>{previewTitle}</span>
               </div>
               <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto p-1">
                 {approval.preview}
@@ -177,14 +195,14 @@ export function ApprovalModal({ approval, onAllow, onDeny, onTimeout }: Approval
 
             <Button
               type="button"
-              variant="destructive"
+              variant={isWrite ? "default" : "destructive"}
               size="sm"
               onClick={() => handleDecision("allow")}
               disabled={isSubmitting}
               className="rounded-lg text-xs font-semibold h-9 px-4 gap-1.5 cursor-pointer shadow-xs"
             >
-              <Trash2 className="size-3.5" />
-              <span>Allow & Delete</span>
+              {isWrite ? <Database className="size-3.5" /> : <Trash2 className="size-3.5" />}
+              <span>{allowLabel}</span>
             </Button>
           </div>
         </motion.div>

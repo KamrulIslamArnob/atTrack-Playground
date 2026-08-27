@@ -82,7 +82,7 @@ export function LandingHeader() {
           <Link href="/" className="flex items-center gap-2.5 justify-self-start">
             <ThemeLogo width={24} height={24} />
             <span className="font-heading text-lg font-semibold tracking-tight">
-              atTrack
+              BetterJob
             </span>
           </Link>
           <nav className="hidden items-center justify-self-center gap-1 text-sm text-muted-foreground md:flex">
@@ -133,7 +133,7 @@ export function LandingHeader() {
                 href="/overview"
                 className="rounded-2xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
-                Open atTrack
+                Open BetterJob
               </Link>
             </div>
             <button
@@ -179,7 +179,7 @@ export function LandingHeader() {
             >
               <ThemeLogo width={24} height={24} />
               <span className="font-heading text-lg font-semibold tracking-tight">
-                atTrack
+                BetterJob
               </span>
             </Link>
             <button
@@ -244,7 +244,7 @@ export function LandingHeader() {
               onClick={() => setMenuOpen(false)}
               className="flex h-11 items-center justify-center rounded-2xl bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
             >
-              Open atTrack
+              Open BetterJob
             </Link>
           </div>
             </motion.div>

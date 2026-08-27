@@ -94,8 +94,14 @@ export function CompanyLogo({
   const [loaded, setLoaded] = useState<boolean>(Boolean(validLogo));
   const [hasError, setHasError] = useState<boolean>(isNone);
   const [imgSrcIndex, setImgSrcIndex] = useState<number>(0);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     if (logoUrl === "none") {
       setCachedSource(null);
       setLoaded(false);
@@ -138,9 +144,9 @@ export function CompanyLogo({
           });
       }
     }
-  }, [logoUrl, domain, companyId, website]);
+  }, [logoUrl, domain, companyId, website, isMounted]);
 
-  const sources = domain && !isNone && getCachedDomainIcon(domain) !== "none"
+  const sources = isMounted && domain && !isNone && getCachedDomainIcon(domain) !== "none"
     ? [
         `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
         `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,

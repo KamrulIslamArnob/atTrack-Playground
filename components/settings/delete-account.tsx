@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { resetAllData } from "@/lib/actions/auth";
 
 interface ResetAllDataProps {
@@ -39,83 +39,64 @@ export function DeleteAccount({ confirmPhrase }: ResetAllDataProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+        className="micro-press inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30"
       >
-        <AlertTriangle className="size-4" />
+        <AlertTriangle className="size-3.5" aria-hidden="true" />
         Delete all data
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
-                <AlertTriangle className="size-5 text-destructive" />
-              </div>
-              <div>
-                <h2 className="font-heading text-base font-medium text-card-foreground">
-                  Delete all data
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  This action cannot be undone
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="flex w-full max-w-[420px] max-h-[85vh] flex-col overflow-hidden rounded-3xl bg-card shadow-e4">
+            <div className="px-6 pt-6">
+              <h2 className="font-heading text-base font-semibold leading-none">Delete all data?</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                This wipes the workspace on this device. It can’t be undone.
+              </p>
             </div>
 
-            <p className="mt-4 text-sm text-muted-foreground">
-              This permanently deletes everything stored in this workspace:
-            </p>
+            <div className="mt-4 border-y border-border bg-muted/20 px-6 py-3">
+              <p className="text-xs font-medium text-muted-foreground">This will erase</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {dataItems.join(" · ")}
+              </p>
+            </div>
 
-            <ul className="mt-3 space-y-1.5">
-              {dataItems.map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Trash2 className="size-3.5 shrink-0 text-destructive/60" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              <div className="space-y-3">
-                <label htmlFor="confirm-phrase" className="text-sm font-medium">
-                  Type{" "}
-                  <span className="inline-flex items-center rounded-2xl bg-muted px-2 py-0.5 font-mono text-sm text-foreground">
-                    {confirmPhrase}
-                  </span>{" "}
-                  to confirm
-                </label>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-6 py-5">
+              <label htmlFor="confirm-phrase" className="space-y-2">
+                <span className="text-sm font-medium">
+                  Type <span className="font-mono text-sm font-semibold text-foreground">{confirmPhrase}</span> to confirm
+                </span>
                 <input
                   id="confirm-phrase"
                   type="text"
                   value={confirmation}
                   onChange={(e) => setConfirmation(e.target.value)}
-                  placeholder="Enter the text above"
-                  className="mt-2 flex h-10 w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder={confirmPhrase}
+                  autoComplete="off"
+                  autoFocus
+                  className="flex h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
-              </div>
+              </label>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setOpen(false);
                     setConfirmation("");
                   }}
-                  className="inline-flex items-center justify-center rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  className="micro-press inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!isMatch || isDeleting}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="micro-press inline-flex items-center gap-1.5 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30"
                 >
-                  {isDeleting ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <AlertTriangle className="size-4" />
-                  )}
-                  Delete everything
+                  {isDeleting ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+                  {isDeleting ? "Deleting…" : "Delete everything"}
                 </button>
               </div>
             </form>

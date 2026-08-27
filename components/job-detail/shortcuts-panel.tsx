@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "@/lib/utils";
 import type { JobDetailData } from "@/lib/types/job-detail";
 
 interface ShortcutsPanelProps {

@@ -25,7 +25,7 @@ import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent, InfoTooltip } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/page-header";
 import { DocumentsUploadInline } from "@/components/documents-upload-inline";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -41,9 +41,9 @@ const typeLabels: Record<string, string> = {
 };
 
 const typeColors: Record<string, string> = {
-  resume: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  cover_letter: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  other: "bg-muted text-muted-foreground",
+  resume: "bg-primary/10 text-primary border-primary/20",
+  cover_letter: "bg-info/10 text-info border-info/20",
+  other: "bg-muted text-muted-foreground border-border/60",
 };
 
 type SortKey = "index" | "name" | "type" | "uploaded" | "ai_extracted";
@@ -188,7 +188,7 @@ function SortHeader({
         backgroundColor: bgColor || undefined,
       }}
       className={cn(
-        "group/th border-r border-border px-3 py-2.5 text-left last:border-r-0 select-none transition-colors relative",
+        "group/th border-r border-border/80 px-3 py-2.5 text-left select-none transition-colors relative",
         isDragging && "opacity-40 bg-primary/10",
         isDragOver && "border-l-2 border-l-primary bg-primary/20",
         className
@@ -207,12 +207,12 @@ function SortHeader({
           type="button"
           onClick={() => onSort(columnKey)}
           className={cn(
-            "group/btn inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 -mx-1.5 rounded-md transition-all duration-200 ease-out hover:scale-[1.04] active:scale-95 hover:bg-lime-500/10 hover:text-green-800 dark:hover:text-lime-400 truncate",
+            "group/btn inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 -mx-1.5 rounded-md transition-all duration-200 ease-out hover:scale-[1.04] active:scale-95 hover:bg-muted hover:text-foreground truncate",
             active ? "text-foreground font-bold" : "text-muted-foreground"
           )}
         >
           {Icon && (
-            <Icon className="size-3.5 shrink-0 opacity-70 group-hover/btn:opacity-100 group-hover/btn:scale-110 group-hover/btn:-rotate-6 group-hover/btn:text-green-800 dark:group-hover/btn:text-lime-400 transition-all duration-200" />
+            <Icon className="size-3.5 shrink-0 opacity-70 group-hover/btn:opacity-100 group-hover/btn:scale-110 group-hover/btn:-rotate-6 group-hover/btn:text-foreground transition-all duration-200" />
           )}
           {label ? <span>{label}</span> : null}
           {active ? (
@@ -650,7 +650,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                 href={doc.file_path}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-flex items-center gap-1 truncate"
+                className="font-medium hover:text-primary transition-colors inline-flex items-center gap-1 truncate"
                 title={`Open external link: ${doc.file_path}`}
               >
                 <span className="truncate">{doc.name}</span>
@@ -659,15 +659,15 @@ export function DocumentsList({ documents }: DocumentsListProps) {
             ) : (
               <Link
                 href={doc.builder_data ? `/documents/builder/${doc.id}` : `/documents/${doc.id}`}
-                className="font-medium hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block truncate"
+                className="font-medium hover:text-primary transition-colors inline-block truncate"
               >
                 {doc.name}
               </Link>
             )}
 
             {doc.is_default && (
-              <span className="inline-flex items-center gap-1 rounded-2xl bg-lime-100 dark:bg-lime-950/50 px-2 py-0.5 text-[10px] font-semibold text-lime-900 dark:text-lime-300 shrink-0 border border-lime-300/60 dark:border-lime-700/40">
-                <Star className="size-2.5 fill-lime-600 dark:fill-lime-400 text-lime-600 dark:text-lime-400" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success shrink-0 border border-success/20">
+                <Star className="size-2.5 fill-success text-success" />
                 Default
               </span>
             )}
@@ -677,10 +677,10 @@ export function DocumentsList({ documents }: DocumentsListProps) {
         return (
           <span
             className={cn(
-              "inline-block rounded-2xl px-2 py-0.5 text-[10px] font-medium whitespace-nowrap capitalize",
+              "inline-block rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap capitalize border",
               doc.generated_kind
-                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                : typeColors[doc.type] ?? "bg-muted text-muted-foreground"
+                ? "bg-info/10 text-info border-info/20"
+                : typeColors[doc.type] ?? "bg-muted text-muted-foreground border-border/60"
             )}
           >
             {doc.generated_kind
@@ -714,7 +714,13 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       <div className="space-y-6">
         <PageHeader
           title="Documents & Resumes"
-          subtitle="Your central hub for resumes, cover letters, and AI-generated documents."
+          titleExtra={
+            <InfoTooltip
+              content="Your central hub for resumes, cover letters, and AI-generated documents."
+              side="right"
+              iconClassName="size-4"
+            />
+          }
         >
           <div className="flex items-center justify-end w-full">
             <DocumentsUploadInline />
@@ -735,7 +741,13 @@ export function DocumentsList({ documents }: DocumentsListProps) {
       {/* Page Header with search & type filter on left and upload actions on right */}
       <PageHeader
         title="Documents & Resumes"
-        subtitle="Your central hub for resumes, cover letters, and AI-generated documents."
+        titleExtra={
+          <InfoTooltip
+            content="Your central hub for resumes, cover letters, and AI-generated documents."
+            side="right"
+            iconClassName="size-4"
+          />
+        }
       >
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           {/* Left: Search + Type filter */}
@@ -775,17 +787,17 @@ export function DocumentsList({ documents }: DocumentsListProps) {
         {hasActiveFilters ? (
           <div className="flex items-center gap-2">
             {search && (
-              <span className="inline-flex items-center gap-1 rounded-2xl bg-lime-100 dark:bg-lime-900/30 px-2.5 py-1 text-xs font-medium text-lime-900 dark:text-lime-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground border border-border/70">
                 &quot;{search}&quot;
-                <button onClick={() => setSearch("")} className="ml-0.5">
+                <button onClick={() => setSearch("")} className="ml-0.5 text-muted-foreground hover:text-foreground">
                   <XIcon className="size-3" />
                 </button>
               </span>
             )}
             {typeFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-2xl bg-lime-100 dark:bg-lime-900/30 px-2.5 py-1 text-xs font-medium text-lime-900 dark:text-lime-300 capitalize">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground border border-border/70 capitalize">
                 {typeLabels[typeFilter] ?? typeFilter}
-                <button onClick={() => setTypeFilter("all")} className="ml-0.5">
+                <button onClick={() => setTypeFilter("all")} className="ml-0.5 text-muted-foreground hover:text-foreground">
                   <XIcon className="size-3" />
                 </button>
               </span>
@@ -812,7 +824,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
               title="Reset column widths to default"
             >
               <RotateCCWIcon className="size-3" />
-              Reset Widths
+              Reset widths
             </button>
           )}
           {(Object.keys(columnColors).length > 0 || Object.keys(rowColors).length > 0) && (
@@ -845,10 +857,10 @@ export function DocumentsList({ documents }: DocumentsListProps) {
 
       {/* Table */}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-2xl border border-border relative">
+        <div className="overflow-x-auto rounded-xl border border-border/80 bg-card shadow-2xs relative">
           <table className="w-full table-fixed border-collapse text-sm select-none">
             <thead>
-              <tr className="border-b border-border bg-muted/60">
+              <tr className="border-b border-border/80 bg-muted/40">
                 {columnOrder.map((key) => {
                   const col = columnDefMap.get(key);
                   if (!col) return null;
@@ -894,8 +906,8 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                     key={doc.id}
                     style={rowBg ? { backgroundColor: rowBg } : undefined}
                     className={cn(
-                      "group relative border-b border-border/60 last:border-b-0 transition-colors",
-                      !rowBg && "odd:bg-card even:bg-muted/30 hover:bg-primary/5"
+                      "group relative border-b border-border/80 last:border-b-0 transition-colors",
+                      !rowBg && "hover:bg-muted/30"
                     )}
                   >
                     {columnOrder.map((key) => {
@@ -913,7 +925,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                             backgroundColor: colBg && !rowBg ? colBg : undefined,
                           }}
                           className={cn(
-                            "border-r border-border px-3 py-3 last:border-r-0 overflow-hidden",
+                            "border-r border-border/80 px-3 py-3 overflow-hidden",
                             col.className
                           )}
                         >

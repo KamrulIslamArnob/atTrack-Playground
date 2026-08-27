@@ -178,6 +178,12 @@ export function AiToolsTab({ data, companyName, onRefresh }: AiToolsTabProps) {
           </div>
         )}
 
+        {jobState.error && !isThisGenerating && (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            {jobState.error}
+          </div>
+        )}
+
         {jobState.result && (
           <div className="space-y-3 rounded-2xl border border-border p-3">
             <div className="space-y-1">

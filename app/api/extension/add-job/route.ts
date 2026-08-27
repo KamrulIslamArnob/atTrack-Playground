@@ -10,6 +10,8 @@ import { withRoute } from "@/lib/log/route";
 
 const log = moduleLogger("api");
 
+export const dynamic = "force-dynamic";
+
 export const OPTIONS = withRoute("/api/extension/add-job", async (req: Request) => {
   return new NextResponse(null, {
     status: 204,
@@ -24,7 +26,7 @@ export const POST = withRoute("/api/extension/add-job", async (req: Request) => 
 
     if (!verifyExtensionAuth(req.headers.get("authorization"), userId)) {
       return NextResponse.json(
-        { error: "Couldn't verify the extension token. Paste the secret from atTrack Settings into the extension popup." },
+        { error: "Couldn't verify the extension token. Paste the secret from BetterJob Settings into the extension popup." },
         { status: 401, headers: corsHeaders }
       );
     }
@@ -142,9 +144,20 @@ export const POST = withRoute("/api/extension/add-job", async (req: Request) => 
     scheduleJobScore(userId, job.id);
     scheduleJobEnrich(userId, job.id);
 
-    // Revalidate paths
-    revalidatePath("/jobs");
-    revalidatePath("/board");
+    // Revalidate paths — best-effort: Route Handlers don't always have a
+    // static-generation store (Next 16 invariant: "static generation store
+    // missing in revalidatePath"). Cache invalidation must never fail the
+    // mutation itself; the job is already persisted at this point.
+    try {
+      revalidatePath("/jobs");
+    } catch (err) {
+      log.warn({ err }, "[Extension API] revalidatePath /jobs skipped (no store):");
+    }
+    try {
+      revalidatePath("/board");
+    } catch (err) {
+      log.warn({ err }, "[Extension API] revalidatePath /board skipped (no store):");
+    }
 
     return NextResponse.json(
       {

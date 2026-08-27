@@ -27,13 +27,12 @@ export function Footer() {
               <Link href="/" className="inline-flex items-center gap-2.5">
                 <ThemeLogo width={18} height={18} />
                 <span className="font-heading text-lg font-semibold">
-                  atTrack
+                  BetterJob
                 </span>
               </Link>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/70 dark:text-foreground/70">
-                A private workspace for your job search — save jobs, track
-                applications, practice interviews, and see how you&apos;re doing.
-                All on your own machine.
+                A better way to reach your next job. Save jobs, track
+                applications, practice interviews, and see how you&apos;re doing — all on your own machine.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <span className="rounded-full border border-background/20 bg-background/10 px-3 py-1 text-xs font-medium text-background/70 dark:border-foreground/20 dark:bg-foreground/10 dark:text-foreground/70">
@@ -83,17 +82,17 @@ export function Footer() {
             <div className="sm:col-span-2 lg:col-span-4">
               <div className="rounded-2xl border border-background/15 bg-background/10 p-6 dark:border-foreground/15 dark:bg-foreground/10">
                 <h4 className="text-base font-semibold">
-                  Start using atTrack
+                  Start using BetterJob
                 </h4>
                 <p className="mt-1.5 text-sm text-background/70 dark:text-foreground/70">
-                  It runs on this machine. No account, no cloud, no setup.
+                  A better way to reach your next job. No account, no cloud, no setup.
                 </p>
                 <div className="mt-5 flex gap-3">
                   <Link
                     href="/overview"
                     className="inline-flex h-10 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
                   >
-                    Open atTrack
+                    Open BetterJob
                   </Link>
                 </div>
               </div>
@@ -103,7 +102,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-background/15 pt-8 sm:flex-row dark:border-foreground/15">
           <p className="text-xs text-background/50 dark:text-foreground/50">
-            &copy; {new Date().getFullYear()} atTrack. All rights reserved.
+            &copy; {new Date().getFullYear()} BetterJob. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-xs text-background/50 dark:text-foreground/50">
             <Link

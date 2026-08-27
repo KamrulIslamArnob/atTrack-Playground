@@ -23,7 +23,7 @@ export const AGENT_REGISTRY: Record<string, AgentDefinition> = {
     badge: "Versatile",
     icon: "Sparkles",
     description: "All-purpose career, coding, and productivity assistant",
-    systemPrompt: "You are atTrack AI, a helpful, precise, and professional career & software engineering assistant.",
+    systemPrompt: "You are BetterJob AI, a helpful, precise, and professional career & software engineering assistant.",
     tools: [
       "search_jobs",
       "get_resume",

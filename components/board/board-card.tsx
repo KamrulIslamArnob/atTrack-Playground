@@ -1,9 +1,7 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
 import { motion, useReducedMotion } from "motion/react";
 import {
-  Building2,
   Tag,
 } from "lucide-react";
 import { FileTextIcon } from "@/components/ui/file-text";
@@ -20,7 +18,7 @@ import {
 } from "@/lib/types/board";
 import { JOB_TIERS } from "@/lib/types/job";
 import { CompanyLogo } from "@/components/company-logo";
-import { cn, parseLocalDate } from "@/lib/utils";
+import { cn, parseLocalDate, formatDistanceToNow } from "@/lib/utils";
 
 interface BoardCardProps {
   card: BoardCard;
@@ -48,7 +46,7 @@ export function BoardCardItem({
   const linkCount = card.project_links?.length ?? 0;
   const deadlineInfo = getEffectiveDeadlineInfo(card, lists);
 
-  const isInactive = card.state === "archived" || card.state === "on_hold";
+  const isInactive = card.state === "archived" || card.state === "on_hold" || card.state === "rejected";
 
   return (
     <motion.div

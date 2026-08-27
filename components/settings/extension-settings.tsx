@@ -1,19 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Puzzle, CheckCircle2, XCircle, Flame, Save, ChevronDown } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronDown } from "lucide-react";
 import { CopyIcon } from "@/components/ui/copy";
 import { CheckIcon } from "@/components/ui/check";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
-import { KeyIcon } from "@/components/ui/key";
-import { ShieldCheckIcon } from "@/components/ui/shield-check";
-import { AnimatePresence, motion } from "motion/react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function ExtensionSettings({ secret }: { secret: string }) {
@@ -23,7 +17,6 @@ export function ExtensionSettings({ secret }: { secret: string }) {
   const [secretCopied, setSecretCopied] = useState(false);
   const [firecrawlKey, setFirecrawlKey] = useState("");
   const [savingKey, setSavingKey] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
 
   useEffect(() => {
@@ -31,20 +24,8 @@ export function ExtensionSettings({ secret }: { secret: string }) {
       setServerUrl(window.location.origin);
       const savedKey = localStorage.getItem("firecrawl_api_key") || "";
       setFirecrawlKey(savedKey);
-      const storedCollapsed = localStorage.getItem("attrack_extension_collapsed");
-      if (storedCollapsed === "true") {
-        setCollapsed(true);
-      }
     }
   }, []);
-
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem("attrack_extension_collapsed", String(next));
-      return next;
-    });
-  };
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -54,14 +35,14 @@ export function ExtensionSettings({ secret }: { secret: string }) {
       const data = await res.json();
       if (data.status === "ok") {
         setStatus("connected");
-        toast.success("atTrack Extension API is active and listening");
+        toast.success("Extension API is listening");
       } else {
         setStatus("failed");
-        toast.error("Extension API test failed");
+        toast.error("Couldn't verify extension API");
       }
     } catch {
       setStatus("failed");
-      toast.error("Unable to connect to local extension API");
+      toast.error("Couldn't reach local API");
     } finally {
       setTesting(false);
     }
@@ -71,9 +52,9 @@ export function ExtensionSettings({ secret }: { secret: string }) {
     setSavingKey(true);
     try {
       localStorage.setItem("firecrawl_api_key", firecrawlKey.trim());
-      toast.success("Firecrawl API Key saved");
+      toast.success("Firecrawl key saved");
     } catch {
-      toast.error("Couldn't save Firecrawl API key");
+      toast.error("Couldn't save Firecrawl key");
     } finally {
       setSavingKey(false);
     }
@@ -82,274 +63,155 @@ export function ExtensionSettings({ secret }: { secret: string }) {
   const handleCopyPath = () => {
     navigator.clipboard.writeText("extension");
     setCopied(true);
-    toast.success("Extension folder name copied to clipboard");
+    toast.success("Folder name copied");
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleCopySecret = () => {
     navigator.clipboard.writeText(secret);
     setSecretCopied(true);
-    toast.success("Extension secret copied to clipboard");
+    toast.success("Secret copied");
     setTimeout(() => setSecretCopied(false), 2000);
   };
 
   return (
-    <Card className="relative overflow-hidden border-2 border-amber-500/40 dark:border-amber-500/35 bg-gradient-to-br from-amber-500/[0.08] via-orange-500/[0.05] to-amber-500/[0.12] dark:from-amber-950/40 dark:via-orange-950/25 dark:to-card shadow-xs transition-all py-0 gap-0">
-      {/* Decorative top accent line with Google Chrome warm gradient */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-yellow-500 to-emerald-500 opacity-90" />
+    <section
+      aria-labelledby="extension-heading"
+      className="rounded-2xl bg-muted p-4 sm:p-5"
+    >
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 id="extension-heading" className="text-sm font-semibold tracking-tight text-foreground">
+            Browser companion extension
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Clip jobs directly from any job board into your Wishlist using the Chrome extension
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleTestConnection}
+          disabled={testing}
+          className="h-8 px-2.5 text-xs shrink-0 gap-1.5"
+        >
+          {testing ? (
+            <RefreshCWIcon className="size-3.5 animate-spin" />
+          ) : status === "connected" ? (
+            <CheckCircle2 className="size-3.5 text-success" />
+          ) : status === "failed" ? (
+            <XCircle className="size-3.5 text-destructive" />
+          ) : (
+            <RefreshCWIcon className="size-3.5" />
+          )}
+          {testing
+            ? "Checking…"
+            : status === "connected"
+            ? "Connected"
+            : status === "failed"
+            ? "Not reachable"
+            : "Test connection"}
+        </Button>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Clip jobs from job boards into BetterJob. Runs locally — nothing leaves this device.
+      </p>
 
-      <CardHeader
-        onClick={toggleCollapsed}
-        className={cn(
-          "cursor-pointer select-none px-6 py-5 hover:bg-amber-500/[0.06] transition-colors",
-          collapsed ? "rounded-2xl" : "rounded-t-2xl"
-        )}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white shadow-xs">
-              <Puzzle className="size-4.5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="text-base font-semibold text-foreground">
-                  Chrome Extension & Scraping Integration
-                </CardTitle>
-                <Badge
-                  variant="outline"
-                  className="bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/30 font-medium text-[11px]"
-                >
-                  Manifest V3
-                </Badge>
-              </div>
-              <CardDescription className="text-xs sm:text-sm mt-0.5 line-clamp-1">
-                Capture job postings from LinkedIn, Indeed, Greenhouse, and web pages directly into Wishlist.
-              </CardDescription>
-            </div>
+      <div className="-mx-2 divide-y divide-border/50">
+        {/* Local API */}
+        <div className="flex flex-col gap-1 px-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <p className="min-w-0 text-sm font-medium">Local API</p>
+          <code
+            suppressHydrationWarning
+            className="min-w-0 truncate rounded-lg bg-background px-2 py-1 font-mono text-xs text-foreground"
+          >
+            {serverUrl ? `${serverUrl}/api/extension` : "/api/extension"}
+          </code>
+        </div>
+
+        {/* Secret */}
+        <div className="flex flex-col gap-2 px-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Secret</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Paste in the extension popup to connect</p>
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={collapsed ? "Expand section" : "Minimize section"}
-              className="size-8 rounded-lg text-amber-800 dark:text-amber-200 hover:text-foreground hover:bg-amber-500/20"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleCollapsed();
-              }}
-            >
-              <ChevronDown
-                className={cn(
-                  "size-4 transition-transform duration-200 text-amber-700 dark:text-amber-300",
-                  collapsed ? "-rotate-90" : "rotate-0"
-                )}
-              />
+          <div className="flex shrink-0 items-center gap-2">
+            <Input
+              type="text"
+              readOnly
+              value={secret}
+              onFocus={(e) => e.currentTarget.select()}
+              className="h-8 w-full font-mono text-xs sm:w-56"
+            />
+            <Button variant="outline" size="sm" onClick={handleCopySecret} className="shrink-0 gap-1.5">
+              {secretCopied ? <CheckIcon className="size-3.5 text-success" /> : <CopyIcon className="size-3.5" />}
+              Copy
             </Button>
           </div>
         </div>
-      </CardHeader>
 
-      <AnimatePresence initial={false}>
-        {!collapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <CardContent className="space-y-6 px-6 pb-6 pt-2">
-              {/* Section 1: Extension API Listener */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-background/90 dark:bg-card/90 border border-amber-500/25 shadow-2xs">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-foreground">Extension API Listener:</span>
-                    <code
-                      suppressHydrationWarning
-                      className="text-xs px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 font-mono text-amber-900 dark:text-amber-200 font-semibold"
-                    >
-                      {serverUrl ? `${serverUrl}/api/extension` : "/api/extension"}
-                    </code>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    The Chrome Extension connects directly to this local endpoint.
-                  </p>
-                </div>
+        {/* Install - progressive disclosure */}
+        <details className="group px-2 py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            Install the extension
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="space-y-3 pt-3">
+            <ol className="space-y-1.5 list-decimal list-inside text-sm text-muted-foreground marker:text-foreground marker:font-medium">
+              <li>
+                Open <code className="rounded bg-background px-1 py-0.5 font-mono text-xs">chrome://extensions</code>
+              </li>
+              <li>
+                Turn on <span className="font-medium text-foreground">Developer mode</span> (top right)
+              </li>
+              <li>
+                Choose <span className="font-medium text-foreground">Load unpacked</span> and select the{" "}
+                <code className="rounded bg-background px-1 py-0.5 font-mono text-xs">extension</code> folder
+              </li>
+            </ol>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button variant="ghost" size="xs" onClick={handleCopyPath} className="gap-1.5">
+                {copied ? <CheckIcon className="size-3 text-success" /> : <CopyIcon className="size-3" />}
+                {copied ? "Copied" : "Copy folder name"}
+              </Button>
+              <a
+                href="https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked"
+                target="_blank"
+                rel="noreferrer"
+                className="ml-auto inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Extension docs
+                <ExternalLinkIcon className="size-3" />
+              </a>
+            </div>
+          </div>
+        </details>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestConnection}
-                  disabled={testing}
-                  className="gap-2 shrink-0 border-amber-500/40 text-amber-800 dark:text-amber-200 hover:bg-amber-500/15 hover:text-amber-900 dark:hover:text-amber-100"
-                >
-                  {testing ? (
-                    <RefreshCWIcon className="size-3.5 animate-spin" />
-                  ) : status === "connected" ? (
-                    <CheckCircle2 className="size-3.5 text-emerald-500" />
-                  ) : status === "failed" ? (
-                    <XCircle className="size-3.5 text-destructive" />
-                  ) : (
-                    <RefreshCWIcon className="size-3.5" />
-                  )}
-                  {testing ? "Testing..." : status === "connected" ? "Connected" : "Test Connection"}
-                </Button>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-amber-500/20" />
-
-              {/* Section 2: Installation Instructions */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <span className="flex size-5 items-center justify-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-800 dark:text-amber-200">
-                    1
-                  </span>
-                  How to Install in Chrome
-                </h4>
-                <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside pl-1">
-                  <li>
-                    Open Google Chrome and navigate to{" "}
-                    <code className="text-xs px-1.5 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 font-mono text-amber-900 dark:text-amber-200 font-medium">
-                      chrome://extensions
-                    </code>
-                  </li>
-                  <li>
-                    Enable <strong className="text-foreground">Developer mode</strong> (toggle switch in the top-right corner).
-                  </li>
-                  <li>
-                    Click <strong className="text-foreground">Load unpacked</strong>.
-                  </li>
-                  <li>
-                    Select the{" "}
-                    <code className="text-xs px-1.5 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 font-mono text-amber-900 dark:text-amber-200 font-medium">
-                      extension
-                    </code>{" "}
-                    folder in your atTrack directory.
-                  </li>
-                </ol>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-amber-500/20" />
-
-              {/* Section 3: Extension Secret */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                  <ShieldCheckIcon className="size-3.5 text-amber-600 dark:text-amber-400" />
-                  Extension Secret
-                </label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="text"
-                    readOnly
-                    value={secret}
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="font-mono text-xs bg-background/90 border-amber-500/30 focus-visible:ring-amber-500"
-                  />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleCopySecret}
-                    className="gap-1.5 shrink-0 border border-amber-500/30 hover:bg-amber-500/15 text-amber-900 dark:text-amber-200"
-                  >
-                    {secretCopied ? <CheckIcon className="size-3.5 text-emerald-500" /> : <CopyIcon className="size-3.5" />}
-                    {secretCopied ? "Copied" : "Copy Secret"}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground pt-0.5">
-                  Paste this into the extension popup&apos;s settings panel to authenticate its requests to atTrack.
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCopyPath}
-                  className="gap-2 border border-amber-500/30 hover:bg-amber-500/15 text-amber-900 dark:text-amber-200"
-                >
-                  {copied ? <CheckIcon className="size-3.5 text-emerald-500" /> : <CopyIcon className="size-3.5" />}
-                  {copied ? "Copied 'extension'" : "Copy Folder Name"}
-                </Button>
-                <a
-                  href="https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors ml-auto font-medium"
-                >
-                  Chrome Extension Docs
-                  <ExternalLinkIcon className="size-3" />
-                </a>
-              </div>
-
-              {/* Major Section Divider */}
-              <div className="border-t-2 border-dashed border-amber-500/30 my-4" />
-
-              {/* Section 4: Firecrawl Cloud Scraper API */}
-              <div className="space-y-4 pt-1">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                      <Flame className="size-4 text-orange-500" />
-                      Firecrawl Cloud Scraper API
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Scrape protected or JavaScript-rendered job sites into clean markdown & structured JSON.
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="bg-orange-500/15 text-orange-800 dark:text-orange-300 border-orange-500/30 shrink-0 text-[11px] font-medium"
-                  >
-                    Layer 2 Provider
-                  </Badge>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                    <KeyIcon className="size-3.5 text-orange-500" />
-                    Firecrawl API Key
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="password"
-                      placeholder="fc-..."
-                      value={firecrawlKey}
-                      onChange={(e) => setFirecrawlKey(e.target.value)}
-                      className="font-mono text-sm bg-background/90 border-amber-500/30 focus-visible:ring-amber-500"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleSaveFirecrawlKey}
-                      disabled={savingKey}
-                      className="gap-1.5 shrink-0 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-medium shadow-xs border-0"
-                    >
-                      <Save className="size-3.5" />
-                      Save Key
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground pt-0.5">
-                    Enter your key from{" "}
-                    <a
-                      href="https://firecrawl.dev"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 font-medium underline underline-offset-2"
-                    >
-                      firecrawl.dev
-                    </a>{" "}
-                    to enable cloud scraping fallback.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
+        {/* Cloud fallback */}
+        <div className="flex flex-col gap-2 px-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Firecrawl key</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Optional fallback when a site blocks local scraping ·{" "}
+              <a href="https://firecrawl.dev" target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                firecrawl.dev
+              </a>
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Input
+              type="password"
+              placeholder="fc-..."
+              value={firecrawlKey}
+              onChange={(e) => setFirecrawlKey(e.target.value)}
+              className="h-8 w-full font-mono text-xs sm:w-44"
+            />
+            <Button size="sm" onClick={handleSaveFirecrawlKey} disabled={savingKey} className="shrink-0">
+              Save
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

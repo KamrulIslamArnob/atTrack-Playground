@@ -15,7 +15,7 @@ interface ThemeLogoProps {
 export function ThemeLogo({
   width = 24,
   height = 24,
-  alt = "atTrack",
+  alt = "BetterJob",
   className,
   priority = false,
 }: ThemeLogoProps) {

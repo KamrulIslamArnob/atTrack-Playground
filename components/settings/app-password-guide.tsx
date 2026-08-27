@@ -13,7 +13,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 max-h-[85vh] overflow-y-auto">
+      <div className="w-full max-w-lg rounded-3xl bg-card p-6 max-h-[85vh] overflow-y-auto shadow-e4">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">Gmail App Password Setup</h2>
           <button
@@ -79,7 +79,7 @@ export function AppPasswordGuide({ open, onOpenChange }: AppPasswordGuideProps) 
               <p className="font-medium">Generate a new App Password</p>
               <p className="mt-1 text-muted-foreground">
                 Select <strong>Mail</strong> as the app and <strong>Other (Custom name)</strong> as the
-                device. Name it something like &quot;atTrack&quot; and click{" "}
+                device. Name it something like &quot;BetterJob&quot; and click{" "}
                 <strong>Generate</strong>.
               </p>
             </div>

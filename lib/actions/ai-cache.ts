@@ -42,7 +42,7 @@ export async function getCachedOutput(
 
   const { data } = await supabase
     .from("ai_output_cache")
-    .select("output, created_at")
+    .select("id, output, created_at")
     .eq("user_id", userId)
     .eq("content_hash", contentHash)
     .eq("kind", kind)
@@ -50,7 +50,23 @@ export async function getCachedOutput(
 
   if (!data?.output) return null;
 
-  return data.output as EmailOutput;
+  const output = data.output as EmailOutput;
+  if (
+    !output.subject ||
+    !output.body ||
+    output.subject.trim().toLowerCase().includes("your subject line here") ||
+    output.body.trim().toLowerCase().includes("your email body here") ||
+    output.subject.trim().startsWith("<") ||
+    output.body.trim().startsWith("<")
+  ) {
+    // Purge bad cache entry
+    if (data.id) {
+      await supabase.from("ai_output_cache").delete().eq("id", data.id);
+    }
+    return null;
+  }
+
+  return output;
 }
 
 const MAX_CACHE_ENTRIES_PER_USER = 50;
@@ -61,6 +77,17 @@ export async function setCachedOutput(
   params: Record<string, unknown>,
   output: EmailOutput
 ): Promise<void> {
+  if (
+    !output.subject ||
+    !output.body ||
+    output.subject.trim().toLowerCase().includes("your subject line here") ||
+    output.body.trim().toLowerCase().includes("your email body here") ||
+    output.subject.trim().startsWith("<") ||
+    output.body.trim().startsWith("<")
+  ) {
+    return;
+  }
+
   const { supabase, userId } = await getUser();
   const contentHash = hashParams(params);
 

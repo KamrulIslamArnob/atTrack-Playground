@@ -30,6 +30,14 @@ export const deleteDatabaseTool: ToolDefinition = {
     required: ["table"],
   },
   execute: async (args, ctx) => {
+    const mode = (ctx.permissionMode as string) ?? "bypass";
+    if (mode === "readonly") {
+      return {
+        content: `Delete blocked: you are in Read-only (View) mode. Switch to "Ask before changes" or "Bypass permissions" to allow deletions. No data was changed.`,
+        citations: [],
+      };
+    }
+
     const table = typeof args.table === "string" ? args.table.trim() : "";
     if (!tableExists(table)) {
       return { content: `Table "${table}" does not exist.`, citations: [] };
@@ -81,6 +89,32 @@ export const deleteDatabaseTool: ToolDefinition = {
       ownerCol ? ` AND "${ownerCol}" = ?` : ""
     }`;
 
+    // Bypass: execute directly without approval
+    if (mode === "bypass") {
+      const placeholders2 = foundIds.map(() => "?").join(",");
+      const params2: unknown[] = [...foundIds];
+      const delSql = `DELETE FROM "${table}" WHERE id IN (${placeholders2})${ownerCol ? ` AND "${ownerCol}" = ?` : ""}`;
+      if (ownerCol) params2.push(ctx.userId);
+      const { executeApprovedDelete } = await import("@/lib/ai-chatbot/db-approval");
+      // Reuse the same execution helper by constructing a temporary pending object
+      const deleted = (() => {
+        const db2 = getDb();
+        const info = db2.prepare(delSql).run(...(params2 as never[]));
+        return Number(info.changes);
+      })();
+      // Log
+      try {
+        const { logResourceActivity } = await import("@/lib/actions/activity-log");
+        for (const id of foundIds) {
+          void logResourceActivity(ctx.userId, "chat_delete", table, id, { bypass: true });
+        }
+      } catch {}
+      return {
+        content: `Deleted ${deleted} row(s) from "${table}" directly (Bypass permissions).`,
+        citations: [table],
+      };
+    }
+
     const approvalId = createPendingDbDelete({
       userId: ctx.userId,
       table,
@@ -103,6 +137,8 @@ export const deleteDatabaseTool: ToolDefinition = {
         preview: summary,
         sql,
         expiresAt: Date.now() + 60_000,
+        kind: "delete",
+        table,
       },
     };
   },

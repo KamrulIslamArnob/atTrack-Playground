@@ -21,6 +21,8 @@ import {
   ScanSearch,
   CircleCheck,
   Briefcase,
+  Compass,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ import {
 import { extractJobKeywords, checkJobResumeScore, setJobResume } from "@/lib/actions/jobs";
 import { CompanyLogo } from "@/components/company-logo";
 import type { JobDetailData } from "@/lib/types/job-detail";
+import { discoveryChannelLabel } from "@/lib/types/job";
 import { cn } from "@/lib/utils";
 
 interface OverviewTabProps {
@@ -184,6 +187,13 @@ export function OverviewTab({ data, onRefresh, onEditJob }: OverviewTabProps) {
     },
     job.application_process && { icon: Send, label: "Process", value: job.application_process, href: null },
     job.source && { icon: Globe, label: "Source", value: job.source, href: null },
+    job.discovery_channel && {
+      icon: Compass,
+      label: "How you found it",
+      value: discoveryChannelLabel(job.discovery_channel) ?? job.discovery_channel,
+      href: null,
+    },
+    job.source_url && { icon: Link2, label: "Source link", value: job.source_url, href: job.source_url },
   ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; value: string; href: string | null }[];
 
   const handleResumeChange = async (value: string | null) => {

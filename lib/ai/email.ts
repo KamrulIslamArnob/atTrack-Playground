@@ -73,6 +73,12 @@ export function parseEmailFromStream(rawStream: string): GeneratedEmail | null {
   // Strip code block markers if present
   text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 
+  const isDummyPlaceholder = (sub: string, body: string) => {
+    const s = sub.trim().toLowerCase();
+    const b = body.trim().toLowerCase();
+    return s.includes("your subject line here") || b.includes("your email body here") || s.startsWith("<") || b.startsWith("<");
+  };
+
   // 1. Try finding JSON block
   const jsonMatch = text.match(/\{[\s\S]*"subject"[\s\S]*"body"[\s\S]*\}/i) || text.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
@@ -82,7 +88,9 @@ export function parseEmailFromStream(rawStream: string): GeneratedEmail | null {
     try {
       const parsed = JSON.parse(rawJsonStr);
       if (typeof parsed.subject === "string" && typeof parsed.body === "string") {
-        return { subject: parsed.subject.trim(), body: parsed.body.trim() };
+        if (!isDummyPlaceholder(parsed.subject, parsed.body)) {
+          return { subject: parsed.subject.trim(), body: parsed.body.trim() };
+        }
       }
     } catch {
       // Fix unescaped newlines inside JSON string literals
@@ -90,7 +98,9 @@ export function parseEmailFromStream(rawStream: string): GeneratedEmail | null {
         const sanitized = rawJsonStr.replace(/(?<=:\s*"[\s\S]*?)\n(?=[\s\S]*?")/g, "\\n");
         const parsed = JSON.parse(sanitized);
         if (typeof parsed.subject === "string" && typeof parsed.body === "string") {
-          return { subject: parsed.subject.trim(), body: parsed.body.trim() };
+          if (!isDummyPlaceholder(parsed.subject, parsed.body)) {
+            return { subject: parsed.subject.trim(), body: parsed.body.trim() };
+          }
         }
       } catch {
         // Fall through to regex extraction
@@ -103,18 +113,31 @@ export function parseEmailFromStream(rawStream: string): GeneratedEmail | null {
       if (subMatch && bodyMatch) {
         const sub = subMatch[1].replace(/\\"/g, '"').replace(/\\n/g, "\n");
         const body = bodyMatch[1].replace(/\\"/g, '"').replace(/\\n/g, "\n");
-        return { subject: sub.trim(), body: body.trim() };
+        if (!isDummyPlaceholder(sub, body)) {
+          return { subject: sub.trim(), body: body.trim() };
+        }
       }
     }
   }
 
-  // 2. Extract bullet or labeled "* Subject:" and "* Body:" format from reasoning text
+  // 2. Partial streaming extraction: JSON is still open, but subject and unclosed body are streaming
+  const streamSubMatch = text.match(/"subject"\s*:\s*"((?:[^"\\]|\\.)*)"/i);
+  const streamBodyMatch = text.match(/"body"\s*:\s*"([\s\S]*)$/i);
+  if (streamSubMatch && streamBodyMatch) {
+    const sub = streamSubMatch[1].replace(/\\"/g, '"').replace(/\\n/g, "\n");
+    const body = streamBodyMatch[1].replace(/"(?:\s*\}|\s*$)/, "").replace(/\\"/g, '"').replace(/\\n/g, "\n");
+    if (!isDummyPlaceholder(sub, body) && (sub.trim() || body.trim())) {
+      return { subject: sub.trim(), body };
+    }
+  }
+
+  // 3. Extract bullet or labeled "* Subject:" and "* Body:" format from reasoning text
   const bulletSubjectMatch = text.match(/(?:\*|-)?\s*Subject:\s*"?([^"\n]+)"?/i);
   const bulletBodyMatch = text.match(/(?:\*|-)?\s*Body:\s*"?([\s\S]+?)"?\s*$/i);
   if (bulletSubjectMatch && bulletBodyMatch) {
     const sub = bulletSubjectMatch[1].replace(/\\"/g, '"').trim();
     const body = bulletBodyMatch[1].replace(/\\"/g, '"').trim();
-    if (sub && body) {
+    if (sub && body && !isDummyPlaceholder(sub, body)) {
       return { subject: sub, body: body };
     }
   }
@@ -122,25 +145,29 @@ export function parseEmailFromStream(rawStream: string): GeneratedEmail | null {
   // Strip reasoning/thinking process preamble for plain text fallbacks
   const cleanedText = text.replace(/^(?:Thinking Process|Thought|Reasoning):[\s\S]*?(?=(?:Subject:|Hello|Hi|Dear|\n\n[A-Z]))/i, "").trim();
 
-  // 3. Fallback for plain text output with Subject: header
+  // 4. Fallback for plain text output with Subject: header
   const subjectHeaderMatch = cleanedText.match(/^Subject:\s*(.+)$/im);
   if (subjectHeaderMatch) {
     const subject = subjectHeaderMatch[1].trim();
     const body = cleanedText.replace(/^Subject:\s*.+$/im, "").trim();
-    if (subject && body) {
+    if (subject && body && !isDummyPlaceholder(subject, body)) {
       return { subject, body };
     }
   }
 
-  // 4. Fallback for plain text output without JSON or headers
-  if (cleanedText.length > 20) {
+  // 5. Fallback for plain text output without JSON or headers
+  if (cleanedText.length > 20 && !cleanedText.startsWith("{")) {
     const lines = cleanedText.split("\n").map((l) => l.trim()).filter(Boolean);
     if (lines.length > 1) {
       const subject = lines[0].replace(/^#+\s*/, "").replace(/^Subject:\s*/i, "").trim();
       const body = lines.slice(1).join("\n\n").trim();
-      return { subject: subject || "Cover Letter", body: body || cleanedText };
+      if (!isDummyPlaceholder(subject, body)) {
+        return { subject: subject || "Cover Letter", body: body || cleanedText };
+      }
     }
-    return { subject: "Cover Letter", body: cleanedText };
+    if (!isDummyPlaceholder("Cover Letter", cleanedText)) {
+      return { subject: "Cover Letter", body: cleanedText };
+    }
   }
 
   return null;

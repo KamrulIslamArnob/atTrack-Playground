@@ -57,8 +57,13 @@ export function QuickShortcutsBar({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-3 shadow-2xs">
+    <div className="rounded-2xl border border-border/70 bg-card/60 p-3 sm:p-3.5 shadow-2xs backdrop-blur-xs">
       <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden lg:flex items-center gap-1.5 pr-1 text-xs font-semibold text-muted-foreground select-none">
+          <span className="size-1.5 rounded-full bg-primary/70" />
+          <span>Quick Copy</span>
+        </div>
+
         {shortcuts.map((sc) => {
           const isCopied = copiedId === sc.id;
           const hasValue = Boolean(sc.value && sc.value.trim());
@@ -77,14 +82,23 @@ export function QuickShortcutsBar({
               className={cn(
                 "group relative h-8 inline-flex items-center justify-center gap-2 rounded-xl border px-3 text-xs font-medium transition-all duration-150 ease-out cursor-pointer select-none active:scale-[0.97]",
                 isCopied
-                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/30"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-2xs ring-1 ring-emerald-500/20 font-semibold"
                   : hasValue
-                  ? "border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary text-foreground shadow-2xs"
-                  : "border-dashed border-border bg-muted/40 hover:bg-muted text-muted-foreground"
+                  ? "border-border/80 bg-background text-foreground shadow-2xs hover:border-primary/40 hover:bg-accent/40 hover:text-primary"
+                  : "border-dashed border-border/80 bg-background/60 text-muted-foreground hover:bg-muted hover:text-foreground hover:border-border"
               )}
             >
               {/* Platform Icon */}
-              <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground group-hover:text-primary-foreground transition-colors">
+              <span
+                className={cn(
+                  "inline-flex size-4 shrink-0 items-center justify-center transition-colors",
+                  isCopied
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : hasValue
+                    ? "text-muted-foreground group-hover:text-primary"
+                    : "text-muted-foreground group-hover:text-foreground"
+                )}
+              >
                 {isCopied ? (
                   <CheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-150" />
                 ) : (
@@ -93,8 +107,17 @@ export function QuickShortcutsBar({
               </span>
 
               {/* Title */}
-              <span className="font-medium tracking-tight truncate max-w-[120px] leading-none text-foreground group-hover:text-primary-foreground transition-colors">
-                {sc.title}
+              <span
+                className={cn(
+                  "font-medium tracking-tight truncate max-w-[130px] leading-none transition-colors",
+                  isCopied
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : hasValue
+                    ? "text-foreground group-hover:text-primary"
+                    : "text-muted-foreground group-hover:text-foreground"
+                )}
+              >
+                {isCopied ? "Copied!" : sc.title}
               </span>
 
               {/* Quick Edit Action Button */}
@@ -104,10 +127,15 @@ export function QuickShortcutsBar({
                   e.stopPropagation();
                   handleOpenEdit(sc);
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-primary-foreground/75 hover:!text-primary-foreground rounded-md hover:bg-white/20 active:scale-90 inline-flex items-center justify-center shrink-0 -mr-0.5"
+                className={cn(
+                  "opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md active:scale-90 inline-flex items-center justify-center shrink-0 -mr-0.5",
+                  isCopied
+                    ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
                 title="Edit Shortcut"
               >
-                <Pencil className="size-2.5" />
+                <Pencil className="size-3" />
               </button>
             </div>
           );
@@ -117,11 +145,11 @@ export function QuickShortcutsBar({
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="h-8 inline-flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-[0.97]"
+          className="h-8 inline-flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/80 bg-background/50 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border transition-all active:scale-[0.97] cursor-pointer"
           title="Add Quick Copy Shortcut"
         >
           <PlusIcon className="size-3.5 shrink-0" />
-          <span>Add Quick Copy Shortcut</span>
+          <span>Add Shortcut</span>
         </button>
       </div>
 

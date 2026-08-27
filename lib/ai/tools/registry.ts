@@ -11,6 +11,7 @@ import { writeDatabaseTool } from "./write-database";
 import { deleteDatabaseTool } from "./delete-database";
 import { readObsidianTool } from "./read-obsidian";
 import { searchGithubTool } from "./search-github";
+import { readLocalFolderTool } from "./read-local-folder";
 
 /**
  * The tool registry. To add a tool: create lib/ai/tools/<name>.ts exporting a
@@ -29,6 +30,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   writeDatabaseTool,
   deleteDatabaseTool,
   readObsidianTool,
+  readLocalFolderTool,
   searchGithubTool,
   webSearchTool,
 ];

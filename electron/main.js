@@ -58,7 +58,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(main).catch((err) => {
-    dialog.showErrorBox("atTrack failed to start", String(err));
+    dialog.showErrorBox("BetterJob failed to start", String(err));
     app.quit();
   });
 
@@ -89,7 +89,7 @@ function createMainWindow(url) {
     // this is the floor: the window can shrink into mobile layout, never past it.
     minWidth: 768,
     show: false,
-    title: "atTrack",
+    title: "BetterJob",
     titleBarStyle: "hidden",
     titleBarOverlay: {
       color: "rgba(0, 0, 0, 0)",
@@ -172,7 +172,7 @@ async function main() {
     if (!chosen) {
       dialog.showErrorBox(
         "Setup required",
-        "atTrack needs a folder to store its data. Please relaunch and choose one."
+        "BetterJob needs a folder to store its data. Please relaunch and choose one."
       );
       app.quit();
       return;
@@ -193,8 +193,12 @@ async function main() {
     settings.encryptionKey = crypto.randomBytes(32).toString("hex");
   }
 
+  // Gemini / AI provider setup no longer blocks startup — handled in the
+  // in-app onboarding wizard (Step 3: AI Engine) and Settings → AI Providers.
+  // Keeping the stored key as-is for existing installs; new installs start empty
+  // and configure AI later without a blocking native popup.
   if (settings.geminiApiKey === undefined) {
-    settings.geminiApiKey = await promptForGeminiKey();
+    settings.geminiApiKey = "";
   }
 
   if (settings.startAtLogin !== undefined) {
@@ -234,7 +238,7 @@ async function main() {
   try {
     await waitForReady(url);
   } catch (err) {
-    dialog.showErrorBox("atTrack failed to start", String(err));
+    dialog.showErrorBox("BetterJob failed to start", String(err));
     app.quit();
     return;
   }
@@ -291,6 +295,18 @@ async function main() {
     }
   });
   ipcMain.handle("app:is-maximized", () => mainWindow?.isMaximized() ?? false);
+
+  // Local workspace folder picker — used by Add Local Workspace Folder dialog
+  ipcMain.handle("app:pick-folder", async () => {
+    if (!mainWindow) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: "Select Workspace Folder",
+      properties: ["openDirectory", "createDirectory"],
+      buttonLabel: "Select Folder",
+    });
+    if (canceled || !filePaths[0]) return null;
+    return filePaths[0];
+  });
 
   // Register IPC Startup & Background service handlers
   ipcMain.handle("app:get-startup-settings", () => {
@@ -476,7 +492,7 @@ async function promptForDataDir() {
     : path.join(app.getPath("documents"), "atTrack");
 
   const { canceled, filePaths } = await dialog.showOpenDialog({
-    title: "Choose a folder for atTrack data",
+    title: "Choose a folder for BetterJob data",
     defaultPath: defaultDir,
     properties: ["openDirectory", "createDirectory"],
     buttonLabel: "Use this folder",
@@ -485,30 +501,7 @@ async function promptForDataDir() {
   return ensureSanitizedDataDir(filePaths[0]) || filePaths[0];
 }
 
-function promptForGeminiKey() {
-  return new Promise((resolve) => {
-    const setupWindow = new BrowserWindow({
-      width: 420,
-      height: 320,
-      resizable: false,
-      title: "atTrack setup",
-      webPreferences: {
-        preload: path.join(__dirname, "preload-setup.js"),
-        contextIsolation: true,
-      },
-    });
-    setupWindow.setMenuBarVisibility(false);
-    setupWindow.loadFile(path.join(__dirname, "setup.html"));
-
-    let resolved = false;
-    ipcMain.once("setup:submit", (_event, geminiApiKey) => {
-      resolved = true;
-      resolve(typeof geminiApiKey === "string" ? geminiApiKey : "");
-      setupWindow.close();
-    });
-    setupWindow.on("closed", () => {
-      // Closed without submitting (e.g. the [x] button) — treat as skip.
-      if (!resolved) resolve("");
-    });
-  });
-}
+// promptForGeminiKey removed — AI provider is now configured in-app via
+// OnboardingWizard (Step 3) and Settings → AI Providers. No blocking native
+// popup on startup. Legacy GEMINI_API_KEY still read from config.json if present
+// (see loadSettings / GEMINI_API_KEY env fallback), but new installs start empty.

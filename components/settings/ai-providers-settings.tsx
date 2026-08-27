@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   deleteProvider,
@@ -13,14 +12,22 @@ import {
 } from "@/lib/actions/ai-providers";
 import { AiProviderDialog } from "@/components/settings/ai-provider-dialog";
 import { AiTaskRoutePicker } from "@/components/settings/ai-task-route-picker";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Pencil, Trash2, Plug, ChevronDown } from "lucide-react";
-import { SparklesIcon } from "@/components/ui/sparkles";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Pencil, Trash2, Plug, MoreHorizontal, KeyRound } from "lucide-react";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
 import { DownloadIcon } from "@/components/ui/download";
 import { UploadIcon } from "@/components/ui/upload";
-import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PROVIDER_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
@@ -31,10 +38,35 @@ interface AiProvidersSettingsProps {
 }
 
 const TASK_DESCRIPTIONS: Record<TaskType, string> = {
-  text: "Resume matching, MCQ generation, email and AI Tools drafting.",
-  scraping: "Job-posting extraction, including fetching a source URL.",
-  image: "Reserved for a future feature — nothing uses this yet.",
+  text: "Chat, drafting, resume matching, MCQs",
+  scraping: "Job-posting extraction",
+  image: "Nothing uses this yet",
 };
+
+function VerificationDot({ verified }: { verified: boolean }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className="inline-flex size-2.5 shrink-0 cursor-default items-center justify-center"
+            aria-label={verified ? "Verified" : "Not verified"}
+          >
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                verified ? "bg-success" : "bg-warning"
+              )}
+            />
+          </span>
+        }
+      />
+      <TooltipContent side="top">
+        {verified ? "Key tested and working" : "Not tested yet"}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvidersSettingsProps) {
   const [providers, setProviders] = useState(initialProviders);
@@ -42,24 +74,6 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   const [dialogOpen, setDialogOpen] = useState<"add" | AiProviderSummary | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("attrack_ai_providers_collapsed");
-      if (stored === "true") {
-        setCollapsed(true);
-      }
-    }
-  }, []);
-
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem("attrack_ai_providers_collapsed", String(next));
-      return next;
-    });
-  };
 
   const refreshProviders = async () => {
     const [next, freshRoutes] = await Promise.all([listProviders(), getTaskRoutes()]);
@@ -82,7 +96,9 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
     if (res.success) {
       toast.success(`Connected to ${p.name} (${res.latencyMs ?? 0}ms)`);
     } else {
-      toast.error(`Connection failed for ${p.name}: ${res.error}`);
+      toast.error(`Couldn't connect to ${p.name}`, {
+        description: res.error,
+      });
     }
   };
 
@@ -115,10 +131,10 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("AI Providers exported to JSON file");
+      toast.success("Providers exported to JSON");
     } catch (e) {
       console.error(e);
-      toast.error("Couldn't export AI providers");
+      toast.error("Couldn't export providers");
     }
   };
 
@@ -133,7 +149,8 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success(`Successfully imported ${result.count ?? 0} AI provider(s)!`);
+        const count = result.count ?? 0;
+        toast.success(count === 1 ? "Imported 1 provider" : `Imported ${count} providers`);
         await refreshProviders();
       }
     } catch (err) {
@@ -148,192 +165,179 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
   const providerSetKey = providers.map((p) => p.id).join(",");
 
   return (
-    <Card className="border-border shadow-xs overflow-hidden transition-all py-0 gap-0">
-      <CardHeader
-        onClick={toggleCollapsed}
-        className={cn(
-          "cursor-pointer select-none px-6 py-5 hover:bg-muted/40 transition-colors",
-          collapsed ? "rounded-2xl" : "rounded-t-2xl"
-        )}
+    <>
+      <section
+        aria-labelledby="ai-providers-heading"
+        className="rounded-2xl bg-muted p-4 sm:p-5"
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-              <SparklesIcon className="size-4.5" />
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex min-w-0 items-center gap-2">
+              <h2 id="ai-providers-heading" className="text-sm font-semibold tracking-tight text-foreground">
+                AI model providers
+              </h2>
+              <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-muted px-2 text-[11px] font-semibold text-muted-foreground">
+                {providers.length}
+              </span>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="text-base font-semibold text-foreground">
-                  AI Providers & Task Routing
-                </CardTitle>
-                <Badge variant="secondary" className="text-xs font-normal">
-                  {providers.length} {providers.length === 1 ? "provider" : "providers"}
-                </Badge>
-              </div>
-              <CardDescription className="text-xs sm:text-sm mt-0.5">
-                Connect LLM credentials and set fallback priority routes for generation and scraping.
-              </CardDescription>
-            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Configure your BYOK API keys and assign models to specific tasks
+            </p>
           </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={collapsed ? "Expand AI Providers" : "Minimize AI Providers"}
-            className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleCollapsed();
-            }}
-          >
-            <ChevronDown
-              className={cn(
-                "size-4 transition-transform duration-200",
-                collapsed ? "-rotate-90" : "rotate-0"
-              )}
+          <div className="flex shrink-0 items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleFileChange}
             />
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDialogOpen("add")}
+            >
+              <PlusIcon className="size-3.5" />
+              Add provider
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+                            aria-label="More provider actions"
+                          />
+                        }
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          disabled={importing}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <UploadIcon className="size-3.5" />
+                          {importing ? "Importing…" : "Import JSON"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportJson}>
+                          <DownloadIcon className="size-3.5" />
+                          Export JSON
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+          </div>
         </div>
-      </CardHeader>
 
-      <AnimatePresence initial={false}>
-        {!collapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <CardContent className="space-y-6 px-6 pb-6 pt-2">
-              {/* Providers List Section */}
-              <div className="space-y-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm font-medium">Configured Providers</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".json"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={importing}
-                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-                    >
-                      <UploadIcon className="size-3.5" />
-                      {importing ? "Importing..." : "Import JSON"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleExportJson}
-                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
-                    >
-                      <DownloadIcon className="size-3.5" />
-                      Export JSON
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDialogOpen("add")}
-                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted cursor-pointer"
-                    >
-                      <PlusIcon className="size-3.5" />
-                      Add provider
-                    </button>
-                  </div>
-                </div>
-
-                {providers.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/70 p-4 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      No AI providers connected yet. Click <strong>Add provider</strong> above to connect Google Gemini, OpenAI, or Anthropic.
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {providers.map((p) => (
+        {providers.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-background/60 px-4 py-8 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <KeyRound className="size-4" />
+            </span>
+            <p className="font-heading text-sm font-semibold">No providers yet</p>
+            <p className="max-w-[36ch] text-xs text-muted-foreground">
+              Add a key so AI features have a model to use.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border/50">
+            {providers.map((p) => (
                       <li
                         key={p.id}
-                        className="flex flex-col gap-3 rounded-2xl border border-border px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                       >
-                        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-                          <Badge variant="outline">{PROVIDER_TYPE_LABELS[p.provider_type]}</Badge>
-                          <Badge
-                            variant="outline"
-                            className={p.verified ? "border-success/30 text-success" : "border-warning/30 text-warning"}
-                          >
-                            {p.verified ? "Verified" : "Not verified"}
-                          </Badge>
-                          <span className="min-w-0 truncate font-medium">{p.name}</span>
-                          <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{p.model}</span>
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                          <VerificationDot verified={p.verified} />
+                          <span className="min-w-0 truncate text-sm font-medium">{p.name}</span>
+                          <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+                            {p.model}
+                          </span>
+                          <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                            {PROVIDER_TYPE_LABELS[p.provider_type]}
+                          </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1 self-start sm:shrink-0 sm:self-auto">
-                          <button
-                            type="button"
-                            onClick={() => handleTest(p)}
-                            disabled={testingId === p.id}
-                            title="Test connection"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 cursor-pointer"
-                          >
-                            {testingId === p.id ? <Spinner className="size-3.5" /> : <Plug className="size-3.5" />}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDialogOpen(p)}
-                            title="Edit provider"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(p.id)}
-                            disabled={deletingId === p.id}
-                            title="Delete provider"
-                            className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50 cursor-pointer"
-                          >
-                            {deletingId === p.id ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />}
-                          </button>
+                        <div className="flex shrink-0 items-center gap-0.5 self-end sm:self-auto">
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="inline-flex" />}>
+                              <button
+                                type="button"
+                                onClick={() => handleTest(p)}
+                                disabled={testingId === p.id}
+                                aria-label={`Test connection for ${p.name}`}
+                                className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground disabled:opacity-50"
+                              >
+                                {testingId === p.id ? (
+                                  <Spinner className="size-3.5" />
+                                ) : (
+                                  <Plug className="size-3.5" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Test connection</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="inline-flex" />}>
+                              <button
+                                type="button"
+                                onClick={() => setDialogOpen(p)}
+                                aria-label={`Edit ${p.name}`}
+                                className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+                              >
+                                <Pencil className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Edit provider</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="inline-flex" />}>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(p.id)}
+                                disabled={deletingId === p.id}
+                                aria-label={`Delete ${p.name}`}
+                                className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                              >
+                                {deletingId === p.id ? (
+                                  <Spinner className="size-3.5" />
+                                ) : (
+                                  <Trash2 className="size-3.5" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Delete provider</TooltipContent>
+                          </Tooltip>
                         </div>
                       </li>
                     ))}
                   </ul>
-                )}
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-border/80" />
-
-              {/* Task Routing Section */}
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium">Task Routing Hierarchy</p>
-                  <p className="text-xs text-muted-foreground">
-                    Define the priority sequence of models for each task. Top priority model is attempted first; fallback occurs in order.
-                  </p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                  {(Object.keys(TASK_DESCRIPTIONS) as TaskType[]).map((taskType) => (
-                    <AiTaskRoutePicker
-                      key={`${taskType}-${providerSetKey}`}
-                      taskType={taskType}
-                      description={TASK_DESCRIPTIONS[taskType]}
-                      allProviders={providers}
-                      initialSelectedIds={(routes[taskType] ?? []).map((p) => p.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </motion.div>
         )}
-      </AnimatePresence>
+
+        <div className="my-4 border-t border-border/50" />
+
+        {/* Routing lanes */}
+        <section aria-label="Task routing" className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">Task routing matrix</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Assign primary and fallback models for text processing, scraping, and generation
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {(Object.keys(TASK_DESCRIPTIONS) as TaskType[]).map((taskType) => (
+              <AiTaskRoutePicker
+                key={`${taskType}-${providerSetKey}`}
+                taskType={taskType}
+                description={TASK_DESCRIPTIONS[taskType]}
+                allProviders={providers}
+                initialSelectedIds={(routes[taskType] ?? []).map((p) => p.id)}
+              />
+            ))}
+          </div>
+        </section>
+      </section>
 
       {dialogOpen && (
         <AiProviderDialog
@@ -342,6 +346,6 @@ export function AiProvidersSettings({ initialProviders, initialRoutes }: AiProvi
           onSaved={refreshProviders}
         />
       )}
-    </Card>
+    </>
   );
 }

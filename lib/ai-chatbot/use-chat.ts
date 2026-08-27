@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { generateSessionTitle, type ChatSession, type Message } from "./sessions";
+import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
+import type { ChatArtifact } from "@/lib/types/chat-artifact";
 
 export interface ToolExecutionStep {
   id: string;
@@ -11,6 +13,9 @@ export interface ToolExecutionStep {
   result?: string;
   error?: string;
   approvalRequired?: boolean;
+  /** Inline card snapshot created by this tool call (e.g. job board card) */
+  artifact?: ChatArtifact;
+  artifacts?: ChatArtifact[];
 }
 
 export interface DbApproval {
@@ -20,6 +25,9 @@ export interface DbApproval {
   sql: string;
   expiresAt?: number;
   sessionId?: string;
+  kind?: "delete" | "write" | "tool";
+  table?: string;
+  action?: string;
 }
 
 export interface ChatMessage {
@@ -235,6 +243,7 @@ export function useAtTrackChat({
         let rawContentAcc = "";
         let sourcesAcc: string[] = [];
         let toolStepsAcc: ToolExecutionStep[] = [];
+        let streamError: string | null = null;
         let buffer = "";
 
         while (true) {
@@ -252,6 +261,10 @@ export function useAtTrackChat({
 
             try {
               const parsed = JSON.parse(data);
+              if (typeof parsed?.error === "string" && parsed.error.trim()) {
+                streamError = cleanAiErrorMessage(parsed.error);
+                continue;
+              }
               const reasoningDelta: string | undefined =
                 parsed?.choices?.[0]?.delta?.reasoning_content ??
                 parsed?.choices?.[0]?.delta?.reasoning ??
@@ -277,7 +290,7 @@ export function useAtTrackChat({
                     status?: string;
                     args?: Record<string, unknown>;
                     error?: string;
-                    result?: { content?: string };
+                    result?: { content?: string; artifact?: unknown; artifacts?: unknown };
                   };
                   return {
                     id: `tool-${i}`,
@@ -290,6 +303,8 @@ export function useAtTrackChat({
                     detail: rec.args ? JSON.stringify(rec.args) : undefined,
                     result: rec.result?.content,
                     error: rec.error,
+                    artifact: rec.result?.artifact as import("@/lib/types/chat-artifact").ChatArtifact | undefined,
+                    artifacts: rec.result?.artifacts as import("@/lib/types/chat-artifact").ChatArtifact[] | undefined,
                   };
                 });
                 onToolSteps?.(toolStepsAcc, targetSessionId);
@@ -339,52 +354,58 @@ export function useAtTrackChat({
             if (data !== "[DONE]") {
               try {
                 const parsed = JSON.parse(data);
-                const reasoningDelta: string | undefined =
-                  parsed?.choices?.[0]?.delta?.reasoning_content ??
-                  parsed?.choices?.[0]?.delta?.reasoning ??
-                  parsed?.delta?.reasoning_content ??
-                  parsed?.thinking;
-                if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
+                if (typeof parsed?.error === "string" && parsed.error.trim()) {
+                  streamError = cleanAiErrorMessage(parsed.error);
+                } else {
+                  const reasoningDelta: string | undefined =
+                    parsed?.choices?.[0]?.delta?.reasoning_content ??
+                    parsed?.choices?.[0]?.delta?.reasoning ??
+                    parsed?.delta?.reasoning_content ??
+                    parsed?.thinking;
+                  if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
 
-                const contentDelta: string | undefined =
-                  parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
-                if (contentDelta) rawContentAcc += contentDelta;
+                  const contentDelta: string | undefined =
+                    parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+                  if (contentDelta) rawContentAcc += contentDelta;
 
-                if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
-                  sourcesAcc = parsed.sources;
-                  onSources?.(sourcesAcc, targetSessionId);
-                }
-                if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
-                  toolStepsAcc = parsed.tool_calls.map((s: unknown, i: number) => {
-                    const rec = s as {
-                      name?: string;
-                      status?: string;
-                      args?: Record<string, unknown>;
-                      error?: string;
-                      result?: { content?: string };
+                  if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                    sourcesAcc = parsed.sources;
+                    onSources?.(sourcesAcc, targetSessionId);
+                  }
+                  if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
+                    toolStepsAcc = parsed.tool_calls.map((s: unknown, i: number) => {
+                      const rec = s as {
+                        name?: string;
+                        status?: string;
+                        args?: Record<string, unknown>;
+                        error?: string;
+                        result?: { content?: string; artifact?: unknown; artifacts?: unknown };
+                      };
+                      return {
+                        id: `tool-${i}`,
+                        label: rec.name ?? "tool",
+                        status: (rec.status === "error" ? "failed" : rec.status === "called" ? "running" : "completed") as
+                          | "pending"
+                          | "running"
+                          | "completed"
+                          | "failed",
+                        detail: rec.args ? JSON.stringify(rec.args) : undefined,
+                        result: rec.result?.content,
+                        error: rec.error,
+                        artifact: rec.result?.artifact as import("@/lib/types/chat-artifact").ChatArtifact | undefined,
+                        artifacts: rec.result?.artifacts as import("@/lib/types/chat-artifact").ChatArtifact[] | undefined,
+                      };
+                    });
+                    onToolSteps?.(toolStepsAcc, targetSessionId);
+                  }
+                  if (parsed?.approval && typeof parsed.approval === "object") {
+                    const approvalObj: DbApproval = {
+                      ...parsed.approval,
+                      sessionId: targetSessionId,
+                      expiresAt: parsed.approval.expiresAt || Date.now() + 60_000,
                     };
-                    return {
-                      id: `tool-${i}`,
-                      label: rec.name ?? "tool",
-                      status: (rec.status === "error" ? "failed" : rec.status === "called" ? "running" : "completed") as
-                        | "pending"
-                        | "running"
-                        | "completed"
-                        | "failed",
-                      detail: rec.args ? JSON.stringify(rec.args) : undefined,
-                      result: rec.result?.content,
-                      error: rec.error,
-                    };
-                  });
-                  onToolSteps?.(toolStepsAcc, targetSessionId);
-                }
-                if (parsed?.approval && typeof parsed.approval === "object") {
-                  const approvalObj: DbApproval = {
-                    ...parsed.approval,
-                    sessionId: targetSessionId,
-                    expiresAt: parsed.approval.expiresAt || Date.now() + 60_000,
-                  };
-                  onApproval?.(approvalObj, targetSessionId);
+                    onApproval?.(approvalObj, targetSessionId);
+                  }
                 }
               } catch {
                 /* ignore partial unparseable chunk */
@@ -393,52 +414,79 @@ export function useAtTrackChat({
           }
         }
 
-        // Stream completed cleanly
-        const { thinking, content } = extractThinkingAndContent(
-          rawContentAcc,
-          structuredThinkingAcc
-        );
+        // Handle provider error surfaced inside 200 SSE (quota 429) — show as error, not silent empty
+        if (streamError) {
+          const { thinking: partialThinking, content: partialContent } = extractThinkingAndContent(
+            rawContentAcc,
+            structuredThinkingAcc
+          );
+          const errorContent = partialContent.trim()
+            ? `${partialContent}\n\n⚠️ ${streamError}`
+            : `⚠️ ${streamError}`;
+          const errorMsgsInner: ChatMessage[] = [
+            ...baseHistory,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: errorContent,
+              thinking: partialThinking || structuredThinkingAcc || undefined,
+              sources: sourcesAcc,
+              toolSteps: toolStepsAcc,
+              status: "error",
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          setMessagesBySession((prev) => ({ ...prev, [targetSessionId]: errorMsgsInner }));
+          onSessionUpdated?.(targetSessionId, errorMsgsInner);
+          onError?.(new Error(streamError), targetSessionId);
+        } else {
+          // Stream completed cleanly
+          const { thinking, content } = extractThinkingAndContent(
+            rawContentAcc,
+            structuredThinkingAcc
+          );
 
-        let finalSessionMessages: ChatMessage[] = [];
-        setMessagesBySession((prev) => {
-          const currentMsgs = prev[targetSessionId] || initialWithAssistant;
-          const hasAssistant = currentMsgs.some((m) => m.id === assistantId);
-          const nextMsgs: ChatMessage[] = hasAssistant
-            ? currentMsgs.map((m) =>
-                m.id === assistantId
-                  ? {
-                      ...m,
-                      content,
-                      thinking,
-                      sources: sourcesAcc.length > 0 ? sourcesAcc : m.sources,
-                      toolSteps: toolStepsAcc.length > 0 ? toolStepsAcc : m.toolSteps,
-                      status: "delivered" as const,
-                      createdAt: m.createdAt || new Date().toISOString(),
-                    }
-                  : {
-                      ...m,
-                      status: "delivered" as const,
-                    }
-              )
-            : [
-                ...baseHistory.map((m) => ({ ...m, status: "delivered" as const })),
-                {
-                  id: assistantId,
-                  role: "assistant" as const,
-                  content,
-                  thinking,
-                  sources: sourcesAcc,
-                  toolSteps: toolStepsAcc,
-                  status: "delivered" as const,
-                  createdAt: new Date().toISOString(),
-                },
-              ];
-          finalSessionMessages = nextMsgs;
-          return { ...prev, [targetSessionId]: nextMsgs };
-        });
+          let finalSessionMessages: ChatMessage[] = [];
+          setMessagesBySession((prev) => {
+            const currentMsgs = prev[targetSessionId] || initialWithAssistant;
+            const hasAssistant = currentMsgs.some((m) => m.id === assistantId);
+            const nextMsgs: ChatMessage[] = hasAssistant
+              ? currentMsgs.map((m) =>
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content,
+                        thinking,
+                        sources: sourcesAcc.length > 0 ? sourcesAcc : m.sources,
+                        toolSteps: toolStepsAcc.length > 0 ? toolStepsAcc : m.toolSteps,
+                        status: "delivered" as const,
+                        createdAt: m.createdAt || new Date().toISOString(),
+                      }
+                    : {
+                        ...m,
+                        status: "delivered" as const,
+                      }
+                )
+              : [
+                  ...baseHistory.map((m) => ({ ...m, status: "delivered" as const })),
+                  {
+                    id: assistantId,
+                    role: "assistant" as const,
+                    content,
+                    thinking,
+                    sources: sourcesAcc,
+                    toolSteps: toolStepsAcc,
+                    status: "delivered" as const,
+                    createdAt: new Date().toISOString(),
+                  },
+                ];
+            finalSessionMessages = nextMsgs;
+            return { ...prev, [targetSessionId]: nextMsgs };
+          });
 
-        onSessionUpdated?.(targetSessionId, finalSessionMessages);
-        onSessionComplete?.(targetSessionId, finalSessionMessages);
+          onSessionUpdated?.(targetSessionId, finalSessionMessages);
+          onSessionComplete?.(targetSessionId, finalSessionMessages);
+        }
       } catch (err) {
         if ((err as Error).name === "AbortError") {
           setMessagesBySession((prev) => {

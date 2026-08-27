@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAITaskQueue } from "@/lib/ai-tasks/task-queue-context";
 import Link from "next/link";
 import {
   ExternalLink,
@@ -22,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { CompanyLogo } from "@/components/company-logo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverviewTab } from "@/components/job-detail/tabs/overview-tab";
+import { InterviewsTab } from "@/components/job-detail/tabs/interviews-tab";
 import { DeadlinesTab } from "@/components/job-detail/tabs/deadlines-tab";
 import { AiToolsTab } from "@/components/job-detail/tabs/ai-tools-tab";
 import { NetworkTab } from "@/components/job-detail/tabs/network-tab";
@@ -57,6 +60,7 @@ import { cn } from "@/lib/utils";
 
 const TAB_ITEMS = [
   { id: "overview", label: "Overview", icon: SparklesIcon },
+  { id: "interviews", label: "Interviews", icon: CalendarClock },
   { id: "timeline", label: "Timeline", icon: CalendarClock },
   { id: "ai-studio", label: "AI studio", icon: Bot },
   { id: "network", label: "Network", icon: UsersIcon },
@@ -65,13 +69,15 @@ const TAB_ITEMS = [
 interface JobDetailContentProps {
   data: JobDetailData;
   onRefresh: () => void;
+  onDelete?: () => void;
   /** Board context only — omitted on the standalone /jobs/[id] page. */
   lists?: BoardList[];
   onMoveTo?: (listId: string) => void;
 }
 
-export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetailContentProps) {
+export function JobDetailContent({ data, onRefresh, onDelete, lists, onMoveTo }: JobDetailContentProps) {
   const { job, company } = data;
+  const router = useRouter();
   const [tab, setTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [aiUpdateOpen, setAiUpdateOpen] = useState(false);
@@ -79,6 +85,13 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   const [tierPending, setTierPending] = useState(false);
   const { confirm, dialog } = useConfirm();
   const band = matchScoreBand(job.match_score);
+  const { setActiveViewing } = useAITaskQueue();
+
+  // Track current viewing context for queue suppression: queue hides when user is already on the generation target
+  useEffect(() => {
+    setActiveViewing(job.id, tab);
+    return () => setActiveViewing(null, null);
+  }, [job.id, tab, setActiveViewing]);
 
   const handleCopyJson = async () => {
     try {
@@ -103,7 +116,11 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
     try {
       const res = await deleteJobWithSmartCascade(job.id);
       toast.success(res.companyDeleted ? "Job and company deleted" : "Job deleted");
-      onRefresh();
+      if (onDelete) {
+        onDelete();
+      } else {
+        router.push("/board");
+      }
     } catch {
       toast.error("Couldn't delete job");
     }
@@ -117,6 +134,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
         active: "Active",
         on_hold: "On Hold",
         archived: "Archived",
+        rejected: "Rejected",
       };
       toast.success(`Job state changed to ${labelMap[newState]}`);
       onRefresh();
@@ -170,7 +188,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b border-border bg-card/60 px-4 sm:px-6 py-3.5 backdrop-blur-sm pr-14 sm:pr-16 md:pr-20">
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
@@ -428,6 +446,12 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 >
                   📦 Archive
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={job.state === "rejected"}
+                  onClick={() => handleStateChange("rejected")}
+                >
+                  ❌ Rejected
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -501,6 +525,7 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
           >
             {TAB_ITEMS.map((item) => {
               const Icon = item.icon;
+              const count = item.id === "interviews" ? data.interviews?.length : null;
               return (
                 <TabsTrigger
                   key={item.id}
@@ -508,7 +533,12 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                   className="shrink-0 gap-1.5 px-3 py-2.5 text-xs font-semibold group-data-horizontal/tabs:after:bottom-0 data-active:text-primary data-active:after:bg-primary"
                 >
                   <Icon className="size-3.5" />
-                  {item.label}
+                  <span>{item.label}</span>
+                  {typeof count === "number" && count > 0 && (
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-primary leading-none">
+                      {count}
+                    </span>
+                  )}
                 </TabsTrigger>
               );
             })}
@@ -522,6 +552,15 @@ export function JobDetailContent({ data, onRefresh, lists, onMoveTo }: JobDetail
                 data={data}
                 onRefresh={onRefresh}
                 onEditJob={() => setEditOpen(true)}
+              />
+            </TabErrorBoundary>
+          </TabsContent>
+          <TabsContent value="interviews">
+            <TabErrorBoundary label="interviews">
+              <InterviewsTab
+                data={data}
+                onRefresh={onRefresh}
+                onSwitchToAiStudio={() => setTab("ai-studio")}
               />
             </TabErrorBoundary>
           </TabsContent>

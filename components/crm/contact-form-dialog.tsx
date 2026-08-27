@@ -16,15 +16,12 @@ import {
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
-  createCompanyContact, createPersonContact, updateContact, uploadContactAvatar, deleteContact, type Contact, } from "@/lib/actions/contacts";
+  createCompanyContact, createPersonContact, updateContact, uploadContactAvatar, openContactAvatarFolder, deleteContact, type Contact, } from "@/lib/actions/contacts";
 import { createCompany, type CrmCompany } from "@/lib/actions/companies";
 import { getJobsForMention, type JobMentionOption } from "@/lib/actions/jobs-list";
 import { insertMentionToken } from "@/lib/mentions";
-import { getTagColorClass, getContactAvatarColorClass, generateUUID, cn } from "@/lib/utils";
-import { Plus, Trash2, Building2, Camera, Loader2 } from "lucide-react";
-import { XIcon } from "@/components/ui/x";
-import { LinkIcon } from "@/components/ui/link";
-import { UploadIcon } from "@/components/ui/upload";
+import { getTagColorClass, generateUUID, cn } from "@/lib/utils";
+import { Plus, Trash2, Building2, Camera, Loader2, Link2, X, FolderOpen } from "lucide-react";
 import { parseContactSocialLinks } from "./contact-card";
 
 const NO_COMPANY = "__none__";
@@ -66,6 +63,7 @@ interface SocialLinkStateItem {
   id: string;
   platform: string;
   url: string;
+  label?: string;
 }
 
 export function ContactFormDialog({
@@ -110,7 +108,7 @@ export function ContactFormDialog({
   const [contactName, setContactName] = useState(contact?.name ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(contact?.avatar_url ?? null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Company state
@@ -139,7 +137,7 @@ export function ContactFormDialog({
     if (!open) return;
     setContactName(contact?.name ?? "");
     setAvatarUrl(contact?.avatar_url ?? null);
-    setShowUrlInput(false);
+    setIsDragging(false);
     setCompanyId(contact?.company_id ?? lockedCompanyId ?? NO_COMPANY);
     setCustomCompanyName("");
     setTags(
@@ -157,11 +155,12 @@ export function ContactFormDialog({
           id: generateUUID(),
           platform: item.platform,
           url: item.url,
+          label: item.label,
         }))
       );
     } else {
       setSocialLinks([
-        { id: generateUUID(), platform: "linkedin", url: "" },
+        { id: generateUUID(), platform: "linkedin", url: "", label: "" },
       ]);
     }
 
@@ -174,10 +173,28 @@ export function ContactFormDialog({
     getJobsForMention().then(setJobOptions);
   }, [open]);
 
-  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+function dataUrlToFile(dataUrl: string, filename = "dropped-image.png"): File | null {
+  try {
+    const arr = dataUrl.split(",");
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "image/png";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  } catch {
+    return null;
+  }
+}
 
+  const processAvatarFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please drop an image file (JPEG, PNG, WebP)");
+      return;
+    }
     setUploadingAvatar(true);
     try {
       const formData = new FormData();
@@ -186,16 +203,110 @@ export function ContactFormDialog({
       formData.append("company_name", companyName(companyId) ?? "");
       formData.append("role", tags.join(", "));
       formData.append("email", contact?.email ?? "");
-      // Pass the current avatar URL so the server can delete the old file
       if (avatarUrl) formData.append("old_avatar_url", avatarUrl);
 
       const url = await uploadContactAvatar(formData);
       setAvatarUrl(url);
-      toast.success("Contact photo processed & uploaded");
+      toast.success("Photo uploaded");
     } catch {
       toast.error("Couldn't upload photo");
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processAvatarFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    // 1. Check for dropped file from filesystem
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith("image/")) {
+        await processAvatarFile(file);
+        return;
+      }
+    }
+
+    // 2. Check for dropped data URL / base64 string
+    const plainText = e.dataTransfer.getData("text/plain");
+    if (plainText && /^data:image\//i.test(plainText.trim())) {
+      const file = dataUrlToFile(plainText.trim());
+      if (file) {
+        await processAvatarFile(file);
+        return;
+      }
+    }
+
+    // 3. Check for dragged URI / link from another tab or web page
+    const uriList = e.dataTransfer.getData("text/uri-list");
+    if (uriList && /^https?:\/\//i.test(uriList)) {
+      setAvatarUrl(uriList.split("\n")[0].trim());
+      toast.success("Photo link applied");
+      return;
+    }
+
+    const htmlData = e.dataTransfer.getData("text/html");
+    if (htmlData) {
+      const match = htmlData.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const src = match?.[1];
+      if (src) {
+        if (/^data:image\//i.test(src)) {
+          const file = dataUrlToFile(src);
+          if (file) {
+            await processAvatarFile(file);
+            return;
+          }
+        }
+        if (/^https?:\/\//i.test(src) || src.startsWith("/api/files/")) {
+          setAvatarUrl(src);
+          toast.success("Photo link applied");
+          return;
+        }
+      }
+    }
+
+    if (plainText && (/^https?:\/\//i.test(plainText.trim()) || plainText.trim().startsWith("/api/files/"))) {
+      setAvatarUrl(plainText.trim());
+      toast.success("Photo link applied");
+      return;
+    }
+
+    toast.info("Couldn't use that image — click upload square to choose a file");
+  };
+
+  const [openingFolder, setOpeningFolder] = useState(false);
+
+  const handleOpenFolder = async () => {
+    setOpeningFolder(true);
+    try {
+      await openContactAvatarFolder(avatarUrl);
+      toast.success("Opened avatar folder");
+    } catch {
+      toast.error("Couldn't open avatar folder");
+    } finally {
+      setOpeningFolder(false);
     }
   };
 
@@ -231,7 +342,11 @@ export function ContactFormDialog({
     ]);
   };
 
-  const handleUpdateSocialLink = (id: string, field: "platform" | "url", val: string) => {
+  const handleUpdateSocialLink = (
+    id: string,
+    field: "platform" | "url" | "label",
+    val: string
+  ) => {
     setSocialLinks((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: val } : item))
     );
@@ -295,11 +410,23 @@ export function ContactFormDialog({
       return;
     }
 
+    const avatarIsUsable =
+      !avatarUrl ||
+      avatarUrl.startsWith("/") ||
+      avatarUrl.startsWith("http://") ||
+      avatarUrl.startsWith("https://") ||
+      avatarUrl.startsWith("data:image/");
+
+    if (avatarUrl && !avatarIsUsable) {
+      toast.info("Saved without photo — the image link wasn't a valid URL");
+    }
+    const safeAvatarUrl = avatarIsUsable ? avatarUrl : null;
+
     setPending(true);
     try {
       const formData = new FormData(e.currentTarget);
       formData.set("name", nameVal);
-      formData.set("avatar_url", avatarUrl ?? "");
+      formData.set("avatar_url", safeAvatarUrl ?? "");
 
       let resolvedCompanyId = lockedCompanyId ?? (companyId === NO_COMPANY ? null : companyId);
       let resolvedCompanyName: string | null = companyName(resolvedCompanyId);
@@ -334,7 +461,11 @@ export function ContactFormDialog({
       
       const cleanSocialLinks = socialLinks
         .filter((l) => l.url.trim() !== "")
-        .map((l) => ({ platform: l.platform, url: l.url.trim() }));
+        .map((l) => ({
+          platform: l.platform,
+          url: l.url.trim(),
+          ...(l.platform === "custom" && l.label?.trim() ? { label: l.label.trim() } : {}),
+        }));
       formData.set("social_links", JSON.stringify(cleanSocialLinks));
 
       const linkedinItem = cleanSocialLinks.find((l) => l.platform === "linkedin");
@@ -351,7 +482,7 @@ export function ContactFormDialog({
         linkedin_url: linkedinItem?.url ?? (formData.get("linkedin_url") as string) ?? null,
         github_url: githubItem?.url ?? (formData.get("github_url") as string) ?? null,
         social_links: JSON.stringify(cleanSocialLinks),
-        avatar_url: avatarUrl || null,
+        avatar_url: safeAvatarUrl || null,
         notes: (formData.get("notes") as string) || null,
         company_id: resolvedCompanyId,
         company_name: resolvedCompanyName,
@@ -398,9 +529,6 @@ export function ContactFormDialog({
     }
   };
 
-  const initialLetter = (contactName.trim()[0] || "C").toUpperCase();
-  const avatarColorClass = getContactAvatarColorClass(tags, contactName);
-
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -410,88 +538,107 @@ export function ContactFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Profile Photo / Avatar Option */}
-          <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/10 p-3">
-            <div className="relative shrink-0">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Contact avatar"
-                  className="size-14 rounded-full object-cover border-2 border-border shadow-xs"
-                />
+          {/* Photo Drop Zone & URL Placement */}
+          <div
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={cn(
+              "group/drop relative flex items-center gap-3.5 rounded-2xl border p-3 transition-all duration-200",
+              isDragging
+                ? "border-primary ring-2 ring-primary/30 bg-primary/5 shadow-[-8px_0_20px_-4px_rgba(14,165,233,0.45)] dark:shadow-[-8px_0_20px_-4px_rgba(56,189,248,0.35)]"
+                : "border-border/80 bg-muted/20 hover:border-border hover:bg-muted/30"
+            )}
+          >
+            {/* Avatar Trigger & Drop Target */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "group/avatar relative size-15 shrink-0 rounded-2xl cursor-pointer overflow-hidden border transition-all duration-150 select-none",
+                avatarUrl
+                  ? "border-border ring-2 ring-background shadow-xs"
+                  : "border-2 border-dashed border-border/80 hover:border-primary/60 bg-background/90 hover:bg-background shadow-2xs"
+              )}
+              title={avatarUrl ? "Click or drop image to replace" : "Click to upload or drag & drop photo"}
+            >
+              {uploadingAvatar ? (
+                <div className="flex size-full items-center justify-center bg-muted/60">
+                  <Loader2 className="size-5 animate-spin text-primary" />
+                </div>
+              ) : avatarUrl ? (
+                <>
+                  <img
+                    src={avatarUrl}
+                    alt="Contact avatar"
+                    className="size-full object-cover rounded-2xl transition-transform duration-200 group-hover/avatar:scale-105"
+                  />
+                  {/* Dark overlay on hover */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-opacity rounded-2xl text-white">
+                    <Camera className="size-4.5" />
+                    <span className="text-[9px] font-medium mt-0.5 tracking-tight">Change</span>
+                  </div>
+                </>
               ) : (
-                <div
-                  className={cn(
-                    "flex size-14 items-center justify-center rounded-full text-xl font-bold shadow-xs transition-colors",
-                    avatarColorClass
-                  )}
-                >
-                  {initialLetter}
+                <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground/70 group-hover/avatar:text-primary transition-colors">
+                  <Camera className="size-5" />
+                  <span className="text-[9px] font-semibold tracking-tight uppercase">Upload</span>
                 </div>
               )}
             </div>
 
-            <div className="flex-1 space-y-1.5 min-w-0">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Profile Picture
-                </Label>
-                {avatarUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setAvatarUrl(null)}
-                    className="text-[11px] font-medium text-destructive hover:underline"
-                  >
-                    Remove photo
-                  </button>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={uploadingAvatar}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-7 text-xs"
-                >
-                  {uploadingAvatar && (
-                    <Loader2 className="mr-1.5 size-3 animate-spin" />
-                  )}
-                  Upload Photo
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowUrlInput((v) => !v)}
-                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <LinkIcon className="mr-1 size-3" />
-                  {showUrlInput ? "Hide Image URL" : "Image URL"}
-                </Button>
-              </div>
-
-              {showUrlInput && (
+            {/* Input alongside the avatar */}
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="relative flex items-center">
+                <Link2 className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground/70" />
                 <Input
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg"
+                  type="text"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Paste image link or drop photo here..."
                   value={avatarUrl ?? ""}
                   onChange={(e) => setAvatarUrl(e.target.value.trim() || null)}
-                  className="h-8 text-xs mt-1"
+                  className="h-9 pl-8 pr-16 text-xs bg-background/85 border-border/70 placeholder:text-muted-foreground/60 focus:bg-background"
                 />
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                className="hidden"
-                onChange={handleAvatarFileSelect}
-              />
+                <div className="absolute right-1.5 flex items-center gap-0.5">
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl(null)}
+                      className="p-1 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      title="Remove photo"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleOpenFolder}
+                    disabled={openingFolder}
+                    className="p-1 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
+                    title="Open native folder where contact avatars are stored"
+                  >
+                    <FolderOpen className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 px-0.5">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block size-1 rounded-full bg-primary/60" />
+                  Drag from web or click square to upload
+                </span>
+                {uploadingAvatar && <span className="text-primary font-medium">Processing photo…</span>}
+              </div>
             </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={handleAvatarFileSelect}
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -568,14 +715,14 @@ export function ContactFormDialog({
             <Input id="contact-phone" name="phone" placeholder="+1 (555) 000-0000" defaultValue={contact?.phone ?? ""} />
           </div>
 
-          {/* Notion-style Colorful Tag System */}
+          {/* Colorful Tag System */}
           <div className="space-y-2 rounded-2xl border border-border bg-muted/10 p-3">
             <div className="flex items-center gap-1.5">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tags (Notion-style)
+                Tags
               </Label>
               <InfoTooltip
-                content="Notion-Style Tag System: Type custom tags separated by commas or Enter (e.g., #alumni, #recruiter), or click quick preset pills below to categorize contacts."
+                content="Type custom tags separated by commas or Enter (e.g., Alumni, Recruiter), or click quick preset pills below to categorize contacts."
                 side="top"
               />
             </div>
@@ -595,7 +742,7 @@ export function ContactFormDialog({
                     aria-label={`Remove ${tag}`}
                     className="rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    <XIcon className="size-3" />
+                    <X className="size-3" />
                   </button>
                 </Badge>
               ))}
@@ -659,7 +806,7 @@ export function ContactFormDialog({
             ) : (
               <div className="space-y-2">
                 {socialLinks.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2">
+                  <div key={item.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                     <Select
                       value={item.platform}
                       onValueChange={(v) => handleUpdateSocialLink(item.id, "platform", v ?? "custom")}
@@ -676,12 +823,22 @@ export function ContactFormDialog({
                       </SelectContent>
                     </Select>
 
+                    {item.platform === "custom" && (
+                      <Input
+                        type="text"
+                        placeholder="Platform name (e.g. Facebook)"
+                        value={item.label ?? ""}
+                        onChange={(e) => handleUpdateSocialLink(item.id, "label", e.target.value)}
+                        className="h-9 w-40 shrink-0 text-xs"
+                      />
+                    )}
+
                     <Input
                       type="url"
                       placeholder="https://..."
                       value={item.url}
                       onChange={(e) => handleUpdateSocialLink(item.id, "url", e.target.value)}
-                      className="h-9 flex-1 text-xs"
+                      className="h-9 flex-1 min-w-[140px] text-xs"
                     />
 
                     <Button

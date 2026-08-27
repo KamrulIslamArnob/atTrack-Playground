@@ -13,13 +13,14 @@ import {
 import { CategoryPanel } from "./category-panel";
 import { LinkDialog } from "./link-dialog";
 import { CategoryManagerDialog } from "./category-manager-dialog";
-import { TagManagerDialog, TagInfo } from "./tag-manager-dialog";
+import { TagManagerDialog } from "./tag-manager-dialog";
 import { CsvImportDialog } from "./csv-import-dialog";
 import { LinksJsonImportDialog } from "./links-json-import-dialog";
 import { useJsonSyncPreference } from "@/lib/hooks/use-json-sync-preference";
 import { QuickShortcutsBar } from "./quick-shortcuts-bar";
 import { PageHeader } from "@/components/page-header";
-import { Search, Settings2, Tag, FileJson } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/tooltip";
+import { Search, Settings2, Tag, FileJson, X } from "lucide-react";
 import { ChevronLeftIcon } from "@/components/ui/chevron-left";
 import { ChevronRightIcon } from "@/components/ui/chevron-right";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
@@ -69,6 +70,7 @@ export function LinksView({
 }: LinksViewProps) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [shortcuts, setShortcuts] = useState<QuickShortcut[]>(initialShortcuts);
   const [extraTags, setExtraTags] = useState<string[]>([]);
   const [jsonImportOpen, setJsonImportOpen] = useState(false);
@@ -77,9 +79,6 @@ export function LinksView({
   const router = useRouter();
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fixedScrollRef = useRef<HTMLDivElement>(null);
-  const isSyncingScroll = useRef(false);
-  const [panelScrollWidth, setPanelScrollWidth] = useState(0);
   const pillsScrollRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null);
 
@@ -366,13 +365,20 @@ export function LinksView({
     }
   };
 
-  // Search & Filter Matching with memoization and Set-based category resolution
+  // Search & Tag Filter Matching with memoization
   const query = search.trim().toLowerCase();
 
   const filteredLinks = useMemo(() => {
-    if (!query) return links;
+    let result = links;
+    if (selectedTag) {
+      const cleanTag = selectedTag.toLowerCase();
+      result = result.filter((link) =>
+        link.tags?.some((t) => t.toLowerCase() === cleanTag)
+      );
+    }
+    if (!query) return result;
     const cleanQuery = query.startsWith("#") ? query.slice(1) : query;
-    return links.filter((link) => {
+    return result.filter((link) => {
       return (
         link.title.toLowerCase().includes(cleanQuery) ||
         link.url.toLowerCase().includes(cleanQuery) ||
@@ -380,21 +386,21 @@ export function LinksView({
         (link.tags && link.tags.some((t) => t.toLowerCase().includes(cleanQuery)))
       );
     });
-  }, [links, query]);
+  }, [links, query, selectedTag]);
 
-  // O(L) Set building for O(1) category membership checks (O(C + L) instead of O(C * L))
+  // O(L) Set building for O(1) category membership checks
   const visibleCategories = useMemo(() => {
     let base = categories;
     if (activeCategory !== "all") {
       base = base.filter((cat) => cat.id === activeCategory);
     }
-    if (!query) return base;
+    if (!query && !selectedTag) return base;
     const matchingCatIds = new Set<string>();
     for (const link of filteredLinks) {
       if (link.category_id) matchingCatIds.add(link.category_id);
     }
     return base.filter((cat) => matchingCatIds.has(cat.id));
-  }, [categories, filteredLinks, query, activeCategory]);
+  }, [categories, filteredLinks, query, selectedTag, activeCategory]);
 
   // Memoized unique tags calculation
   const allTags = useMemo(() => {
@@ -422,7 +428,6 @@ export function LinksView({
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setPanelScrollWidth(el.scrollWidth);
     const hasOverflow = el.scrollWidth > el.clientWidth + 2;
     setCanScroll(hasOverflow);
     setCanScrollLeft(el.scrollLeft > 4);
@@ -440,25 +445,6 @@ export function LinksView({
 
   const handleMainScroll = () => {
     updateScrollState();
-    if (isSyncingScroll.current) return;
-    if (fixedScrollRef.current && scrollRef.current) {
-      isSyncingScroll.current = true;
-      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
-      requestAnimationFrame(() => {
-        isSyncingScroll.current = false;
-      });
-    }
-  };
-
-  const handleFixedScroll = () => {
-    if (isSyncingScroll.current) return;
-    if (fixedScrollRef.current && scrollRef.current) {
-      isSyncingScroll.current = true;
-      scrollRef.current.scrollLeft = fixedScrollRef.current.scrollLeft;
-      requestAnimationFrame(() => {
-        isSyncingScroll.current = false;
-      });
-    }
   };
 
   const handlePanStart = (pointerId: number, clientX: number) => {
@@ -474,9 +460,6 @@ export function LinksView({
     if (!panRef.current || panRef.current.pointerId !== pointerId || !scrollRef.current) return;
     const deltaX = clientX - panRef.current.startX;
     scrollRef.current.scrollLeft = panRef.current.startScrollLeft - deltaX;
-    if (fixedScrollRef.current) {
-      fixedScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
-    }
     updateScrollState();
   };
 
@@ -502,20 +485,35 @@ export function LinksView({
     <div className="space-y-4 pb-16">
       {/* Consistent 2-Layer Page Header */}
       <PageHeader
-        title="Social Links"
-        subtitle="Organize and quick-launch professional links, career resources, and job portals."
+        title="Resources & Links"
+        titleExtra={
+          <InfoTooltip
+            content="Organize and quick-launch professional links, career resources, and job portals."
+            side="right"
+            iconClassName="size-4"
+          />
+        }
       >
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           {/* Left Alignment: Search + Import JSON */}
           <div className="flex items-center gap-2">
-            <div className="relative w-40 sm:w-56">
+            <div className="relative w-40 sm:w-60">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search links..."
+                placeholder="Search resources, tags..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs bg-card border-border"
+                className="h-8 pl-8 pr-7 text-xs bg-card border-border"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
 
             {jsonSyncEnabled && (
@@ -531,13 +529,13 @@ export function LinksView({
             )}
           </div>
 
-          {/* Right Alignment: Categories + Tags + Add Link */}
-          <div className="flex items-center gap-2">
+          {/* Right Alignment: Categories + Tags + Add Resource */}
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setManageCatOpen(true)}
-              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
+              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground cursor-pointer"
             >
               <Settings2 className="size-3.5 text-muted-foreground" />
               <span className="hidden sm:inline">Categories</span>
@@ -547,7 +545,7 @@ export function LinksView({
               variant="ghost"
               size="sm"
               onClick={() => setManageTagsOpen(true)}
-              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground"
+              className="h-8 gap-1.5 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground cursor-pointer"
             >
               <Tag className="size-3.5 text-muted-foreground" />
               <span className="hidden sm:inline">Tags</span>
@@ -556,10 +554,10 @@ export function LinksView({
             <Button
               size="sm"
               onClick={() => handleOpenAdd()}
-              className="h-8 gap-1.5 text-xs font-medium"
+              className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
             >
               <PlusIcon className="size-3.5" />
-              <span>Add Link</span>
+              <span>Add Resource</span>
             </Button>
           </div>
         </div>
@@ -576,28 +574,28 @@ export function LinksView({
       {/* Category Filter & Navigation Bar */}
       {categories.length > 1 && (
         <div className="flex items-center justify-between gap-2">
-          {/* Category Navigation Pills */}
+          {/* Category Navigation Track */}
           <div
             ref={pillsScrollRef}
-            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 min-w-0 flex-1"
+            className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1 p-1 bg-muted/40 border border-border/60 rounded-xl"
           >
             <button
               type="button"
               onClick={() => handleCategoryClick("all")}
               className={cn(
-                "shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer active:scale-95",
+                "shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer active:scale-95",
                 activeCategory === "all"
-                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                  : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                  ? "bg-background text-foreground shadow-2xs font-semibold border border-border/70"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50 font-medium"
               )}
             >
               All
               <span
                 className={cn(
-                  "inline-flex items-center justify-center min-w-5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                  "inline-flex items-center justify-center min-w-4.5 h-4 px-1 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
                   activeCategory === "all"
-                    ? "bg-primary-foreground/20 text-primary-foreground"
-                    : "bg-background/90 text-muted-foreground border border-border/40"
+                    ? "bg-muted text-foreground"
+                    : "bg-muted/70 text-muted-foreground"
                 )}
               >
                 {links.length}
@@ -613,19 +611,19 @@ export function LinksView({
                   type="button"
                   onClick={() => handleCategoryClick(cat.id)}
                   className={cn(
-                    "shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer active:scale-95",
+                    "shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer active:scale-95",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                      ? "bg-background text-foreground shadow-2xs font-semibold border border-border/70"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/50 font-medium"
                   )}
                 >
                   {cat.name}
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center min-w-5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                      "inline-flex items-center justify-center min-w-4.5 h-4 px-1 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
                       isActive
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-background/90 text-muted-foreground border border-border/40"
+                        ? "bg-muted text-foreground"
+                        : "bg-muted/70 text-muted-foreground"
                     )}
                   >
                     {count}
@@ -635,25 +633,25 @@ export function LinksView({
             })}
           </div>
 
-          {/* Horizontal Scroll Navigation Controls */}
+          {/* Horizontal Scroll Navigation Controls (for Columns mode) */}
           {canScroll && activeCategory === "all" && (
-            <div className="inline-flex h-7 shrink-0 items-center overflow-hidden rounded-lg border border-border bg-card shadow-2xs">
+            <div className="inline-flex h-7.5 shrink-0 items-center overflow-hidden rounded-lg border border-border/80 bg-card shadow-2xs">
               <button
                 type="button"
                 aria-label="Scroll categories left"
                 onClick={() => scrollByAmount("left")}
                 disabled={!canScrollLeft}
-                className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="flex size-7.5 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
               </button>
-              <span className="w-px h-3.5 bg-border" aria-hidden="true" />
+              <span className="w-px h-3.5 bg-border/80" aria-hidden="true" />
               <button
                 type="button"
                 aria-label="Scroll categories right"
                 onClick={() => scrollByAmount("right")}
                 disabled={!canScrollRight}
-                className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="flex size-7.5 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronRightIcon className="size-3.5" aria-hidden="true" />
               </button>
@@ -662,70 +660,107 @@ export function LinksView({
         </div>
       )}
 
-      {/* Category Panels (Horizontal Scrollable Layout) */}
+      {/* Quick Tag Filter Chips Bar */}
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground shrink-0 mr-0.5 flex items-center gap-1">
+            <Tag className="size-3 text-muted-foreground/80" /> Tags:
+          </span>
+          {selectedTag && (
+            <button
+              type="button"
+              onClick={() => setSelectedTag(null)}
+              className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/30 px-2 py-0.5 text-[11px] font-semibold text-primary cursor-pointer hover:bg-primary/20 transition-colors shrink-0 shadow-2xs"
+            >
+              <span>Clear (#{selectedTag})</span>
+              <X className="size-3" />
+            </button>
+          )}
+          {allTags.slice(0, 15).map((t) => {
+            const isTagActive = selectedTag?.toLowerCase() === t.name.toLowerCase();
+            return (
+              <button
+                key={t.name}
+                type="button"
+                onClick={() => setSelectedTag(isTagActive ? null : t.name)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-all cursor-pointer shrink-0",
+                  isTagActive
+                    ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs"
+                    : "bg-card border-border/80 hover:bg-accent/40 text-muted-foreground hover:text-foreground shadow-2xs"
+                )}
+              >
+                <span>#{t.name}</span>
+                <span className="text-[10px] opacity-70 tabular-nums font-mono">({t.count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Category Panels (Swimlanes Column Layout) */}
       {visibleCategories.length > 0 ? (
-        <>
-          <div
-            ref={scrollRef}
-            onScroll={handleMainScroll}
-            onPointerDown={(e) => {
-              if (e.target === e.currentTarget) {
-                e.currentTarget.setPointerCapture(e.pointerId);
-                handlePanStart(e.pointerId, e.clientX);
-              }
-            }}
-            onPointerMove={(e) => {
-              if (panRef.current && panRef.current.pointerId === e.pointerId) {
-                handlePanMove(e.pointerId, e.clientX);
-              }
-            }}
-            onPointerUp={(e) => {
-              if (panRef.current && panRef.current.pointerId === e.pointerId) {
-                try {
-                  e.currentTarget.releasePointerCapture(e.pointerId);
-                } catch {}
-                handlePanEnd(e.pointerId);
-              }
-            }}
-            onPointerCancel={(e) => {
-              if (panRef.current && panRef.current.pointerId === e.pointerId) {
-                handlePanEnd(e.pointerId);
-              }
-            }}
-            className={cn(
-              "flex gap-4 pb-4 items-start no-scrollbar",
-              visibleCategories.length === 1 ? "w-full" : "flex-nowrap overflow-x-auto"
-            )}
-          >
-            {visibleCategories.map((cat) => {
-              const catLinks = filteredLinks.filter((l) => l.category_id === cat.id);
-              return (
-                <CategoryPanel
-                  key={cat.id}
-                  category={cat}
-                  categories={categories}
-                  links={catLinks}
-                  onAddLink={handleOpenAdd}
-                  onEditLink={handleOpenEdit}
-                  onDeleteLink={handleDeleteLink}
-                  onMoveLinkCategory={handleMoveLink}
-                  onRenameCategory={() => setManageCatOpen(true)}
-                  onDeleteCategory={() => setManageCatOpen(true)}
-                  onPanStart={handlePanStart}
-                  onPanMove={handlePanMove}
-                  onPanEnd={handlePanEnd}
-                  isFullWidth={visibleCategories.length === 1}
-                />
-              );
-            })}
-          </div>
-        </>
+        <div
+          ref={scrollRef}
+          onScroll={handleMainScroll}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              handlePanStart(e.pointerId, e.clientX);
+            }
+          }}
+          onPointerMove={(e) => {
+            if (panRef.current && panRef.current.pointerId === e.pointerId) {
+              handlePanMove(e.pointerId, e.clientX);
+            }
+          }}
+          onPointerUp={(e) => {
+            if (panRef.current && panRef.current.pointerId === e.pointerId) {
+              try {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              } catch {}
+              handlePanEnd(e.pointerId);
+            }
+          }}
+          onPointerCancel={(e) => {
+            if (panRef.current && panRef.current.pointerId === e.pointerId) {
+              handlePanEnd(e.pointerId);
+            }
+          }}
+          className={cn(
+            "flex gap-4 pb-4 items-start no-scrollbar",
+            visibleCategories.length === 1 ? "w-full" : "flex-nowrap overflow-x-auto"
+          )}
+        >
+          {visibleCategories.map((cat) => {
+            const catLinks = filteredLinks.filter((l) => l.category_id === cat.id);
+            return (
+              <CategoryPanel
+                key={cat.id}
+                category={cat}
+                categories={categories}
+                links={catLinks}
+                onAddLink={handleOpenAdd}
+                onEditLink={handleOpenEdit}
+                onDeleteLink={handleDeleteLink}
+                onMoveLinkCategory={handleMoveLink}
+                onRenameCategory={() => setManageCatOpen(true)}
+                onDeleteCategory={() => setManageCatOpen(true)}
+                onPanStart={handlePanStart}
+                onPanMove={handlePanMove}
+                onPanEnd={handlePanEnd}
+                layout={visibleCategories.length === 1 ? "grid" : "columns"}
+                isFullWidth={visibleCategories.length === 1}
+              />
+            );
+          })}
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
-          <h3 className="font-semibold text-base text-foreground">No links found</h3>
+          <h3 className="font-semibold text-base text-foreground">No resources found</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
-            {query
-              ? `No links matched "${search}". Try adjusting your search query or category filter.`
+            {query || selectedTag
+              ? `No items matched your current filters. Try resetting search or tag selection.`
               : "Get started by adding your first professional link or job portal."}
           </p>
           <Button
@@ -734,7 +769,7 @@ export function LinksView({
             className="gap-2 text-xs font-medium"
           >
             <PlusIcon className="size-3.5" />
-            Add Your First Link
+            Add Resource
           </Button>
         </div>
       )}
@@ -748,6 +783,7 @@ export function LinksView({
         linkToEdit={editingLink}
         existingTags={existingTags}
         onSubmit={handleSaveLink}
+        onSubmitShortcut={handleAddShortcut}
         onCreateCategoryInline={handleCreateCategoryInline}
         onOpenCsv={() => setCsvOpen(true)}
         onOpenJson={

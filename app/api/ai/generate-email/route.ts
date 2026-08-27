@@ -23,9 +23,12 @@ STRICT RULES FOR SPAM AVOIDANCE:
 OUTPUT FORMAT:
 CRITICAL: DO NOT include any thinking process, reasoning text, scratchpad, or preamble (e.g. "Thinking Process:").
 Return ONLY a valid JSON object with this exact structure, no markdown wrappers, no code blocks:
-{"subject": "your subject line here", "body": "your email body here"}
+{
+  "subject": "<Concise, professional subject line tailored to the job and company>",
+  "body": "<Full text of the email with proper paragraphs and salutation/sign-off>"
+}
 
-The body should use \\n for line breaks. Do not wrap in quotes.
+The body should use \\n for line breaks. Do not wrap in quotes. Write the actual email content based on the applicant and job details provided; NEVER output placeholder text.
 
 EXAMPLES:
 

@@ -3,7 +3,6 @@
 import { EntryCard } from "../interactive/entry-card";
 import { ClickToEditField } from "../interactive/click-to-edit-field";
 import { InlineRichText } from "../interactive/inline-rich-text";
-import { DateField } from "../interactive/date-field";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { ProjectEntry } from "@/lib/types/resume-builder";
@@ -88,31 +87,23 @@ export function ProjectSectionEditor({
           }}
         >
           <div className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Heading</p>
-              <InlineRichText
-                value={entry.left}
-                onChange={(v) => handleUpdate(entry.id, { left: v })}
-                placeholder="Click to add heading…"
-                ariaLabel={`${title} entry ${index + 1} heading`}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Right-side detail</p>
+                <p className="text-xs text-muted-foreground mb-1">Heading</p>
+                <InlineRichText
+                  value={entry.left}
+                  onChange={(v) => handleUpdate(entry.id, { left: v })}
+                  placeholder="Click to add heading…"
+                  ariaLabel={`${title} entry ${index + 1} heading`}
+                />
+              </div>
+              <div className="sm:min-w-[180px]">
+                <p className="text-xs text-muted-foreground mb-1">Right-side detail / date</p>
                 <InlineRichText
                   value={entry.right}
                   onChange={(v) => handleUpdate(entry.id, { right: v })}
-                  placeholder="Click to add detail…"
+                  placeholder="e.g. [live](https://…) or 2024"
                   ariaLabel={`${title} entry ${index + 1} right detail`}
-                />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Date (if applicable)</p>
-                <DateField
-                  value={entry.right}
-                  onChange={(v) => handleUpdate(entry.id, { right: v })}
-                  ariaLabel={`${title} entry ${index + 1} date`}
                 />
               </div>
             </div>

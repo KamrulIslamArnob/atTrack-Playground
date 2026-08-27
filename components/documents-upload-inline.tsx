@@ -50,7 +50,7 @@ export function DocumentsUploadInline() {
       <DropdownMenu>
         <DropdownMenuTrigger className={buttonVariants({ size: "sm" })}>
           <PlusIcon className="mr-1 size-4" />
-          Add Resume
+          Add resume
           <ChevronDownIcon className="ml-1 size-3.5 opacity-70" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52 rounded-xl">
@@ -60,7 +60,7 @@ export function DocumentsUploadInline() {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenTab("link")} className="gap-2 cursor-pointer">
             <Link2Icon className="size-4 text-muted-foreground" />
-            External Link
+            External link
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenTab("tex")} className="justify-between cursor-pointer">
             <div className="flex items-center gap-2">

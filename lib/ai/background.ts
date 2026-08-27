@@ -353,6 +353,28 @@ async function enrichJobInBackground(userId: string, jobId: string): Promise<voi
   await enrichJobFromAi(jobId, extraction);
 }
 
+/** Manual AI queue: extension's "AI Add" (link + text + images) is fire-and-forget.
+ *  The popup sends all three sources once, the server creates a placeholder job
+ *  immediately and enriches it in the background via extractJob (same multimodal
+ *  pipeline the dashboard's Import with AI uses). The popup only waits for the
+ *  200 "queued" ack, not the LLM round-trip. */
+export function scheduleManualAiEnrich(
+  userId: string,
+  jobId: string,
+  imagesBase64: string[],
+  text: string,
+  url: string
+): void {
+  enqueueBackground(`manual-ai-${jobId}`, async () => {
+    const [{ extractJob }, { enrichJobFromAi }] = await Promise.all([
+      import("@/lib/ai/ai"),
+      import("@/lib/actions/jobs"),
+    ]);
+    const extraction = await callWithRateRetry(() => extractJob(imagesBase64, text, url, userId));
+    await enrichJobFromAi(jobId, extraction);
+  });
+}
+
 export function scheduleRescoreAll(userId: string): void {
   enqueueBackground(`rescore-all-${userId}`, () => recalculateAllMatchScores(userId));
 }

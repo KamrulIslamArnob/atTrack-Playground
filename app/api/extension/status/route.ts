@@ -17,7 +17,7 @@ export const GET = withRoute("/api/extension/status", async (req: Request) => {
     return NextResponse.json(
       {
         status: "ok",
-        appName: "atTrack",
+        appName: "BetterJob",
         version: "1.5.0",
         userId,
         authenticated: true,

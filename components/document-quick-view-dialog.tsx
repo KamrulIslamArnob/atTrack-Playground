@@ -201,7 +201,7 @@ export function DocumentQuickViewDialog({
                     {generatedLabel}
                   </Badge>
                   {doc.is_default && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4.5 text-lime-600 border-lime-500/30 dark:text-lime-400">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4.5 text-success border-success/30 bg-success/5">
                       Default
                     </Badge>
                   )}

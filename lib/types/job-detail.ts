@@ -4,7 +4,7 @@
 
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobDocument } from "@/lib/actions/documents";
-import type { Contact } from "@/lib/actions/contacts";
+import type { JobContact } from "@/lib/actions/contacts";
 
 export interface JobDetailCompany {
   id: string;
@@ -35,7 +35,9 @@ export interface JobDetailInterview {
   interviewer_name: string | null;
   interviewer_email: string | null;
   notes: string | null;
+  prep_notes?: string | null;
   status: string;
+  duration_minutes?: number | null;
 }
 
 export interface JobDetailResumeOption {
@@ -66,6 +68,8 @@ export interface JobDetailJob {
   section_deadline: string | null;
   section_deadline_list_id: string | null;
   source: string | null;
+  discovery_channel: string | null;
+  source_url: string | null;
   status: string;
   notes: Array<{ title: string; bullets: string[] }> | null;
   skills: string[] | null;
@@ -92,7 +96,7 @@ export interface JobDetailData {
   company: JobDetailCompany | null;
   applications: JobDetailApplication[];
   interviews: JobDetailInterview[];
-  contacts: Contact[];
+  contacts: JobContact[];
   documents: JobDocument[];
   resumeOptions: JobDetailResumeOption[];
   boardLists?: import("@/lib/types/board").BoardList[];

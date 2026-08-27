@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/purity": "off",
       "react-hooks/preserve-manual-memoization": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   {

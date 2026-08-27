@@ -26,10 +26,10 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "atTrack",
-    template: "%s | atTrack",
+    default: "BetterJob",
+    template: "%s | BetterJob",
   },
-  description: "Your personal job application tracker",
+  description: "A better way to reach your next job.",
 };
 
 export default function RootLayout({

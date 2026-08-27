@@ -4,6 +4,7 @@
 @import "tw-shimmer";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant electron (html.is-electron &);
 
 @theme inline {
   --color-background: var(--background);

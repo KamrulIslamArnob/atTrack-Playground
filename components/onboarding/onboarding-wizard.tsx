@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { ThemeLogo } from "@/components/ui/theme-logo";
+import AILoadingState from "@/components/ui/ai-loading";
 import { completeOnboarding } from "@/lib/actions/onboarding";
 import { testProviderConnection, fetchProviderModels, type FetchedModel } from "@/lib/actions/ai-providers";
 import { saveAvatar } from "@/lib/actions/auth";
@@ -172,6 +173,9 @@ export function OnboardingWizard({
       const result = await saveAvatar(formData);
       if (result.success && result.avatarUrl) {
         setAvatarPreview(result.avatarUrl);
+        // Sync everywhere: sidebar + settings card listen to this single event
+        window.dispatchEvent(new CustomEvent("avatar-updated", { detail: result.avatarUrl }));
+        router.refresh();
         setAvatarJustUploaded(true);
         setTimeout(() => setAvatarJustUploaded(false), 700);
       } else {
@@ -399,8 +403,8 @@ export function OnboardingWizard({
           <div className="flex items-center gap-2.5">
             <ThemeLogo width={24} height={24} />
             <div>
-              <h2 className="font-heading font-semibold text-base leading-tight">Welcome to atTrack</h2>
-              <p className="text-xs text-muted-foreground">Local-first career workspace</p>
+              <h2 className="font-heading font-semibold text-base leading-tight">Welcome to BetterJob</h2>
+              <p className="text-xs text-muted-foreground">A better way to reach your next job.</p>
             </div>
           </div>
           {step > 1 && (
@@ -454,6 +458,13 @@ export function OnboardingWizard({
 
         {/* Body Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {submitting ? (
+            <div className="flex min-h-[360px] items-center justify-center py-6 animate-in fade-in duration-300">
+              <AILoadingState />
+            </div>
+          ) : (
+            <>
+
           {/* STEP 1: Profile & Target Role */}
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in-50 duration-150">
@@ -620,7 +631,7 @@ export function OnboardingWizard({
               <div>
                 <h3 className="font-heading text-lg font-semibold tracking-tight">Add your master resume</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  atTrack compares job postings against your resume to compute match scores and draft tailored cover letters.
+                  BetterJob compares job postings against your resume to compute match scores and draft tailored cover letters.
                 </p>
               </div>
 
@@ -987,7 +998,7 @@ export function OnboardingWizard({
               <div>
                 <h3 className="font-heading text-lg font-semibold tracking-tight">Choose your starting experience</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Would you like to explore atTrack with realistic sample data or begin with a clean board?
+                  Would you like to explore BetterJob with realistic sample data or begin with a clean board?
                 </p>
               </div>
 
@@ -1043,63 +1054,65 @@ export function OnboardingWizard({
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
 
         {/* Footer Actions */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border/60 bg-muted/10">
-          <div>
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={() => setStep((s) => (s - 1) as Step)}
-                disabled={submitting}
-                className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted"
-              >
-                <ChevronLeft className="size-4" />
-                <span>Back</span>
-              </button>
-            ) : (
-              <div />
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {step < 4 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (step === 1 && !isStep1Valid) {
-                    setStep1Touched(true);
-                    return;
-                  }
-                  setStep((s) => (s + 1) as Step);
-                }}
-                className="flex items-center gap-1 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-4 py-2 rounded-lg shadow-xs"
-              >
-                <span>Continue</span>
-                <ChevronRight className="size-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleFinish}
-                disabled={submitting}
-                className="flex items-center gap-1.5 text-xs font-semibold bg-gradient-brand text-primary-foreground transition-transform active:scale-95 px-5 py-2 rounded-lg shadow-sm"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    <span>Setting up workspace...</span>
-                  </>
+          {submitting ? (
+            <div className="flex w-full items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <span>Hang tight — setting up everything locally and securely...</span>
+            </div>
+          ) : (
+            <>
+              <div>
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep((s) => (s - 1) as Step)}
+                    disabled={submitting}
+                    className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted"
+                  >
+                    <ChevronLeft className="size-4" />
+                    <span>Back</span>
+                  </button>
                 ) : (
-                  <>
+                  <div />
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {step < 4 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (step === 1 && !isStep1Valid) {
+                        setStep1Touched(true);
+                        return;
+                      }
+                      setStep((s) => (s + 1) as Step);
+                    }}
+                    className="flex items-center gap-1 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-4 py-2 rounded-lg shadow-xs"
+                  >
+                    <span>Continue</span>
+                    <ChevronRight className="size-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleFinish}
+                    disabled={submitting}
+                    className="flex items-center gap-1.5 text-xs font-semibold bg-gradient-brand text-primary-foreground transition-transform active:scale-95 px-5 py-2 rounded-lg shadow-sm"
+                  >
                     <span>Get started</span>
                     <ArrowRight className="size-4" />
-                  </>
+                  </button>
                 )}
-              </button>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

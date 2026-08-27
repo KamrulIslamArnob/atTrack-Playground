@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import {
-  createContact, getContacts, linkContact, unlinkContact, type Contact, } from "@/lib/actions/contacts";
+  createContact, getContacts, linkContact, unlinkContact, updateJobContactRelationship, type Contact, } from "@/lib/actions/contacts";
 import { CONTACT_ROLES, contactRoleLabel } from "@/lib/types/contacts";
 import { parseNoteMentions } from "@/lib/mentions";
 import type { JobDetailData } from "@/lib/types/job-detail";
@@ -72,6 +72,17 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
       onRefresh();
     } catch {
       toast.error("Couldn't remove contact");
+    }
+  };
+
+  // Per-job relationship (job_contacts.relationship) — separate from the
+  // contact's global role, so retagging it here never touches the contact.
+  const handleRelationshipChange = async (contactId: string, relationship: string) => {
+    try {
+      await updateJobContactRelationship(data.job.id, contactId, relationship);
+      onRefresh();
+    } catch {
+      toast.error("Couldn't update relationship");
     }
   };
 
@@ -184,7 +195,24 @@ export function ContactsTab({ data, onRefresh }: ContactsTabProps) {
                 )}
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{c.name || "Unnamed contact"}</p>
-                  <p className="text-xs text-muted-foreground">{contactRoleLabel(c.role)}</p>
+                  <Select
+                    value={c.relationship ?? c.role ?? "other"}
+                    onValueChange={(v) => handleRelationshipChange(c.id, v ?? "other")}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="h-6 w-auto gap-1 border-none bg-transparent px-0 text-xs font-normal text-muted-foreground shadow-none hover:text-foreground data-[size=sm]:h-6"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTACT_ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                     {c.email && (
                       <span className="flex items-center gap-1">

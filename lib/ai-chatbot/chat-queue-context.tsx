@@ -17,6 +17,7 @@ import {
 } from "./sessions";
 import { ApprovalModal } from "@/components/ai-chatbot/approval-modal";
 import { toast } from "sonner";
+import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 
 export interface ChatQueueTask {
   id: string;
@@ -310,6 +311,7 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
         let rawContentAcc = "";
         let sourcesAcc: string[] = [];
         let toolStepsAcc: ToolExecutionStep[] = [];
+        let streamError: string | null = null;
         let buffer = "";
 
         while (true) {
@@ -327,6 +329,11 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
 
             try {
               const parsed = JSON.parse(data);
+              // Quota/rate-limit or any provider failure arrives as 200 SSE with {error: "..."} — surface it instead of silent empty bubble
+              if (typeof parsed?.error === "string" && parsed.error.trim()) {
+                streamError = cleanAiErrorMessage(parsed.error);
+                continue;
+              }
 
               const reasoningDelta: string | undefined =
                 parsed?.choices?.[0]?.delta?.reasoning_content ??
@@ -352,7 +359,7 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
                     status?: string;
                     args?: Record<string, unknown>;
                     error?: string;
-                    result?: { content?: string };
+                    result?: { content?: string; artifact?: unknown; artifacts?: unknown };
                   };
                   return {
                     id: `tool-${i}`,
@@ -365,6 +372,8 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
                     detail: rec.args ? JSON.stringify(rec.args) : undefined,
                     result: rec.result?.content,
                     error: rec.error,
+                    artifact: rec.result?.artifact as import("@/lib/types/chat-artifact").ChatArtifact | undefined,
+                    artifacts: rec.result?.artifacts as import("@/lib/types/chat-artifact").ChatArtifact[] | undefined,
                   };
                 });
               }
@@ -408,101 +417,150 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
             if (data !== "[DONE]") {
               try {
                 const parsed = JSON.parse(data);
-                const reasoningDelta: string | undefined =
-                  parsed?.choices?.[0]?.delta?.reasoning_content ??
-                  parsed?.choices?.[0]?.delta?.reasoning ??
-                  parsed?.delta?.reasoning_content ??
-                  parsed?.thinking;
-                if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
+                if (typeof parsed?.error === "string" && parsed.error.trim()) {
+                  streamError = cleanAiErrorMessage(parsed.error);
+                } else {
+                  const reasoningDelta: string | undefined =
+                    parsed?.choices?.[0]?.delta?.reasoning_content ??
+                    parsed?.choices?.[0]?.delta?.reasoning ??
+                    parsed?.delta?.reasoning_content ??
+                    parsed?.thinking;
+                  if (reasoningDelta) structuredThinkingAcc += reasoningDelta;
 
-                const contentDelta: string | undefined =
-                  parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
-                if (contentDelta) rawContentAcc += contentDelta;
+                  const contentDelta: string | undefined =
+                    parsed?.choices?.[0]?.delta?.content ?? parsed?.content;
+                  if (contentDelta) rawContentAcc += contentDelta;
 
-                if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
-                  sourcesAcc = parsed.sources;
-                }
-                if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
-                  toolStepsAcc = parsed.tool_calls.map((s: unknown, i: number) => {
-                    const rec = s as {
-                      name?: string;
-                      status?: string;
-                      args?: Record<string, unknown>;
-                      error?: string;
-                      result?: { content?: string };
+                  if (Array.isArray(parsed?.sources) && parsed.sources.length > 0) {
+                    sourcesAcc = parsed.sources;
+                  }
+                  if (Array.isArray(parsed?.tool_calls) && parsed.tool_calls.length > 0) {
+                    toolStepsAcc = parsed.tool_calls.map((s: unknown, i: number) => {
+                      const rec = s as {
+                        name?: string;
+                        status?: string;
+                        args?: Record<string, unknown>;
+                        error?: string;
+                        result?: { content?: string; artifact?: unknown; artifacts?: unknown };
+                      };
+                      return {
+                        id: `tool-${i}`,
+                        label: rec.name ?? "tool",
+                        status: (rec.status === "error"
+                          ? "failed"
+                          : rec.status === "called"
+                          ? "running"
+                          : "completed") as "pending" | "running" | "completed" | "failed",
+                        detail: rec.args ? JSON.stringify(rec.args) : undefined,
+                        result: rec.result?.content,
+                        error: rec.error,
+                        artifact: rec.result?.artifact as import("@/lib/types/chat-artifact").ChatArtifact | undefined,
+                        artifacts: rec.result?.artifacts as import("@/lib/types/chat-artifact").ChatArtifact[] | undefined,
+                      };
+                    });
+                  }
+                  if (parsed?.approval && typeof parsed.approval === "object") {
+                    const approvalObj: DbApproval = {
+                      ...parsed.approval,
+                      sessionId,
+                      expiresAt: parsed.approval.expiresAt || Date.now() + 60_000,
                     };
-                    return {
-                      id: `tool-${i}`,
-                      label: rec.name ?? "tool",
-                      status: (rec.status === "error"
-                        ? "failed"
-                        : rec.status === "called"
-                        ? "running"
-                        : "completed") as "pending" | "running" | "completed" | "failed",
-                      detail: rec.args ? JSON.stringify(rec.args) : undefined,
-                      result: rec.result?.content,
-                      error: rec.error,
-                    };
-                  });
-                }
-                if (parsed?.approval && typeof parsed.approval === "object") {
-                  const approvalObj: DbApproval = {
-                    ...parsed.approval,
-                    sessionId,
-                    expiresAt: parsed.approval.expiresAt || Date.now() + 60_000,
-                  };
-                  setActiveApproval(approvalObj);
-                  updateStreamState(sessionId, (s) => ({
-                    ...s,
-                    status: "paused_approval",
-                    approval: approvalObj,
-                  }));
+                    setActiveApproval(approvalObj);
+                    updateStreamState(sessionId, (s) => ({
+                      ...s,
+                      status: "paused_approval",
+                      approval: approvalObj,
+                    }));
+                  }
                 }
               } catch {}
             }
           }
         }
 
-        // Stream completed cleanly
-        const { thinking, content } = extractThinkingAndContent(
-          rawContentAcc,
-          structuredThinkingAcc
-        );
-
-        const finalAssistantMsg: Message = {
-          id: assistantId,
-          role: "assistant",
-          content,
-          thinking,
-          sources: sourcesAcc,
-          toolSteps: toolStepsAcc,
-          createdAt: new Date().toISOString(),
-        };
-
-        const finalHistory = [...updatedHistory, finalAssistantMsg];
-        const sessionToSave = readCache().find((s) => s.id === sessionId);
-        if (sessionToSave) {
-          const finalSession: ChatSession = {
-            ...sessionToSave,
-            messages: finalHistory,
-            updatedAt: new Date().toISOString(),
+        // Provider signalled failure inside 200 SSE (quota/rate-limit) — persist as error message, not silent empty bubble
+        if (streamError) {
+          const { content: partialContent, thinking: partialThinking } = extractThinkingAndContent(
+            rawContentAcc,
+            structuredThinkingAcc
+          );
+          const errorContent = partialContent.trim()
+            ? `${partialContent}\n\n⚠️ ${streamError}`
+            : `⚠️ ${streamError}`;
+          const errorMsg: Message = {
+            id: assistantId,
+            role: "assistant",
+            content: errorContent,
+            thinking: partialThinking || structuredThinkingAcc || undefined,
+            sources: sourcesAcc,
+            toolSteps: toolStepsAcc,
+            createdAt: new Date().toISOString(),
           };
-          const finalSessions = readCache().map((s) =>
-            s.id === sessionId ? finalSession : s
+          const errorHistory = [...updatedHistory, errorMsg];
+          const sessionToSaveErr = readCache().find((s) => s.id === sessionId);
+          if (sessionToSaveErr) {
+            const errSession: ChatSession = {
+              ...sessionToSaveErr,
+              messages: errorHistory,
+              updatedAt: new Date().toISOString(),
+            };
+            const finalSessionsErr = readCache().map((s) => (s.id === sessionId ? errSession : s));
+            writeCache(finalSessionsErr);
+            void persistSession(errSession).catch((e) => console.error("Failed to persist session:", e));
+          }
+          task.status = "failed";
+          task.error = streamError;
+          updateStreamState(sessionId, (s) => ({
+            ...s,
+            status: "error",
+            error: streamError,
+            streamText: errorContent,
+            thinking: structuredThinkingAcc || "",
+          }));
+          toast.error(streamError);
+        } else {
+          // Stream completed cleanly
+          const { thinking, content } = extractThinkingAndContent(
+            rawContentAcc,
+            structuredThinkingAcc
           );
-          writeCache(finalSessions);
-          void persistSession(finalSession).catch((e) =>
-            console.error("Failed to persist session:", e)
-          );
-        }
 
-        task.status = "completed";
-        updateStreamState(sessionId, (s) => ({
-          ...s,
-          status: s.status === "paused_approval" ? "paused_approval" : "completed",
-          streamText: content,
-          thinking: thinking || "",
-        }));
+          // Dedupe artifacts already handled in renderer, keep message as is
+          const finalAssistantMsg: Message = {
+            id: assistantId,
+            role: "assistant",
+            content,
+            thinking,
+            sources: sourcesAcc,
+            toolSteps: toolStepsAcc,
+            createdAt: new Date().toISOString(),
+          };
+
+          const finalHistory = [...updatedHistory, finalAssistantMsg];
+          const sessionToSave = readCache().find((s) => s.id === sessionId);
+          if (sessionToSave) {
+            const finalSession: ChatSession = {
+              ...sessionToSave,
+              messages: finalHistory,
+              updatedAt: new Date().toISOString(),
+            };
+            const finalSessions = readCache().map((s) =>
+              s.id === sessionId ? finalSession : s
+            );
+            writeCache(finalSessions);
+            void persistSession(finalSession).catch((e) =>
+              console.error("Failed to persist session:", e)
+            );
+          }
+
+          task.status = "completed";
+          updateStreamState(sessionId, (s) => ({
+            ...s,
+            status: s.status === "paused_approval" ? "paused_approval" : "completed",
+            streamText: content,
+            thinking: thinking || "",
+          }));
+        }
       } catch (err) {
         if ((err as Error).name === "AbortError") {
           task.status = "cancelled";

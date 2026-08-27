@@ -9,6 +9,7 @@ import { SparklesIcon } from "@/components/ui/sparkles";
 import { FileTextIcon } from "@/components/ui/file-text";
 import { SearchIcon } from "@/components/ui/search";
 import { useReducedMotion } from "motion/react";
+import type { ChatArtifact } from "@/lib/types/chat-artifact";
 
 export interface ToolExecutionStep {
   id: string;
@@ -25,6 +26,9 @@ export interface ToolExecutionStep {
    *  call; `source` is workspace data retrieval pre-fetched before the model
    *  ran. Both are provenance and both belong in the trace. */
   kind?: "tool" | "source";
+  /** Inline artifact snapshot (e.g. job card) created by this tool call */
+  artifact?: ChatArtifact;
+  artifacts?: ChatArtifact[];
 }
 
 function iconTypeForSource(label: string): ToolExecutionStep["iconType"] {

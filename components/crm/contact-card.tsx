@@ -9,17 +9,24 @@ import { getContactAvatarColorClass, getTagColorClass, cn } from "@/lib/utils";
 import { CompanyLogo } from "@/components/company-logo";
 import { toast } from "sonner";
 import {
-  Building2, Globe, Mail, Palette, Pencil, Video, AtSign } from "lucide-react";
+  Globe,
+  Mail,
+  Palette,
+  Pencil,
+  Video,
+  AtSign,
+  User,
+} from "lucide-react";
 import { CheckIcon } from "@/components/ui/check";
 import { CopyIcon } from "@/components/ui/copy";
 import { Link2Icon } from "@/components/ui/link-2";
 import { PhoneIcon } from "@/components/ui/phone";
 import { PlusIcon } from "@/components/ai-chatbot/plus-icon";
-import { XIcon } from "@/components/ui/x";
 
 export interface SocialLinkItem {
   platform: string;
   url: string;
+  label?: string;
 }
 
 export function parseContactSocialLinks(contact: Contact): SocialLinkItem[] {
@@ -27,7 +34,15 @@ export function parseContactSocialLinks(contact: Contact): SocialLinkItem[] {
   if (contact.social_links) {
     try {
       const parsed = JSON.parse(contact.social_links);
-      if (Array.isArray(parsed)) list = parsed.filter((item) => item && item.url);
+      if (Array.isArray(parsed)) {
+        list = parsed
+          .filter((item) => item && typeof item.url === "string" && item.url.trim())
+          .map((item) => ({
+            platform: item.platform || "custom",
+            url: item.url.trim(),
+            label: typeof item.label === "string" && item.label.trim() ? item.label.trim() : undefined,
+          }));
+      }
     } catch {}
   }
   if (list.length === 0) {
@@ -47,14 +62,42 @@ function initials(name: string): string {
 }
 
 function SocialIcon({ platform }: { platform: string }) {
-  const p = platform.toLowerCase();
-  if (p === "linkedin") return <span className="font-bold text-[11px]">in</span>;
-  if (p === "github") return <span className="font-bold text-[11px]">gh</span>;
+  const p = platform.toLowerCase().trim();
+  if (p === "linkedin") return <span className="font-bold text-xs tracking-tight">in</span>;
+  if (p === "github") return <span className="font-bold text-xs tracking-tight">gh</span>;
   if (p === "twitter" || p === "x") return <AtSign className="size-3.5" />;
   if (p === "website" || p === "portfolio") return <Globe className="size-3.5" />;
   if (p === "dribbble") return <Palette className="size-3.5" />;
   if (p === "youtube") return <Video className="size-3.5" />;
+  if (p === "facebook") return <span className="font-bold text-xs tracking-tight">fb</span>;
+  if (p === "instagram") return <span className="font-bold text-xs tracking-tight">ig</span>;
+  if (p === "discord") return <span className="font-bold text-xs tracking-tight">dc</span>;
+  if (p === "medium") return <span className="font-bold text-xs tracking-tight">m</span>;
+  if (p.length <= 3 && p !== "custom") return <span className="font-bold text-[10px] uppercase">{p}</span>;
   return <Link2Icon className="size-3.5" />;
+}
+
+function getSocialButtonClass(platform: string): string {
+  const p = platform.toLowerCase().trim();
+  if (p === "linkedin") {
+    return "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white";
+  }
+  if (p === "github") {
+    return "border-zinc-700/25 dark:border-zinc-300/25 bg-muted text-foreground hover:bg-foreground hover:text-background";
+  }
+  if (p === "twitter" || p === "x") {
+    return "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white";
+  }
+  if (p === "website" || p === "portfolio") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white";
+  }
+  if (p === "dribbble") {
+    return "border-pink-500/30 bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-600 hover:text-white";
+  }
+  if (p === "youtube") {
+    return "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white";
+  }
+  return "border-border/70 bg-muted/60 text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary";
 }
 
 export function ContactCard({
@@ -75,12 +118,6 @@ export function ContactCard({
     ? contact.role.split(",").map((t) => t.trim()).filter(Boolean)
     : [];
   const socialLinks = parseContactSocialLinks(contact);
-
-  const linkedinLink = socialLinks.find((l) => l.platform.toLowerCase() === "linkedin")?.url || contact.linkedin_url;
-  const githubLink = socialLinks.find((l) => l.platform.toLowerCase() === "github")?.url || contact.github_url;
-  const extraLinks = socialLinks.filter(
-    (l) => l.platform.toLowerCase() !== "linkedin" && l.platform.toLowerCase() !== "github"
-  );
 
   const copy = (value: string, field: "phone" | "email", label: string) => {
     navigator.clipboard.writeText(value);
@@ -112,125 +149,195 @@ export function ContactCard({
 
   return (
     <div
-      className="agent-fade-up group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40"
-      style={{ animationDelay: `${index * 30}ms` }}
+      className="agent-fade-up group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs transition-all duration-300 hover:border-border hover:shadow-xs"
+      style={{ animationDelay: `${index * 25}ms` }}
     >
-      <div className="space-y-2.5">
-        {/* Top Header: Avatar + Identity + Edit Trigger */}
-        <div className="flex items-start justify-between gap-2.5">
+      <div>
+        {/* ========================================================================= */}
+        {/* HERO IMAGE (3:4 Ratio) & BLUR GRADIENT OVERLAY                            */}
+        {/* ========================================================================= */}
+        <div className="relative w-full aspect-[3/4] overflow-hidden bg-muted/40 select-none">
           <button
             type="button"
             onClick={() => onEdit(contact)}
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left group/head focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
+            className="size-full text-left focus-visible:outline-none cursor-pointer"
+            title="Click to view/edit contact"
           >
             {contact.avatar_url ? (
               <img
                 src={contact.avatar_url}
                 alt={contact.name}
-                className="size-10 shrink-0 rounded-full object-cover shadow-2xs border border-border ring-1 ring-border/50"
+                className="size-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
               />
             ) : (
               <div
                 className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-2xs transition-transform group-hover/head:scale-105",
+                  "size-full flex flex-col items-center justify-center text-center font-heading font-bold text-5xl transition-transform duration-700 ease-out group-hover:scale-105",
                   getContactAvatarColorClass(contact.role, contact.name)
                 )}
               >
-                {initials(contact.name) || "?"}
+                {initials(contact.name) || <User className="size-16 opacity-60" />}
               </div>
             )}
-            <div className="min-w-0 flex-1">
-              <h4 className="truncate text-sm font-bold text-foreground group-hover/head:text-primary transition-colors">
-                {contact.name}
-              </h4>
-              <p className="truncate text-[11px] text-muted-foreground">
-                {contact.position || (contact.company_name ? contact.company_name : "No job title")}
-              </p>
-            </div>
           </button>
 
-          {/* Top Quick Actions: Socials + Edit */}
-          <div className="flex shrink-0 items-center gap-1">
-            {linkedinLink && (
-              <a
-                href={linkedinLink.startsWith("http") ? linkedinLink : `https://${linkedinLink}`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`LinkedIn: ${linkedinLink}`}
-                className="flex size-6 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[10px] transition-all hover:bg-blue-600 hover:text-white"
-                title={`LinkedIn: ${linkedinLink}`}
-              >
-                in
-              </a>
-            )}
-            {githubLink && (
-              <a
-                href={githubLink.startsWith("http") ? githubLink : `https://${githubLink}`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`GitHub: ${githubLink}`}
-                className="flex size-6 items-center justify-center rounded-md border border-zinc-700/30 dark:border-zinc-300/30 bg-muted text-foreground font-bold text-[10px] transition-all hover:bg-foreground hover:text-background"
-                title={`GitHub: ${githubLink}`}
-              >
-                gh
-              </a>
-            )}
-            {extraLinks.map((link, idx) => (
-              <a
-                key={idx}
-                href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${link.platform}: ${link.url}`}
-                className="flex size-6 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary transition-all hover:bg-primary hover:text-primary-foreground"
-                title={`${link.platform}: ${link.url}`}
-              >
-                <SocialIcon platform={link.platform} />
-              </a>
-            ))}
-            <button
-              type="button"
-              onClick={() => onEdit(contact)}
-              aria-label="Edit contact"
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground/60 opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all focus-visible:opacity-100"
-              title="Edit contact"
-            >
-              <Pencil className="size-3" />
-            </button>
-          </div>
+          {/* Floating Edit Button in Top-Right */}
+          <button
+            type="button"
+            onClick={() => onEdit(contact)}
+            aria-label="Edit contact"
+            className="absolute top-2.5 right-2.5 z-20 flex size-7 items-center justify-center rounded-full bg-background/85 backdrop-blur-md border border-border/70 text-muted-foreground hover:text-foreground shadow-xs transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+            title="Edit contact"
+          >
+            <Pencil className="size-3" />
+          </button>
+
+          {/* Ambient Fade & Blur into Card Body */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-card via-card/85 to-transparent pointer-events-none" />
         </div>
 
-        {/* Company & Role Badges */}
-        {(contact.company_name || tags.length > 0) && (
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            {contact.company_name && contact.position && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                <CompanyLogo
-                  name={contact.company_name}
-                  className="size-3.5 rounded-xs"
-                  iconClassName="size-2.5"
-                  fallback="initial"
-                />
-                <span className="truncate max-w-[120px]">{contact.company_name}</span>
-              </span>
-            )}
-            {tags.map((tag) => (
-              <Badge
-                key={tag}
-                className={cn(
-                  "border font-medium text-[10px] px-1.5 py-0.5 rounded-full tabular-nums",
-                  getTagColorClass(tag)
-                )}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* ========================================================================= */}
+        {/* CARD BODY: Name -> Company Logo (2-row) -> Tags -> Social & Direct Links */}
+        {/* ========================================================================= */}
+        <div className="relative -mt-8 z-10 px-3.5 sm:px-4 space-y-2.5">
+          {/* 1. Name */}
+          <button
+            type="button"
+            onClick={() => onEdit(contact)}
+            className="text-left group/title focus-visible:outline-none block w-full"
+          >
+            <h3 className="truncate font-heading text-base font-bold text-foreground group-hover/title:text-primary transition-colors tracking-tight leading-snug">
+              {contact.name}
+            </h3>
+          </button>
 
-        {/* Compact Notes Callout */}
+          {/* 2. Company Logo (2-row height) + Position (Row 1) & Company Name (Row 2) */}
+          <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-muted/25 px-2.5 py-2 shadow-2xs">
+            <div className="size-9 shrink-0 rounded-lg border border-border/80 bg-background/90 p-1 flex items-center justify-center shadow-2xs overflow-hidden">
+              <CompanyLogo
+                name={contact.company_name || "Company"}
+                className="size-full rounded-xs object-contain"
+                iconClassName="size-4 text-muted-foreground"
+                fallback="initial"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-foreground leading-tight">
+                {contact.position || contact.role || "No title specified"}
+              </p>
+              <p className="truncate text-[11px] font-medium text-muted-foreground leading-tight mt-0.5">
+                {contact.company_name || "Independent"}
+              </p>
+            </div>
+          </div>
+
+          {/* 3. Tags Row */}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+              {tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  className={cn(
+                    "border font-medium text-[10px] px-2 py-0.5 rounded-full tabular-nums shadow-2xs",
+                    getTagColorClass(tag)
+                  )}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* 4. Social Media & Direct Contact Links */}
+          {(socialLinks.length > 0 || contact.email || contact.phone) && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* Social icons */}
+              {socialLinks.map((link, idx) => {
+                const fullUrl = link.url.startsWith("http") ? link.url : `https://${link.url}`;
+                const displayLabel = link.label || (link.platform === "custom" ? "Link" : link.platform);
+                return (
+                  <a
+                    key={idx}
+                    href={fullUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`${displayLabel}: ${fullUrl}`}
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-lg border text-xs transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer",
+                      getSocialButtonClass(link.platform)
+                    )}
+                    title={`Open ${displayLabel}: ${fullUrl}`}
+                  >
+                    <SocialIcon platform={link.platform} />
+                  </a>
+                );
+              })}
+
+              {/* Email */}
+              {contact.email && (
+                <div className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/30 px-2 py-1 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">
+                  <a
+                    href={`mailto:${contact.email}`}
+                    className="flex items-center gap-1.5 truncate max-w-[140px]"
+                    title={`Email ${contact.email}`}
+                  >
+                    <Mail className="size-3 text-muted-foreground/70 shrink-0" />
+                    <span className="truncate text-[11px] font-medium">{contact.email}</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => copy(contact.email!, "email", "Email")}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer ml-0.5"
+                    title="Copy email"
+                  >
+                    {copiedField === "email" ? (
+                      <CheckIcon className="size-3 text-success" />
+                    ) : (
+                      <CopyIcon className="size-3" />
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Phone */}
+              {contact.phone && (
+                <div className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/30 px-2 py-1 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">
+                  <a
+                    href={`tel:${contact.phone}`}
+                    className="flex items-center gap-1.5 truncate max-w-[120px]"
+                    title={`Call ${contact.phone}`}
+                  >
+                    <PhoneIcon className="size-3 text-muted-foreground/70 shrink-0" />
+                    <span className="truncate text-[11px] font-medium">{contact.phone}</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => copy(contact.phone!, "phone", "Phone number")}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer ml-0.5"
+                    title="Copy phone"
+                  >
+                    {copiedField === "phone" ? (
+                      <CheckIcon className="size-3 text-success" />
+                    ) : (
+                      <CopyIcon className="size-3" />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 5. BOTTOM SECTION: Notes Card with Inline Editing & @job mentions         */}
+      {/* ========================================================================= */}
+      <div className="p-3.5 pt-2.5 sm:px-4 sm:pb-3.5 border-t border-border/60 mt-2.5">
         {editingNote ? (
-          <div className="rounded-xl border border-warning-border bg-warning-surface p-2 text-xs text-warning shadow-2xs">
+          <div className="rounded-xl border border-primary/30 bg-primary/[0.03] p-3 text-xs shadow-2xs space-y-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
+              Notes
+            </div>
             <textarea
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
@@ -243,13 +350,13 @@ export function ContactCard({
               }}
               autoFocus
               placeholder="Write a note... (@ to mention a job)"
-              className="w-full min-h-[48px] bg-transparent outline-none resize-none text-xs text-warning placeholder:text-warning/50 leading-snug"
+              className="w-full min-h-[56px] bg-transparent outline-none resize-none text-xs text-foreground placeholder:text-muted-foreground/60 leading-relaxed"
             />
-            <div className="flex items-center justify-end gap-1 pt-1 border-t border-warning-border/40">
+            <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-border/50">
               <button
                 type="button"
                 onClick={handleCancelNote}
-                className="rounded px-1.5 py-0.5 text-[10px] font-medium text-warning hover:bg-warning/20"
+                className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -257,7 +364,7 @@ export function ContactCard({
                 type="button"
                 onClick={handleSaveNote}
                 disabled={savingNote}
-                className="rounded bg-warning text-warning-foreground px-2 py-0.5 text-[10px] font-bold shadow-2xs hover:opacity-90 disabled:opacity-50"
+                className="rounded-lg bg-primary text-primary-foreground px-3 py-1 text-[11px] font-semibold shadow-2xs hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer"
               >
                 Save
               </button>
@@ -274,17 +381,20 @@ export function ContactCard({
                 setEditingNote(true);
               }
             }}
-            className="group/note relative rounded-lg border border-warning-border/60 bg-warning-surface/40 p-2 text-xs text-warning leading-snug cursor-pointer transition-all hover:bg-warning-surface hover:border-warning-border"
-            title="Click to edit note"
+            className="group/note relative rounded-xl border border-border/60 bg-muted/20 p-2.5 text-xs leading-relaxed cursor-pointer transition-colors hover:bg-muted/40 hover:border-border shadow-2xs"
+            title="Click to edit notes"
           >
-            <div className="pr-4 line-clamp-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+              Notes
+            </div>
+            <div className="pr-4 line-clamp-3 text-foreground/90">
               {noteSegments.map((seg, idx) =>
                 seg.jobId ? (
                   <Link
                     key={idx}
                     href={`/jobs/${seg.jobId}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-bold text-warning underline underline-offset-2 hover:opacity-80 mx-0.5"
+                    className="font-semibold text-primary underline underline-offset-2 hover:opacity-80 mx-0.5"
                   >
                     @{seg.text}
                   </Link>
@@ -293,74 +403,19 @@ export function ContactCard({
                 )
               )}
             </div>
-            <Pencil className="absolute right-1.5 top-1.5 size-2.5 opacity-0 group-hover/note:opacity-100 transition-opacity text-warning/80" />
+            <Pencil className="absolute right-2.5 top-2.5 size-3 opacity-0 group-hover/note:opacity-100 transition-opacity text-muted-foreground hover:text-foreground" />
           </div>
         ) : (
           <button
             type="button"
             onClick={() => setEditingNote(true)}
-            className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
+            className="w-full flex items-center justify-between rounded-xl border border-dashed border-border/70 bg-muted/10 px-3 py-2 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 hover:border-border transition-colors cursor-pointer"
           >
-            <PlusIcon className="size-3" />
-            <span>Add note...</span>
+            <span className="text-[11px]">Add a note...</span>
+            <PlusIcon className="size-3 text-muted-foreground/60" />
           </button>
         )}
       </div>
-
-      {/* Footer: Compact Contact Action Pills */}
-      {(contact.phone || contact.email) && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2.5 text-[11px]">
-          {contact.phone && (
-            <div className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">
-              <a
-                href={`tel:${contact.phone}`}
-                className="flex items-center gap-1 truncate max-w-[120px]"
-                title={contact.phone}
-              >
-                <PhoneIcon className="size-3 text-muted-foreground/70" />
-                <span className="truncate">{contact.phone}</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => copy(contact.phone!, "phone", "Phone")}
-                className="shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors"
-                title="Copy phone"
-              >
-                {copiedField === "phone" ? (
-                  <CheckIcon className="size-2.5 text-success" />
-                ) : (
-                  <CopyIcon className="size-2.5" />
-                )}
-              </button>
-            </div>
-          )}
-
-          {contact.email && (
-            <div className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/30 px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">
-              <a
-                href={`mailto:${contact.email}`}
-                className="flex items-center gap-1 truncate max-w-[140px]"
-                title={contact.email}
-              >
-                <Mail className="size-3 text-muted-foreground/70" />
-                <span className="truncate">{contact.email}</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => copy(contact.email!, "email", "Email")}
-                className="shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors"
-                title="Copy email"
-              >
-                {copiedField === "email" ? (
-                  <CheckIcon className="size-2.5 text-success" />
-                ) : (
-                  <CopyIcon className="size-2.5" />
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

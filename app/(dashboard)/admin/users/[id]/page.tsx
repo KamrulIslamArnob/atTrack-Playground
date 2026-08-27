@@ -25,7 +25,7 @@ import { SearchIcon } from "@/components/ui/search";
 import { XIcon } from "@/components/ui/x";
 import { ChevronLeftIcon } from "@/components/ui/chevron-left";
 import { ChevronRightIcon } from "@/components/ui/chevron-right";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "@/lib/utils";
 import { formatAiUsageMessage, AI_ACTION_COLORS, AI_ACTION_LABELS } from "@/lib/ai-usage-messages";
 
 const DEBOUNCE_MS = 400;

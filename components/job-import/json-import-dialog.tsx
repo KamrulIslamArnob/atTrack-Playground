@@ -214,7 +214,7 @@ export function JsonImportDialog({ open, onOpenChange }: JsonImportDialogProps) 
               <div className="flex items-center gap-2 text-xs font-semibold text-success">
                 <CheckCircle2 className="size-4 shrink-0" />
                 <span className="truncate">
-                  Valid atTrack JSON: {preview.count} {preview.count === 1 ? "job" : "jobs"} detected
+                  Valid BetterJob JSON: {preview.count} {preview.count === 1 ? "job" : "jobs"} detected
                 </span>
               </div>
               <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
@@ -256,7 +256,7 @@ export function JsonImportDialog({ open, onOpenChange }: JsonImportDialogProps) 
               Smart Duplicate Handling
             </p>
             <p className="leading-normal">
-              If a job with the same ID or title & company exists, atTrack updates it in-place with latest fields and interviews instead of creating duplicate cards.
+              If a job with the same ID or title & company exists, BetterJob updates it in-place with latest fields and interviews instead of creating duplicate cards.
             </p>
           </div>
         </div>

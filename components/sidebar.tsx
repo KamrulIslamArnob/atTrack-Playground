@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { NotificationButton } from "@/components/ui/notification-button";
+import { useAITaskQueue } from "@/lib/ai-tasks/task-queue-context";
 import {
   LayoutDashboard,
   Briefcase,
@@ -256,6 +257,11 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
   const pathname = usePathname();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  // Queue bell wiring — functional toggle for AI Tasks popover
+  const { activeTasksCount: queueActiveCount, pendingConfirmationCount: queuePendingCount, isPanelOpen: queueIsOpen, setIsPanelOpen: setQueueOpen } = useAITaskQueue();
+  const queueBadgeCount = queueActiveCount + queuePendingCount;
+  const queueIsActive = queueActiveCount > 0;
+  const toggleQueue = () => setQueueOpen(!queueIsOpen);
   const visibleSecondaryNavigation = showRawDatabase
     ? secondaryNavigation
     : secondaryNavigation.filter((item) => item.href !== "/preferences/database");
@@ -720,8 +726,16 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
                     <Link
                       key={item.name}
                       href={item.href}
-                      onClick={onNavigate}
+                      onClick={(e) => {
+                        if (pathname === item.href) {
+                          e.preventDefault();
+                          onNavigate?.();
+                          return;
+                        }
+                        onNavigate?.();
+                      }}
                       title={isCollapsed ? item.name : undefined}
+                      aria-current={isActive ? "page" : undefined}
                       className={cn(
                         "group flex items-center text-sm font-medium transition-all duration-150 ease-out active:scale-[0.98]",
                         isCollapsed ? "size-10 mx-auto justify-center p-0 rounded-xl" : "gap-3 px-3 py-2 rounded-lg",
@@ -764,7 +778,7 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
           </Link>
         </div>
 
-        {/* Bottom Section: atTrack Logo, Search, Notification & Theme */}
+        {/* Bottom Section: BetterJob Logo, Search, Notification & Theme */}
         <div className={cn("border-t border-border/50 space-y-2.5", isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3")}>
           {/* Row 1: Logo & Notification Button */}
           <div className="app-no-drag flex items-center justify-between">
@@ -772,12 +786,23 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
               href={homeHref}
               onClick={onNavigate}
               className="flex items-center gap-2 min-w-0 px-1"
-              title={isCollapsed ? "atTrack Overview" : undefined}
+              title={isCollapsed ? "BetterJob Overview" : undefined}
             >
               <ThemeLogo width={22} height={22} />
-              {!isCollapsed && <span className="font-heading text-sm font-semibold truncate">atTrack</span>}
+              {!isCollapsed && <span className="font-heading text-sm font-semibold truncate">BetterJob</span>}
             </Link>
-            {!isCollapsed && <NotificationButton />}
+            {!isCollapsed && (
+              <span data-queue-anchor>
+                <NotificationButton
+                  badgeCount={queueBadgeCount}
+                  isActive={queueIsActive}
+                  isOpen={queueIsOpen}
+                  onClick={toggleQueue}
+                  aria-label={queueBadgeCount > 0 ? `AI Tasks — ${queueBadgeCount} pending` : "AI Tasks"}
+                  title={queueBadgeCount > 0 ? `${queueBadgeCount} task${queueBadgeCount === 1 ? "" : "s"} — click to view queue` : "Queue — click to view"}
+                />
+              </span>
+            )}
           </div>
 
           {/* Row 2: Search Bar (Full Width) */}
@@ -792,7 +817,16 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
               >
                 <Search className="size-4" />
               </Button>
-              <NotificationButton />
+              <span data-queue-anchor>
+                <NotificationButton
+                  badgeCount={queueBadgeCount}
+                  isActive={queueIsActive}
+                  isOpen={queueIsOpen}
+                  onClick={toggleQueue}
+                  aria-label={queueBadgeCount > 0 ? `AI Tasks — ${queueBadgeCount} pending` : "AI Tasks"}
+                  title={queueBadgeCount > 0 ? `${queueBadgeCount} task${queueBadgeCount === 1 ? "" : "s"} — click to view queue` : "Queue — click to view"}
+                />
+              </span>
             </div>
           ) : (
             <div className="app-no-drag w-full">

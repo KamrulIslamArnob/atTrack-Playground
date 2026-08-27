@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   description TEXT,
   location TEXT,
   status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('saved','interested','preparing')),
-  state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active','on_hold','archived')),
+  state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active','on_hold','archived','rejected')),
   employment_type TEXT DEFAULT 'Full-time',
   salary_range TEXT,
   application_url TEXT,
@@ -170,6 +170,13 @@ CREATE TABLE IF NOT EXISTS jobs (
   application_process TEXT,
   deadline TEXT,
   source TEXT,
+  -- Small fixed vocabulary (see DISCOVERY_CHANNELS in lib/types/job.ts) for how
+  -- this job was found — distinct from `source`, which stays freeform platform
+  -- text ("LinkedIn", "Bdjobs") so nothing that already reads `source` breaks.
+  discovery_channel TEXT,
+  -- Permalink of the post/listing/message that tipped the user off, distinct
+  -- from application_url (where you apply).
+  source_url TEXT,
   work_location TEXT,
   notes TEXT,                   -- JSON: JobNote[]
   match_score REAL,
@@ -336,6 +343,10 @@ CREATE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_id, lower(em
 CREATE TABLE IF NOT EXISTS job_contacts (
   job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
   contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  -- Per-link role (reuses the CONTACT_ROLES vocabulary), separate from
+  -- contacts.role: the same person can be the Referral on this job and just
+  -- an Employee contact on another.
+  relationship TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   PRIMARY KEY (job_id, contact_id)
 );

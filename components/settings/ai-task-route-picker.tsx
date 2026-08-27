@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { saveTaskRoute } from "@/lib/actions/ai-providers";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -10,9 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUp } from "lucide-react";
-import { ArrowDownIcon } from "@/components/ui/arrow-down";
-import { XIcon } from "@/components/ui/x";
+import { ArrowUp, ArrowDown, X, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { TASK_TYPE_LABELS, type AiProviderSummary, type TaskType } from "@/lib/types/ai-providers";
 
@@ -29,99 +26,145 @@ export function AiTaskRoutePicker({ taskType, description, allProviders, initial
 
   useEffect(() => {
     setSelectedIds(initialSelectedIds);
-  }, [initialSelectedIds]);
+  }, [initialSelectedIds.join(",")]);
 
   const save = async (next: string[]) => {
     const prev = selectedIds;
     setSelectedIds(next);
     setSaving(true);
-    const result = await saveTaskRoute(taskType, next);
-    if (result.error) {
+    try {
+      const result = await saveTaskRoute(taskType, next);
+      if (result.error) {
+        setSelectedIds(prev);
+        toast.error(result.error);
+      } else {
+        toast.success("Routing updated");
+      }
+    } catch {
       setSelectedIds(prev);
-      toast.error(result.error);
+      toast.error("Couldn't save routing");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const availableToAdd = allProviders.filter((p) => !selectedIds.includes(p.id));
-  const selected = selectedIds
-    .map((id) => allProviders.find((p) => p.id === id))
-    .filter((p): p is AiProviderSummary => !!p);
+  const selected = selectedIds.map((id) => allProviders.find((p) => p.id === id)).filter((p): p is AiProviderSummary => !!p);
 
   const move = (index: number, dir: -1 | 1) => {
     const target = index + dir;
     if (target < 0 || target >= selected.length) return;
     const next = selected.map((p) => p.id);
-    [next[index], next[target]] = [next[target], next[index]];
+    const tmp = next[index];
+    next[index] = next[target];
+    next[target] = tmp;
     save(next);
   };
 
+  const remove = (id: string) => {
+    save(selectedIds.filter((sid) => sid !== id));
+  };
+
   return (
-    <div className="space-y-2 rounded-2xl border border-border p-4">
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+    <div className="rounded-xl bg-background p-4">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-medium">{TASK_TYPE_LABELS[taskType]}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <h4 className="text-sm font-semibold leading-none">{TASK_TYPE_LABELS[taskType]}</h4>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
-        {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
+        {saving && (
+          <span className="shrink-0 text-xs text-muted-foreground" aria-live="polite">
+            Saving…
+          </span>
+        )}
       </div>
 
-      {selected.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No route assigned (auto-routes to first available provider).</p>
-      ) : (
-        <ul className="space-y-1.5">
-          {selected.map((p, i) => (
-            <li
-              key={p.id}
-              className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <span className="flex min-w-0 items-center gap-2 text-sm">
-                <Badge variant="secondary">{i + 1}</Badge>
-                <span className="min-w-0 truncate">{p.name}</span>
-                <span className="min-w-0 truncate text-muted-foreground">({p.model})</span>
-              </span>
-              <span className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30 cursor-pointer"
-                  title="Move priority up"
+      <div className="mt-3">
+        {selected.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-background/50 px-3 py-2.5 text-center">
+            <p className="text-xs text-muted-foreground">
+              No chain yet — falls back to any available provider.
+            </p>
+          </div>
+        ) : (
+          <ol className="relative space-y-0.5">
+            {selected.length > 1 && (
+              <span
+                aria-hidden="true"
+                className="absolute bottom-[13px] left-[7px] top-[13px] w-px bg-border"
+              />
+            )}
+            {selected.map((p, i) => (
+              <li key={p.id} className="relative flex items-start gap-2 py-1 pr-0.5">
+                <span
+                  aria-hidden="true"
+                  className="relative z-10 mt-[5px] flex w-4 shrink-0 justify-center"
                 >
-                  <ArrowUp className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(i, 1)}
-                  disabled={i === selected.length - 1}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-30 cursor-pointer"
-                  title="Move priority down"
-                >
-                  <ArrowDownIcon className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => save(selected.filter((item) => item.id !== p.id).map((item) => item.id))}
-                  className="rounded p-1 text-destructive hover:bg-destructive/10 cursor-pointer"
-                  title="Remove from task route"
-                >
-                  <XIcon className="size-3.5" />
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <span className="size-2 rounded-full bg-primary" />
+                </span>
+                <span className="min-w-0 flex-1 pt-px">
+                  <span className="block truncate text-sm font-medium leading-tight">
+                    <span className="sr-only">Priority {i + 1}: </span>
+                    {p.name}
+                    {!p.verified && (
+                      <>
+                        {" "}
+                        <TriangleAlert
+                          aria-label="Not verified"
+                          className="inline size-3 shrink-0 text-warning"
+                        />
+                      </>
+                    )}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center">
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0 || saving}
+                    aria-label={`Move ${p.name} up`}
+                    className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                  >
+                    <ArrowUp className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === selected.length - 1 || saving}
+                    aria-label={`Move ${p.name} down`}
+                    className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                  >
+                    <ArrowDown className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(p.id)}
+                    disabled={saving}
+                    aria-label={`Remove ${p.name} from ${TASK_TYPE_LABELS[taskType]}`}
+                    className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
 
       {availableToAdd.length > 0 && (
-        <Select onValueChange={(id) => save([...selected.map((p) => p.id), id as string])}>
-          <SelectTrigger className="h-9 w-full text-xs">
-            <SelectValue placeholder="+ Add provider to this task" />
+        <Select
+          onValueChange={(value) => {
+            if (typeof value === "string" && value) save([...selectedIds, value]);
+          }}
+        >
+          <SelectTrigger className="mt-2.5 h-8 w-full text-xs">
+            <SelectValue placeholder="Add provider" />
           </SelectTrigger>
           <SelectContent>
             {availableToAdd.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name} ({p.model})
+              <SelectItem key={p.id} value={p.id} className="text-xs">
+                {p.name} — {p.model}
               </SelectItem>
             ))}
           </SelectContent>

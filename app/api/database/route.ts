@@ -44,55 +44,74 @@ export interface TableData {
  * never hits the API again until it remounts.
  */
 export const GET = withRoute("/api/database", async () => {
-  const { userId } = await getUser();
-  if (!isRawDatabaseEnabled(userId)) {
+  try {
+    const { userId } = await getUser();
+    if (!isRawDatabaseEnabled(userId)) {
+      return NextResponse.json(
+        { error: "The raw database viewer is turned off. Turn it on in Settings to use it." },
+        { status: 403 }
+      );
+    }
+
+    const db = getDb();
+
+    // 1. List all user tables (skip sqlite_ internal tables).
+    const tables = db
+      .prepare(
+        `SELECT name FROM sqlite_master
+         WHERE type = 'table'
+           AND name NOT LIKE 'sqlite_%'
+         ORDER BY name`
+      )
+      .all() as Array<{ name: string }>;
+
+    const result: TableData[] = [];
+
+    for (const { name } of tables) {
+      if (RESTRICTED_TABLES.has(name)) continue;
+
+      try {
+        // 2. Column metadata via PRAGMA.
+        const columns = db
+          .prepare(`PRAGMA table_info("${name}")`)
+          .all() as unknown as ColumnInfo[];
+
+        // 3. Foreign keys — tells the client which columns participate in
+        //    cascading constraints and should be read-only.
+        const foreignKeys = db
+          .prepare(`PRAGMA foreign_key_list("${name}")`)
+          .all() as unknown as ForeignKeyInfo[];
+
+        // 4. All rows — guard against corrupt/locked tables so one bad table
+        //    doesn't take the whole viewer down (and a second click while
+        //    already on the page doesn't hard-crash the route).
+        let rows: Record<string, unknown>[] = [];
+        try {
+          rows = db.prepare(`SELECT * FROM "${name}"`).all() as Record<string, unknown>[];
+        } catch (err) {
+          // Return empty rows for this table but keep the schema so the UI can still render it.
+          rows = [];
+        }
+
+        result.push({
+          name,
+          columns,
+          foreignKeys,
+          rows,
+          rowCount: rows.length,
+        });
+      } catch (err) {
+        // Skip a single broken table but keep serving the rest — prevents a full 500
+        // when a concurrent write holds a lock or a table is mid-migration.
+        continue;
+      }
+    }
+
+    return NextResponse.json({ tables: result });
+  } catch (err) {
     return NextResponse.json(
-      { error: "The raw database viewer is turned off. Turn it on in Settings to use it." },
-      { status: 403 }
+      { error: err instanceof Error ? err.message : "Failed to load database" },
+      { status: 500 }
     );
   }
-
-  const db = getDb();
-
-  // 1. List all user tables (skip sqlite_ internal tables).
-  const tables = db
-    .prepare(
-      `SELECT name FROM sqlite_master
-       WHERE type = 'table'
-         AND name NOT LIKE 'sqlite_%'
-       ORDER BY name`
-    )
-    .all() as Array<{ name: string }>;
-
-  const result: TableData[] = [];
-
-  for (const { name } of tables) {
-    if (RESTRICTED_TABLES.has(name)) continue;
-
-    // 2. Column metadata via PRAGMA.
-    const columns = db
-      .prepare(`PRAGMA table_info("${name}")`)
-      .all() as unknown as ColumnInfo[];
-
-    // 3. Foreign keys — tells the client which columns participate in
-    //    cascading constraints and should be read-only.
-    const foreignKeys = db
-      .prepare(`PRAGMA foreign_key_list("${name}")`)
-      .all() as unknown as ForeignKeyInfo[];
-
-    // 4. All rows.
-    const rows = db
-      .prepare(`SELECT * FROM "${name}"`)
-      .all() as Record<string, unknown>[];
-
-    result.push({
-      name,
-      columns,
-      foreignKeys,
-      rows,
-      rowCount: rows.length,
-    });
-  }
-
-  return NextResponse.json({ tables: result });
 });

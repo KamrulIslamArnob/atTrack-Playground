@@ -59,6 +59,7 @@ import {
   Briefcase,
   Users,
   Terminal,
+  CornerDownLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getMemories } from "@/lib/actions/memories";
@@ -72,6 +73,10 @@ import { CopyIcon } from "@/components/ui/copy";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { ModelSelector } from "@/components/ai-chatbot/model-selector";
+import { LocalFolderSelector } from "@/components/ai-chatbot/composer/local-folder-selector";
+import { PermissionModeSelector } from "@/components/ai-chatbot/composer/permission-mode-selector";
+import { ReasoningEffortPopover } from "@/components/ai-chatbot/composer/reasoning-effort-popover";
+import { ContextUsagePopover } from "@/components/ai-chatbot/composer/context-usage-popover";
 import { Source } from "@/components/source";
 import type { AIModel } from "@/lib/ai-chatbot/types";
 import {
@@ -558,29 +563,39 @@ const Composer: FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Top Local Workspace Folder Selector Header */}
+      <LocalFolderSelector />
+
       <ComposerPrimitive.AttachmentDropzone
         render={
           <div
             data-slot="aui_composer-shell"
-            className="flex w-full flex-col rounded-2xl border-0 bg-muted/40 p-2.5 shadow-xs transition-all focus-within:ring-1 focus-within:ring-foreground/10 data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/40"
+            className="flex w-full flex-col rounded-2xl border border-border/40 bg-muted/40 p-2.5 shadow-xs transition-all focus-within:ring-1 focus-within:ring-foreground/10 data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/40"
           />
         }
       >
         <ComposerAttachments />
-        <textarea
-          ref={textareaRef}
-          value={value}
-          disabled={isDisabled}
-          onChange={handleChange}
-          onKeyUp={handleKeyUp}
-          onClick={handleClick}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask Tracky anything, type @ for memory, or / for skills..."
-          className="aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-36 min-h-9 w-full resize-none bg-transparent px-2 py-1 text-xs sm:text-[13px] text-foreground outline-none leading-relaxed"
-          rows={1}
-          autoFocus
-          aria-label="Message input"
-        />
+        <div className="relative flex items-center w-full">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            disabled={isDisabled}
+            onChange={handleChange}
+            onKeyUp={handleKeyUp}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            placeholder="Describe a task or ask a question, type @ for memory, / for skills..."
+            className="aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-36 min-h-9 w-full resize-none bg-transparent px-2 py-1 pr-6 text-xs sm:text-[13px] text-foreground outline-none leading-relaxed"
+            rows={1}
+            autoFocus
+            aria-label="Message input"
+          />
+          {value.trim() && (
+            <div className="absolute right-2 top-2 text-muted-foreground/40 pointer-events-none hidden sm:block">
+              <CornerDownLeft className="size-3.5" />
+            </div>
+          )}
+        </div>
         <ComposerAction />
       </ComposerPrimitive.AttachmentDropzone>
     </ComposerPrimitive.Root>
@@ -592,18 +607,10 @@ const ComposerAction: FC = () => {
 
   return (
     <div className="aui-composer-action-wrapper relative flex items-center justify-between pt-1">
-      <div className="flex items-center gap-0.5">
-        <ComposerAddAttachment />
-        {modelCtx?.selectedModel && modelCtx?.onSelectModel && (
-          <ModelSelector
-            selectedModelId={modelCtx.selectedModel.id}
-            onSelectModel={modelCtx.onSelectModel}
-            availableModels={modelCtx.availableModels}
-            direction="up"
-          />
-        )}
-      </div>
+      {/* Left controls: Permission mode, Attach +, Dictation */}
       <div className="flex items-center gap-1">
+        <PermissionModeSelector />
+        <ComposerAddAttachment />
         <AuiIf condition={(s) => s.thread.capabilities.dictation}>
           <AuiIf condition={(s) => s.composer.dictation == null}>
             <ComposerPrimitive.Dictate
@@ -640,6 +647,20 @@ const ComposerAction: FC = () => {
             </ComposerPrimitive.StopDictation>
           </AuiIf>
         </AuiIf>
+      </div>
+
+      {/* Right controls: Model selector, Reasoning Effort, Context Usage, Send/Stop */}
+      <div className="flex items-center gap-1.5">
+        {modelCtx?.selectedModel && modelCtx?.onSelectModel && (
+          <ModelSelector
+            selectedModelId={modelCtx.selectedModel.id}
+            onSelectModel={modelCtx.onSelectModel}
+            availableModels={modelCtx.availableModels}
+            direction="up"
+          />
+        )}
+        <ReasoningEffortPopover />
+        <ContextUsagePopover model={modelCtx?.selectedModel} />
         <AuiIf condition={(s) => !s.thread.isRunning}>
           <ComposerPrimitive.Send
             render={

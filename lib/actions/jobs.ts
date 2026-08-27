@@ -58,6 +58,8 @@ export async function createJob(formData: FormData) {
   const milestoneName = formData.get("milestone_name") as string | null;
   const milestoneDate = formData.get("milestone_date") as string | null;
   const source = formData.get("source") as string | null;
+  const discoveryChannel = (formData.get("discovery_channel") as string | null) || null;
+  const sourceUrl = (formData.get("source_url") as string | null)?.trim() || null;
   const tier = (formData.get("tier") as string | null) || null;
   const status = (formData.get("status") as string) || "saved";
   const notesRaw = formData.get("notes") as string | null;
@@ -169,6 +171,8 @@ export async function createJob(formData: FormData) {
       section_deadline: sectionDeadline || null,
       section_deadline_list_id: sectionDeadlineListId || null,
       source: source || null,
+      discovery_channel: discoveryChannel,
+      source_url: sourceUrl,
       tier: tier || null,
       // status is overwritten by the sync_job_status_from_list trigger whenever
       // list_id is set (migration 019). Kept for the no-board fallback path.
@@ -261,7 +265,7 @@ export async function createJob(formData: FormData) {
         contactId = newContact?.id ?? null;
       }
       if (contactId) {
-        await supabase.from("job_contacts").insert({ job_id: job.id, contact_id: contactId });
+        await supabase.from("job_contacts").insert({ job_id: job.id, contact_id: contactId, relationship: contactRole });
       }
     } catch (e) {
       log.error({ err: e, reqId: requestId(), jobId: job.id }, "[CreateJob] Contact linking failed:");
@@ -427,6 +431,12 @@ export async function updateJob(formData: FormData) {
   if (formData.has("tier")) {
     const t = formData.get("tier") as string | null;
     updateData.tier = t || null;
+  }
+  if (formData.has("discovery_channel")) {
+    updateData.discovery_channel = (formData.get("discovery_channel") as string | null) || null;
+  }
+  if (formData.has("source_url")) {
+    updateData.source_url = (formData.get("source_url") as string | null)?.trim() || null;
   }
 
   if (notes !== undefined) {

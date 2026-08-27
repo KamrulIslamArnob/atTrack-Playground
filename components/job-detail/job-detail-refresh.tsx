@@ -17,9 +17,17 @@ export function JobDetailRefresh({ data: initialData }: { data: JobDetailData })
 
   const handleRefresh = useCallback(async () => {
     const fresh = await getJobDetail(initialData.job.id);
-    if (fresh) setData(fresh);
-    router.refresh();
+    if (fresh) {
+      setData(fresh);
+      router.refresh();
+    } else {
+      router.push("/board");
+    }
   }, [initialData.job.id, router]);
 
-  return <JobDetailContent data={data} onRefresh={handleRefresh} />;
+  const handleDelete = useCallback(() => {
+    router.push("/board");
+  }, [router]);
+
+  return <JobDetailContent data={data} onRefresh={handleRefresh} onDelete={handleDelete} />;
 }

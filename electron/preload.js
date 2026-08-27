@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   minimize: () => ipcRenderer.send("app:minimize"),
   maximize: () => ipcRenderer.send("app:maximize"),
   close: () => ipcRenderer.send("app:close"),
+  pickFolder: () => ipcRenderer.invoke("app:pick-folder"),
   isMaximized: () => ipcRenderer.invoke("app:is-maximized"),
   onMaximizedChange: (callback) => {
     const handler = (_event, isMaximized) => callback(isMaximized);

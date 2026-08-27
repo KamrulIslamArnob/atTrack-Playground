@@ -156,7 +156,7 @@ export default function PerformancePreferencesPage() {
       {/* Quick Summary Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Memory Card */}
-        <Card className="relative overflow-hidden border-border/80 bg-card/60 backdrop-blur-sm flex flex-col justify-between">
+        <Card className="relative overflow-hidden border-0 bg-muted/60 backdrop-blur-sm flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               RAM Space & Usage
@@ -218,7 +218,7 @@ export default function PerformancePreferencesPage() {
         </Card>
 
         {/* CPU Card */}
-        <Card className="relative overflow-hidden border-border/80 bg-card/60 backdrop-blur-sm flex flex-col justify-between">
+        <Card className="relative overflow-hidden border-0 bg-muted/60 backdrop-blur-sm flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               CPU Resource Load
@@ -266,7 +266,7 @@ export default function PerformancePreferencesPage() {
         </Card>
 
         {/* Network & Port Card */}
-        <Card className="relative overflow-hidden border-border/80 bg-card/60 backdrop-blur-sm flex flex-col justify-between">
+        <Card className="relative overflow-hidden border-0 bg-muted/60 backdrop-blur-sm flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Network & Port
@@ -305,7 +305,7 @@ export default function PerformancePreferencesPage() {
         </Card>
 
         {/* App Version & Mode Card */}
-        <Card className="relative overflow-hidden border-border/80 bg-card/60 backdrop-blur-sm flex flex-col justify-between">
+        <Card className="relative overflow-hidden border-0 bg-muted/60 backdrop-blur-sm flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               App Version & Mode
@@ -350,7 +350,7 @@ export default function PerformancePreferencesPage() {
       {/* Main Grid: Root Directories & Detailed System Specifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Root Directory Paths Card */}
-        <Card className="border-border">
+        <Card className="border-0 bg-muted">
           <CardHeader className="border-b border-border/50 bg-muted/20">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -387,7 +387,7 @@ export default function PerformancePreferencesPage() {
                   )}
                 </Button>
               </div>
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-2.5 font-mono text-xs text-foreground break-all">
+              <div className="rounded-lg bg-background p-2.5 font-mono text-xs text-foreground break-all">
                 {data?.paths.rootFolder}
               </div>
             </div>
@@ -413,7 +413,7 @@ export default function PerformancePreferencesPage() {
                   )}
                 </Button>
               </div>
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-2.5 font-mono text-xs text-foreground break-all">
+              <div className="rounded-lg bg-background p-2.5 font-mono text-xs text-foreground break-all">
                 {data?.paths.dataDir}
               </div>
             </div>
@@ -439,7 +439,7 @@ export default function PerformancePreferencesPage() {
                   )}
                 </Button>
               </div>
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-2.5 font-mono text-xs text-foreground break-all">
+              <div className="rounded-lg bg-background p-2.5 font-mono text-xs text-foreground break-all">
                 {data?.paths.userDataDir}
               </div>
             </div>
@@ -465,7 +465,7 @@ export default function PerformancePreferencesPage() {
                   )}
                 </Button>
               </div>
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-2.5 font-mono text-xs text-foreground break-all">
+              <div className="rounded-lg bg-background p-2.5 font-mono text-xs text-foreground break-all">
                 {data?.paths.exePath}
               </div>
             </div>
@@ -473,7 +473,7 @@ export default function PerformancePreferencesPage() {
         </Card>
 
         {/* Detailed System Specifications */}
-        <Card className="border-border">
+        <Card className="border-0 bg-muted">
           <CardHeader className="border-b border-border/50 bg-muted/20">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -560,7 +560,7 @@ export default function PerformancePreferencesPage() {
       </div>
 
       {/* Database Connection & Storage Summary */}
-      <Card className="border-border">
+      <Card className="border-0 bg-muted">
         <CardHeader className="border-b border-border/50 bg-muted/20">
           <div className="flex items-center gap-2">
             <Database className="size-4 text-emerald-500 shrink-0" />

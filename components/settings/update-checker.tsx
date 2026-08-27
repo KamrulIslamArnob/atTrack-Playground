@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { Download } from "lucide-react";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
-import { SparklesIcon } from "@/components/ui/sparkles";
 import { toast } from "sonner";
 
 import type { ElectronUpdateStatus } from "@/lib/types/electron";
 
+/** Electron-only row: check for updates / apply a downloaded one. */
 export function UpdateChecker() {
   const [isElectron, setIsElectron] = useState(false);
   const [updateState, setUpdateState] = useState<ElectronUpdateStatus>({ status: "idle" });
@@ -21,13 +20,10 @@ export function UpdateChecker() {
       const unsubscribe = window.electronAPI.onUpdateStatus?.((data: ElectronUpdateStatus) => {
         setUpdateState(data);
         if (data.status === "available") {
-          toast.info(`Version ${data.version} is available! Downloading update...`);
+          toast.info(`Version ${data.version} available — downloading`);
         } else if (data.status === "downloaded") {
-          toast.success(`Update v${data.version} downloaded! Click restart to apply.`);
+          toast.success(`Update v${data.version} downloaded. Restart to apply.`);
         } else if (data.status === "not-available") {
-          toast.success("atTrack is already up to date");
-          setIsChecking(false);
-        } else if (data.status === "error") {
           setIsChecking(false);
         }
       });
@@ -50,101 +46,63 @@ export function UpdateChecker() {
       }
     } catch (e) {
       console.error(e);
-      setUpdateState({ status: "error", error: "Failed to check for updates" });
+      setUpdateState({ status: "error", error: "Couldn't check for updates" });
     } finally {
       setIsChecking(false);
     }
   };
 
   const handleQuitAndInstall = () => {
-    if (window.electronAPI) {
-      window.electronAPI.quitAndInstall?.();
-    }
+    window.electronAPI?.quitAndInstall?.();
   };
 
-  // Only render in Electron desktop app environment
   if (!isElectron) {
     return null;
   }
 
+  const busy = isChecking || updateState.status === "checking" || updateState.status === "downloading";
+
   return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <SparklesIcon className="size-4 text-primary" />
-          Desktop Application Updates
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium">Check for software updates</p>
-            <p className="text-xs text-muted-foreground">
-              Automatically download and install the latest features and bug fixes.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {updateState.status === "downloaded" ? (
-              <Button onClick={handleQuitAndInstall} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Download className="size-4" />
-                Restart & Install Update
-              </Button>
-            ) : (
-              <Button
-                onClick={handleCheckForUpdates}
-                disabled={isChecking || updateState.status === "checking" || updateState.status === "downloading"}
-                variant="outline"
-                className="gap-2"
-              >
-                <RefreshCWIcon className={`size-4 ${isChecking || updateState.status === "checking" ? "animate-spin" : ""}`} />
-                {isChecking || updateState.status === "checking"
-                  ? "Checking..."
-                  : updateState.status === "downloading"
-                  ? `Downloading (${updateState.percent ?? 0}%)`
-                  : "Check for Updates"}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Status Message Indicator */}
-        {updateState.status === "downloaded" && (
-          <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-            <CheckCircle2 className="size-4" />
-            Update v{updateState.version} ready! Click restart to apply the latest build.
-          </div>
-        )}
-
+    <div className="flex items-center justify-between gap-4 px-2 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">Updates</p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          {updateState.status === "downloaded"
+            ? `v${updateState.version} ready — restart to install`
+            : updateState.status === "downloading"
+            ? `Downloading v${updateState.version} (${updateState.percent ?? 0}%)`
+            : updateState.status === "dev"
+            ? "Dev mode — auto-updates run in packaged builds"
+            : "Automatic in the desktop app"}
+        </p>
         {updateState.status === "downloading" && (
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Downloading update v{updateState.version}...</span>
-              <span>{updateState.percent ?? 0}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${updateState.percent ?? 0}%` }}
-              />
-            </div>
+          <div className="mt-2 h-1 w-full max-w-56 overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${updateState.percent ?? 0}%` }}
+            />
           </div>
         )}
+      </div>
 
-        {updateState.status === "dev" && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <AlertCircle className="size-3.5" />
-            Running in development mode. Auto-updater activates in packaged desktop builds.
-          </div>
-        )}
-
-        {updateState.status === "not-available" && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CheckCircle2 className="size-3.5 text-emerald-500" />
-            You are running the latest version of atTrack.
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {updateState.status === "downloaded" ? (
+        <Button type="button" size="sm" onClick={handleQuitAndInstall} className="shrink-0 gap-1.5">
+          <Download className="size-3.5" />
+          Restart to update
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleCheckForUpdates}
+          disabled={busy}
+          className="shrink-0 gap-1.5"
+        >
+          <RefreshCWIcon className={busy ? "size-3.5 animate-spin" : "size-3.5"} />
+          Check now
+        </Button>
+      )}
+    </div>
   );
 }
