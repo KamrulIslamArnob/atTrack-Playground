@@ -4,6 +4,7 @@ export interface AIModel {
   provider: "gemini" | "anthropic" | "openai" | "deepseek" | "local" | string;
   description: string;
   supportsImages: boolean;
+  supportsPdfs?: boolean;
   isReasoning: boolean;
   badge?: string;
   capability?: string;

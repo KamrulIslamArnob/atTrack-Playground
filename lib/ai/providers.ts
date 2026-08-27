@@ -360,10 +360,18 @@ export async function callGemini(provider: ResolvedProvider, input: GenerateText
 }
 
 export async function callAnthropic(provider: ResolvedProvider, input: GenerateTextInput): Promise<GenerateTextResult> {
-  const content: unknown[] = (input.images ?? []).map((img) => ({
-    type: "image",
-    source: { type: "base64", media_type: img.mimeType, data: img.data },
-  }));
+  const content: unknown[] = (input.images ?? []).map((img) => {
+    if (img.mimeType === "application/pdf") {
+      return {
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: img.data },
+      };
+    }
+    return {
+      type: "image",
+      source: { type: "base64", media_type: img.mimeType, data: img.data },
+    };
+  });
   content.push({ type: "text", text: input.userPrompt });
 
   const res = await fetchWithLog("https://api.anthropic.com/v1/messages", {
@@ -642,10 +650,18 @@ async function* streamAnthropic(
   provider: ResolvedProvider,
   input: GenerateTextInput
 ): AsyncGenerator<StreamDelta> {
-  const content: unknown[] = (input.images ?? []).map((img) => ({
-    type: "image",
-    source: { type: "base64", media_type: img.mimeType, data: img.data },
-  }));
+  const content: unknown[] = (input.images ?? []).map((img) => {
+    if (img.mimeType === "application/pdf") {
+      return {
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: img.data },
+      };
+    }
+    return {
+      type: "image",
+      source: { type: "base64", media_type: img.mimeType, data: img.data },
+    };
+  });
   content.push({ type: "text", text: input.userPrompt });
 
   const res = await fetchWithLog("https://api.anthropic.com/v1/messages", {

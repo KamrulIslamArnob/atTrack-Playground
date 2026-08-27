@@ -16,7 +16,35 @@ import type { ProviderType } from "@/lib/types/ai-providers";
  *  model reached through an openai_compatible row is caught by "gemini". */
 export function modelSupportsImages(providerType: ProviderType, model: string): boolean {
   const m = model.toLowerCase();
-  return providerType === "gemini" || m.includes("gemini") || m.includes("vision") || m.includes("4o");
+  return (
+    providerType === "gemini" ||
+    providerType === "anthropic" ||
+    m.includes("gemini") ||
+    m.includes("vision") ||
+    m.includes("4o") ||
+    m.includes("claude-3") ||
+    m.includes("claude-sonnet") ||
+    m.includes("claude-opus") ||
+    m.includes("claude-haiku") ||
+    m.includes("pixtral") ||
+    m.includes("llava") ||
+    m.includes("qwen-vl") ||
+    m.includes("qwen2.5-vl")
+  );
+}
+
+/** True when the model can accept PDF documents. Gemini & Anthropic Claude support native PDFs. */
+export function modelSupportsPdfs(providerType: ProviderType, model: string): boolean {
+  const m = model.toLowerCase();
+  return (
+    providerType === "gemini" ||
+    providerType === "anthropic" ||
+    m.includes("gemini") ||
+    m.includes("claude-3") ||
+    m.includes("claude-sonnet") ||
+    m.includes("claude-opus") ||
+    m.includes("claude-haiku")
+  );
 }
 
 /** True when the model emits a chain of thought worth showing in the UI. */

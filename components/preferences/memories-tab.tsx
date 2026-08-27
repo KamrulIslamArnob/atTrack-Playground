@@ -165,9 +165,9 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
               key={i}
               type="button"
               onClick={() => openCreateDialog(preset)}
-              className="micro-press inline-flex items-center gap-1 rounded-full border border-border/80 bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-all duration-140 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 shadow-2xs cursor-pointer"
+              className="h-7.5 inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-2.5 text-xs font-medium text-muted-foreground transition-all duration-140 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground active:scale-95 shadow-2xs cursor-pointer"
             >
-              <span className="text-primary text-[10px]">+</span>
+              <span className="text-primary text-[11px] font-bold">+</span>
               {preset.title}
             </button>
           ))}
@@ -180,7 +180,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
           placeholder="Search memories by title, tag, or content…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-9 rounded-xl bg-card ps-9 text-xs border-border/80 placeholder:text-muted-foreground/70"
+          className="h-8 rounded-lg bg-card ps-9 text-xs border border-border/80 placeholder:text-muted-foreground/70"
         />
       </div>
 
@@ -190,63 +190,63 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
           return (
             <div
               key={memory.id}
-              className="group rounded-2xl border border-border/70 bg-muted/20 p-1.5 transition-all duration-200 hover:border-border hover:bg-muted/35 hover:shadow-xs"
+              className="group flex flex-col justify-between gap-3.5 rounded-2xl bg-muted/50 dark:bg-muted/25 p-4 transition-all duration-200 hover:bg-muted/70"
             >
-              <div className="flex h-full flex-col justify-between gap-3.5 rounded-xl border border-border/60 bg-card p-4 shadow-2xs">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-muted/40 text-primary shrink-0 group-hover:border-primary/30 group-hover:bg-primary/5 transition-colors shadow-2xs">
-                        <Brain className="size-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold leading-tight text-foreground">
-                          {memory.title || "User Profile Context"}
-                        </h3>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <span className="rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary">
-                            {mentionTag}
-                          </span>
-                        </div>
-                      </div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background text-primary shrink-0 group-hover:border-primary/30 group-hover:bg-primary/5 transition-colors shadow-2xs">
+                      <Brain className="size-4" />
                     </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => openEditDialog(memory)}
-                        aria-label="Edit memory"
-                        className="size-7 rounded-lg text-muted-foreground hover:text-foreground border border-border/40 hover:border-border bg-muted/20"
-                      >
-                        <Edit2 className="size-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => handleDeleteMemory(memory)}
-                        aria-label="Delete memory"
-                        className="size-7 rounded-lg text-muted-foreground hover:text-destructive border border-border/40 hover:border-destructive/30 bg-muted/20"
-                      >
-                        <Trash2 className="size-3" />
-                      </Button>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold leading-tight text-foreground">
+                        {memory.title || "User Profile Context"}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary">
+                          {mentionTag}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => openEditDialog(memory)}
+                      aria-label="Edit memory"
+                      className="size-7.5 rounded-lg text-muted-foreground hover:text-foreground border border-border/60 hover:border-border bg-card hover:bg-muted shadow-2xs"
+                    >
+                      <Edit2 className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => handleDeleteMemory(memory)}
+                      aria-label="Delete memory"
+                      className="size-7.5 rounded-lg text-muted-foreground hover:text-destructive border border-border/60 hover:border-destructive/30 bg-card hover:bg-muted shadow-2xs"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs">
                   <p className="line-clamp-4 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
                     {memory.description}
                   </p>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between border-t border-border/60 pt-3 text-[10px] leading-none text-muted-foreground">
-                  <span className="inline-flex items-center gap-1.5 font-medium">
-                    <span className="size-1.5 rounded-full bg-success animate-pulse" aria-hidden="true" />
-                    Active in Chat Context
-                  </span>
-                  <span className="tabular-nums">
-                    Updated {new Date(memory.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between border-t border-border/40 pt-2.5 text-[10px] leading-none text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="size-1.5 rounded-full bg-success animate-pulse" aria-hidden="true" />
+                  Active in Chat Context
+                </span>
+                <span className="tabular-nums">
+                  Updated {new Date(memory.updated_at).toLocaleDateString()}
+                </span>
               </div>
             </div>
           );

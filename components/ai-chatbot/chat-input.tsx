@@ -21,8 +21,8 @@ import {
   Terminal,
   Zap,
   CornerDownLeft,
+  FileText,
 } from "lucide-react";
-import { LocalFolderSelector } from "@/components/ai-chatbot/composer/local-folder-selector";
 import { PermissionModeSelector } from "@/components/ai-chatbot/composer/permission-mode-selector";
 import { ReasoningEffortPopover } from "@/components/ai-chatbot/composer/reasoning-effort-popover";
 import { ContextUsagePopover } from "@/components/ai-chatbot/composer/context-usage-popover";
@@ -127,6 +127,12 @@ interface SpeechRecognitionLike {
 }
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function ChatInput({
   input,
@@ -256,26 +262,57 @@ function ChatInput({
     onToggleWebSearch?.(next);
   }, [isWebSearchActive, onToggleWebSearch]);
 
+  const validateAndAddFile = useCallback(
+    (file: File) => {
+      const isImage = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const isText =
+        file.type.startsWith("text/") ||
+        file.name.endsWith(".txt") ||
+        file.name.endsWith(".md") ||
+        file.name.endsWith(".json") ||
+        file.name.endsWith(".csv");
+
+      if (isImage) {
+        if (!model.supportsImages) {
+          toast.warning(
+            `${model.name} does not support image attachments. Please switch to a vision model (e.g. Gemini, Claude, GPT-4o).`
+          );
+          return false;
+        }
+      } else if (isPdf) {
+        const canPdf =
+          model.supportsPdfs ??
+          (model.provider === "gemini" ||
+            model.provider === "anthropic" ||
+            model.id.toLowerCase().includes("gemini") ||
+            model.id.toLowerCase().includes("claude"));
+        if (!canPdf) {
+          toast.warning(
+            `${model.name} does not support PDF documents. Please switch to Gemini or Claude.`
+          );
+          return false;
+        }
+      } else if (!isText) {
+        toast.error(`Unsupported file type (${file.name}). Allowed: images, PDFs, text files.`);
+        return false;
+      }
+
+      const url = URL.createObjectURL(file);
+      setAttachments((prev) => [...prev, { file, url }]);
+      return true;
+    },
+    [model]
+  );
+
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       if (files.length === 0) return;
-
-      if (!model.supportsImages) {
-        toast.warning(`${model.name} does not support image attachments. Switch to a vision model.`);
-        return;
-      }
-
-      files.forEach((file) => {
-        if (!file.type.startsWith("image/")) {
-          toast.error("Only image files are allowed");
-          return;
-        }
-        const url = URL.createObjectURL(file);
-        setAttachments((prev) => [...prev, { file, url }]);
-      });
+      files.forEach(validateAndAddFile);
+      if (e.target) e.target.value = "";
     },
-    [model.supportsImages, model.name]
+    [validateAndAddFile]
   );
 
   const removeAttachment = useCallback((index: number) => {
@@ -318,22 +355,9 @@ function ChatInput({
 
       const files = Array.from(e.dataTransfer.files || []);
       if (files.length === 0) return;
-
-      if (!model.supportsImages) {
-        toast.warning(`${model.name} does not support image attachments.`);
-        return;
-      }
-
-      files.forEach((file) => {
-        if (!file.type.startsWith("image/")) {
-          toast.error("Only image files are allowed as attachments");
-          return;
-        }
-        const url = URL.createObjectURL(file);
-        setAttachments((prev) => [...prev, { file, url }]);
-      });
+      files.forEach(validateAndAddFile);
     },
-    [model.supportsImages, model.name]
+    [validateAndAddFile]
   );
 
   const filteredSkills = useMemo(() => {
@@ -565,34 +589,22 @@ function ChatInput({
   }, [input, attachments.length]);
 
   const triggerFilePicker = useCallback(() => {
-    if (!model.supportsImages) {
-      toast.warning(`${model.name} does not support images`);
-      return;
-    }
     fileInputRef.current?.click();
-  }, [model.supportsImages, model.name]);
+  }, []);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const items = Array.from(e.clipboardData?.items || []);
-      const imageItems = items.filter((item) => item.type.startsWith("image/"));
-      if (imageItems.length === 0) return;
+      const fileItems = items.filter((item) => item.kind === "file");
+      if (fileItems.length === 0) return;
 
       e.preventDefault();
-
-      if (!model.supportsImages) {
-        toast.warning(`${model.name} does not support image attachments.`);
-        return;
-      }
-
-      imageItems.forEach((item) => {
+      fileItems.forEach((item) => {
         const file = item.getAsFile();
-        if (!file) return;
-        const url = URL.createObjectURL(file);
-        setAttachments((prev) => [...prev, { file, url }]);
+        if (file) validateAndAddFile(file);
       });
     },
-    [model.supportsImages, model.name]
+    [validateAndAddFile]
   );
 
   return (
@@ -789,21 +801,43 @@ function ChatInput({
                   className="overflow-hidden bg-transparent"
                 >
                   <div className="flex flex-wrap gap-2 p-3">
-                    {attachments.map((att, i) => (
-                      <div
-                        key={i}
-                        className="group/att relative size-12 overflow-hidden rounded-lg border border-border/50 bg-muted/50 transition-transform active:scale-95"
-                      >
-                        <Image src={att.url} alt="Attachment" fill className="object-cover" unoptimized />
-                        <button
-                          type="button"
-                          onClick={() => removeAttachment(i)}
-                          className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 text-foreground opacity-0 transition-opacity group-hover/att:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+                    {attachments.map((att, i) => {
+                      const isImage = att.file.type.startsWith("image/");
+                      return (
+                        <div
+                          key={i}
+                          className={cn(
+                            "group/att relative overflow-hidden rounded-xl border border-border/70 bg-card/90 shadow-2xs transition-transform active:scale-95",
+                            isImage ? "size-12" : "h-12 px-3 py-1.5 flex items-center gap-2 max-w-[220px]"
+                          )}
                         >
-                          <XIcon className="size-3" />
-                        </button>
-                      </div>
-                    ))}
+                          {isImage ? (
+                            <Image src={att.url} alt={att.file.name} fill className="object-cover" unoptimized />
+                          ) : (
+                            <>
+                              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <FileText className="size-4" />
+                              </div>
+                              <div className="min-w-0 text-left">
+                                <p className="truncate text-xs font-semibold text-foreground leading-tight">
+                                  {att.file.name}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground font-mono">
+                                  {formatFileSize(att.file.size)}
+                                </p>
+                              </div>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(i)}
+                            className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 text-foreground opacity-0 transition-opacity group-hover/att:opacity-100 hover:bg-destructive hover:text-destructive-foreground shadow-xs cursor-pointer"
+                          >
+                            <XIcon className="size-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </motion.div>
               )}
@@ -840,11 +874,6 @@ function ChatInput({
               )}
             </AnimatePresence>
 
-            {/* Top Local Workspace Folder Selector Header */}
-            <div className="px-2 pt-1">
-              <LocalFolderSelector />
-            </div>
-
             {/* Main Textarea */}
             <div className="relative flex items-center w-full">
               <Textarea
@@ -874,7 +903,7 @@ function ChatInput({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.pdf,application/pdf,.txt,.md,.json,.csv"
               multiple
               onChange={handleFileSelect}
               className="hidden"
@@ -921,12 +950,12 @@ function ChatInput({
                   </button>
                 )}
 
-                {/* Image Upload Button */}
+                {/* Image & File Upload Button */}
                 <button
                   type="button"
                   onClick={triggerFilePicker}
                   className="flex size-7.5 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
-                  title="Attach image"
+                  title="Attach image, PDF, or document"
                 >
                   <PlusIcon className="size-4" />
                 </button>

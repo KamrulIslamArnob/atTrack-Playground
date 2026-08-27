@@ -43,7 +43,6 @@ export interface ChatPipelineInput {
   sourceConfig?: Record<string, Record<string, unknown>>;
   reasoningEffort?: string;
   permissionMode?: string;
-  localFolder?: { name: string; path: string };
 }
 
 export interface LoadedChatContext {
@@ -63,6 +62,7 @@ export interface LoadedChatContext {
    *  stage that can see them. Absent means the caller named a model outright. */
   autoRule?: AutoRule;
   chain: ResolvedProvider[];
+  approvals?: ToolApproval[];
 }
 
 export interface RetrievedChatContext extends LoadedChatContext {
@@ -96,18 +96,18 @@ export type AgentExecutionResult = AgentToolsExecutionResult | AgentStreamExecut
 
 export function parseAttachmentsToImages(rawAttachments: unknown): { mimeType: string; data: string }[] | undefined {
   if (!Array.isArray(rawAttachments) || rawAttachments.length === 0) return undefined;
-  const images: { mimeType: string; data: string }[] = [];
+  const files: { mimeType: string; data: string }[] = [];
   for (const att of rawAttachments) {
     if (!att || typeof att !== "object") continue;
     const url = (att as { url?: string }).url;
     if (typeof url === "string" && url.startsWith("data:")) {
-      const match = url.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+      const match = url.match(/^data:([a-zA-Z0-9_.\-\+\/]+);base64,(.+)$/);
       if (match) {
-        images.push({ mimeType: match[1], data: match[2] });
+        files.push({ mimeType: match[1], data: match[2] });
       }
     }
   }
-  return images.length > 0 ? images : undefined;
+  return files.length > 0 ? files : undefined;
 }
 
 export function isSourceAllowed(toolSourceId: string | undefined, enabledSourceIds?: string[]): boolean {
@@ -182,10 +182,6 @@ export function buildChatContextBase(
   const conversationHistory = formatConversationHistory(historyMessages);
 
   let mergedWorkspaceContext = typeof input.workspaceContext === "string" ? input.workspaceContext : null;
-  if (input.localFolder && input.localFolder.path) {
-    const folderInfo = `Active Local Folder Workspace: "${input.localFolder.name}" (${input.localFolder.path}). Use tool 'read_local_folder' to search, list, or read files from this directory.`;
-    mergedWorkspaceContext = mergedWorkspaceContext ? `${mergedWorkspaceContext}\n- ${folderInfo}` : `- ${folderInfo}`;
-  }
 
   if (input.permissionMode === "readonly") {
     const readonlyNotice = "Permission Mode: READ-ONLY. The user has set the chat to read-only mode — do not modify or delete records.";

@@ -577,13 +577,13 @@ export function LinksView({
           {/* Category Navigation Track */}
           <div
             ref={pillsScrollRef}
-            className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1 p-1 bg-muted/40 border border-border/60 rounded-xl"
+            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar min-w-0 flex-1 p-1 sm:p-1.5 bg-muted/60 dark:bg-muted/30 rounded-xl"
           >
             <button
               type="button"
               onClick={() => handleCategoryClick("all")}
               className={cn(
-                "shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer active:scale-95",
+                "h-8 shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 text-xs transition-all cursor-pointer active:scale-95 select-none",
                 activeCategory === "all"
                   ? "bg-background text-foreground shadow-2xs font-semibold border border-border/70"
                   : "text-muted-foreground hover:text-foreground hover:bg-background/50 font-medium"
@@ -592,7 +592,7 @@ export function LinksView({
               All
               <span
                 className={cn(
-                  "inline-flex items-center justify-center min-w-4.5 h-4 px-1 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                  "inline-flex items-center justify-center min-w-4.5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
                   activeCategory === "all"
                     ? "bg-muted text-foreground"
                     : "bg-muted/70 text-muted-foreground"
@@ -611,7 +611,7 @@ export function LinksView({
                   type="button"
                   onClick={() => handleCategoryClick(cat.id)}
                   className={cn(
-                    "shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer active:scale-95",
+                    "h-8 shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 text-xs transition-all cursor-pointer active:scale-95 select-none",
                     isActive
                       ? "bg-background text-foreground shadow-2xs font-semibold border border-border/70"
                       : "text-muted-foreground hover:text-foreground hover:bg-background/50 font-medium"
@@ -620,7 +620,7 @@ export function LinksView({
                   {cat.name}
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center min-w-4.5 h-4 px-1 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                      "inline-flex items-center justify-center min-w-4.5 h-4.5 px-1.5 rounded-full text-[10px] font-semibold tabular-nums leading-none transition-colors",
                       isActive
                         ? "bg-muted text-foreground"
                         : "bg-muted/70 text-muted-foreground"
@@ -635,23 +635,22 @@ export function LinksView({
 
           {/* Horizontal Scroll Navigation Controls (for Columns mode) */}
           {canScroll && activeCategory === "all" && (
-            <div className="inline-flex h-7.5 shrink-0 items-center overflow-hidden rounded-lg border border-border/80 bg-card shadow-2xs">
+            <div className="inline-flex h-10 sm:h-11 shrink-0 items-center overflow-hidden rounded-xl bg-muted/60 dark:bg-muted/30 p-1 sm:p-1.5 gap-1">
               <button
                 type="button"
                 aria-label="Scroll categories left"
                 onClick={() => scrollByAmount("left")}
                 disabled={!canScrollLeft}
-                className="flex size-7.5 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background hover:text-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronLeftIcon className="size-3.5" aria-hidden="true" />
               </button>
-              <span className="w-px h-3.5 bg-border/80" aria-hidden="true" />
               <button
                 type="button"
                 aria-label="Scroll categories right"
                 onClick={() => scrollByAmount("right")}
                 disabled={!canScrollRight}
-                className="flex size-7.5 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background hover:text-foreground active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronRightIcon className="size-3.5" aria-hidden="true" />
               </button>
@@ -663,14 +662,14 @@ export function LinksView({
       {/* Quick Tag Filter Chips Bar */}
       {allTags.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <span className="text-[11px] font-medium text-muted-foreground shrink-0 mr-0.5 flex items-center gap-1">
-            <Tag className="size-3 text-muted-foreground/80" /> Tags:
+          <span className="text-xs font-medium text-muted-foreground shrink-0 mr-0.5 flex items-center gap-1">
+            <Tag className="size-3.5 text-muted-foreground/80" /> Tags:
           </span>
           {selectedTag && (
             <button
               type="button"
               onClick={() => setSelectedTag(null)}
-              className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/30 px-2 py-0.5 text-[11px] font-semibold text-primary cursor-pointer hover:bg-primary/20 transition-colors shrink-0 shadow-2xs"
+              className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/30 px-3 text-xs font-semibold text-primary cursor-pointer hover:bg-primary/20 transition-colors shrink-0 shadow-2xs active:scale-95"
             >
               <span>Clear (#{selectedTag})</span>
               <X className="size-3" />
@@ -684,14 +683,14 @@ export function LinksView({
                 type="button"
                 onClick={() => setSelectedTag(isTagActive ? null : t.name)}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-all cursor-pointer shrink-0",
+                  "h-8 inline-flex items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all cursor-pointer shrink-0 active:scale-95 select-none",
                   isTagActive
                     ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs"
                     : "bg-card border-border/80 hover:bg-accent/40 text-muted-foreground hover:text-foreground shadow-2xs"
                 )}
               >
                 <span>#{t.name}</span>
-                <span className="text-[10px] opacity-70 tabular-nums font-mono">({t.count})</span>
+                <span className="text-[10px] opacity-75 tabular-nums font-mono">({t.count})</span>
               </button>
             );
           })}

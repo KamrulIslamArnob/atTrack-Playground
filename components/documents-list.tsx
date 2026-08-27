@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import {
-  FileText, Folder, Trash2, Star, ChevronsUpDown, GripVertical, MoveLeft, MoveRight, Palette, Hash, Tag, Calendar, Code2 } from "lucide-react";
+  FileText, Folder, Trash2, Star, ChevronsUpDown, GripVertical, MoveLeft, MoveRight, Palette, Hash, Tag, Calendar, Code2, Briefcase } from "lucide-react";
 import { DownloadIcon } from "@/components/ui/download";
 import { SearchIcon } from "@/components/ui/search";
 import { XIcon } from "@/components/ui/x";
@@ -22,6 +22,7 @@ import { CheckIcon } from "@/components/ui/check";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { Link2Icon } from "@/components/ui/link-2";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
+import { CompanyLogo } from "@/components/company-logo";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -46,7 +47,7 @@ const typeColors: Record<string, string> = {
   other: "bg-muted text-muted-foreground border-border/60",
 };
 
-type SortKey = "index" | "name" | "type" | "uploaded" | "ai_extracted";
+type SortKey = "index" | "name" | "type" | "uploaded" | "connected_jobs";
 type SortDir = "asc" | "desc";
 
 interface ColumnDef {
@@ -60,15 +61,15 @@ interface ColumnDef {
 }
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { key: "index", label: "", icon: Hash, isDraggable: false, className: "text-xs", defaultPct: 6 },
-  { key: "name", label: "Name", icon: FileText, defaultPct: 32 },
-  { key: "type", label: "Type", icon: Tag, defaultPct: 13 },
-  { key: "uploaded", label: "Uploaded", icon: Calendar, defaultPct: 15 },
-  { key: "ai_extracted", label: "AI Extracted", icon: SparklesIcon, defaultPct: 19 },
+  { key: "index", label: "", icon: Hash, isDraggable: false, className: "text-center justify-center text-xs font-mono", defaultPct: 5 },
+  { key: "name", label: "Name", icon: FileText, defaultPct: 34 },
+  { key: "type", label: "Type", icon: Tag, className: "text-center justify-center", defaultPct: 12 },
+  { key: "uploaded", label: "Uploaded", icon: Calendar, className: "text-center justify-center", defaultPct: 14 },
+  { key: "connected_jobs", label: "Connected Jobs", icon: Briefcase, defaultPct: 27, className: "text-left" },
 ];
 
 // Remaining share after the columns above, reserved for the fixed Actions column.
-const ACTIONS_DEFAULT_PCT = 15;
+const ACTIONS_DEFAULT_PCT = 8;
 
 const DEFAULT_COLUMN_KEYS: SortKey[] = ALL_COLUMNS.map((c) => c.key);
 
@@ -77,7 +78,7 @@ const DEFAULT_DIR: Record<SortKey, SortDir> = {
   name: "asc",
   type: "asc",
   uploaded: "desc",
-  ai_extracted: "desc",
+  connected_jobs: "desc",
 };
 
 const COLOR_PALETTE = [
@@ -108,10 +109,8 @@ function sortValue(row: Row, key: SortKey): string | number | null {
       return typeLabels[doc.type] ?? doc.type;
     case "uploaded":
       return doc.created_at ? new Date(doc.created_at).getTime() : null;
-    case "ai_extracted":
-      return doc.match_data
-        ? doc.match_data.skills.length + doc.match_data.experience.length
-        : null;
+    case "connected_jobs":
+      return doc.connected_jobs?.length ?? 0;
   }
 }
 
@@ -194,7 +193,7 @@ function SortHeader({
         className
       )}
     >
-      <div className="flex items-center gap-1 min-w-0 pr-1.5">
+      <div className={cn("flex items-center gap-1 min-w-0 pr-1.5", className?.includes("justify-center") && "justify-center pr-0")}>
         {isDraggable && (
           <span
             className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground inline-flex items-center shrink-0"
@@ -631,7 +630,7 @@ export function DocumentsList({ documents }: DocumentsListProps) {
     const { doc, originalIndex } = row;
     switch (key) {
       case "index":
-        return <span className="text-muted-foreground text-xs">{originalIndex + 1}</span>;
+        return <div className="text-center font-mono text-xs text-muted-foreground/80">{originalIndex + 1}</div>;
       case "name":
         return (
           <div className="flex items-center gap-2">
@@ -675,37 +674,89 @@ export function DocumentsList({ documents }: DocumentsListProps) {
         );
       case "type":
         return (
-          <span
-            className={cn(
-              "inline-block rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap capitalize border",
-              doc.generated_kind
-                ? "bg-info/10 text-info border-info/20"
-                : typeColors[doc.type] ?? "bg-muted text-muted-foreground border-border/60"
-            )}
-          >
-            {doc.generated_kind
-              ? doc.generated_kind.replace(/_/g, " ")
-              : typeLabels[doc.type] ?? doc.type}
-          </span>
+          <div className="flex justify-center">
+            <span
+              className={cn(
+                "inline-block rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap capitalize border",
+                doc.generated_kind
+                  ? "bg-info/10 text-info border-info/20"
+                  : typeColors[doc.type] ?? "bg-muted text-muted-foreground border-border/60"
+              )}
+            >
+              {doc.generated_kind
+                ? doc.generated_kind.replace(/_/g, " ")
+                : typeLabels[doc.type] ?? doc.type}
+            </span>
+          </div>
         );
       case "uploaded":
         return (
-          <span className="text-muted-foreground text-xs whitespace-nowrap">
-            {new Date(doc.created_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
+          <div className="text-center">
+            <span className="text-muted-foreground text-xs whitespace-nowrap">
+              {new Date(doc.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+          </div>
         );
-      case "ai_extracted":
-        return doc.match_data ? (
-          <span className="text-xs text-muted-foreground">
-            {doc.match_data.skills.length} skills, {doc.match_data.experience.length} roles
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground/50">-</span>
+      case "connected_jobs": {
+        const connected = doc.connected_jobs ?? [];
+        if (connected.length === 0) {
+          return <span className="text-xs text-muted-foreground/40 pl-1">-</span>;
+        }
+        return (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {connected.slice(0, 2).map((job) => (
+              <Link
+                key={job.id}
+                href={`/jobs/${job.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-muted hover:border-border transition-colors max-w-[180px] truncate shadow-2xs group/chip"
+                title={`${job.title}${job.company_name ? ` at ${job.company_name}` : ""}`}
+              >
+                <CompanyLogo
+                  name={job.company_name}
+                  className="size-3.5 rounded-xs shrink-0"
+                  fallback="initial"
+                  iconClassName="size-2.5"
+                />
+                <span className="truncate group-hover/chip:text-primary transition-colors">
+                  {job.company_name ? `${job.company_name} · ${job.title}` : job.title}
+                </span>
+              </Link>
+            ))}
+            {connected.length > 2 && (
+              <Tooltip>
+                <TooltipTrigger render={<span className="inline-flex cursor-pointer" />}>
+                  <span className="inline-flex items-center rounded-md border border-border/80 bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground">
+                    +{connected.length - 2}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="p-2.5 space-y-1 max-w-xs text-xs">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                    Connected Jobs ({connected.length})
+                  </div>
+                  {connected.slice(2).map((job) => (
+                    <Link
+                      key={job.id}
+                      href={`/jobs/${job.id}`}
+                      className="flex items-center gap-1.5 text-foreground hover:text-primary truncate py-0.5"
+                    >
+                      <CompanyLogo
+                        name={job.company_name}
+                        className="size-3 rounded-xs shrink-0"
+                        fallback="initial"
+                      />
+                      <span className="truncate">{job.company_name ? `${job.company_name} · ${job.title}` : job.title}</span>
+                    </Link>
+                  ))}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         );
+      }
     }
   };
 
@@ -850,14 +901,9 @@ export function DocumentsList({ documents }: DocumentsListProps) {
         </div>
       </div>
 
-      {/* Results count */}
-      <div className="text-xs text-muted-foreground">
-        {rows.length} document{rows.length !== 1 ? "s" : ""} found
-      </div>
-
       {/* Table */}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-border/80 bg-card shadow-2xs relative">
+        <div className="overflow-x-auto rounded-xl border border-border/80 bg-card shadow-2xs relative mt-3">
           <table className="w-full table-fixed border-collapse text-sm select-none">
             <thead>
               <tr className="border-b border-border/80 bg-muted/40">
@@ -891,10 +937,8 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                 <th
                   scope="col"
                   style={{ width: `${ACTIONS_DEFAULT_PCT}%` }}
-                  className="px-4 py-2.5 font-semibold uppercase text-[11px] text-muted-foreground text-right tracking-wide"
-                >
-                  Actions
-                </th>
+                  className="px-2.5 py-2.5 text-right w-[96px] min-w-[90px] max-w-[110px]"
+                />
               </tr>
             </thead>
             <tbody>
@@ -933,8 +977,8 @@ export function DocumentsList({ documents }: DocumentsListProps) {
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-right overflow-hidden">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-2.5 py-2.5 text-right overflow-hidden w-[96px] min-w-[90px] max-w-[110px]">
+                      <div className="flex items-center justify-end gap-0.5">
                         {doc.type === "resume" && !doc.is_default && (
                           <Tooltip>
                             <TooltipTrigger render={<span className="inline-flex" />}>

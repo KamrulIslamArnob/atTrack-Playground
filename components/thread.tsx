@@ -73,7 +73,6 @@ import { CopyIcon } from "@/components/ui/copy";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
 import { SparklesIcon } from "@/components/ui/sparkles";
 import { ModelSelector } from "@/components/ai-chatbot/model-selector";
-import { LocalFolderSelector } from "@/components/ai-chatbot/composer/local-folder-selector";
 import { PermissionModeSelector } from "@/components/ai-chatbot/composer/permission-mode-selector";
 import { ReasoningEffortPopover } from "@/components/ai-chatbot/composer/reasoning-effort-popover";
 import { ContextUsagePopover } from "@/components/ai-chatbot/composer/context-usage-popover";
@@ -562,9 +561,6 @@ const Composer: FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Top Local Workspace Folder Selector Header */}
-      <LocalFolderSelector />
 
       <ComposerPrimitive.AttachmentDropzone
         render={

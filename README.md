@@ -2,194 +2,204 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/icon-256-dark.svg">
-  <img src="public/icon-256.svg" alt="BetterJob Logo" width="84" height="84" />
+  <img src="public/icon-256.svg" alt="BetterJob Logo" width="96" height="96" />
 </picture>
 
 # BetterJob
 
 ### *A better way to reach your next job.*
 
-**The private, local-first career workspace and job application tracker.**  
-Manage your job search, build tailor-fit resumes, prep for interviews, track networking CRM contacts, and leverage AI career co-pilots — 100% on your own machine.
+**The private, 100% local career workspace designed to help you land your dream role faster.**  
+Track applications, auto-clip job listings with 1 click, build tailored resumes, prep for interviews with AI, and manage your network — with absolute privacy on your own computer.
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.2_(App_Router)-000000?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![SQLite](https://img.shields.io/badge/Database-Native_node:sqlite-003B57?style=flat-square&logo=sqlite)](https://nodejs.org/api/sqlite.html)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![Electron](https://img.shields.io/badge/Desktop-Electron_34-47848F?style=flat-square&logo=electron)](https://www.electronjs.org/)
-[![Chrome Extension](https://img.shields.io/badge/Extension-Manifest_V3-4285F4?style=flat-square&logo=google-chrome)](https://developer.chrome.com/docs/extensions/mv3/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
+---
 
-[Features](#-product-features) • [Why BetterJob?](#-why-betterjob) • [Getting Started](#-getting-started) • [Architecture](#-architecture) • [Chrome Extension](#-companion-chrome-extension) • [Desktop App](#-desktop-app)
+[![100% Local-First](https://img.shields.io/badge/Privacy-100%25_Local--First-22c55e?style=for-the-badge&logo=shield)](https://github.com/KamrulIslamArnob/atTrack-Playground)
+[![Zero Cloud Storage](https://img.shields.io/badge/Data-Stored_On_Your_Machine-0ea5e9?style=for-the-badge)](https://github.com/KamrulIslamArnob/atTrack-Playground)
+[![No Monthly Subscription](https://img.shields.io/badge/Pricing-Free_&_Open_Source-6366f1?style=for-the-badge)](https://github.com/KamrulIslamArnob/atTrack-Playground)
+[![BYOK AI](https://img.shields.io/badge/AI-Bring_Your_Own_Key-f59e0b?style=for-the-badge)](https://github.com/KamrulIslamArnob/atTrack-Playground)
+
+<br />
+
+[Why BetterJob?](#-why-betterjob) • [What You Can Do](#-everything-you-need-to-land-your-next-role) • [Your Privacy Guarantee](#-100-safe--private-your-data-is-yours) • [Quick Install in 60s](#-get-started-in-60-seconds) • [Chrome Clipper](#-1-click-chrome-extension)
 
 ---
 
 </div>
 
-## 🌟 Why BetterJob?
+## 💡 Why BetterJob?
 
-Traditional job hunting tools (Huntr, Teal, Notion templates) force trade-offs: your private resumes, salary notes, and career trajectory live in someone else's cloud behind expensive monthly AI subscriptions.
+Job hunting is already stressful. You shouldn't have to juggle 30 open browser tabs, messy spreadsheets, lost follow-ups, and expensive monthly subscriptions just to stay organized.
 
-**BetterJob reimagines the job search as a modern, private desktop operating system:**
+Most job trackers store your confidential resumes, salary goals, and career notes in a remote company's cloud — and charge you $20–$40/month just to draft a few cover letters.
 
-- 🛡️ **100% Local-First Privacy**: Your entire database, uploaded resumes, salary goals, and application notes live in a local SQLite database (`node:sqlite`) on your disk. No remote database, no tracking cookies, and no accounts.
-- 🔑 **Bring-Your-Own-Key (BYOK) AI**: Zero middleman markup. Plug in your own Google Gemini, Anthropic Claude, OpenAI, or OpenRouter keys.
-- ⚡ **Instant Capture**: Save postings from LinkedIn, Indeed, Greenhouse, Lever, and company career portals with a single click via the companion Chrome extension.
-- 🎯 **Unified Career Pipeline**: Consolidate your board, document versions, interview calendar, CRM contacts, and outreach emails in one blazing-fast workspace.
+**BetterJob gives you a complete, high-performance command center that runs entirely on your own machine.**
 
----
-
-## 🚀 Product Features
-
-### 1. 📋 Kanban Application Pipeline
-Visual drag-and-drop board organized by intuitive lifecycle stages (`Wishlist`, `Preparing`, `Applied`, `Interviewing`, `Offered`, `Accepted`, `Archived`).
-- **Smart Metadata**: Priority tags, work locations (Remote/Hybrid/Onsite), compensation ranges, application links, and deadlines.
-- **Dynamic State Management**: Automatic application timestamps, stage duration metrics, and keyboard navigation support (`MoveToMenu`).
-- **Deep Job Sheets**: Dedicated slide-out drawer with rich overview notes, interview timeline, contact attachments, and AI match insights.
-
-### 2. 🤖 Tracky — Intelligent AI Career Co-Pilot
-A background-streamed, multi-session AI assistant deeply grounded in your real workspace data.
-- **Workspace-Aware Context**: Tracky references your saved jobs, master resume text, recruiter notes, and interview stages to generate high-accuracy answers.
-- **Match Score & Gap Analysis**: Compute compatibility scores against job listings and surface missing keywords.
-- **Cover Letter & Email Composer**: Draft targeted, punchy outreach emails and cover letters matching your actual experience.
-- **Interview Mock Prep**: Generate customized technical and behavioral practice questions for specific job descriptions.
-- **Safety-Gated Database Tools**: Search jobs, query stats, or request structured workspace edits with explicit approval modals.
-
-### 3. 📄 Live Resume Builder & Document Hub
-A rich-text, LaTeX-inspired resume editor with instant Letter preview and responsive zoom controls.
-- **Interactive Visual Editor**: Manage contact headers, executive summary, work experience, projects, education, and custom skill badges.
-- **Live Scaled Preview**: Auto-adjusts Letter page proportions (8.5" × 11") to your viewport with interactive zoom (`-`, `+`, `Fit`, `100%`).
-- **Multi-Format Export**: Clean HTML, high-resolution printable PDF, and raw LaTeX export.
-- **Document Repository**: Store master resumes, portfolios, certification PDFs, and cover letters locally.
-
-### 4. 🌐 1-Click Chrome Clipper (Manifest V3)
-Clip job postings from any website directly into your BetterJob board without leaving the browser tab.
-- **Deep Carrier Scraper**: Automated heuristic and AI DOM extraction for job title, company, location, salary range, and description.
-- **Offline Resilient Queue**: If the desktop app is closed, jobs queue locally in Chrome storage and auto-sync when BetterJob launches.
-- **Floating Prompt Overlay**: Smart detection on job boards prompts you with a floating 1-click capture button.
-
-### 5. 👥 Contact & Networking CRM
-Never lose track of a recruiter, hiring manager, or referral contact.
-- **Company & Contact Directory**: Associate contacts with companies and active job cards.
-- **Interaction Timeline**: Record email exchanges, referral intros, informational chats, and follow-up reminders.
-- **One-Click Email Outreach**: Integrated SMTP client (with AES-256 encrypted credentials) to send follow-ups directly from your workspace.
-
-### 6. 📊 Career Analytics & Omni-Search
-- **Insights & Funnel Breakdown**: Response rates, time-in-stage averages, interview progression velocity, and application volume charts.
-- **Global Omni-Search (⌘K / Ctrl+K)**: Instant full-text search across jobs, contacts, documents, and past notes powered by SQLite FTS5.
+```
+   Spreadsheets & 30 open tabs ──┐
+   Expensive $30/mo AI trackers  ┼──►  ⚡ BetterJob (All-in-one, 100% private on your machine)
+   Lost emails & missed deadlines─┘
+```
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🔒 100% Safe & Private: Your Data Is Yours
 
-BetterJob is engineered as a zero-dependency-runtime web application and native desktop bundle:
+We believe your career search is deeply personal. **We do not own your data, we never see your data, and nothing ever leaves your device without your explicit permission.**
 
-| Layer | Technology |
+| Cloud Job Trackers | ⚡ BetterJob |
 |---|---|
-| **Framework** | [Next.js 16 (App Router)](https://nextjs.org/) with React 19 & Turbopack |
-| **Language** | TypeScript 5.7 (Strict Mode) |
-| **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) + Custom Design Tokens |
-| **Database** | Native Node.js `node:sqlite` (`DatabaseSync` + WAL mode + FTS5) |
-| **Desktop Shell** | [Electron 34](https://www.electronjs.org/) + `electron-builder` |
-| **Browser Extension** | Chrome Manifest V3 (Service Worker + Side Panel + Content Bridge) |
-| **AI Integration** | Google Gemini (`@google/genai`), Anthropic, OpenAI, OpenRouter |
-| **Security** | AES-256-GCM encryption for credentials, local-only storage |
+| ❌ Resumes & salary goals stored on third-party cloud servers | ✅ **100% on your machine**: Everything is saved to a local database on your hard drive |
+| ❌ Mandatory account creation, email verification, passwords | ✅ **Zero login friction**: No account, no signup, no tracking cookies |
+| ❌ Expensive monthly subscriptions for basic AI features | ✅ **Free & Open Source**: Bring your own free/cheap API key (Gemini, Claude, OpenAI) |
+| ❌ Telemetry & analytics tracking your applications | ✅ **Total isolation**: Fully functional even when completely offline |
+| ❌ Hard to export or permanently delete your history | ✅ **One-click complete wipe**: Delete all data permanently anytime from Settings |
+
+> ### 🛡️ The Privacy Promise
+> *"Your resumes, application histories, recruiter contacts, and interview notes belong to you. We have no access to them, no tracking servers, and no advertising model."*
 
 ---
 
-## 💻 Getting Started
+## ✨ Everything You Need to Land Your Next Role
 
-### Prerequisites
-- **Node.js 22.5+** (Required for native `node:sqlite` support; Node 24+ recommended)
-- **npm** or **pnpm**
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/KamrulIslamArnob/atTrack-Playground.git betterjob
-   cd betterjob
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   ```
-   *(Optional: configure AI provider keys in `.env` or set them up anytime directly inside the BetterJob Settings UI).*
-
-4. **Start the local server:**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3788](http://localhost:3788) in your browser.
+### 🎯 1. Visual Application Pipeline
+Never wonder *"Where did I apply?"* or *"When should I follow up?"* again.
+- **Drag-and-Drop Kanban Board**: Move opportunities seamlessly from `Wishlist` → `Preparing` → `Applied` → `Interviewing` → `Offer`.
+- **At-a-Glance Intelligence**: See compensation ranges, remote/hybrid status, priority tags, and approaching deadlines.
+- **Detailed Job Drawers**: Keep custom notes, interview logs, matching resumes, and key contacts attached directly to each job card.
 
 ---
 
-## 🖥️ Desktop App (Electron)
+### ⚡ 2. One-Click Job Capture (Chrome Extension)
+Found an interesting role on LinkedIn, Indeed, Glassdoor, Greenhouse, or Lever?
+- **Instant 1-Click Import**: The companion browser extension detects job pages and extracts the title, company, salary, location, and description automatically.
+- **Offline Resilient**: Browsing on the go? Save jobs while the desktop app is closed — they will automatically sync the moment you open BetterJob.
 
-BetterJob can run as a native windowed desktop app with system tray controls:
+---
+
+### 📄 3. Tailor-Fit Resume Builder & Document Hub
+Match every application with the exact right resume version.
+- **Live Scaled Visual Editor**: Edit bullet points, skills, work history, and projects with real-time scaling and zoom controls (`-`, `+`, `Fit`, `100%`).
+- **One-Click Export**: Export pixel-perfect PDFs or high-standard LaTeX documents ready for recruiters.
+- **Document Manager**: Keep master resumes, custom cover letters, and portfolios organized in one private library.
+
+---
+
+### 🤖 4. Tracky — Your Personal AI Career Co-Pilot
+Meet Tracky, your private AI co-pilot who is directly grounded in your actual workspace.
+- **Resume Fit Scoring**: Compare any job posting against your master resume to calculate match percentages and discover missing keywords.
+- **Targeted Cover Letters & Outreach**: Generate punchy, tailored cover letters and cold outreach emails referencing your real achievements.
+- **Interview Mock Simulations**: Practice with AI-generated technical, situational, and behavioral questions customized for the exact job description.
+- **BYOK Multi-Model Freedom**: Connect directly to Google Gemini, Anthropic Claude, OpenAI, or OpenRouter with zero markup.
+
+---
+
+### 👥 5. Recruiter & Networking CRM
+Build relationships that turn into job offers.
+- **Contact Directory**: Keep track of recruiters, hiring managers, referrers, and alumni.
+- **Interaction History**: Log coffee chats, emails, and interview feedback.
+- **Direct Outreach**: Connect your Gmail/SMTP (safely encrypted with AES-256 on your machine) to send personalized follow-ups straight from BetterJob.
+
+---
+
+### 📊 6. Career Insights & Instant Search
+- **Visual Analytics**: Track your application velocity, response rates, and stage conversion funnel over time.
+- **Lightning Omni-Search (⌘K / Ctrl+K)**: Instantly search across all your saved jobs, contacts, documents, and interview notes.
+
+---
+
+## 🚀 Get Started in 60 Seconds
+
+Installing BetterJob on your computer is quick, simple, and free.
+
+### Step 1: Prerequisites
+Ensure you have [Node.js](https://nodejs.org/) installed (version 22.5 or higher recommended).
+
+### Step 2: Download & Launch
+Open your terminal and run:
 
 ```bash
-# Run production build in Electron shell
+# 1. Clone this repository
+git clone https://github.com/KamrulIslamArnob/atTrack-Playground.git betterjob
+cd betterjob
+
+# 2. Install dependencies
+npm install
+
+# 3. Launch BetterJob
+npm run dev
+```
+
+Open **[http://localhost:3788](http://localhost:3788)** in your browser — **you're ready to track your first job!**
+
+> **💡 First-time Launch**: BetterJob includes an optional quick onboarding wizard with realistic sample data so you can test every feature immediately, or start fresh with a clean slate.
+
+---
+
+## 🖥️ Run as a Desktop App (Windows / Mac / Linux)
+
+Prefer a standalone window that lives in your system tray?
+
+```bash
+# Launch the desktop window
 npm run electron:dev
 
-# Build Windows installer (.exe) into release/
+# Or package an installer for Windows (.exe)
 npm run electron:build:win
 ```
 
-**Desktop Highlights:**
-- Native hidden titlebar with window frame controls.
-- Runs in background with minimize-to-tray support.
-- User data saved safely under `%APPDATA%\BetterJob\` or custom selected folder.
+- **Clean Native Window**: Hidden titlebar with smooth controls.
+- **Minimize to Tray**: Runs discreetly in the background so you can clip jobs anytime.
+- **Local Storage Directory**: All data is neatly housed in your local Documents folder.
 
 ---
 
-## 🧩 Companion Chrome Extension
+## 🧩 1-Click Chrome Extension
 
-Load the unpacked extension to clip jobs directly from your browser:
+Clip jobs directly while browsing job boards:
 
-1. Open Google Chrome and navigate to `chrome://extensions`.
-2. Enable **Developer mode** (top right toggle).
-3. Click **Load unpacked** and select the `extension/` directory from this repository.
-4. Open the BetterJob web or desktop app to auto-pair the extension token.
-
----
-
-## 📜 Available Scripts
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Next.js development server on port 3788 |
-| `npm run build` | Compile optimized Next.js production build |
-| `npm run start` | Serve production build locally |
-| `npm run typecheck` | Run TypeScript strict type verification (`tsc --noEmit`) |
-| `npm run lint` | Run ESLint across codebase |
-| `npm run electron:dev` | Build and launch local Electron desktop shell |
-| `npm run electron:build:win` | Package Windows desktop executable |
+1. Open Chrome and go to `chrome://extensions/`.
+2. Turn on **Developer mode** (top right toggle).
+3. Click **Load unpacked** and select the `extension/` folder in this repo.
+4. Browse any job board (LinkedIn, Indeed, etc.) — click the BetterJob icon to clip roles directly into your board!
 
 ---
 
-## 🔒 Security & Privacy
+## 💬 Frequently Asked Questions
 
-BetterJob is fundamentally built around user ownership:
-- **No Cloud Sync Required**: All data remains on your local file system.
-- **Zero Account Tracking**: No sign-in or session tokens.
-- **Encrypted Secrets**: Custom SMTP passwords and API secrets are encrypted at rest with AES-256-GCM.
-- **Data Export & Wipe**: Export your database anytime or use "Delete all data" for permanent local teardown.
+<details>
+<summary><strong>Do I need to create an account?</strong></summary>
+<br />
+No! BetterJob is designed from the ground up with zero authentication friction. You never have to create an account, verify an email, or remember a password. You own your workspace.
+</details>
+
+<details>
+<summary><strong>Where are my files and resumes stored?</strong></summary>
+<br />
+Everything is saved directly on your computer's local hard drive inside a fast, lightweight SQLite database. No external servers or cloud hosting providers are ever contacted for your data.
+</details>
+
+<details>
+<summary><strong>Is AI mandatory to use BetterJob?</strong></summary>
+<br />
+Not at all. Every core feature — Kanban board, resume builder, search, networking CRM, notes, and metrics — works 100% offline without any AI configuration. If you want AI assistance, simply paste your own API key in Settings.
+</details>
+
+<details>
+<summary><strong>How much does it cost?</strong></summary>
+<br />
+BetterJob is 100% free and open-source under the MIT license. You will never be asked for a credit card or charged a monthly subscription fee.
+</details>
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+BetterJob is open-source software licensed under the **[MIT License](LICENSE)**.
 
 <div align="center">
   <br />
-  <sub>Built with ❤️ for every job seeker striving for a better career journey.</sub>
+  <h3>Ready to take control of your career search?</h3>
+  <p><strong>Clone the repository and start using BetterJob today.</strong></p>
+  <sub>Built with ❤️ to give job seekers the power, privacy, and tools they deserve.</sub>
 </div>

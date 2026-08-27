@@ -51,7 +51,7 @@ export function CategoryPanel({
     <div
       id={`category-panel-${category.id}`}
       className={cn(
-        "flex flex-col justify-between rounded-2xl border border-border/70 bg-muted/35 p-3.5 sm:p-4 transition-all duration-200 ease-out shadow-2xs",
+        "flex flex-col justify-between rounded-2xl bg-muted/50 dark:bg-muted/25 p-3.5 sm:p-4 transition-all duration-200 ease-out",
         isColumns
           ? "min-w-[320px] sm:min-w-[360px] md:min-w-[380px] max-w-[420px] flex-none"
           : "w-full"

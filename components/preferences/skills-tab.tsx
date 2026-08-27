@@ -272,7 +272,7 @@ export function SkillsTab({ initialSkills }: SkillsTabProps) {
           placeholder="Search skills by name, command, or instructions…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-9 rounded-xl bg-card ps-9 text-xs border-border/80 placeholder:text-muted-foreground/70"
+          className="h-8 rounded-lg bg-card ps-9 text-xs border border-border/80 placeholder:text-muted-foreground/70"
         />
       </div>
 
@@ -282,79 +282,77 @@ export function SkillsTab({ initialSkills }: SkillsTabProps) {
           return (
             <div
               key={skill.id}
-              className="group rounded-2xl border border-border/70 bg-muted/20 p-1.5 transition-all duration-200 hover:border-border hover:bg-muted/35 hover:shadow-xs"
+              className="group flex flex-col justify-between gap-3.5 rounded-2xl bg-muted/50 dark:bg-muted/25 p-4 transition-all duration-200 hover:bg-muted/70"
             >
-              <div className="flex h-full flex-col justify-between gap-3.5 rounded-xl border border-border/60 bg-card p-4 shadow-2xs">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-muted/40 text-primary shrink-0 group-hover:border-primary/30 group-hover:bg-primary/5 transition-colors shadow-2xs">
-                        <IconComp className="size-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="truncate text-sm font-semibold leading-tight text-foreground">
-                            {skill.name}
-                          </h3>
-                          {skill.is_builtin && (
-                            <span className="shrink-0 rounded-full border border-border/80 bg-muted px-1.5 py-0.2 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              Built-in
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <span className="rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary">
-                            /{skill.command}
-                          </span>
-                        </div>
-                      </div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background text-primary shrink-0 group-hover:border-primary/30 group-hover:bg-primary/5 transition-colors shadow-2xs">
+                      <IconComp className="size-4" />
                     </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => handleCopyCommand(skill.command, skill.id)}
-                        aria-label="Copy command"
-                        className="size-7 rounded-lg text-muted-foreground hover:text-foreground border border-border/40 hover:border-border bg-muted/20"
-                      >
-                        {copiedId === skill.id ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => openEditDialog(skill)}
-                        aria-label={skill.is_builtin ? "Duplicate skill" : "Edit skill"}
-                        className="size-7 rounded-lg text-muted-foreground hover:text-foreground border border-border/40 hover:border-border bg-muted/20"
-                      >
-                        <Edit2 className="size-3" />
-                      </Button>
-                      {!skill.is_builtin && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => handleDeleteSkill(skill)}
-                          aria-label="Delete skill"
-                          className="size-7 rounded-lg text-muted-foreground hover:text-destructive border border-border/40 hover:border-destructive/30 bg-muted/20"
-                        >
-                          <Trash2 className="size-3" />
-                        </Button>
-                      )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="truncate text-sm font-semibold leading-tight text-foreground">
+                          {skill.name}
+                        </h3>
+                        {skill.is_builtin && (
+                          <span className="shrink-0 rounded-full border border-border/80 bg-background px-1.5 py-0.2 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground shadow-2xs">
+                            Built-in
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary">
+                          /{skill.command}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {skill.description && (
-                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                      {skill.description}
-                    </p>
-                  )}
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => handleCopyCommand(skill.command, skill.id)}
+                      aria-label="Copy command"
+                      className="size-7.5 rounded-lg text-muted-foreground hover:text-foreground border border-border/60 hover:border-border bg-card hover:bg-muted shadow-2xs"
+                    >
+                      {copiedId === skill.id ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => openEditDialog(skill)}
+                      aria-label={skill.is_builtin ? "Duplicate skill" : "Edit skill"}
+                      className="size-7.5 rounded-lg text-muted-foreground hover:text-foreground border border-border/60 hover:border-border bg-card hover:bg-muted shadow-2xs"
+                    >
+                      <Edit2 className="size-3.5" />
+                    </Button>
+                    {!skill.is_builtin && (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleDeleteSkill(skill)}
+                        aria-label="Delete skill"
+                        className="size-7.5 rounded-lg text-muted-foreground hover:text-destructive border border-border/60 hover:border-destructive/30 bg-card hover:bg-muted shadow-2xs"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-                  <p className="line-clamp-3 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted-foreground">
-                    {skill.instructions}
+                {skill.description && (
+                  <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {skill.description}
                   </p>
-                </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-card p-3 shadow-2xs">
+                <p className="line-clamp-3 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  {skill.instructions}
+                </p>
               </div>
             </div>
           );

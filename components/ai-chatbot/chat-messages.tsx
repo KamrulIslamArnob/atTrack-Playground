@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import Link from "next/link";
 import {
-  Sparkles, Volume2, VolumeX, Pencil, ThumbsUp, ThumbsDown, MessageSquareReply } from "lucide-react";
+  Sparkles, Volume2, VolumeX, Pencil, ThumbsUp, ThumbsDown, MessageSquareReply, FileText } from "lucide-react";
 import { UserIcon } from "@/components/ui/user";
 import { CopyIcon } from "@/components/ui/copy";
 import { CheckIcon } from "@/components/ui/check";
@@ -41,6 +42,8 @@ export interface ChatMessageItem {
   status?: "sending" | "sent" | "delivered" | "error";
   /** Quoted reply context */
   replyTo?: { id: string; preview: string; role: string };
+  /** Attached files or images */
+  experimental_attachments?: { url: string; contentType?: string }[];
   /** AI response rating feedback: 'up' (helpful) | 'down' (needs improvement) | null */
   feedback?: "up" | "down" | null;
 }
@@ -129,6 +132,7 @@ export function ChatMessages({
                 toolSteps={message.toolSteps}
                 status={message.status}
                 replyTo={message.replyTo}
+                attachments={message.experimental_attachments}
                 isLast={isLast}
                 isLoading={isLoading}
                 canRetry={isLast && !isLoading}
@@ -178,6 +182,7 @@ interface MessageItemProps {
   toolSteps?: ToolExecutionStep[];
   status?: "sending" | "sent" | "delivered" | "error";
   replyTo?: { id: string; preview: string; role: string };
+  attachments?: { url: string; contentType?: string }[];
   isLast: boolean;
   isLoading: boolean;
   canRetry: boolean;
@@ -202,6 +207,7 @@ const MessageItem = React.memo(function MessageItem({
   toolSteps,
   status,
   replyTo,
+  attachments,
   isLast,
   isLoading,
   canRetry,
@@ -353,6 +359,37 @@ const MessageItem = React.memo(function MessageItem({
               <span className="truncate">
                 {replyTo.role === "assistant" ? "AI: " : ""}{replyTo.preview}
               </span>
+            </div>
+          )}
+
+          {/* User message attachments */}
+          {attachments && attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap justify-end gap-2">
+              {attachments.map((att, i) => {
+                const isImage = att.contentType?.startsWith("image/") || att.url.startsWith("data:image/");
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "overflow-hidden rounded-xl border border-border/60 bg-card shadow-2xs",
+                      isImage ? "size-20 relative" : "flex items-center gap-2 px-3 py-2 text-xs"
+                    )}
+                  >
+                    {isImage ? (
+                      <Image src={att.url} alt="Attachment" fill className="object-cover" unoptimized />
+                    ) : (
+                      <>
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <FileText className="size-4" />
+                        </div>
+                        <span className="max-w-[160px] truncate text-xs font-medium text-foreground">
+                          Document
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

@@ -15,6 +15,12 @@ import type { ResumeDoc } from "@/lib/types/resume-builder";
 
 const log = moduleLogger("actions.documents");
 
+export interface ConnectedJob {
+  id: string;
+  title: string;
+  company_name: string | null;
+}
+
 export interface Document {
   id: string;
   name: string;
@@ -29,6 +35,7 @@ export interface Document {
   match_data: ResumeMatchData | null;
   builder_data: ResumeDoc | null;
   created_at: string;
+  connected_jobs?: ConnectedJob[];
 }
 
 export async function getDocuments(): Promise<Document[]> {
@@ -41,12 +48,34 @@ export async function getDocuments(): Promise<Document[]> {
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (error) {
-    log.error({ err: error, reqId: requestId() }, "Error fetching documents:");
+  if (error || !data) {
+    if (error) log.error({ err: error, reqId: requestId() }, "Error fetching documents:");
     return [];
   }
 
-  return (data as unknown as Document[]) ?? [];
+  const docIds = (data as Array<{ id: string }>).map((d) => d.id);
+  const jobsByDoc = new Map<string, ConnectedJob[]>();
+
+  if (docIds.length > 0) {
+    const { data: jobDocs } = await supabase
+      .from("job_documents")
+      .select("document_id, job:jobs(id, title, company_name)")
+      .in("document_id", docIds);
+
+    if (jobDocs) {
+      for (const jd of jobDocs as unknown as Array<{ document_id: string; job: ConnectedJob | null }>) {
+        if (!jd.job) continue;
+        const list = jobsByDoc.get(jd.document_id) || [];
+        list.push(jd.job);
+        jobsByDoc.set(jd.document_id, list);
+      }
+    }
+  }
+
+  return (data as unknown as Document[]).map((d) => ({
+    ...d,
+    connected_jobs: jobsByDoc.get(d.id) || [],
+  }));
 }
 
 export async function uploadDocument(formData: FormData): Promise<{ documentId: string }> {

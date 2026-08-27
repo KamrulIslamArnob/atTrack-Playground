@@ -33,7 +33,6 @@ import {
 } from "@/lib/ai-chatbot/workspace";
 import type { ContextSource } from "@/lib/ai-chatbot/types";
 import { getCustomSources, setSourceConfig, buildSourcePayload } from "@/lib/ai-chatbot/source-permissions";
-import { getActiveLocalFolder } from "@/lib/ai-chatbot/local-folders";
 import { getComposerSettings } from "@/lib/ai-chatbot/composer-settings";
 import type { ChatMessage, DbApproval } from "@/lib/ai-chatbot/use-chat";
 import DbDeleteApprovalCard from "@/components/ai-chatbot/db-delete-approval-card";
@@ -45,7 +44,7 @@ import { MemoryChatCard } from "@/components/ai-chatbot/artifacts/memory-chat-ca
 import { InterviewChatCard } from "@/components/ai-chatbot/artifacts/interview-chat-card";
 import { useChatQueue } from "@/lib/ai-chatbot/chat-queue-context";
 import { listProviders, hasAnyProviderConfigured } from "@/lib/actions/ai-providers";
-import { modelSupportsImages, isReasoningModel } from "@/lib/ai/model-capabilities";
+import { modelSupportsImages, modelSupportsPdfs, isReasoningModel } from "@/lib/ai/model-capabilities";
 import { executeLocalSqlQuery, type SqlQueryResult } from "@/lib/actions/database-query";
 import { TopNavigation } from "@/components/ai-chatbot/top-navigation";
 import { WorkspaceConnectionDrawer } from "@/components/ai-chatbot/workspace-connection-drawer";
@@ -170,31 +169,12 @@ export default function AIChatbotPage() {
       if (!currentId || (!value && !hasAttachments)) return;
 
       const composerSettings = getComposerSettings();
-      const activeFolder = getActiveLocalFolder();
-
       const { sourceConfig } = buildSourcePayload(sources);
-      if (activeFolder) {
-        sourceConfig.localFolder = {
-          id: activeFolder.id,
-          name: activeFolder.name,
-          path: activeFolder.path,
-          noteCount: activeFolder.noteCount,
-        };
-        if (!sourceConfig.obsidian?.vaultPath) {
-          sourceConfig.obsidian = {
-            vaultPath: activeFolder.path,
-          };
-        }
-      }
 
       const enabled =
         activeConnectedIds.length > 0
           ? [...activeConnectedIds]
           : sources.filter((s) => s.enabled).map((s) => s.id);
-
-      if (activeFolder && !enabled.includes("obsidian")) {
-        enabled.push("obsidian");
-      }
 
       const bodyPayload = {
         model: selectedModel.id,
@@ -206,7 +186,6 @@ export default function AIChatbotPage() {
         sourceConfig,
         reasoningEffort: composerSettings.reasoningEffort,
         permissionMode: composerSettings.permissionMode,
-        localFolder: activeFolder ? { name: activeFolder.name, path: activeFolder.path } : undefined,
       };
 
       await enqueueChat(currentId, value, attachments, bodyPayload);
@@ -303,6 +282,7 @@ export default function AIChatbotPage() {
         // Same heuristics the server-side auto-router uses, so the badge
         // the picker shows and the provider "auto" chooses can't drift.
         supportsImages: modelSupportsImages(p.provider_type, p.model),
+        supportsPdfs: modelSupportsPdfs(p.provider_type, p.model),
         isReasoning: isReasoningModel(p.model),
         badge: p.name || p.provider_type,
       })),

@@ -58,7 +58,6 @@ export const POST = withRoute("/api/chat", async (req: Request) => {
       sourceConfig,
       reasoningEffort,
       permissionMode,
-      localFolder,
     } = body;
 
     const { userId } = await getUser();
@@ -116,7 +115,6 @@ export const POST = withRoute("/api/chat", async (req: Request) => {
       sourceConfig: sourceConfig && typeof sourceConfig === "object" ? sourceConfig : {},
       reasoningEffort: typeof reasoningEffort === "string" ? reasoningEffort : undefined,
       permissionMode: typeof permissionMode === "string" ? permissionMode : undefined,
-      localFolder: localFolder && typeof localFolder === "object" ? localFolder : undefined,
     });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);

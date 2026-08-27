@@ -57,13 +57,8 @@ export function QuickShortcutsBar({
   };
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/60 p-3 sm:p-3.5 shadow-2xs backdrop-blur-xs">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="hidden lg:flex items-center gap-1.5 pr-1 text-xs font-semibold text-muted-foreground select-none">
-          <span className="size-1.5 rounded-full bg-primary/70" />
-          <span>Quick Copy</span>
-        </div>
-
+    <div className="rounded-xl bg-muted/60 dark:bg-muted/30 p-1 sm:p-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {shortcuts.map((sc) => {
           const isCopied = copiedId === sc.id;
           const hasValue = Boolean(sc.value && sc.value.trim());
@@ -80,7 +75,7 @@ export function QuickShortcutsBar({
                   : `Click to set ${sc.title} value`
               }
               className={cn(
-                "group relative h-8 inline-flex items-center justify-center gap-2 rounded-xl border px-3 text-xs font-medium transition-all duration-150 ease-out cursor-pointer select-none active:scale-[0.97]",
+                "group relative h-8 inline-flex items-center justify-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all duration-150 ease-out cursor-pointer select-none active:scale-[0.97]",
                 isCopied
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-2xs ring-1 ring-emerald-500/20 font-semibold"
                   : hasValue
@@ -141,15 +136,15 @@ export function QuickShortcutsBar({
           );
         })}
 
-        {/* Add Shortcut (+) Button */}
+        {/* Add Quick Copy Shortcut (+) Button */}
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="h-8 inline-flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/80 bg-background/50 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border transition-all active:scale-[0.97] cursor-pointer"
-          title="Add Quick Copy Shortcut"
+          className="h-8 inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/80 bg-background/50 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border transition-all active:scale-[0.97] cursor-pointer"
+          title="Add quick copy shortcut"
         >
           <PlusIcon className="size-3.5 shrink-0" />
-          <span>Add Shortcut</span>
+          <span>Add quick copy shortcut</span>
         </button>
       </div>
 
