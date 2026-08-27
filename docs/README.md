@@ -1,6 +1,6 @@
-# atTrack Documentation
+# BetterJob Documentation
 
-This folder is the public documentation home for **atTrack**, a local-first career workspace and job application tracker.
+This folder is the public documentation home for **BetterJob**, a local-first career workspace and job application tracker.
 
 ## Start here
 
