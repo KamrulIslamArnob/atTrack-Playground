@@ -55,7 +55,28 @@ BetterJob is your private, local-first career command center — built to organi
 
 ---
 
-## ⏱️ Quick Start in 30 Seconds
+## 📥 Download & Install
+
+Get the native desktop app — zero setup required, always offline-ready.
+
+<div align="center">
+
+[![Download for Windows](https://img.shields.io/badge/Windows-Download_.exe-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
+[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
+[![Download for Linux](https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
+
+[**View All Releases & Assets &rarr;**](https://github.com/KamrulIslamArnob/atTrack-Playground/releases/latest)
+
+</div>
+
+### 🧩 1-Click Chrome Extension
+1. Download or clone this repository.
+2. Open `chrome://extensions` in Google Chrome & enable **Developer mode**.
+3. Click **Load unpacked** and select the `extension/` folder.
+
+---
+
+## 💻 Or Run from Source (30s)
 
 ```bash
 # 1. Clone & enter
@@ -67,14 +88,7 @@ npm install
 npm run dev
 ```
 
-Open **[http://localhost:3788](http://localhost:3788)** — you're ready to roll.
-
----
-
-## 🖥️ Desktop & Chrome Extension
-
-- **Desktop App (Windows / Mac)**: Run `npm run electron:dev` for a distraction-free window with system tray controls.
-- **Chrome Extension**: Open `chrome://extensions` → enable **Developer mode** → **Load unpacked** from the `extension/` folder.
+Open **[http://localhost:3788](http://localhost:3788)** in your browser.
 
 ---
 
