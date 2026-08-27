@@ -21,6 +21,7 @@ import { GettingStartedWidget } from "@/components/onboarding/getting-started-wi
 import { getOnboardingStatus } from "@/lib/actions/onboarding";
 import { ClientGreeting } from "@/components/client-greeting";
 import { PageHeader } from "@/components/page-header";
+import { InfoTooltip } from "@/components/ui/tooltip";
 
 /**
  * Importers write this field free-form, so the same mode arrives as "onsite",
@@ -228,7 +229,13 @@ export default async function OverviewPage() {
       {/* Header & Actions */}
       <PageHeader
         title={<ClientGreeting className="font-heading text-xl sm:text-2xl font-semibold tracking-tight" />}
-        subtitle="Search overview, pipeline progress, and upcoming milestones."
+        titleExtra={
+          <InfoTooltip
+            content="Search overview, pipeline progress, and upcoming milestones."
+            side="right"
+            iconClassName="size-4"
+          />
+        }
         actions={<ImportChoice lists={boardLists} />}
       />
 

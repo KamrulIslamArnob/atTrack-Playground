@@ -184,7 +184,7 @@ export function MemoriesTab({ initialMemories }: MemoriesTabProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredMemories.map((memory) => {
           const mentionTag = memory.title ? `@${memory.title.toLowerCase().replace(/[^a-z0-9_-]/g, "_")}` : "@memory";
           return (

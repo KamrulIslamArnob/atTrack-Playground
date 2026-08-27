@@ -229,7 +229,7 @@ export default function PromptsPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-20 w-full max-w-7xl">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {dialog}
 
       {/* Hero Header */}
@@ -245,7 +245,7 @@ export default function PromptsPage() {
       />
 
       {/* Main Segmented Pill Tabs Navigation */}
-      <div className="rounded-xl bg-muted/60 dark:bg-muted/30 p-1 sm:p-1.5 w-full sm:w-fit">
+      <div className="rounded-xl bg-muted/60 dark:bg-muted/30 p-1 sm:p-1.5 w-full">
         <div
           role="tablist"
           aria-label="Prompt management categories"
@@ -311,10 +311,10 @@ export default function PromptsPage() {
         <div
           id="prompts-tabpanel-prompts"
           role="tabpanel"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in-50 duration-150"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in-50 duration-150 w-full"
         >
           {/* Left Column: AI Tool Templates List (Bento Sidebar) */}
-          <div className="lg:col-span-4 rounded-2xl bg-muted/50 dark:bg-muted/25 p-3.5 sm:p-4 space-y-3.5">
+          <div className="lg:col-span-4 xl:col-span-3 rounded-2xl bg-muted/50 dark:bg-muted/25 p-3.5 sm:p-4 space-y-3.5">
             {/* Header & Stage Filter */}
             <div className="flex items-center justify-between px-0.5">
               <div className="flex items-center gap-1.5">
@@ -411,7 +411,7 @@ export default function PromptsPage() {
           </div>
 
           {/* Right Column: Prompt Editor Workspace Deck */}
-          <div className="lg:col-span-8 rounded-2xl bg-muted/50 dark:bg-muted/25 p-3.5 sm:p-5 space-y-4.5">
+          <div className="lg:col-span-8 xl:col-span-9 rounded-2xl bg-muted/50 dark:bg-muted/25 p-3.5 sm:p-5 space-y-4.5">
             {/* Tool Header with Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3.5 border-b border-border/50">
               <div className="flex items-start gap-3.5 min-w-0">
