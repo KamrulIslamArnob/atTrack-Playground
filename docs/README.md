@@ -1,46 +1,37 @@
 # BetterJob Documentation
 
-This folder is the public documentation home for **BetterJob**, a local-first career workspace and job application tracker.
+This directory contains the canonical documentation for **BetterJob**, a private, local-first career workspace and job application tracker.
 
-## Start here
+## Start Here
 
-| Need | Read |
+| Need | Document |
 |---|---|
-| Project overview, setup, and commands | [`DEVELOPMENT.md`](DEVELOPMENT.md) |
-| How to contribute safely | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| Security model and vulnerability reporting | [`SECURITY.md`](SECURITY.md) |
-| Structured logs, AI trace events, and the log drain | [`LOGGING.md`](LOGGING.md) |
-| Design system: tokens, type, radius, motion, components, copy | [`Design.md`](Design.md) |
-| How to spec a screen before building it | [`DesignHandoff.md`](DesignHandoff.md) |
-| Current feature backlog and roadmap notes | [`ROADMAP.md`](ROADMAP.md) |
-| Release checklist for web and desktop builds | [`RELEASE.md`](RELEASE.md) |
-| Latest codebase audit status | [`AuditReport.md`](AuditReport.md) |
-| Historical task/plan summaries | [`PlanningSummary.md`](PlanningSummary.md) |
-| AI-agent/code-assistant navigation map | [`CLAUDE.md`](CLAUDE.md) |
+| Product vision, positioning, and core principles | [`PRODUCT.md`](PRODUCT.md) |
+| Architecture, local setup, commands, and Electron build notes | [`DEVELOPMENT.md`](DEVELOPMENT.md) |
+| Design system: tokens, typography, radius ladder, motion, and copy rules | [`Design.md`](Design.md) |
+| Structured logging, event taxonomy, and AI trace events | [`LOGGING.md`](LOGGING.md) |
+| Security model, local storage boundaries, and credential safety | [`SECURITY.md`](SECURITY.md) |
+| Step-by-step release checklist for web and desktop builds | [`RELEASE.md`](RELEASE.md) |
+| Contributor guidelines and PR validation checklist | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Feature roadmap and backlog notes | [`ROADMAP.md`](ROADMAP.md) |
 
-## Current docs structure
+## Documentation Structure
 
 ```text
 docs/
-├── README.md        # This index
-├── CLAUDE.md        # AI-agent map and repository conventions
-├── CONTRIBUTING.md  # Contributor workflow and PR checklist
-├── SECURITY.md      # Security and privacy policy
+├── README.md        # Documentation index (this file)
+├── PRODUCT.md       # Product vision, constraints, and commitments
 ├── DEVELOPMENT.md   # Architecture, setup, commands, Electron notes
-├── LOGGING.md       # Log format, event taxonomy, redaction, drain setup
-├── RELEASE.md       # Step-by-step release and update checklist
-├── Design.md        # Design system and UI rules
-├── ROADMAP.md          # Current backlog policy
-├── PlanningSummary.md  # Condensed history from old task docs
-└── AuditReport.md      # Latest dated audit only
+├── Design.md        # Design system, tokens, colors, UI copy, and motion rules
+├── LOGGING.md       # Structured log format, AI trace taxonomy, and log drain
+├── SECURITY.md      # Security model and data privacy policy
+├── RELEASE.md       # Step-by-step release and packaging checklist
+├── CONTRIBUTING.md  # Contributor workflow and PR checklist
+└── ROADMAP.md       # Current feature roadmap and backlog policy
 ```
 
-## Documentation rules
+## Documentation Guidelines
 
-When adding or changing docs:
-
-1. **Prefer updating an existing category** over creating a new top-level document.
-2. **Keep `CLAUDE.md` updated** with links to the current canonical files.
-3. **Keep audits in `AuditReport.md`** and replace it with the latest dated audit summary instead of creating many audit files.
-4. **Summarize historical implementation plans in `PlanningSummary.md`** instead of keeping many separate task documents.
-5. **Do not document secrets, private local data, or machine-specific paths** except as safe examples.
+1. **Keep documentation single-source-of-truth**: Avoid duplicate files across directories.
+2. **Preserve privacy**: Never document actual API keys, machine-specific paths, or personal user data.
+3. **Keep tokens aligned**: Design changes must reference [`docs/Design.md`](Design.md) and [`app/globals.css`](../app/globals.css).
