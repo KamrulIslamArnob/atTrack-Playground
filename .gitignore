@@ -64,8 +64,6 @@ next-env.d.ts
 public/resume/*.pdf
 public/resume/**/*.pdf
 
-# electron-builder installer output
-/release/
 
 # Temporary test/agent artifacts
 .playwright-mcp/
