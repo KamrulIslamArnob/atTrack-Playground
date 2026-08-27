@@ -86,17 +86,21 @@ export function BoardOverflowNavigator({
 
   return (
     <div className={cn("relative w-full flex-1 min-h-0", className)}>
-      {/* Left Overflow Edge Gradient & Floating Quick-Scroll Button */}
-      <AnimatePresence>
-        {canScroll && canScrollLeft && (
-          <motion.div
-            initial={shouldReduceMotion ? undefined : { opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={shouldReduceMotion ? undefined : { opacity: 0, x: -12 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="pointer-events-none absolute -left-6 top-0 bottom-0 min-h-full w-28 bg-gradient-to-r from-background via-background/85 to-transparent z-20"
-          >
-            <div className="sticky top-1/2 -translate-y-1/2 pl-3 flex items-center justify-start pointer-events-none">
+      {/* Sticky viewport-tracking container for left and right overflow controls */}
+      <div className="sticky top-0 left-0 right-0 h-0 pointer-events-none z-30">
+        {/* Left Overflow Quick-Scroll Button & Subtle Edge Halo */}
+        <AnimatePresence>
+          {canScroll && canScrollLeft && (
+            <motion.div
+              initial={shouldReduceMotion ? undefined : { opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, x: -12 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="absolute left-0 top-[45vh] -translate-y-1/2 flex items-center justify-start pointer-events-none"
+            >
+              {/* Soft edge fade halo around button */}
+              <div className="pointer-events-none absolute -left-6 -top-20 -bottom-20 w-24 bg-gradient-to-r from-background via-background/60 to-transparent blur-xs z-10" />
+
               <button
                 type="button"
                 onClick={handleScrollLeft}
@@ -113,26 +117,27 @@ export function BoardOverflowNavigator({
                 }}
                 aria-label="Scroll pipeline left"
                 title="Scroll pipeline left (click or press and hold)"
-                className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-background/95 backdrop-blur-md border border-border/90 shadow-xl text-foreground hover:bg-primary hover:text-white hover:border-primary hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="pointer-events-auto relative z-20 flex size-10 items-center justify-center rounded-full bg-background/95 backdrop-blur-md border border-border shadow-xl text-foreground hover:bg-primary hover:text-white hover:border-primary hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ml-1"
               >
                 <ChevronLeftIcon className="size-5 transition-transform" />
               </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Right Overflow Edge Gradient & Floating Quick-Scroll Button */}
-      <AnimatePresence>
-        {canScroll && canScrollRight && (
-          <motion.div
-            initial={shouldReduceMotion ? undefined : { opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={shouldReduceMotion ? undefined : { opacity: 0, x: 12 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="pointer-events-none absolute -right-6 top-0 bottom-0 min-h-full w-28 bg-gradient-to-l from-background via-background/85 to-transparent z-20"
-          >
-            <div className="sticky top-1/2 -translate-y-1/2 pr-3 flex items-center justify-end pointer-events-none">
+        {/* Right Overflow Quick-Scroll Button & Subtle Edge Halo */}
+        <AnimatePresence>
+          {canScroll && canScrollRight && (
+            <motion.div
+              initial={shouldReduceMotion ? undefined : { opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, x: 12 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="absolute right-0 top-[45vh] -translate-y-1/2 flex items-center justify-end pointer-events-none"
+            >
+              {/* Soft edge fade halo around button */}
+              <div className="pointer-events-none absolute -right-6 -top-20 -bottom-20 w-24 bg-gradient-to-l from-background via-background/60 to-transparent blur-xs z-10" />
+
               <button
                 type="button"
                 onClick={handleScrollRight}
@@ -149,14 +154,14 @@ export function BoardOverflowNavigator({
                 }}
                 aria-label="Scroll pipeline right"
                 title="Scroll pipeline right (click or press and hold)"
-                className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-background/95 backdrop-blur-md border border-border/90 shadow-xl text-foreground hover:bg-primary hover:text-white hover:border-primary hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="pointer-events-auto relative z-20 flex size-10 items-center justify-center rounded-full bg-background/95 backdrop-blur-md border border-border shadow-xl text-foreground hover:bg-primary hover:text-white hover:border-primary hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary mr-1"
               >
                 <ChevronRightIcon className="size-5 transition-transform" />
               </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {children}
     </div>
