@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { updateContactNotes, type Contact } from "@/lib/actions/contacts";
@@ -145,6 +145,12 @@ export function ContactCard({
     setEditingNote(false);
   };
 
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [contact.avatar_url]);
+
   const noteSegments = noteText ? parseNoteMentions(noteText) : [];
 
   return (
@@ -163,10 +169,11 @@ export function ContactCard({
             className="size-full text-left focus-visible:outline-none cursor-pointer"
             title="Click to view/edit contact"
           >
-            {contact.avatar_url ? (
+            {contact.avatar_url && !imgError ? (
               <img
                 src={contact.avatar_url}
                 alt={contact.name}
+                onError={() => setImgError(true)}
                 className="size-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
               />
             ) : (

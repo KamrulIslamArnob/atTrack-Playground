@@ -404,23 +404,51 @@ function dataUrlToFile(dataUrl: string, filename = "dropped-image.png"): File | 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (uploadingAvatar) {
+      toast.info("Please wait for photo upload to finish");
+      return;
+    }
+
     const nameVal = contactName.trim();
     if (!nameVal) {
       toast.error("Name is required");
       return;
     }
 
-    const avatarIsUsable =
-      !avatarUrl ||
-      avatarUrl.startsWith("/") ||
-      avatarUrl.startsWith("http://") ||
-      avatarUrl.startsWith("https://") ||
-      avatarUrl.startsWith("data:image/");
+    let finalAvatarUrl = avatarUrl?.trim() || null;
 
-    if (avatarUrl && !avatarIsUsable) {
+    // If a base64 data URL was entered, upload it to storage before saving
+    if (finalAvatarUrl && finalAvatarUrl.startsWith("data:image/")) {
+      const file = dataUrlToFile(finalAvatarUrl);
+      if (file) {
+        setUploadingAvatar(true);
+        try {
+          const avatarFormData = new FormData();
+          avatarFormData.append("avatar", file);
+          avatarFormData.append("name", nameVal);
+          avatarFormData.append("company_name", companyName(companyId) ?? "");
+          avatarFormData.append("role", tags.join(", "));
+          avatarFormData.append("email", contact?.email ?? "");
+          finalAvatarUrl = await uploadContactAvatar(avatarFormData);
+          setAvatarUrl(finalAvatarUrl);
+        } catch {
+          finalAvatarUrl = null;
+        } finally {
+          setUploadingAvatar(false);
+        }
+      }
+    }
+
+    const avatarIsUsable =
+      !finalAvatarUrl ||
+      finalAvatarUrl.startsWith("/") ||
+      finalAvatarUrl.startsWith("http://") ||
+      finalAvatarUrl.startsWith("https://");
+
+    if (finalAvatarUrl && !avatarIsUsable) {
       toast.info("Saved without photo — the image link wasn't a valid URL");
     }
-    const safeAvatarUrl = avatarIsUsable ? avatarUrl : null;
+    const safeAvatarUrl = avatarIsUsable ? finalAvatarUrl : null;
 
     setPending(true);
     try {
@@ -598,7 +626,17 @@ function dataUrlToFile(dataUrl: string, filename = "dropped-image.png"): File | 
                   spellCheck={false}
                   placeholder="Paste image link or drop photo here..."
                   value={avatarUrl ?? ""}
-                  onChange={(e) => setAvatarUrl(e.target.value.trim() || null)}
+                  onChange={async (e) => {
+                    const val = e.target.value.trim();
+                    if (val.startsWith("data:image/")) {
+                      const file = dataUrlToFile(val);
+                      if (file) {
+                        await processAvatarFile(file);
+                        return;
+                      }
+                    }
+                    setAvatarUrl(val || null);
+                  }}
                   className="h-9 pl-8 pr-16 text-xs bg-background/85 border-border/70 placeholder:text-muted-foreground/60 focus:bg-background"
                 />
                 <div className="absolute right-1.5 flex items-center gap-0.5">
@@ -903,12 +941,12 @@ function dataUrlToFile(dataUrl: string, filename = "dropped-image.png"): File | 
               <div />
             )}
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={pending || deleting}>
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={pending || deleting || uploadingAvatar}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={pending || deleting}>
-                {pending && <Spinner className="mr-2" />}
-                {mode === "edit" ? "Save changes" : "Add contact"}
+              <Button type="submit" size="sm" disabled={pending || deleting || uploadingAvatar}>
+                {(pending || uploadingAvatar) && <Spinner className="mr-2" />}
+                {uploadingAvatar ? "Uploading photo…" : mode === "edit" ? "Save changes" : "Add contact"}
               </Button>
             </div>
           </DialogFooter>
