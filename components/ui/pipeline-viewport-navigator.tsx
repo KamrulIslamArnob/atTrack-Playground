@@ -328,8 +328,8 @@ export function PipelineViewportNavigator({
         aria-controls="board-scroll-container"
         onKeyDown={handleKeyDown}
         className={cn(
-          "group relative flex items-center h-7 px-2 rounded-full border border-border/70 bg-card shadow-2xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-primary/40",
-          (isDragging || isHovered) && "border-primary/40 shadow-xs"
+          "group relative flex items-center h-7 px-2 rounded-full bg-card shadow-2xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-primary/40",
+          (isDragging || isHovered) && "shadow-xs"
         )}
       >
         {/* Elastic Scrollbar Track Rail */}
