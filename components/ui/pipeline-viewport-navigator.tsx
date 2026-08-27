@@ -85,30 +85,30 @@ export function PipelineViewportNavigator({
     };
   }, [scrollRef, updateFromScroll]);
 
-  // Frame-Rate Independent Exponential Smoothing Physics Engine (Lenis / critically-damped spring)
+  // Frame-Rate Independent Exponential Smoothing Physics Engine (Silky Lenis-style decay)
   const startPhysicsLoop = useCallback(() => {
     if (animFrameRef.current !== null) return;
     lastTimeRef.current = performance.now();
 
     const physicsStep = (time: number) => {
-      if (!scrollRef.current) {
+      const el = scrollRef.current;
+      if (!el) {
         animFrameRef.current = null;
         return;
       }
 
-      const el = scrollRef.current;
       const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
       const prevTime = lastTimeRef.current ?? time;
       lastTimeRef.current = time;
 
       // Delta time in seconds (clamped to prevent huge leaps on background tab wake)
-      const dt = Math.min((time - prevTime) / 1000, 0.048);
+      const dt = Math.min((time - prevTime) / 1000, 0.033);
 
       const current = virtualScrollRef.current;
       const target = Math.max(0, Math.min(maxScroll, targetScrollRef.current));
       const diff = target - current;
 
-      if (Math.abs(diff) < 0.25) {
+      if (Math.abs(diff) < 0.3) {
         virtualScrollRef.current = target;
         el.scrollLeft = target;
         animFrameRef.current = null;
@@ -116,14 +116,13 @@ export function PipelineViewportNavigator({
         return;
       }
 
-      // Exponential Decay Smoothing: f(t) = 1 - e^(-lambda * dt)
-      // lambda = 22 for snappy zero-latency responsiveness with buttery curve
-      const lambda = 22;
+      // Smooth exponential decay: lambda = 12 for buttery fluid glide
+      const lambda = 12;
       const factor = 1 - Math.exp(-lambda * dt);
       const nextScroll = current + diff * factor;
 
       virtualScrollRef.current = nextScroll;
-      el.scrollLeft = Math.round(nextScroll * 10) / 10;
+      el.scrollLeft = nextScroll;
 
       animFrameRef.current = requestAnimationFrame(physicsStep);
     };
@@ -147,8 +146,8 @@ export function PipelineViewportNavigator({
 
       const rawDelta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       // Normalise delta based on input device mode
-      const scaleFactor = e.deltaMode === 1 ? 38 : e.deltaMode === 2 ? 650 : 2.6;
-      const scrollImpulse = rawDelta * scaleFactor * (e.deltaMode === 0 ? 0.95 : 1.1);
+      const scaleFactor = e.deltaMode === 1 ? 24 : e.deltaMode === 2 ? 400 : 1.2;
+      const scrollImpulse = rawDelta * scaleFactor;
 
       targetScrollRef.current = Math.max(
         0,
@@ -200,7 +199,7 @@ export function PipelineViewportNavigator({
 
     const now = performance.now();
     pointerHistory.current.push({ x: e.clientX, time: now });
-    // Keep last 60ms of movement samples for kinetic inertia calculation
+    // Keep last 80ms of movement samples for kinetic inertia calculation
     pointerHistory.current = pointerHistory.current.filter((p) => now - p.time <= 80);
 
     const rect = trackRef.current.getBoundingClientRect();
@@ -260,14 +259,14 @@ export function PipelineViewportNavigator({
         const pxDiff = newest.x - oldest.x;
         const velocityPxPerSec = pxDiff / timeDiff;
 
-        if (Math.abs(velocityPxPerSec) > 80) {
+        if (Math.abs(velocityPxPerSec) > 50) {
           const rect = trackRef.current.getBoundingClientRect();
           const BALL_SIZE = 14;
           const usableTrack = Math.max(1, rect.width - BALL_SIZE);
           const scrubRatio = maxScroll / usableTrack;
 
           // Momentum fling projection with natural damping
-          const impulseScroll = velocityPxPerSec * 0.28 * scrubRatio;
+          const impulseScroll = velocityPxPerSec * 0.35 * scrubRatio;
           targetScrollRef.current = Math.max(
             0,
             Math.min(maxScroll, virtualScrollRef.current + impulseScroll)
@@ -345,9 +344,9 @@ export function PipelineViewportNavigator({
           )}
           title="Drag or click to scroll pipeline"
         >
-          {/* Active progress fill */}
+          {/* Active progress fill - synchronized with thumb without transition lag */}
           <div
-            className="absolute left-0 top-0 bottom-0 rounded-full bg-primary/20 transition-all duration-75"
+            className="absolute left-0 top-0 bottom-0 rounded-full bg-primary/25 pointer-events-none"
             style={{ width: `calc(${scrollProgress * 100}% - ${scrollProgress * BALL_SIZE}px + ${BALL_SIZE / 2}px)` }}
           />
 
@@ -368,9 +367,9 @@ export function PipelineViewportNavigator({
                     scale: { duration: 0.08 },
                   }
                 : {
-                    left: { type: "spring", stiffness: 450, damping: 36 },
-                    x: { type: "spring", stiffness: 500, damping: 26 },
-                    scale: { type: "spring", stiffness: 400, damping: 25 },
+                    left: { duration: 0 }, // 1:1 direct tracking with scroll progress to eliminate lag/jitter
+                    x: { type: "spring", stiffness: 450, damping: 28 },
+                    scale: { type: "spring", stiffness: 350, damping: 24 },
                   }
             }
             className={cn(
