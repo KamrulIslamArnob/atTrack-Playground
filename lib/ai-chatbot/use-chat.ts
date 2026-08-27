@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { generateSessionTitle, type ChatSession, type Message } from "./sessions";
+import { generateSessionTitle } from "./sessions";
 import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
 import type { ChatArtifact } from "@/lib/types/chat-artifact";
 

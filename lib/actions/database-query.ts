@@ -39,7 +39,7 @@ const ALLOWED_TABLES = [
  */
 export async function executeLocalSqlQuery(sqlText: string): Promise<SqlQueryResult> {
   try {
-    const { userId } = await getUser();
+    await getUser();
     let cleanSql = sqlText.trim().replace(/^```sql\s*/i, "").replace(/\s*```$/i, "").trim();
 
     // Remove trailing semicolons for uniform execution

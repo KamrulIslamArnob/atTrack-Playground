@@ -20,7 +20,7 @@ export const webSearchTool: ToolDefinition = {
     },
     required: ["url"],
   },
-  execute: async (args, _ctx) => {
+  execute: async (args) => {
     const url = typeof args.url === "string" ? args.url : "";
     if (!/^https?:\/\//i.test(url)) {
       return { content: "Invalid or missing URL; provide a concrete https URL.", citations: [] };

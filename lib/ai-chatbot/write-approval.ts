@@ -9,14 +9,7 @@ import { getDb } from "@/lib/db/sqlite";
 import { createDbClient } from "@/lib/db/client";
 import { ensureApplication } from "@/lib/actions/board";
 import { logResourceActivity } from "@/lib/actions/activity-log";
-import {
-  tableExists,
-  getColumns,
-  getColumnsWithTypes,
-  resolveOwnerColumn,
-  isValidIdentifier,
-  ALWAYS_BLOCKED_COLUMNS,
-} from "@/lib/ai/tools/db-utils";
+import { resolveOwnerColumn } from "@/lib/ai/tools/db-utils";
 
 export interface PendingWrite {
   approvalId: string;
