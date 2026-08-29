@@ -225,12 +225,55 @@ export async function getOnboardingStatus(): Promise<{
   };
 }
 
-/** Deletes all sample/demo data from the workspace */
+/** Deletes all sample/demo data from the workspace in one click */
 export async function clearSampleDataAction(): Promise<{ success: boolean; removedCount: number }> {
   const { userId } = await getUser();
   const res = deleteSampleData(userId);
 
-  safeRevalidatePaths(["/", "/overview", "/jobs", "/network"]);
+  safeRevalidatePaths([
+    "/",
+    "/overview",
+    "/jobs",
+    "/board",
+    "/applications",
+    "/interviews",
+    "/network",
+    "/resources",
+    "/settings",
+    "/preferences",
+  ]);
 
   return { success: true, removedCount: res.removedCount };
 }
+
+/** Seeds the comprehensive Big Tech & AI showcase demo suite in one click */
+export async function seedDemoDataAction(): Promise<{
+  success: boolean;
+  jobCount: number;
+  companyCount: number;
+  contactCount: number;
+}> {
+  const { userId } = await getUser();
+  const res = seedSampleJobsAndContacts({ userId });
+
+  safeRevalidatePaths([
+    "/",
+    "/overview",
+    "/jobs",
+    "/board",
+    "/applications",
+    "/interviews",
+    "/network",
+    "/resources",
+    "/settings",
+    "/preferences",
+  ]);
+
+  return {
+    success: true,
+    jobCount: res.jobIds.length,
+    companyCount: res.companyIds.length,
+    contactCount: res.contactIds.length,
+  };
+}
+

@@ -2,18 +2,29 @@ const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron")
 const crypto = require("node:crypto");
 const path = require("node:path");
 const os = require("node:os");
-const { loadSettings, saveSettings } = require("./settings");
-const { findPreferredPort, waitForReady, spawnServer, stopServer } = require("./server");
+const { loadSettings, saveSettings, readInstallerDataDir, discoverExistingDataDir } = require("./settings");
+const {
+  findPreferredPort,
+  waitForReady,
+  spawnServer,
+  stopServer,
+  writeServerManifest,
+  removeServerManifest,
+} = require("./server");
 const { createTray } = require("./tray");
 const { ensureSanitizedDataDir, resolveNestedDataDir } = require("./data-dir");
 
-// Determines %APPDATA%\AtTrack (userData) instead of %APPDATA%\Electron/whatever the
-// packaged exe's internal name is — must be called before any app.getPath() use.
-//
-// This is the on-disk identity, NOT display copy: it must keep matching
-// electron-builder.json's "productName" and the userData folder existing installs
-// already use. Human-visible strings say "atTrack"; this one deliberately does not.
-app.setName("AtTrack");
+// Determines %APPDATA%\BetterJob (userData)
+app.setName("BetterJob");
+
+// Register custom protocol client for seamless browser SSO / deep link activation
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("betterjob", process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient("betterjob");
+}
 
 let mainWindow = null;
 let serverProcess = null;
@@ -21,6 +32,55 @@ let currentPort = null;
 let currentSettings = null;
 let trayManager = null;
 let isQuitting = false;
+let isShuttingDown = false;
+let pendingDeepLinkPayload = null;
+
+function handleDeepLinkUrl(rawUrl) {
+  try {
+    if (!rawUrl || typeof rawUrl !== "string" || !rawUrl.startsWith("betterjob://")) return;
+    console.log("[main] Handling deep link:", rawUrl);
+    const parsed = new URL(rawUrl);
+    const key = parsed.searchParams.get("key");
+    const token = parsed.searchParams.get("token");
+    const email = parsed.searchParams.get("email");
+    const payload = { key, token, email };
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("app:deep-link-activate", payload);
+    } else {
+      pendingDeepLinkPayload = payload;
+    }
+  } catch (err) {
+    console.warn("[main] Deep link parsing error:", err.message);
+  }
+}
+
+async function shutdownApp() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  isQuitting = true;
+
+  try {
+    trayManager?.destroy();
+  } catch {}
+
+  try {
+    removeServerManifest({
+      dataDir: currentSettings?.dataDir,
+      userDataDir: app.getPath("userData"),
+    });
+  } catch {}
+
+  if (serverProcess) {
+    console.log("[main] Shutting down server process...");
+    const proc = serverProcess;
+    serverProcess = null;
+    await stopServer(proc, 5000);
+    console.log("[main] Server process stopped.");
+  }
+
+  app.quit();
+}
 
 function applyStartupSettings(enable) {
   if (app.isPackaged) {
@@ -49,12 +109,34 @@ function showMainWindow() {
   }
 }
 
+// Check cold start args for deep link
+const initialDeepLink = process.argv.find(
+  (arg) => typeof arg === "string" && arg.startsWith("betterjob://")
+);
+if (initialDeepLink) {
+  handleDeepLinkUrl(initialDeepLink);
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  app.on("second-instance", (_event, commandLine) => {
     showMainWindow();
+    if (Array.isArray(commandLine)) {
+      const deepLink = commandLine.find(
+        (arg) => typeof arg === "string" && arg.startsWith("betterjob://")
+      );
+      if (deepLink) {
+        handleDeepLinkUrl(deepLink);
+      }
+    }
+  });
+
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    showMainWindow();
+    handleDeepLinkUrl(url);
   });
 
   app.whenReady().then(main).catch((err) => {
@@ -64,18 +146,28 @@ if (!gotLock) {
 
   app.on("window-all-closed", () => {
     if (!currentSettings?.closeToTray && process.platform !== "darwin") {
-      isQuitting = true;
-      stopServer(serverProcess);
-      app.quit();
+      shutdownApp();
     }
   });
 
-  app.on("before-quit", () => {
-    isQuitting = true;
-    stopServer(serverProcess);
-    trayManager?.destroy();
+  app.on("before-quit", (event) => {
+    if (serverProcess && !isShuttingDown) {
+      event.preventDefault();
+      shutdownApp();
+    } else {
+      isQuitting = true;
+      trayManager?.destroy();
+    }
+  });
+
+  app.on("will-quit", (event) => {
+    if (serverProcess && !isShuttingDown) {
+      event.preventDefault();
+      shutdownApp();
+    }
   });
 }
+
 
 function createMainWindow(url) {
   Menu.setApplicationMenu(null);
@@ -168,16 +260,47 @@ async function main() {
     (app.isPackaged && Boolean(app.getLoginItemSettings()?.wasOpenedAsHidden));
 
   if (!settings.dataDir) {
-    const chosen = await promptForDataDir();
-    if (!chosen) {
-      dialog.showErrorBox(
-        "Setup required",
-        "BetterJob needs a folder to store its data. Please relaunch and choose one."
-      );
-      app.quit();
-      return;
+    // Auto-detect data directory: registry → existing DB scan → prompt
+    let autoDetected = null;
+
+    // 1. Check NSIS installer registry key (HKCU\Software\BetterJob\DataDir)
+    const registryDir = readInstallerDataDir();
+    if (registryDir) {
+      const { existsSync } = require("node:fs");
+      const { mkdirSync } = require("node:fs");
+      try { mkdirSync(registryDir, { recursive: true }); } catch {}
+      if (existsSync(registryDir)) {
+        autoDetected = registryDir;
+        console.log(`[main] Data directory from installer registry: ${registryDir}`);
+      }
     }
-    settings.dataDir = chosen;
+
+    // 2. Scan common locations for existing attrack.db
+    if (!autoDetected) {
+      const discovered = discoverExistingDataDir();
+      if (discovered) {
+        autoDetected = discovered;
+        console.log(`[main] Discovered existing data directory: ${discovered}`);
+      }
+    }
+
+    if (autoDetected) {
+      // Validate and sanitize the auto-detected path
+      const sanitized = ensureSanitizedDataDir(autoDetected);
+      settings.dataDir = sanitized || autoDetected;
+    } else {
+      // 3. Fall back to manual prompt
+      const chosen = await promptForDataDir();
+      if (!chosen) {
+        dialog.showErrorBox(
+          "Setup required",
+          "BetterJob needs a folder to store its data. Please relaunch and choose one."
+        );
+        app.quit();
+        return;
+      }
+      settings.dataDir = chosen;
+    }
     currentSettings = settings;
   } else {
     // Sanitize and nest existing data directory if needed, auto-migrating any loose files
@@ -207,38 +330,67 @@ async function main() {
 
   // Prefer last launch's resolved port, then the fixed ladder the extension
   // also probes (see extension/background/service-worker.js CANDIDATE_PORTS)
-  // — makes the app's address predictable across relaunches so the Chrome
-  // extension can find it automatically instead of the user reading a random
-  // port out of Settings and retyping it every time the app restarts.
-  const preferred = settings.lastPort || 3788;
-  const port = await findPreferredPort([preferred, 3788, 3789, 3790, 3791, 3792]);
-  currentPort = port;
-  settings.lastPort = port;
-
-  saveSettings(settings);
-
   const standaloneDir = app.isPackaged
     ? path.join(process.resourcesPath, "standalone")
     : path.join(__dirname, "..", ".next", "standalone");
 
-  serverProcess = spawnServer({
-    standaloneDir,
-    port,
-    env: {
-      SQLITE_DIR: settings.dataDir,
-      STORAGE_DIR: path.join(settings.dataDir, "storage"),
-      ENCRYPTION_KEY: settings.encryptionKey,
-      SMTP_ENCRYPTION_KEY: settings.encryptionKey,
-      GEMINI_API_KEY: settings.geminiApiKey || "",
-    },
-  });
+  const candidatePorts = [settings.lastPort || 3788, 3788, 3789, 3790, 3791, 3792, 3793, 3794, 3795];
+  const uniqueCandidates = [...new Set(candidatePorts.filter(Boolean))];
 
-  const url = `http://127.0.0.1:${port}`;
+  let serverStarted = false;
+  let lastError = null;
 
-  try {
-    await waitForReady(url);
-  } catch (err) {
-    dialog.showErrorBox("BetterJob failed to start", String(err));
+  for (const port of uniqueCandidates) {
+    console.log(`[main] Attempting to start server on port ${port}...`);
+    try {
+      if (serverProcess) {
+        await stopServer(serverProcess, 5000);
+        serverProcess = null;
+      }
+
+      serverProcess = spawnServer({
+        standaloneDir,
+        port,
+        env: {
+          SQLITE_DIR: settings.dataDir,
+          STORAGE_DIR: path.join(settings.dataDir, "storage"),
+          ENCRYPTION_KEY: settings.encryptionKey,
+          SMTP_ENCRYPTION_KEY: settings.encryptionKey,
+          GEMINI_API_KEY: settings.geminiApiKey || "",
+        },
+      });
+
+      currentPort = port;
+      const url = `http://127.0.0.1:${port}`;
+      await waitForReady(url, { timeoutMs: 15000, intervalMs: 200, child: serverProcess });
+
+      settings.lastPort = port;
+      saveSettings(settings);
+      serverStarted = true;
+      writeServerManifest(port, {
+        pid: serverProcess?.pid,
+        dataDir: settings.dataDir,
+        userDataDir: app.getPath("userData"),
+        appName: app.getName(),
+        version: app.getVersion(),
+      });
+      console.log(`[main] Standalone server successfully listening at ${url}`);
+      break;
+    } catch (err) {
+      console.warn(`[main] Port ${port} failed or server exited:`, err.message);
+      lastError = err;
+      if (serverProcess) {
+        await stopServer(serverProcess, 5000);
+        serverProcess = null;
+      }
+    }
+  }
+
+  if (!serverStarted) {
+    dialog.showErrorBox(
+      "BetterJob failed to start server",
+      lastError ? String(lastError.message || lastError) : "All candidate ports failed to bind."
+    );
     app.quit();
     return;
   }
@@ -259,12 +411,11 @@ async function main() {
     },
     onShowApp: () => showMainWindow(),
     onQuit: () => {
-      isQuitting = true;
-      app.quit();
+      shutdownApp();
     },
   });
 
-  createMainWindow(url);
+  createMainWindow(`http://127.0.0.1:${currentPort}`);
 
   if (!startHidden) {
     mainWindow.once("ready-to-show", () => {
@@ -295,6 +446,12 @@ async function main() {
     }
   });
   ipcMain.handle("app:is-maximized", () => mainWindow?.isMaximized() ?? false);
+  ipcMain.handle("app:get-pending-deep-link", () => {
+    const payload = pendingDeepLinkPayload;
+    pendingDeepLinkPayload = null;
+    return payload;
+  });
+
 
   // Local workspace folder picker — used by Add Local Workspace Folder dialog
   ipcMain.handle("app:pick-folder", async () => {

@@ -17,7 +17,7 @@ import type {
 export function evaluateConnectorAccess(
   connectorId: string,
   action: ConnectorActionType,
-  permissionMode: PermissionMode = "bypass"
+  permissionMode: PermissionMode = "ask"
 ): AccessDecision {
   const connector = getConnector(connectorId);
   const connectorName = connector?.name ?? connectorId;
@@ -31,6 +31,20 @@ export function evaluateConnectorAccess(
       status: "blocked",
       reason: `Blocked: Read-only (View) mode is active. Operations that modify state or execute actions on "${connectorName}" are prevented.`,
       recommendation: `Switch to "Ask before changes" or "Bypass permissions" in the composer toolbar to allow modifications.`,
+    };
+  }
+
+  // 1.5. Deletes are destructive and hard to undo — every mode (including
+  // Bypass/"Auto") stages an interactive Allow/Deny instead of auto-executing.
+  // This is the one action Bypass mode never shortcuts, so an indirect
+  // prompt injection (a malicious page fetched by web_search, an attacker-
+  // controlled repo description via search_github, etc.) can never delete
+  // data without a human clicking Allow — regardless of what permission
+  // mode happens to be active when the model decides to call the tool.
+  if (action === "delete") {
+    return {
+      status: "stage_approval",
+      reason: `Deletions on "${connectorName}" always require your explicit confirmation, regardless of the active permission mode.`,
     };
   }
 
@@ -64,7 +78,7 @@ export function evaluateConnectorAccess(
 export function stageConnectorOperation(
   input: StageConnectorOperationInput
 ): StagedOperationResult {
-  const mode = input.permissionMode ?? "bypass";
+  const mode = input.permissionMode ?? "ask";
   const decision = evaluateConnectorAccess(input.connectorId, input.action, mode);
 
   if (decision.status === "blocked") {

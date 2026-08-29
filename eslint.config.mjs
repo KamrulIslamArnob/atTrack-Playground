@@ -40,6 +40,9 @@ const eslintConfig = defineConfig([
     // pdf.js worker in here on install; linting it is meaningless noise.
     "public/**",
     "next-env.d.ts",
+    // Separate, standalone Next.js project nested in this directory tree —
+    // its own package.json/node_modules/eslint config; not part of atTrack.
+    "Better Job - Website/**",
   ]),
 ]);
 

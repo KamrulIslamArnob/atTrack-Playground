@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
-import { User, Palette, Sparkles, Monitor, Globe } from "lucide-react";
+import { User, Palette, Sparkles, Monitor, Globe, Gauge, RefreshCw, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Settings cards
@@ -13,17 +13,32 @@ import { AiProvidersSettings } from "@/components/settings/ai-providers-settings
 import { SmtpConfigFormWrapper } from "@/components/settings/smtp-config-form-wrapper";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
 import { DataBackupCard } from "@/components/settings/data-backup-card";
+import { GistSyncCard } from "@/components/settings/gist-sync-card";
+import { CloudSyncCard } from "@/components/settings/cloud-sync-card";
 import { OnboardingSettingsCard } from "@/components/settings/onboarding-settings-card";
 import { RawDatabaseToggle } from "@/components/settings/raw-database-toggle";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { UpdateChecker } from "@/components/settings/update-checker";
 import { StartupServiceCard } from "@/components/settings/startup-service-card";
+import { PerformanceSettingsTab } from "@/components/settings/performance-settings-tab";
+import { LicenseInfoCard } from "@/components/settings/license-info-card";
 
 import type { Profile } from "@/components/settings/profile-form";
 import type { SmtpConfig } from "@/lib/actions/smtp";
 import type { AiProviderSummary, TaskType } from "@/lib/types/ai-providers";
+import type { GithubSyncStatus } from "@/lib/actions/gist-sync";
+import type { CloudSyncStatus } from "@/lib/actions/cloud-sync";
+import type { LicenseState } from "@/lib/actions/license";
 
-export type SettingsTabId = "information" | "appearance" | "ai" | "extension" | "desktop";
+export type SettingsTabId =
+  | "information"
+  | "appearance"
+  | "ai"
+  | "extension"
+  | "desktop"
+  | "performance"
+  | "backup"
+  | "database";
 
 interface TabItem {
   id: SettingsTabId;
@@ -38,7 +53,7 @@ const SETTINGS_TABS: TabItem[] = [
     id: "information",
     label: "Information",
     icon: User,
-    description: "Personal profile, email configuration, backups, and local storage",
+    description: "Personal profile and email configuration",
   },
   {
     id: "appearance",
@@ -64,6 +79,24 @@ const SETTINGS_TABS: TabItem[] = [
     icon: Monitor,
     description: "Desktop shell configuration, background services, and auto-updates",
   },
+  {
+    id: "performance",
+    label: "Performance",
+    icon: Gauge,
+    description: "Live system metrics, RAM/CPU load, process status, paths, and technical diagnostics",
+  },
+  {
+    id: "backup",
+    label: "Backup and sync",
+    icon: RefreshCw,
+    description: "Cloud backup, Git Gist synchronization, and JSON data exports",
+  },
+  {
+    id: "database",
+    label: "Database",
+    icon: Database,
+    description: "Raw database inspector, demo data management, and reset controls",
+  },
 ];
 
 interface SettingsTabViewProps {
@@ -75,6 +108,9 @@ interface SettingsTabViewProps {
   aiProviders: AiProviderSummary[];
   aiTaskRoutes: Record<TaskType, AiProviderSummary[]>;
   extensionSecret: string;
+  githubSyncStatus: GithubSyncStatus;
+  cloudSyncStatus: CloudSyncStatus;
+  licenseState?: LicenseState;
 }
 
 function SettingsTabContent({
@@ -86,20 +122,33 @@ function SettingsTabContent({
   aiProviders,
   aiTaskRoutes,
   extensionSecret,
+  githubSyncStatus,
+  cloudSyncStatus,
+  licenseState,
 }: SettingsTabViewProps) {
   const searchParams = useSearchParams();
 
-  const tabParam = searchParams.get("tab") as SettingsTabId | null;
+  const tabParam = searchParams.get("tab");
+  const normalizedTabParam =
+    tabParam === "backup-sync"
+      ? "backup"
+      : (tabParam as SettingsTabId | null);
   const initialTab: SettingsTabId =
-    tabParam && SETTINGS_TABS.some((t) => t.id === tabParam) ? tabParam : "information";
+    normalizedTabParam && SETTINGS_TABS.some((t) => t.id === normalizedTabParam)
+      ? normalizedTabParam
+      : "information";
 
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   useEffect(() => {
-    if (tabParam && SETTINGS_TABS.some((t) => t.id === tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    if (
+      normalizedTabParam &&
+      SETTINGS_TABS.some((t) => t.id === normalizedTabParam) &&
+      normalizedTabParam !== activeTab
+    ) {
+      setActiveTab(normalizedTabParam);
     }
-  }, [tabParam, activeTab]);
+  }, [normalizedTabParam, activeTab]);
 
   const handleSelectTab = useCallback(
     (tabId: SettingsTabId) => {
@@ -183,80 +232,94 @@ function SettingsTabContent({
         className="animate-in fade-in-50 duration-150"
       >
         {activeTab === "information" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            {/* Top Left: Profile Identity Hero */}
-            <div className="lg:col-span-7">
-              <ProfileSettingsCard
-                profile={profile}
-                avatarUrl={avatarUrl}
-                fullName={fullName}
-              />
-            </div>
+          <div className="space-y-6">
+            {/* Desktop Activation License Hero Card */}
+            {licenseState && <LicenseInfoCard licenseState={licenseState} />}
 
-            {/* Top Right: Email SMTP Configuration */}
-            <div className="lg:col-span-5">
-              <SmtpConfigFormWrapper config={smtpConfig} />
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Top Left: Profile Identity Hero */}
+              <div className="lg:col-span-7">
+                <ProfileSettingsCard
+                  profile={profile}
+                  avatarUrl={avatarUrl}
+                  fullName={fullName}
+                />
+              </div>
 
-            {/* Bottom Left: Data Backups & Export */}
-            <div className="lg:col-span-7">
-              <section
-                aria-labelledby="data-heading"
-                className="rounded-2xl bg-muted p-4 sm:p-5"
-              >
-                <div className="mb-3">
-                  <h3 id="data-heading" className="text-sm font-semibold tracking-tight text-foreground">
-                    Data backups and export
+              {/* Top Right: Email SMTP Configuration */}
+              <div className="lg:col-span-5">
+                <SmtpConfigFormWrapper config={smtpConfig} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "backup" && (
+          <div className="space-y-6">
+            {/* Data Backups & Export */}
+            <section
+              aria-labelledby="data-heading"
+              className="rounded-2xl bg-muted p-4 sm:p-5"
+            >
+              <div className="mb-3">
+                <h3 id="data-heading" className="text-sm font-semibold tracking-tight text-foreground">
+                  Data backups and export
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Export, copy, or restore your local database in JSON format
+                </p>
+              </div>
+              <div className="-mx-1 divide-y divide-border/50">
+                <DataBackupCard />
+              </div>
+            </section>
+
+            {/* Off-device sync destinations */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <CloudSyncCard initialStatus={cloudSyncStatus} />
+              <GistSyncCard initialStatus={githubSyncStatus} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "database" && (
+          <div className="space-y-6">
+            {/* General Preferences */}
+            <section
+              aria-labelledby="database-general-heading"
+              className="rounded-2xl bg-muted p-4 sm:p-5"
+            >
+              <div className="mb-3">
+                <h3 id="database-general-heading" className="text-sm font-semibold tracking-tight text-foreground">
+                  General preferences
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Workspace setup, sample data cleanup, and database developer mode
+                </p>
+              </div>
+              <div className="-mx-1 divide-y divide-border/50">
+                <RawDatabaseToggle initialEnabled={showRawDatabase} />
+                <OnboardingSettingsCard />
+              </div>
+            </section>
+
+            {/* Danger Zone */}
+            <section
+              aria-labelledby="database-danger-heading"
+              className="rounded-2xl border border-destructive/25 bg-destructive/5 p-4 sm:p-5"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <h3 id="database-danger-heading" className="text-sm font-semibold text-destructive">
+                    Delete all data
                   </h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Export, copy, or restore your local database in JSON format
+                  <p className="mt-0.5 max-w-[48ch] text-xs leading-relaxed text-muted-foreground">
+                    Permanently wipes every job, document, and local database record from this device.
                   </p>
                 </div>
-                <div className="-mx-1 divide-y divide-border/50">
-                  <DataBackupCard />
-                </div>
-              </section>
-            </div>
-
-            {/* Bottom Right: General Preferences & Danger Zone */}
-            <div className="lg:col-span-5 space-y-5">
-              {/* General Preferences */}
-              <section
-                aria-labelledby="general-heading"
-                className="rounded-2xl bg-muted p-4 sm:p-5"
-              >
-                <div className="mb-3">
-                  <h3 id="general-heading" className="text-sm font-semibold tracking-tight text-foreground">
-                    General preferences
-                  </h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Workspace setup, sample data cleanup, and database developer mode
-                  </p>
-                </div>
-                <div className="-mx-1 divide-y divide-border/50">
-                  <OnboardingSettingsCard />
-                  <RawDatabaseToggle initialEnabled={showRawDatabase} />
-                </div>
-              </section>
-
-              {/* Danger Zone */}
-              <section
-                aria-labelledby="danger-heading"
-                className="rounded-2xl border border-destructive/25 bg-destructive/5 p-4 sm:p-5"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <h3 id="danger-heading" className="text-sm font-semibold text-destructive">
-                      Delete all data
-                    </h3>
-                    <p className="mt-0.5 max-w-[48ch] text-xs leading-relaxed text-muted-foreground">
-                      Permanently wipes every job, document, and local database record from this device.
-                    </p>
-                  </div>
-                  <DeleteAccount confirmPhrase={fullName || "DELETE"} />
-                </div>
-              </section>
-            </div>
+                <DeleteAccount confirmPhrase={fullName || "DELETE"} />
+              </div>
+            </section>
           </div>
         )}
 
@@ -297,6 +360,12 @@ function SettingsTabContent({
                 <StartupServiceCard />
               </div>
             </section>
+          </div>
+        )}
+
+        {activeTab === "performance" && (
+          <div className="space-y-6">
+            <PerformanceSettingsTab />
           </div>
         )}
       </div>

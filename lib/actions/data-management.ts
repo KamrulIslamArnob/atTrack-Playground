@@ -39,6 +39,7 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
     { data: rawDeadlines },
     { data: rawContacts },
     { data: rawDocuments },
+    { data: rawJobDocuments },
     { data: profile },
   ] = await Promise.all([
     supabase.from("jobs").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
@@ -48,7 +49,11 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
     supabase.from("interviews").select("*").eq("user_id", userId),
     supabase.from("job_deadlines").select("*").eq("user_id", userId),
     supabase.from("contacts").select("*").eq("user_id", userId),
-    supabase.from("documents").select("id, user_id, job_id, name, type, file_path, generated_kind, content, created_at").eq("user_id", userId),
+    // documents has no job_id column — the job<->document relationship
+    // lives in the job_documents junction table (a resume can attach to
+    // many jobs), joined in JS below via jobDocumentLinks.
+    supabase.from("documents").select("id, user_id, name, type, file_path, generated_kind, content, created_at").eq("user_id", userId),
+    supabase.from("job_documents").select("job_id, document_id"),
     supabase.from("profiles").select("full_name, headline").eq("id", userId).maybeSingle(),
   ]);
 
@@ -60,6 +65,7 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
   const deadlines = (rawDeadlines ?? []) as Array<Record<string, unknown>>;
   const contacts = (rawContacts ?? []) as Array<Record<string, unknown>>;
   const documents = (rawDocuments ?? []) as Array<Record<string, unknown>>;
+  const jobDocumentLinks = (rawJobDocuments ?? []) as Array<{ job_id: string; document_id: string }>;
 
   const formattedJobs: JobDetailData[] = jobsList.map((j) => {
     const jobId = j.id as string;
@@ -91,14 +97,11 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
       }));
 
     const jobContacts = contacts
-      .filter((ct) => ct.job_id === jobId || ct.company_id === companyId)
+      .filter((ct) => ct.job_id === jobId)
       .map((ct) => ({
         id: ct.id as string,
         name: ct.name as string,
         role: (ct.role as string) || (ct.title as string) || null,
-        // This export doesn't join job_contacts, so the real per-job value
-        // isn't available here — fall back to the contact's global role,
-        // same default used when linking a contact to a job.
         relationship: (ct.role as string) || (ct.title as string) || null,
         email: (ct.email as string) || null,
         phone: (ct.phone as string) || null,
@@ -112,8 +115,11 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
         company_name: comp ? (comp.name as string) : null,
       }));
 
+    const linkedDocumentIds = new Set(
+      jobDocumentLinks.filter((link) => link.job_id === jobId).map((link) => link.document_id)
+    );
     const jobDocuments: JobDocument[] = documents
-      .filter((d) => d.job_id === jobId)
+      .filter((d) => linkedDocumentIds.has(d.id as string))
       .map((d) => ({
         id: d.id as string,
         name: d.name as string,
@@ -198,7 +204,6 @@ export async function exportAllJobsData(): Promise<JobsBackupPayload> {
       contacts: jobContacts,
       documents: jobDocuments,
       resumeOptions: [],
-      boardLists,
       deadlines: jobDeadlines,
       smtpReady: false,
       applicantName: profile?.full_name ?? "",

@@ -360,7 +360,7 @@ Deliberate conventions. Follow them; don't "upgrade" them to a component without
 
 atTrack talks like a competent colleague: plain, direct, unexcited. It's a private tool on the user's own machine, not a service trying to delight them.
 
-**The product name is `atTrack`** — lowercase `a`, capital `T`, in every user-facing string, at the start of a sentence included. The only exceptions are deliberate on-disk identities that must not churn: `app.setName("AtTrack")` in `electron/main.js` and `"productName": "AtTrack"` in `electron-builder.json` determine the userData folder and installer name for existing installs.
+**The product name is `atTrack`** — lowercase `a`, capital `T`, in every user-facing string, at the start of a sentence included. The only exceptions are deliberate on-disk identities that must not churn: `app.setName("AtTrack")` in `electron/main.js` and `"productName": "AtTrack"` in `electron-builder.js` determine the userData folder and installer name for existing installs.
 
 ### Rules
 

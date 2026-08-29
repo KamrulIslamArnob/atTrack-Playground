@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, XCircle, ChevronDown } from "lucide-react";
@@ -8,9 +8,12 @@ import { CopyIcon } from "@/components/ui/copy";
 import { CheckIcon } from "@/components/ui/check";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { RefreshCWIcon } from "@/components/ui/refresh-cw";
+import { rotateExtensionSecret } from "@/lib/actions/extension";
 import { toast } from "sonner";
 
-export function ExtensionSettings({ secret }: { secret: string }) {
+export function ExtensionSettings({ secret: initialSecret }: { secret: string }) {
+  const [secret, setSecret] = useState(initialSecret);
+  const [rotating, setRotating] = useState(false);
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<"idle" | "connected" | "failed">("idle");
   const [copied, setCopied] = useState(false);
@@ -18,14 +21,72 @@ export function ExtensionSettings({ secret }: { secret: string }) {
   const [firecrawlKey, setFirecrawlKey] = useState("");
   const [savingKey, setSavingKey] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
+  const [extensionDetected, setExtensionDetected] = useState(false);
+  const [extensionVersion, setExtensionVersion] = useState<string | null>(null);
+  const [extensionSynced, setExtensionSynced] = useState(false);
+
+  useEffect(() => {
+    setSecret(initialSecret);
+  }, [initialSecret]);
+
+  const broadcastPairing = useCallback((targetSecret = secret, apiKey = firecrawlKey) => {
+    if (typeof window === "undefined") return;
+    const origin = window.location.origin;
+    window.postMessage(
+      {
+        type: "ATTRACK_PAIR_EXTENSION",
+        serverUrl: origin,
+        secret: targetSecret,
+        firecrawlApiKey: apiKey,
+      },
+      "*"
+    );
+  }, [secret, firecrawlKey]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setServerUrl(window.location.origin);
+      const origin = window.location.origin;
+      setServerUrl(origin);
       const savedKey = localStorage.getItem("firecrawl_api_key") || "";
       setFirecrawlKey(savedKey);
+
+      // Automated pairing broadcast on mount
+      window.postMessage(
+        {
+          type: "ATTRACK_PAIR_EXTENSION",
+          serverUrl: origin,
+          secret,
+          firecrawlApiKey: savedKey,
+        },
+        "*"
+      );
+
+      const handleMessage = (event: MessageEvent) => {
+        if (event.source !== window || !event.data || typeof event.data !== "object") return;
+        if (event.data.type === "ATTRACK_EXTENSION_PRESENT") {
+          setExtensionDetected(true);
+          if (event.data.version) setExtensionVersion(event.data.version);
+          const currentKey = localStorage.getItem("firecrawl_api_key") || "";
+          window.postMessage(
+            {
+              type: "ATTRACK_PAIR_EXTENSION",
+              serverUrl: window.location.origin,
+              secret,
+              firecrawlApiKey: currentKey,
+            },
+            "*"
+          );
+        } else if (event.data.type === "ATTRACK_PAIR_EXTENSION_ACK") {
+          setExtensionDetected(true);
+          setExtensionSynced(true);
+          if (event.data.version) setExtensionVersion(event.data.version);
+        }
+      };
+
+      window.addEventListener("message", handleMessage);
+      return () => window.removeEventListener("message", handleMessage);
     }
-  }, []);
+  }, [secret]);
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -48,10 +109,30 @@ export function ExtensionSettings({ secret }: { secret: string }) {
     }
   };
 
+  const handleRotateSecret = async () => {
+    setRotating(true);
+    try {
+      const res = await rotateExtensionSecret();
+      if (res.success && res.secret) {
+        setSecret(res.secret);
+        broadcastPairing(res.secret);
+        toast.success("Secret regenerated and paired");
+      } else {
+        toast.error("Couldn't regenerate secret");
+      }
+    } catch {
+      toast.error("Couldn't regenerate secret");
+    } finally {
+      setRotating(false);
+    }
+  };
+
   const handleSaveFirecrawlKey = () => {
     setSavingKey(true);
     try {
-      localStorage.setItem("firecrawl_api_key", firecrawlKey.trim());
+      const trimmed = firecrawlKey.trim();
+      localStorage.setItem("firecrawl_api_key", trimmed);
+      broadcastPairing(secret, trimmed);
       toast.success("Firecrawl key saved");
     } catch {
       toast.error("Couldn't save Firecrawl key");
@@ -132,8 +213,20 @@ export function ExtensionSettings({ secret }: { secret: string }) {
         {/* Secret */}
         <div className="flex flex-col gap-2 px-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Secret</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Paste in the extension popup to connect</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">Secret</p>
+              {extensionSynced && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                  <CheckCircle2 className="size-3" />
+                  Paired {extensionVersion ? `v${extensionVersion}` : ""}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {extensionSynced
+                ? "Automatically synchronized with companion extension"
+                : "Paste in the extension popup or pair automatically"}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Input
@@ -146,6 +239,16 @@ export function ExtensionSettings({ secret }: { secret: string }) {
             <Button variant="outline" size="sm" onClick={handleCopySecret} className="shrink-0 gap-1.5">
               {secretCopied ? <CheckIcon className="size-3.5 text-success" /> : <CopyIcon className="size-3.5" />}
               Copy
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRotateSecret}
+              disabled={rotating}
+              className="shrink-0 gap-1.5"
+            >
+              <RefreshCWIcon className={`size-3.5 ${rotating ? "animate-spin" : ""}`} />
+              {rotating ? "Regenerating…" : "Regenerate"}
             </Button>
           </div>
         </div>
@@ -215,3 +318,4 @@ export function ExtensionSettings({ secret }: { secret: string }) {
     </section>
   );
 }
+

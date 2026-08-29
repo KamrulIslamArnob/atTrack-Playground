@@ -6,7 +6,7 @@ const DEFAULT_SERVER_URL = "http://127.0.0.1:3788";
 // something else already holds it (electron/main.js findPreferredPort) —
 // probing the same short ladder is how the extension finds the app with zero
 // manual setup, on install and on every relaunch after a port changes.
-const CANDIDATE_PORTS = [3788, 3789, 3790, 3791, 3792, 3000, 3001, 3002, 3100, 5173, 8080];
+const CANDIDATE_PORTS = [3788, 3789, 3790, 3791, 3792, 3793, 3794, 3795, 3000, 3001, 3002, 3100, 5173, 8080];
 
 // Ensure default settings on install and configure side panel behavior
 chrome.runtime.onInstalled.addListener(async () => {
@@ -114,16 +114,84 @@ async function discoverServer() {
 
 const PENDING_JOBS_KEY = "pendingJobs";
 const FLUSH_ALARM = "flush-pending-jobs";
+const QUEUE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours TTL
+const MAX_QUEUED_JOBS = 100; // Max 100 queued jobs
+const MAX_QUEUE_PAYLOAD_BYTES = 500 * 1024; // 500 KB total payload size cap
+
+/**
+ * Calculates byte size of a JavaScript object/string as UTF-8 payload.
+ */
+function getPayloadByteSize(data) {
+  try {
+    const jsonStr = typeof data === "string" ? data : JSON.stringify(data);
+    if (typeof TextEncoder !== "undefined") {
+      return new TextEncoder().encode(jsonStr).length;
+    }
+    return new Blob([jsonStr]).size;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Prunes expired jobs (older than 24h) and enforces maximum 100 jobs and 500KB size cap.
+ * Evicts oldest items first if limits are exceeded.
+ */
+function pruneJobs(jobs) {
+  if (!Array.isArray(jobs)) return [];
+  const now = Date.now();
+
+  // 1. Filter out jobs older than 24h (TTL) or missing valid queuedAt
+  let validJobs = jobs.filter((item) => {
+    if (!item || typeof item !== "object") return false;
+    const queuedAt = typeof item.queuedAt === "number" ? item.queuedAt : now;
+    return now - queuedAt <= QUEUE_TTL_MS;
+  });
+
+  // 2. Enforce max 100 queued jobs (FIFO - drop oldest from beginning)
+  if (validJobs.length > MAX_QUEUED_JOBS) {
+    validJobs = validJobs.slice(validJobs.length - MAX_QUEUED_JOBS);
+  }
+
+  // 3. Enforce 500KB total queue payload size cap (drop oldest until payload <= 500KB)
+  while (validJobs.length > 0 && getPayloadByteSize(validJobs) > MAX_QUEUE_PAYLOAD_BYTES) {
+    validJobs.shift();
+  }
+
+  return validJobs;
+}
 
 async function getPendingJobs() {
-  const { [PENDING_JOBS_KEY]: jobs } = await chrome.storage.local.get(PENDING_JOBS_KEY);
-  return Array.isArray(jobs) ? jobs : [];
+  const { [PENDING_JOBS_KEY]: rawJobs } = await chrome.storage.local.get(PENDING_JOBS_KEY);
+  if (!Array.isArray(rawJobs)) return [];
+
+  const pruned = pruneJobs(rawJobs);
+
+  // If items were pruned on retrieval (e.g. expired by 24h TTL or exceeding caps), persist the cleaned list
+  if (pruned.length !== rawJobs.length) {
+    await chrome.storage.local.set({ [PENDING_JOBS_KEY]: pruned });
+  }
+
+  return pruned;
 }
 
 async function queuePendingJob(jobData) {
   const jobs = await getPendingJobs();
-  jobs.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, jobData, queuedAt: Date.now() });
-  await chrome.storage.local.set({ [PENDING_JOBS_KEY]: jobs });
+  const newJob = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    jobData,
+    queuedAt: Date.now(),
+  };
+
+  // If single job itself exceeds the maximum queue payload size cap, reject queueing
+  if (getPayloadByteSize([newJob]) > MAX_QUEUE_PAYLOAD_BYTES) {
+    console.warn("Job payload exceeds 500KB queue size limit and cannot be queued");
+    return;
+  }
+
+  jobs.push(newJob);
+  const boundedJobs = pruneJobs(jobs);
+  await chrome.storage.local.set({ [PENDING_JOBS_KEY]: boundedJobs });
 }
 
 /** One POST attempt, shared by the direct save path and the queue flush. */
@@ -170,7 +238,8 @@ async function flushPendingJobs() {
     }
   }
 
-  await chrome.storage.local.set({ [PENDING_JOBS_KEY]: remaining });
+  const prunedRemaining = pruneJobs(remaining);
+  await chrome.storage.local.set({ [PENDING_JOBS_KEY]: prunedRemaining });
   return flushed;
 }
 

@@ -19,7 +19,51 @@ export function getStorageDir(): string {
   if (process.env.STORAGE_DIR) {
     return process.env.STORAGE_DIR;
   }
-  const baseDataDir = process.env.SQLITE_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), ".data");
+  if (process.env.SQLITE_DIR) {
+    return path.join(process.env.SQLITE_DIR, "storage");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("node:fs");
+  const localDb = path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "attrack.db");
+  if (fs.existsSync(localDb)) {
+    return path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "storage");
+  }
+  // If running inside Electron on Windows, fallback to configured dataDir in userData config or registry
+  if (process.platform === "win32") {
+    if (process.env.APPDATA) {
+      for (const appName of ["BetterJob", "betterjob", "AtTrack", "atTrack"]) {
+        const electronConfig = path.join(process.env.APPDATA, appName, "config.json");
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const fs = require("node:fs");
+          if (fs.existsSync(electronConfig)) {
+            const parsed = JSON.parse(fs.readFileSync(electronConfig, "utf8"));
+            if (parsed.dataDir) {
+              return path.join(parsed.dataDir, "storage");
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { execSync } = require("node:child_process");
+      const reg = execSync('reg query "HKCU\\Software\\BetterJob" /v DataDir 2>nul', {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 1500,
+      });
+      const match = reg.match(/DataDir\s+REG_SZ\s+(.+)/i);
+      if (match && match[1]?.trim()) {
+        return path.join(match[1].trim(), "storage");
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const baseDataDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ".data");
   return path.join(baseDataDir, "storage");
 }
 
@@ -40,10 +84,10 @@ function signingKey(): string {
  * validated rather than trusted: no absolute paths, no "..", no backslashes.
  */
 function safeKey(key: string): string {
-  const normalized = key.replace(/\\/g, "/");
+  let normalized = key.replace(/\\/g, "/");
+  normalized = normalized.replace(/^\/+/, "");
   if (
     !normalized ||
-    normalized.startsWith("/") ||
     normalized.includes("..") ||
     /^[A-Za-z]:/.test(normalized)
   ) {
@@ -84,29 +128,33 @@ export async function readObject(
   bucket: string,
   key: string
 ): Promise<{ buffer: Buffer; resolvedKey: string }> {
-  const primaryPath = objectPath(bucket, key);
+  const cleanKey = safeKey(key);
+  const primaryPath = objectPath(bucket, cleanKey);
   try {
     const buffer = await readFile(primaryPath);
-    return { buffer, resolvedKey: key };
+    return { buffer, resolvedKey: cleanKey };
   } catch (err) {
-    if (bucket === "avatar") {
-      // Robust fallback: If specific extension wasn't found (e.g. url asked for .webp but on disk it is .png/.jpeg),
-      // search user's avatar directory for the existing avatar file.
-      try {
-        const dir = path.dirname(primaryPath);
-        const entries = await readdir(dir, { withFileTypes: true });
-        const match = entries.find((e) => e.isFile() && e.name.startsWith("avatar."));
-        if (match) {
-          const fallbackPath = path.join(dir, match.name);
-          const buffer = await readFile(fallbackPath);
-          const normalizedKey = key.replace(/\\/g, "/");
-          const segments = normalizedKey.split("/");
-          segments[segments.length - 1] = match.name;
-          return { buffer, resolvedKey: segments.join("/") };
-        }
-      } catch {
-        // pass through
+    // Robust universal fallback: If exact filename with extension wasn't found
+    // (e.g. requested .webp but stored as .png/.jpeg/.gif/.avif or vice-versa),
+    // search the parent directory for matching base filename.
+    try {
+      const dir = path.dirname(primaryPath);
+      const targetBase = path.parse(cleanKey).name.toLowerCase();
+      const entries = await readdir(dir, { withFileTypes: true });
+      const match = entries.find((e) => {
+        if (!e.isFile()) return false;
+        const entryBase = path.parse(e.name).name.toLowerCase();
+        return entryBase === targetBase;
+      });
+      if (match) {
+        const fallbackPath = path.join(dir, match.name);
+        const buffer = await readFile(fallbackPath);
+        const segments = cleanKey.split("/");
+        segments[segments.length - 1] = match.name;
+        return { buffer, resolvedKey: segments.join("/") };
       }
+    } catch {
+      // pass through original error
     }
     throw err;
   }

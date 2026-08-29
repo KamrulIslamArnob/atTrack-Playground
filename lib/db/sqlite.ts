@@ -13,14 +13,60 @@ const dbLog = moduleLogger("db");
 // Cached on globalThis because Next's dev server hot-reloads modules, and a new
 // DatabaseSync per reload would leak file handles and eventually lock the file.
 
-const DB_DIR = process.env.SQLITE_DIR ?? path.join(process.cwd(), ".data");
+function resolveDbDir(): string {
+  if (process.env.SQLITE_DIR) {
+    return process.env.SQLITE_DIR;
+  }
+  const localDb = path.join(process.cwd(), ".data", "attrack.db");
+  if (existsSync(localDb)) {
+    return path.join(process.cwd(), ".data");
+  }
+  if (process.platform === "win32") {
+    if (process.env.APPDATA) {
+      for (const appName of ["BetterJob", "betterjob", "AtTrack", "atTrack"]) {
+        const cfg = path.join(process.env.APPDATA, appName, "config.json");
+        try {
+          if (existsSync(cfg)) {
+            const parsed = JSON.parse(readFileSync(cfg, "utf8"));
+            if (parsed.dataDir) {
+              return parsed.dataDir;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { execSync } = require("node:child_process");
+      const reg = execSync('reg query "HKCU\\Software\\BetterJob" /v DataDir 2>nul', {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 1500,
+      });
+      const match = reg.match(/DataDir\s+REG_SZ\s+(.+)/i);
+      if (match && match[1]?.trim()) {
+        return match[1].trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return path.join(process.cwd(), ".data");
+}
+
+const DB_DIR = resolveDbDir();
 const DB_PATH = process.env.SQLITE_PATH ?? path.join(DB_DIR, "attrack.db");
 
 declare global {
   var __attrackDb: DatabaseSync | undefined;
+  var __virtualTablesEnsured: boolean | undefined;
 }
 
-const CURRENT_SCHEMA_VERSION = 12;
+// v15: cloud_sync_config.sync_avatar_enabled + last_avatar_synced_at
+// (opt-in avatar cloud sync — see lib/actions/cloud-sync.ts).
+const CURRENT_SCHEMA_VERSION = 15;
 
 // Triggers that schema.sql redefines in place. `CREATE TRIGGER IF NOT EXISTS` is a
 // no-op when an older definition already exists, so any trigger whose body or
@@ -58,24 +104,140 @@ function loadSqliteVec(db: DatabaseSync): boolean {
   }
 }
 
+export interface SqliteDirValidationResult {
+  valid: boolean;
+  isNetworkPath?: boolean;
+  isCloudSyncPath?: boolean;
+  cloudProvider?: string;
+  warning?: string;
+  error?: string;
+}
+
+/**
+ * Validates whether a directory path is safe for SQLite WAL mode.
+ * - Rejects UNC paths (\\... or //... or \\?\UNC\...) and network shares as fatal (WAL file locking fails).
+ * - Warns if path is located inside cloud sync folders (OneDrive, Dropbox, Google Drive, iCloud) where lock contention corrupts data.
+ */
+export function validateSqliteDir(dirPath: string): SqliteDirValidationResult {
+  if (!dirPath || typeof dirPath !== "string") {
+    return {
+      valid: false,
+      isNetworkPath: false,
+      isCloudSyncPath: false,
+      error: "Database directory path is required and must be a string.",
+    };
+  }
+
+  const trimmed = dirPath.trim();
+  if (!trimmed) {
+    return {
+      valid: false,
+      isNetworkPath: false,
+      isCloudSyncPath: false,
+      error: "Database directory path cannot be empty.",
+    };
+  }
+
+  // Check for UNC paths (\\server\share, //server/share, \\?\UNC\server\share)
+  const isUnc =
+    /^[\\/]{2}/.test(trimmed) ||
+    /^[\\/]{2}\?[\\/]{2}UNC[\\/]/i.test(trimmed) ||
+    /^\\\\\\\?\\UNC\\/i.test(trimmed);
+
+  if (isUnc) {
+    return {
+      valid: false,
+      isNetworkPath: true,
+      isCloudSyncPath: false,
+      error: `SQLite database cannot be located on a UNC network share path ("${trimmed}"). SQLite WAL mode requires local filesystem locking primitives to prevent database corruption.`,
+    };
+  }
+
+  // Detect Cloud Sync directories
+  const normalized = path.normalize(trimmed).toLowerCase();
+
+  const cloudChecks: Array<{ name: string; test: (p: string) => boolean }> = [
+    {
+      name: "OneDrive",
+      test: (p) => {
+        if (/[\\/]onedrive([\\/]|\s|$)/i.test(p) || p.includes("onedrive")) return true;
+        const envOne = process.env.OneDrive || process.env.OneDriveConsumer || process.env.OneDriveCommercial;
+        if (envOne && p.startsWith(path.normalize(envOne).toLowerCase())) return true;
+        return false;
+      },
+    },
+    {
+      name: "Dropbox",
+      test: (p) => /[\\/]dropbox([\\/]|\s|$)/i.test(p) || p.includes("dropbox"),
+    },
+    {
+      name: "GoogleDrive",
+      test: (p) =>
+        /[\\/](google[\s_-]?drive|googledrive|my\s*drive)([\\/]|\s|$)/i.test(p) ||
+        p.includes("googledrive") ||
+        p.includes("google drive"),
+    },
+    {
+      name: "iCloud",
+      test: (p) =>
+        /[\\/](iclouddrive|icloud|mobile\s*documents)([\\/]|\s|$)/i.test(p) ||
+        p.includes("com~apple~clouddocs"),
+    },
+    {
+      name: "Box",
+      test: (p) => /[\\/]box(\s+sync|\s+drive)?([\\/]|\s|$)/i.test(p),
+    },
+    {
+      name: "Nextcloud",
+      test: (p) => /[\\/]nextcloud([\\/]|\s|$)/i.test(p) || /[\\/]owncloud([\\/]|\s|$)/i.test(p),
+    },
+  ];
+
+  const matched = cloudChecks.find((c) => c.test(normalized));
+  if (matched) {
+    return {
+      valid: true,
+      isNetworkPath: false,
+      isCloudSyncPath: true,
+      cloudProvider: matched.name,
+      warning: `SQLite database directory is located inside a cloud sync folder (${matched.name}: "${trimmed}"). Active cloud synchronization may cause WAL file locking conflicts and database corruption. A local non-synced directory is strongly recommended.`,
+    };
+  }
+
+  return { valid: true, isNetworkPath: false, isCloudSyncPath: false };
+}
+
 function open(): DatabaseSync {
-  mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  const dir = path.dirname(DB_PATH);
+  const validation = validateSqliteDir(dir);
+  if (!validation.valid) {
+    const errorMsg = validation.error || `Invalid SQLite directory: ${dir}`;
+    dbLog.error({ dir, error: errorMsg }, "SQLite directory validation failed");
+    throw new Error(`[sqlite] Cannot open database in unsafe directory: ${errorMsg}`);
+  }
+  if (validation.warning) {
+    dbLog.warn({ dir, warning: validation.warning }, "SQLite directory warning");
+  }
+
+  mkdirSync(dir, { recursive: true });
 
   const db = new DatabaseSync(DB_PATH, { allowExtension: true });
 
   // Set busy timeout FIRST before anything else so concurrent workers wait rather than throw SQLITE_BUSY
-  db.exec("PRAGMA busy_timeout = 60000");
+  db.exec("PRAGMA busy_timeout = 60000;");
   // WAL survives across connections; setting it every open is harmless.
-  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA journal_mode = WAL;");
   // NORMAL mode avoids fsync latency on every write in WAL mode while remaining crash-safe.
-  db.exec("PRAGMA synchronous = NORMAL");
+  db.exec("PRAGMA synchronous = NORMAL;");
+  // Auto-checkpoint WAL threshold (1000 pages)
+  db.exec("PRAGMA wal_autocheckpoint = 1000;");
   // OFF by default in SQLite — without this, ON DELETE CASCADE silently does nothing.
-  db.exec("PRAGMA foreign_keys = ON");
+  db.exec("PRAGMA foreign_keys = ON;");
   // Performance PRAGMAs: 64MB memory cache, RAM temp tables, 256MB memory mapping, multi-threading.
-  db.exec("PRAGMA cache_size = -64000");
-  db.exec("PRAGMA temp_store = MEMORY");
-  db.exec("PRAGMA mmap_size = 268435456");
-  db.exec("PRAGMA threads = 4");
+  db.exec("PRAGMA cache_size = -64000;");
+  db.exec("PRAGMA temp_store = MEMORY;");
+  db.exec("PRAGMA mmap_size = 268435456;");
+  db.exec("PRAGMA threads = 4;");
 
   loadSqliteVec(db);
   fixJobsStateConstraint(db);
@@ -603,6 +765,9 @@ function dropDeadColumns(db: DatabaseSync) {
 // table. Safe to run on every connection: ALTER TABLE ADD COLUMN throws
 // "duplicate column name" once already applied, which is swallowed below.
 const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
+  { table: "users", column: "device_identifier", ddl: "ALTER TABLE users ADD COLUMN device_identifier TEXT" },
+  { table: "users", column: "device_token_encrypted", ddl: "ALTER TABLE users ADD COLUMN device_token_encrypted TEXT" },
+  { table: "users", column: "license_activated_at", ddl: "ALTER TABLE users ADD COLUMN license_activated_at TEXT" },
   { table: "jobs", column: "color", ddl: "ALTER TABLE jobs ADD COLUMN color TEXT" },
   { table: "jobs", column: "section_deadline", ddl: "ALTER TABLE jobs ADD COLUMN section_deadline TEXT" },
   { table: "jobs", column: "section_deadline_list_id", ddl: "ALTER TABLE jobs ADD COLUMN section_deadline_list_id TEXT REFERENCES board_lists(id) ON DELETE SET NULL" },
@@ -647,6 +812,9 @@ const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> =
   { table: "jobs", column: "discovery_channel", ddl: "ALTER TABLE jobs ADD COLUMN discovery_channel TEXT" },
   { table: "jobs", column: "source_url", ddl: "ALTER TABLE jobs ADD COLUMN source_url TEXT" },
   { table: "job_contacts", column: "relationship", ddl: "ALTER TABLE job_contacts ADD COLUMN relationship TEXT" },
+  { table: "users", column: "license_key_encrypted", ddl: "ALTER TABLE users ADD COLUMN license_key_encrypted TEXT" },
+  { table: "cloud_sync_config", column: "sync_avatar_enabled", ddl: "ALTER TABLE cloud_sync_config ADD COLUMN sync_avatar_enabled INTEGER NOT NULL DEFAULT 0" },
+  { table: "cloud_sync_config", column: "last_avatar_synced_at", ddl: "ALTER TABLE cloud_sync_config ADD COLUMN last_avatar_synced_at TEXT" },
 ];
 
 /** Returns how many COLUMN_MIGRATIONS actually landed — zero on an
@@ -786,26 +954,7 @@ function addMissingColumns(db: DatabaseSync): number {
 
   `);
 
-  try {
-    db.exec(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        embedding float[768] distance_metric=cosine,
-        +memory_id TEXT,
-        +user_id TEXT
-      );
-
-      CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
-        id INTEGER PRIMARY KEY,
-        embedding float[768] distance_metric=cosine,
-        +user_id TEXT,
-        +source_id TEXT
-      );
-    `);
-  } catch (err) {
-    // sqlite-vec might not be loaded on existing connection or unsupported platform
-    dbLog.warn({ err }, "Vector virtual tables skipped or not available:");
-  }
+  ensureVirtualTables(db);
 
   let applied = 0;
   for (const { ddl } of COLUMN_MIGRATIONS) {
@@ -895,3 +1044,78 @@ export function transaction<T>(fn: () => T): T {
     throw err;
   }
 }
+
+/**
+ * Verifies that vector virtual tables (vec_memories, vec_document_chunks) exist.
+ * Caches verification once per process to avoid redundant DDL executions on new connections.
+ */
+export function ensureVirtualTables(db: DatabaseSync): boolean {
+  if (globalThis.__virtualTablesEnsured) {
+    return true;
+  }
+
+  try {
+    const existing = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('vec_memories', 'vec_document_chunks')"
+      )
+      .all() as Array<{ name: string }>;
+
+    const existingNames = new Set(existing.map((r) => r.name));
+
+    if (!existingNames.has("vec_memories")) {
+      db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          embedding float[768] distance_metric=cosine,
+          +memory_id TEXT,
+          +user_id TEXT
+        );
+      `);
+    }
+
+    if (!existingNames.has("vec_document_chunks")) {
+      db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
+          id INTEGER PRIMARY KEY,
+          embedding float[768] distance_metric=cosine,
+          +user_id TEXT,
+          +source_id TEXT
+        );
+      `);
+    }
+
+    globalThis.__virtualTablesEnsured = true;
+    return true;
+  } catch (err) {
+    // sqlite-vec might not be loaded on existing connection or unsupported platform
+    dbLog.warn({ err }, "Vector virtual tables skipped or not available:");
+    return false;
+  }
+}
+
+/**
+ * Safely closes the active database connection:
+ * - Flushes all pending transactions to the database file and truncates WAL.
+ * - Closes the DatabaseSync handle.
+ * - Cleans up the global singleton cache.
+ */
+export function closeDb(): void {
+  if (globalThis.__attrackDb) {
+    try {
+      globalThis.__attrackDb.exec("PRAGMA wal_checkpoint(TRUNCATE);");
+    } catch (err) {
+      dbLog.warn({ err }, "Could not checkpoint WAL before closing database connection:");
+    }
+    try {
+      globalThis.__attrackDb.close();
+    } catch (err) {
+      dbLog.warn({ err }, "Error closing SQLite database handle:");
+    } finally {
+      globalThis.__attrackDb = undefined;
+      globalThis.__virtualTablesEnsured = undefined;
+    }
+    dbLog.info({ event: "db.close" }, "SQLite database closed safely and WAL checkpointed (TRUNCATE)");
+  }
+}
+

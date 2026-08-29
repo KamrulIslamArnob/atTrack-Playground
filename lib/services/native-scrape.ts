@@ -10,7 +10,7 @@
 import * as cheerio from "cheerio";
 import { fetchWithLog } from "@/lib/log/fetch";
 import { moduleLogger } from "@/lib/log";
-import { assertPublicHttpUrl } from "@/lib/ai/providers";
+import { validatePublicUrl, assertPublicHttpUrl } from "@/lib/security/ssrf";
 import type { FirecrawlJobResult } from "./firecrawl";
 
 const svcLog = moduleLogger("services.native-scrape");
@@ -26,6 +26,14 @@ function targetHost(url: string): string {
 type JobData = NonNullable<FirecrawlJobResult["data"]>;
 
 export async function scrapeNative(url: string): Promise<FirecrawlJobResult> {
+  const validation = validatePublicUrl(url);
+  if (!validation.valid) {
+    return {
+      success: false,
+      error: validation.error || "Invalid URL or target not allowed",
+    };
+  }
+
   const startTime = Date.now();
   const host = targetHost(url);
   svcLog.info({ event: "native.scrape.start", host });

@@ -9,6 +9,15 @@ import { AI_EVENTS, aiEvent, aiWarn, newTraceId } from "@/lib/log/ai-events";
 import { fetchWithLog } from "@/lib/log/fetch";
 import { estimateCost } from "@/lib/ai/pricing";
 import { cleanAiErrorMessage } from "@/lib/ai/error-formatter";
+import {
+  isProviderAvailable,
+  recordProviderSuccess,
+  recordProviderFailure,
+  resolveHopTimeout,
+  resolveToolRoundTimeout,
+  getProviderCooldownRemaining,
+  DEFAULT_HOP_TIMEOUT_MS,
+} from "@/lib/ai/circuit-breaker";
 import type { ToolApproval } from "./tools/types";
 import type { ChatArtifact } from "@/lib/types/chat-artifact";
 import type { PermissionMode } from "@/lib/ai-chatbot/composer-settings";
@@ -184,7 +193,7 @@ const DEFAULT_GEMINI_MODEL = "models/gemini-2.0-flash";
  *  Sized against the chat route's maxDuration, not under it: a slow endpoint
  *  answering a tool-grounded prompt was measured at 69s to first token, so a
  *  60s ceiling aborted work that would have succeeded. */
-const HOP_TIMEOUT_MS = 120_000;
+const HOP_TIMEOUT_MS = DEFAULT_HOP_TIMEOUT_MS;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -388,7 +397,7 @@ export async function callAnthropic(provider: ResolvedProvider, input: GenerateT
       ...(input.systemPrompt ? { system: input.systemPrompt } : {}),
       messages: [{ role: "user", content }],
     }),
-    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+    signal: AbortSignal.timeout(resolveHopTimeout(provider)),
   });
 
   if (!res.ok) {
@@ -438,7 +447,7 @@ export async function callOpenAICompatible(
       ...(input.temperature != null ? { temperature: input.temperature } : {}),
       ...(input.maxOutputTokens != null ? { max_tokens: input.maxOutputTokens } : {}),
     }),
-    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+    signal: AbortSignal.timeout(resolveHopTimeout(provider)),
   });
 
   if (!res.ok) {
@@ -491,9 +500,28 @@ export async function runChain(
 
   const errors: string[] = [];
   for (const [attempt, provider] of chain.entries()) {
+    if (!isProviderAvailable(provider.id)) {
+      const cooldownRemaining = getProviderCooldownRemaining(provider.id);
+      const skipMsg = `${provider.name}: Circuit breaker OPEN (cooling down, ${Math.ceil(cooldownRemaining / 1000)}s remaining)`;
+      errors.push(skipMsg);
+      recordHop({
+        logContext,
+        traceId,
+        provider,
+        attempt,
+        startedAt: Date.now(),
+        ok: false,
+        streaming: false,
+        error: "Circuit breaker OPEN",
+      });
+      continue;
+    }
+
     const startedAt = Date.now();
+    const hopTimeout = resolveHopTimeout(provider);
     try {
-      const result = await withTimeout(resolveCaller(provider.provider_type)(provider, input), HOP_TIMEOUT_MS, provider.name);
+      const result = await withTimeout(resolveCaller(provider.provider_type)(provider, input), hopTimeout, provider.name);
+      recordProviderSuccess(provider.id);
       recordHop({
         logContext,
         traceId,
@@ -508,6 +536,7 @@ export async function runChain(
       });
       return result;
     } catch (err) {
+      recordProviderFailure(provider.id, err);
       const message = err instanceof Error ? err.message : String(err);
       errors.push(`${provider.name}: ${message}`);
       recordHop({
@@ -614,7 +643,7 @@ async function* streamOpenAICompatible(
       ...(input.temperature != null ? { temperature: input.temperature } : {}),
       ...(input.maxOutputTokens != null ? { max_tokens: input.maxOutputTokens } : {}),
     }),
-    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+    signal: AbortSignal.timeout(resolveHopTimeout(provider)),
   });
 
   if (!res.ok) throw new Error(`${provider.name}: ${res.status} ${await res.text()}`);
@@ -679,7 +708,7 @@ async function* streamAnthropic(
       ...(input.systemPrompt ? { system: input.systemPrompt } : {}),
       messages: [{ role: "user", content }],
     }),
-    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+    signal: AbortSignal.timeout(resolveHopTimeout(provider)),
   });
 
   if (!res.ok) throw new Error(`${provider.name}: ${res.status} ${await res.text()}`);
@@ -741,6 +770,23 @@ export async function generateTextStream(
       const errors: string[] = [];
 
       for (const [attempt, provider] of chain.entries()) {
+        if (!isProviderAvailable(provider.id)) {
+          const cooldownRemaining = getProviderCooldownRemaining(provider.id);
+          const skipMsg = `${provider.name}: Circuit breaker OPEN (cooling down, ${Math.ceil(cooldownRemaining / 1000)}s remaining)`;
+          errors.push(skipMsg);
+          recordHop({
+            logContext,
+            traceId,
+            provider,
+            attempt,
+            startedAt: Date.now(),
+            ok: false,
+            streaming: true,
+            error: "Circuit breaker OPEN",
+          });
+          continue;
+        }
+
         const startedAt = Date.now();
         let enqueuedChunk = false;
         let usageCaptured = false;
@@ -748,6 +794,7 @@ export async function generateTextStream(
          *  this and durationMs is the difference between a UI that feels
          *  alive and one that looks hung. */
         let ttftMs: number | undefined;
+        const hopTimeout = resolveHopTimeout(provider);
 
         try {
           if (provider.provider_type === "gemini") {
@@ -769,7 +816,7 @@ export async function generateTextStream(
             });
 
             const iterator = response[Symbol.asyncIterator]();
-            let chunk = await withTimeout(iterator.next(), HOP_TIMEOUT_MS, `${provider.name} first token`);
+            let chunk = await withTimeout(iterator.next(), hopTimeout, `${provider.name} first token`);
             while (!chunk.done) {
               const parts = chunk.value.candidates?.[0]?.content?.parts;
               if (parts && parts.length > 0) {
@@ -827,7 +874,7 @@ export async function generateTextStream(
             const iterator = source[Symbol.asyncIterator]();
             // Only the first token is time-boxed: a hung provider must not
             // stall the UI, but a long legitimate answer must not be cut off.
-            let step = await withTimeout(iterator.next(), HOP_TIMEOUT_MS, `${provider.name} first token`);
+            let step = await withTimeout(iterator.next(), hopTimeout, `${provider.name} first token`);
             while (!step.done) {
               const { text, reasoning, inputTokens, outputTokens } = step.value;
               if (reasoning) {
@@ -881,6 +928,7 @@ export async function generateTextStream(
           }
 
           if (enqueuedChunk) {
+            recordProviderSuccess(provider.id);
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             controller.close();
             return;
@@ -894,6 +942,7 @@ export async function generateTextStream(
           // a Gemini pick finished ok with 17 output tokens and zero text
           // parts, and the next chain entry answered under Gemini's name.
           errors.push(`${provider.name}: produced no output`);
+          recordProviderFailure(provider.id, "produced no output");
           recordHop({
             logContext,
             traceId,
@@ -905,6 +954,7 @@ export async function generateTextStream(
             error: "empty stream",
           });
         } catch (err) {
+          recordProviderFailure(provider.id, err);
           const message = err instanceof Error ? err.message : String(err);
           errors.push(`${provider.name}: ${message}`);
           recordHop({
@@ -939,15 +989,7 @@ export async function generateTextStream(
   });
 }
 
-const BLOCKED_HOSTNAME_PATTERNS: RegExp[] = [
-  /^127\./, // 127.0.0.0/8 loopback
-  /^10\./, // 10.0.0.0/8 private
-  /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12 private
-  /^192\.168\./, // 192.168.0.0/16 private
-  /^169\.254\./, // 169.254.0.0/16 link-local
-  /^0\.0\.0\.0$/,
-  /^\[?::1\]?$/, // IPv6 loopback
-];
+import { assertPublicHttpUrl as ssrfAssertPublicHttpUrl } from "@/lib/security/ssrf";
 
 /** Guards every server-side "fetch a URL someone else supplied" call — the
  *  chatbot's web_search tool and the native scrape fallback below are the
@@ -955,19 +997,7 @@ const BLOCKED_HOSTNAME_PATTERNS: RegExp[] = [
  *  network before they go out, so a job description or chat message can't
  *  smuggle in an SSRF probe against localhost/the LAN. */
 export function assertPublicHttpUrl(url: string): void {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error("Invalid URL");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Only http/https URLs are allowed");
-  }
-  const hostname = parsed.hostname;
-  if (hostname === "localhost" || BLOCKED_HOSTNAME_PATTERNS.some((re) => re.test(hostname))) {
-    throw new Error("Requests to local or private network addresses are not allowed");
-  }
+  ssrfAssertPublicHttpUrl(url);
 }
 
 /** Scraping-task substitute for Gemini's built-in url_context tool: plain
@@ -1054,7 +1084,7 @@ const MAX_TOOL_RESULT_CHARS = 6000;
  *  payload. Deliberately well under HOP_TIMEOUT_MS: overrunning it costs the
  *  wait AND the ungrounded fallback that follows, so the two must fit together
  *  inside the route's maxDuration. */
-const TOOL_ROUND_TIMEOUT_MS = 30_000;
+const TOOL_ROUND_TIMEOUT_MS = resolveToolRoundTimeout();
 
 /** Minimal instruction for the tool-selection round. Deliberately tiny — the
  *  tool declarations already carry the semantics, and every token here is paid
@@ -1162,7 +1192,7 @@ async function callOpenAICompatibleToolRound(
       tool_choice: "auto",
       ...(temperature != null ? { temperature } : {}),
     }),
-    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+    signal: AbortSignal.timeout(resolveHopTimeout(provider)),
   });
   if (!res.ok) throw new Error(`${provider.name}: ${res.status} ${await res.text()}`);
   const json = await res.json();
@@ -1221,7 +1251,7 @@ async function callAnthropicToolRound(
       tools: toolDeclarations,
       messages,
     }),
-    signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
+    signal: AbortSignal.timeout(resolveHopTimeout(provider)),
   });
   if (!res.ok) throw new Error(`${provider.name}: ${res.status} ${await res.text()}`);
   const json = await res.json();
@@ -1286,6 +1316,22 @@ export async function generateTextWithTools(
   let lastError = "";
 
   for (const [attempt, provider] of chain.entries()) {
+    if (!isProviderAvailable(provider.id)) {
+      const remaining = getProviderCooldownRemaining(provider.id);
+      lastError = `${provider.name}: Circuit breaker OPEN (cooling down, ${Math.ceil(remaining / 1000)}s remaining)`;
+      recordHop({
+        logContext: lc,
+        traceId,
+        provider,
+        attempt,
+        startedAt: Date.now(),
+        ok: false,
+        streaming: false,
+        error: "Circuit breaker OPEN",
+      });
+      continue;
+    }
+
     // Per-hop, not per-call: a shared clock would bill the second provider for
     // the time the first one spent timing out.
     const startedAt = Date.now();
@@ -1315,6 +1361,7 @@ export async function generateTextWithTools(
 
         if (!roundResult.functionCalls || roundResult.functionCalls.length === 0) {
           const text = roundResult.text ?? "";
+          recordProviderSuccess(provider.id);
           recordHop({
             logContext: lc,
             traceId,
@@ -1388,9 +1435,11 @@ export async function generateTextWithTools(
       }
 
       // Exhausted rounds without a final text — return whatever we have.
+      recordProviderSuccess(provider.id);
       const text = records.length ? "I gathered workspace data but could not finalize a response." : "";
       return { text, toolCalls: records };
     } catch (err) {
+      recordProviderFailure(provider.id, err);
       const message = err instanceof Error ? err.message : String(err);
       lastError = `${provider.name}: ${message}`;
       recordHop({
@@ -1464,7 +1513,9 @@ export async function generateTextWithToolsStream(
     return { toolCalls: [], stream: await generateTextStream(chain, input, log) };
   }
 
-  const provider = chain[0];
+  const availableProviders = chain.filter((p) => isProviderAvailable(p.id));
+  const activeChain = availableProviders.length > 0 ? availableProviders : chain;
+  const provider = activeChain[0];
   const records: ToolCallRecord[] = [];
 
   // Fold tool output into the prompt instead of replaying each vendor's native
@@ -1485,7 +1536,7 @@ export async function generateTextWithToolsStream(
           : "Answer the question using the tool results above. Do not mention the tools themselves.",
       ].join("\n"),
     };
-    return generateTextStream(chain, followUp, log);
+    return generateTextStream(activeChain, followUp, log);
   };
 
   // Include the grounded system prompt (conversation history, schema, and IDs)
@@ -1536,64 +1587,73 @@ export async function generateTextWithToolsStream(
   //
   // The budget is the blast radius: a model that keeps calling tools stops
   // after MAX_TOOL_ROUNDS and answers with what it has.
-  for (let roundIndex = 0; roundIndex < MAX_TOOL_ROUNDS; roundIndex++) {
-    const roundPrompt =
-      records.length === 0
-        ? input.userPrompt
-        : [
-            input.userPrompt,
-            "",
-            "--- TOOL RESULTS SO FAR ---",
-            renderToolContext(records),
-            "--- END TOOL RESULTS ---",
-            "Call another tool only if the question still cannot be answered. Otherwise call nothing.",
-          ].join("\n");
+  const roundTimeout = resolveToolRoundTimeout();
 
-    // Bounded separately from a full generation: this round returns a few dozen
-    // tokens, so if it has not landed quickly the provider is not going to serve
-    // tools usefully this turn.
-    const round = await withTimeout(runRound(roundPrompt), TOOL_ROUND_TIMEOUT_MS, `${provider.name} tool round`);
+  try {
+    for (let roundIndex = 0; roundIndex < MAX_TOOL_ROUNDS; roundIndex++) {
+      const roundPrompt =
+        records.length === 0
+          ? input.userPrompt
+          : [
+              input.userPrompt,
+              "",
+              "--- TOOL RESULTS SO FAR ---",
+              renderToolContext(records),
+              "--- END TOOL RESULTS ---",
+              "Call another tool only if the question still cannot be answered. Otherwise call nothing.",
+            ].join("\n");
 
-    if (!round.functionCalls || round.functionCalls.length === 0) {
-      // No tool wanted. On the first round there is nothing to ground the
-      // answer in, so stream from the full grounded prompt — whatever text the
-      // selection round produced was written against the lean prompt that told
-      // it not to answer, so it is not usable. On a later round the model is
-      // signalling it has enough, so fall through to the follow-up below.
-      if (records.length === 0) {
-        return { toolCalls: [], stream: await generateTextStream(chain, input, log) };
-      }
-      break;
-    }
+      // Bounded separately from a full generation: this round returns a few dozen
+      // tokens, so if it has not landed quickly the provider is not going to serve
+      // tools usefully this turn.
+      const round = await withTimeout(runRound(roundPrompt), roundTimeout, `${provider.name} tool round`);
 
-    for (const fc of round.functionCalls) {
-      const record: ToolCallRecord = { name: fc.name, args: fc.args, status: "called" };
-      onStep?.(record);
-      try {
-        const res = await executor(fc.name, fc.args, ctx);
-        record.result = res;
-        record.status = "done";
-        if (res.citations.length) {
-          (record as ToolCallRecord & { citations?: string[] }).citations = res.citations;
+      if (!round.functionCalls || round.functionCalls.length === 0) {
+        // No tool wanted. On the first round there is nothing to ground the
+        // answer in, so stream from the full grounded prompt — whatever text the
+        // selection round produced was written against the lean prompt that told
+        // it not to answer, so it is not usable. On a later round the model is
+        // signalling it has enough, so fall through to the follow-up below.
+        if (records.length === 0) {
+          return { toolCalls: [], stream: await generateTextStream(activeChain, input, log) };
         }
-      } catch (err) {
-        record.status = "error";
-        record.error = err instanceof Error ? err.message : String(err);
-        record.result = { content: `Tool error: ${record.error}`, citations: [] };
+        break;
       }
-      records.push(record);
-      onStep?.(record);
 
-      // A pending delete never gets a second round: the approval card is the
-      // next step, not another tool call. Stop immediately so the model can't
-      // re-propose or chain past it.
-      if (record.result?.approval) {
-        return { toolCalls: records, stream: await finalAnswer() };
+      for (const fc of round.functionCalls) {
+        const record: ToolCallRecord = { name: fc.name, args: fc.args, status: "called" };
+        onStep?.(record);
+        try {
+          const res = await executor(fc.name, fc.args, ctx);
+          record.result = res;
+          record.status = "done";
+          if (res.citations.length) {
+            (record as ToolCallRecord & { citations?: string[] }).citations = res.citations;
+          }
+        } catch (err) {
+          record.status = "error";
+          record.error = err instanceof Error ? err.message : String(err);
+          record.result = { content: `Tool error: ${record.error}`, citations: [] };
+        }
+        records.push(record);
+        onStep?.(record);
+
+        // A pending delete never gets a second round: the approval card is the
+        // next step, not another tool call. Stop immediately so the model can't
+        // re-propose or chain past it.
+        if (record.result?.approval) {
+          recordProviderSuccess(provider.id);
+          return { toolCalls: records, stream: await finalAnswer() };
+        }
       }
     }
-  }
 
-  return { toolCalls: records, stream: await finalAnswer() };
+    recordProviderSuccess(provider.id);
+    return { toolCalls: records, stream: await finalAnswer() };
+  } catch (err) {
+    recordProviderFailure(provider.id, err);
+    throw err;
+  }
 }
 
 /**

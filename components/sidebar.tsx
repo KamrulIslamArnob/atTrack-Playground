@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,7 +37,6 @@ import {
   Building2,
   User,
   Database,
-  Gauge,
   Link2,
   Bot,
   Clock,
@@ -62,7 +60,6 @@ const resourceNavigation = [
 const secondaryNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Database", href: "/preferences/database", icon: Database },
-  { name: "Performance", href: "/preferences", icon: Gauge },
 ];
 
 const adminOverviewNavigation = [
@@ -87,7 +84,9 @@ const NAV_ITEMS = [
   { name: "Resources", href: "/resources", keywords: "social links resources portals bookmarks directory" },
   { name: "Settings", href: "/settings", keywords: "profile preferences email" },
   { name: "Prompts", href: "/prompts", keywords: "ai prompts memory custom instructions" },
-  { name: "Performance", href: "/preferences", keywords: "performance ram cpu memory port system root path version" },
+  { name: "Performance", href: "/settings?tab=performance", keywords: "performance ram cpu memory port system root path version diagnostics" },
+  { name: "Backup and sync", href: "/settings?tab=backup", keywords: "backup sync gist cloud export import json" },
+  { name: "Database settings", href: "/settings?tab=database", keywords: "database reset demo seed clear wipe raw browser" },
 ];
 
 const ADMIN_NAV_ITEMS = [
@@ -555,6 +554,30 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
         </div>
 
         <nav className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-2" : "px-3")}>
+          {/* Ask Tracky Button (Positioned right after name & email, before Overview) */}
+          <div className="mb-2.5">
+            <Link
+              href="/ai-builder/chatbot"
+              onClick={onNavigate}
+              title={isCollapsed ? "Ask Tracky" : undefined}
+              className={cn(
+                "btn-liquid-tracky group flex items-center font-semibold text-sm shadow-xs active:scale-[0.97] select-none",
+                isCollapsed
+                  ? "size-10 justify-center mx-auto p-0"
+                  : "w-full justify-center gap-2 px-3.5 py-2.5 h-10",
+                (pathname.startsWith("/ai-builder/chatbot") || pathname === "/chatbot") && "active"
+              )}
+            >
+              <Bot className="size-4.5 shrink-0 transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110" />
+
+              {!isCollapsed && (
+                <span className="truncate tracking-tight font-semibold text-sm">
+                  Ask Tracky
+                </span>
+              )}
+            </Link>
+          </div>
+
           {role === "admin" ? (
             <>
               {!isCollapsed && (
@@ -753,30 +776,6 @@ export function Sidebar({ user, avatarUrl, fullName: profileName, role, showRawD
             </>
           )}
         </nav>
-
-        {/* Ask Tracky Button (Pinned directly above the bottom divider and logo) */}
-        <div className={cn("px-3 pb-2.5", isCollapsed && "px-2 pb-2.5")}>
-          <Link
-            href="/ai-builder/chatbot"
-            onClick={onNavigate}
-            title={isCollapsed ? "Ask Tracky" : undefined}
-            className={cn(
-              "btn-liquid-tracky group flex items-center font-semibold text-sm shadow-xs active:scale-[0.97] select-none",
-              isCollapsed
-                ? "size-10 justify-center mx-auto p-0"
-                : "w-full justify-center gap-2 px-3.5 py-2.5 h-10",
-              (pathname.startsWith("/ai-builder/chatbot") || pathname === "/chatbot") && "active"
-            )}
-          >
-            <Bot className="size-4.5 shrink-0 transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110" />
-
-            {!isCollapsed && (
-              <span className="truncate tracking-tight font-semibold text-sm">
-                Ask Tracky
-              </span>
-            )}
-          </Link>
-        </div>
 
         {/* Bottom Section: BetterJob Logo, Search, Notification & Theme */}
         <div className={cn("border-t border-border/50 space-y-2.5", isCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3")}>

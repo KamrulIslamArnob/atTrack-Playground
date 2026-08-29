@@ -9,6 +9,7 @@ import { getStorageDir } from "@/lib/db/storage";
 import { moduleLogger } from "@/lib/log";
 import { requestId } from "@/lib/log/request";
 import { logActivity, logResourceActivity } from "./activity-log";
+import { maybeAutoSync } from "@/lib/actions/cloud-sync";
 
 const log = moduleLogger("actions.contacts");
 
@@ -121,10 +122,14 @@ function extractStoragePath(publicUrl: string): string | null {
 
 async function processContactAvatar(file: File): Promise<{ buffer: Buffer; format: string }> {
   const inputBuffer = Buffer.from(await file.arrayBuffer());
-  let ext = (file.name ? file.name.split(".").pop() : "") || "png";
+  let ext = (file.name ? file.name.split(".").pop() : "") || "";
   ext = ext.toLowerCase().trim();
   if (ext === "jpg") ext = "jpeg";
-  if (!["png", "jpeg", "webp", "gif", "svg"].includes(ext)) {
+  if (!ext && file.type) {
+    ext = file.type.replace(/^image\//, "").toLowerCase().replace("svg+xml", "svg");
+  }
+  const validExts = ["png", "jpeg", "webp", "gif", "svg", "avif", "bmp", "tiff", "tif", "ico", "heic", "heif"];
+  if (!validExts.includes(ext)) {
     ext = "png";
   }
   return { buffer: inputBuffer, format: ext };
@@ -280,6 +285,7 @@ export async function createContact(
   await supabase.from("job_contacts").insert({ job_id: jobId, contact_id: contact.id, relationship: role });
 
   void logResourceActivity(userId, "contact.create", "contact", contact.id, { jobId });
+  void maybeAutoSync();
 
   revalidatePath("/jobs/" + jobId);
   return { id: contact.id };
@@ -491,6 +497,7 @@ export async function createCompanyContact(
   if (error) throw new Error("Failed to create contact.");
 
   void logResourceActivity(userId, "contact.create", "contact", contact.id, { companyId });
+  void maybeAutoSync();
 
   revalidatePath("/crm");
   return { id: contact.id };
@@ -555,6 +562,7 @@ export async function createPersonContact(formData: FormData): Promise<{ id: str
   if (error) throw new Error("Failed to create contact.");
 
   void logResourceActivity(userId, "contact.create", "contact", contact.id, { companyId });
+  void maybeAutoSync();
 
   revalidatePath("/crm");
   return { id: contact.id };

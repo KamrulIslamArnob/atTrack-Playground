@@ -14,6 +14,7 @@ import { logResourceActivity } from "./activity-log";
 import type { ProjectLink } from "@/lib/types/board";
 import type { JobState, JobTier } from "@/lib/types/job";
 import type { ExtractionResult } from "@/lib/ai/schema";
+import { maybeAutoSync } from "@/lib/actions/cloud-sync";
 
 const log = moduleLogger("actions.jobs");
 
@@ -282,6 +283,7 @@ export async function createJob(formData: FormData) {
   revalidatePath("/jobs");
   revalidatePath("/board");
   revalidatePath("/network");
+  void maybeAutoSync();
   return { jobId: job.id };
 }
 

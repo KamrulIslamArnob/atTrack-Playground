@@ -28,4 +28,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("app:startup-settings-changed", handler);
     return () => ipcRenderer.removeListener("app:startup-settings-changed", handler);
   },
+  onDeepLinkActivate: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on("app:deep-link-activate", handler);
+    return () => ipcRenderer.removeListener("app:deep-link-activate", handler);
+  },
+  getPendingDeepLink: () => ipcRenderer.invoke("app:get-pending-deep-link"),
 });
+

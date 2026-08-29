@@ -37,8 +37,7 @@ const PAGE_RESULTS: { title: string; href: string; keywords: string }[] = [
   { title: "Resources", href: "/resources", keywords: "social links resources portals bookmarks directory" },
   { title: "Settings", href: "/settings", keywords: "account profile smtp email preferences" },
   { title: "Prompts", href: "/prompts", keywords: "custom ai system prompts memory cover letter templates preferences" },
-  { title: "Database", href: "/preferences/database", keywords: "database sqlite tables schema viewer data preferences" },
-  { title: "Performance", href: "/preferences", keywords: "performance ram memory cpu system ports root path connection process status details preferences" },
+  { title: "Performance", href: "/settings?tab=performance", keywords: "performance ram memory cpu system ports root path connection process status details diagnostics settings preferences" },
 ];
 
 // High-performance O(1) LRU Query Cache with TTL and recency promotion

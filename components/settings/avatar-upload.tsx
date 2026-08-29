@@ -51,15 +51,14 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
     : "U";
 
   const validateFile = (file: File): boolean => {
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const validExts = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
-    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
-      toast.error("Please select a JPG, PNG, GIF, WebP, or SVG image");
+    const validExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "bmp", "tiff", "tif", "ico", "heic", "heif"];
+    if (!file.type.startsWith("image/") && !validExts.includes(ext)) {
+      toast.error("Please select a valid image file");
       return false;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
       return false;
     }
     return true;
@@ -247,7 +246,7 @@ export function AvatarUpload({ avatarUrl: initialAvatarUrl, fullName }: AvatarUp
                 Drop image or click to browse
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                JPG, PNG, GIF, WebP. Max 5MB.
+                JPG, PNG, WebP, GIF, SVG, AVIF. Max 10MB.
               </p>
             </div>
 

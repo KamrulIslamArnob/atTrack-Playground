@@ -63,4 +63,97 @@ function saveSettings(settings) {
   writeFileSync(file, JSON.stringify(toWrite, null, 2), "utf8");
 }
 
-module.exports = { loadSettings, saveSettings, configPath };
+
+
+// ─── Installer-provided data directory (Windows Registry) ─────────────
+
+/**
+ * Reads the data directory path written by the NSIS installer to
+ * HKCU\Software\BetterJob\DataDir. Returns null on non-Windows,
+ * if the key doesn't exist, or on any error.
+ */
+function readInstallerDataDir() {
+  if (process.platform !== "win32") return null;
+  try {
+    const { execSync } = require("node:child_process");
+    const result = execSync(
+      'reg query "HKCU\\Software\\BetterJob" /v DataDir 2>nul',
+      { encoding: "utf8", windowsHide: true, timeout: 3000 }
+    );
+    // Output format: "    DataDir    REG_SZ    C:\path\to\data"
+    const match = result.match(/DataDir\s+REG_SZ\s+(.+)/i);
+    if (match && match[1]) {
+      const dir = match[1].trim();
+      return dir || null;
+    }
+  } catch {
+    // Key doesn't exist or reg.exe failed — normal on first install
+  }
+  return null;
+}
+
+/**
+ * Searches common locations for an existing attrack.db file.
+ * Returns the directory containing it, or null if not found.
+ */
+function discoverExistingDataDir() {
+  const fs = require("node:fs");
+  const p = require("node:path");
+  const os = require("node:os");
+
+  const candidates = [];
+
+  // 1. Registry-provided path (installer)
+  const registryDir = readInstallerDataDir();
+  if (registryDir) candidates.push(registryDir);
+
+  // 2. Next to executable (portable installs)
+  try {
+    const exeDir = p.dirname(app.getPath("exe"));
+    candidates.push(p.join(exeDir, "data"));
+    candidates.push(p.join(exeDir, "BetterJob"));
+  } catch {}
+
+  // 3. AppData paths
+  try {
+    const appData = app.getPath("appData");
+    candidates.push(p.join(appData, "BetterJob"));
+    candidates.push(p.join(appData, "betterjob"));
+    candidates.push(p.join(appData, "AtTrack"));
+    candidates.push(p.join(appData, "atTrack"));
+  } catch {}
+
+  // 4. Documents
+  try {
+    const docs = app.getPath("documents");
+    candidates.push(p.join(docs, "BetterJob"));
+    candidates.push(p.join(docs, "atTrack"));
+  } catch {}
+
+  // 5. userData (Electron default)
+  try {
+    candidates.push(app.getPath("userData"));
+  } catch {}
+
+  // 6. Home directory fallbacks
+  const home = os.homedir();
+  candidates.push(p.join(home, "BetterJob"));
+  candidates.push(p.join(home, "atTrack"));
+
+  // Deduplicate and check
+  const seen = new Set();
+  for (const dir of candidates) {
+    if (!dir || seen.has(dir)) continue;
+    seen.add(dir);
+    try {
+      const dbPath = p.join(dir, "attrack.db");
+      if (fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0) {
+        console.log(`[settings] Discovered existing data at: ${dir}`);
+        return dir;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+module.exports = { loadSettings, saveSettings, configPath, readInstallerDataDir, discoverExistingDataDir };

@@ -35,7 +35,13 @@ CREATE TABLE IF NOT EXISTS users (
   email_confirmed_at TEXT,
   raw_user_meta_data TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  -- Free-tier licensing (lib/actions/license.ts). NULL = not yet activated;
+  -- the app stays fully usable up to FREE_JOB_CAP jobs either way.
+  device_identifier TEXT,
+  device_token_encrypted TEXT,
+  license_key_encrypted TEXT,
+  license_activated_at TEXT
 );
 
 -- Case-insensitive email uniqueness (Postgres/Supabase treated emails as unique).
@@ -594,6 +600,52 @@ CREATE TABLE IF NOT EXISTS extension_config (
 );
 
 -- =============================================
+-- github_sync_config: one row per user holding the GitHub credential used by
+-- "Sync with Git Gist" (Settings). Either a pasted personal access token or
+-- an OAuth-device-flow token — token_encrypted holds whichever was used
+-- last, AES-256-GCM via lib/encryption.ts (same module as smtp_config /
+-- ai_providers). gist_id is remembered so repeat syncs PATCH the same Gist
+-- instead of creating a new one every time.
+-- =============================================
+CREATE TABLE IF NOT EXISTS github_sync_config (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  token_encrypted TEXT,
+  auth_method TEXT CHECK (auth_method IN ('pat','oauth')),
+  github_username TEXT,
+  gist_id TEXT,
+  last_synced_at TEXT,
+  last_sync_size_bytes INTEGER,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- =============================================
+-- cloud_sync_config: one row per user for the Neon-backed "Cloud backup and
+-- sync" (Settings). Purely a local preference + last-result cache — the
+-- source of truth for whether a device is *allowed* to sync is the device
+-- token from license activation (users.device_token_encrypted), not this
+-- table. autosync_enabled is opt-in and defaults off: activation alone
+-- never uploads local data (local-first — see PROJECT_CONTEXT.md).
+-- =============================================
+CREATE TABLE IF NOT EXISTS cloud_sync_config (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  autosync_enabled INTEGER NOT NULL DEFAULT 0,
+  last_synced_at TEXT,
+  last_sync_size_bytes INTEGER,
+  -- Separate, independently-opt-in toggle for syncing the profile photo to
+  -- cloud storage — deliberately its own column rather than riding along
+  -- with autosync_enabled: a photo is more personal than job/company text
+  -- data and deserves its own explicit consent. Defaults off, same as
+  -- autosync_enabled — see lib/actions/cloud-sync.ts's syncAvatarToCloud().
+  sync_avatar_enabled INTEGER NOT NULL DEFAULT 0,
+  last_avatar_synced_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- =============================================
 -- updated_at triggers (replaces the update_updated_at() trigger from 001)
 -- =============================================
 CREATE TRIGGER IF NOT EXISTS trg_profiles_updated AFTER UPDATE ON profiles
@@ -628,6 +680,12 @@ BEGIN UPDATE smtp_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') W
 
 CREATE TRIGGER IF NOT EXISTS trg_extension_config_updated AFTER UPDATE ON extension_config
 BEGIN UPDATE extension_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_github_sync_config_updated AFTER UPDATE ON github_sync_config
+BEGIN UPDATE github_sync_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_cloud_sync_config_updated AFTER UPDATE ON cloud_sync_config
+BEGIN UPDATE cloud_sync_config SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id; END;
 
 -- =============================================
 -- jobs.status is DERIVED from its board list's kind (migration 019 trigger).

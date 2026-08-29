@@ -76,10 +76,16 @@ function extractRowId(content: string): string {
 async function main(): Promise<void> {
   console.log("write_database / delete_database verification\n");
 
+  // NOTE: these write_database calls pass permissionMode: "bypass" explicitly
+  // — the shipped default is now "ask" (see lib/ai-chatbot/composer-settings.ts),
+  // which stages writes for approval instead of executing them. These tests
+  // are verifying execute-time invariants (id generation, the status block,
+  // the applied-list trigger), so they opt into immediate execution the same
+  // way a user who deliberately picks Bypass in the composer toolbar would.
   await runTest("write_database insert generates a real TEXT id, not a bare rowid", async () => {
     const result = await writeDatabaseTool.execute(
       { action: "insert", table: "link_categories", values: { name: "verify_category_x" } },
-      { userId }
+      { userId, permissionMode: "bypass" }
     );
     const newId = extractRowId(result.content);
     assert(/^[0-9a-f-]{36}$/i.test(newId), `id "${newId}" isn't a uuid — id-generation bug`);
@@ -95,7 +101,7 @@ async function main(): Promise<void> {
   await runTest("write_database drops jobs.status — it's derived, never model-writable", async () => {
     const result = await writeDatabaseTool.execute(
       { action: "insert", table: "jobs", values: { title: "verify_status_block", status: "applied" } },
-      { userId }
+      { userId, permissionMode: "bypass" }
     );
     const jobId = extractRowId(result.content);
     cleanup.push({ table: "jobs", id: jobId });
@@ -109,14 +115,14 @@ async function main(): Promise<void> {
     const listId = await appliedListId();
     const insertResult = await writeDatabaseTool.execute(
       { action: "insert", table: "jobs", values: { title: "verify_ensure_application" } },
-      { userId }
+      { userId, permissionMode: "bypass" }
     );
     const jobId = extractRowId(insertResult.content);
     cleanup.push({ table: "jobs", id: jobId });
 
     await writeDatabaseTool.execute(
       { action: "update", table: "jobs", id: jobId, values: { list_id: listId } },
-      { userId }
+      { userId, permissionMode: "bypass" }
     );
 
     const { data: applications } = await db
@@ -142,6 +148,33 @@ async function main(): Promise<void> {
 
     const { data: stillThere } = await db.from("ai_memories").select("id").eq("id", row.id);
     assert(stillThere.length === 1, "row was deleted on the proposing call — the gate is broken");
+  });
+
+  await runTest("delete_database stages for approval even under Bypass permission mode", async () => {
+    // Regression test for lib/ai/connectors/staging.ts: Bypass ("Auto") mode
+    // grants immediate execution for every other action, but deletes are the
+    // one exception — this locks that in so it can't silently regress back
+    // to auto-deleting under an indirect prompt injection.
+    const { data: row, error } = await db
+      .from("ai_memories")
+      .insert({ user_id: userId, title: "verify_delete_bypass", description: "scratch row for verification" })
+      .select("id")
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "insert failed");
+    cleanup.push({ table: "ai_memories", id: row.id as string });
+
+    const proposal = await deleteDatabaseTool.execute(
+      { table: "ai_memories", ids: [row.id] },
+      { userId, permissionMode: "bypass" }
+    );
+    assert(
+      proposal.content.includes("This has NOT run yet"),
+      `expected Bypass mode to still stage a proposal, got: ${proposal.content}`
+    );
+    assert(!!proposal.approval?.approvalId, "Bypass-mode proposal did not return an approval payload");
+
+    const { data: stillThere } = await db.from("ai_memories").select("id").eq("id", row.id);
+    assert(stillThere.length === 1, "row was deleted under Bypass mode without approval — the gate is broken");
   });
 
   await runTest("db-approval deletes exactly once on Allow, and refuses a replayed decision", async () => {

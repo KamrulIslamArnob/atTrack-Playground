@@ -191,8 +191,10 @@ function dataUrlToFile(dataUrl: string, filename = "dropped-image.png"): File | 
 }
 
   const processAvatarFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please drop an image file (JPEG, PNG, WebP)");
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const validExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "bmp", "tiff", "tif", "ico", "heic", "heif"];
+    if (!file.type.startsWith("image/") && !validExts.includes(ext)) {
+      toast.error("Please drop an image file");
       return;
     }
     setUploadingAvatar(true);
@@ -673,7 +675,7 @@ function dataUrlToFile(dataUrl: string, filename = "dropped-image.png"): File | 
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
+              accept="image/*"
               className="hidden"
               onChange={handleAvatarFileSelect}
             />

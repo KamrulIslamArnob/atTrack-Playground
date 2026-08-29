@@ -81,7 +81,12 @@ declare global {
       setStartupSettings?: (settings: Partial<ElectronStartupSettings>) => Promise<ElectronStartupSettings>;
       openExternalUrl?: (url: string) => Promise<boolean>;
       onStartupSettingsChange?: (callback: (settings: ElectronStartupSettings) => void) => () => void;
+      onDeepLinkActivate?: (
+        callback: (payload: { key?: string; token?: string; email?: string }) => void
+      ) => () => void;
+      getPendingDeepLink?: () => Promise<{ key?: string; token?: string; email?: string } | null>;
     };
   }
 }
+
 

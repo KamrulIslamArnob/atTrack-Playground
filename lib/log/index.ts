@@ -19,7 +19,35 @@ export type Logger = pino.Logger;
 /** Mirrors lib/db/sqlite.ts so a packaged Electron install (which sets
  *  SQLITE_DIR to the user's chosen folder) keeps logs beside its database
  *  instead of next to the read-only app bundle. */
-const DATA_DIR = process.env.SQLITE_DIR ?? path.join(process.cwd(), ".data");
+function resolveLogDataDir(): string {
+  if (process.env.SQLITE_DIR) {
+    return process.env.SQLITE_DIR;
+  }
+  const localDb = path.join(process.cwd(), ".data", "attrack.db");
+  if (fs.existsSync(localDb)) {
+    return path.join(process.cwd(), ".data");
+  }
+  if (process.platform === "win32") {
+    if (process.env.APPDATA) {
+      for (const appName of ["BetterJob", "betterjob", "AtTrack", "atTrack"]) {
+        const cfg = path.join(process.env.APPDATA, appName, "config.json");
+        try {
+          if (fs.existsSync(cfg)) {
+            const parsed = JSON.parse(fs.readFileSync(cfg, "utf8"));
+            if (parsed.dataDir) {
+              return parsed.dataDir;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+  return path.join(process.cwd(), ".data");
+}
+
+const DATA_DIR = resolveLogDataDir();
 export const LOG_DIR = process.env.ATTRACK_LOG_DIR ?? path.join(DATA_DIR, "logs");
 
 const IS_DEV = process.env.NODE_ENV !== "production";

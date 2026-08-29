@@ -2,6 +2,9 @@ import { getUser } from "@/lib/auth";
 import { getSmtpConfig } from "@/lib/actions/smtp";
 import { listProviders, getTaskRoutes } from "@/lib/actions/ai-providers";
 import { getExtensionSecret } from "@/lib/actions/extension";
+import { getGithubSyncStatus } from "@/lib/actions/gist-sync";
+import { getCloudSyncStatus } from "@/lib/actions/cloud-sync";
+import { getLicenseState } from "@/lib/actions/license";
 import { PageHeader } from "@/components/page-header";
 import { SettingsTabView } from "@/components/settings/settings-tab-view";
 import type { Profile } from "@/components/settings/profile-form";
@@ -16,10 +19,13 @@ export default async function SettingsPage() {
     .single();
 
   const smtpConfig = await getSmtpConfig();
-  const [aiProviders, aiTaskRoutes, extensionSecret] = await Promise.all([
+  const [aiProviders, aiTaskRoutes, extensionSecret, githubSyncStatus, cloudSyncStatus, licenseState] = await Promise.all([
     listProviders(),
     getTaskRoutes(),
     getExtensionSecret(),
+    getGithubSyncStatus(),
+    getCloudSyncStatus(),
+    getLicenseState(),
   ]);
 
   const userProfile = {
@@ -40,6 +46,9 @@ export default async function SettingsPage() {
         aiProviders={aiProviders}
         aiTaskRoutes={aiTaskRoutes}
         extensionSecret={extensionSecret}
+        githubSyncStatus={githubSyncStatus}
+        cloudSyncStatus={cloudSyncStatus}
+        licenseState={licenseState}
       />
     </div>
   );

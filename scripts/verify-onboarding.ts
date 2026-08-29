@@ -15,7 +15,7 @@ async function main() {
   console.log("\n[Test 1] Seeding demo jobs & contacts...");
   const seedResult = seedSampleJobsAndContacts({ userId: user.id });
   console.log(`Seeded ${seedResult.jobIds.length} jobs, ${seedResult.companyIds.length} companies, ${seedResult.contactIds.length} contacts.`);
-  if (seedResult.jobIds.length !== 3) throw new Error("Expected 3 jobs seeded");
+  if (seedResult.jobIds.length < 15) throw new Error("Expected at least 15 jobs seeded");
 
   const hasDemo = hasDemoData(user.id);
   console.log(`hasDemoData: ${hasDemo}`);
@@ -25,7 +25,7 @@ async function main() {
   console.log("\n[Test 2] Cleaning demo data...");
   const deleteResult = deleteSampleData(user.id);
   console.log(`Removed ${deleteResult.removedCount} demo jobs.`);
-  if (deleteResult.removedCount !== 3) throw new Error("Expected 3 jobs removed");
+  if (deleteResult.removedCount < 15) throw new Error("Expected at least 15 jobs removed");
 
   const hasDemoAfter = hasDemoData(user.id);
   console.log(`hasDemoData after deletion: ${hasDemoAfter}`);

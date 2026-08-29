@@ -35,6 +35,20 @@ jobs:
         run: npm ci
 
       # ── Optional Windows Signing Certificate ─────────────────────────────
+      # Accepted tradeoff, not a bug: without WIN_CSC_LINK/WIN_CSC_KEY_PASSWORD
+      # repo secrets, the .exe below ships UNSIGNED (scripts/sign.js skips
+      # silently). That means SmartScreen warns on install, which trains users
+      # to click through security prompts — a real risk if a spoofed release
+      # page ever shows up. The explicit warning annotation below exists so
+      # that gap is visible in every run instead of a silent skip. Get a cert
+      # (SignPath, DigiCert, SSL.com, etc.) and set those two secrets to close
+      # it; until then this is a deliberate, known-and-accepted state.
+      - name: Warn if releasing unsigned
+        if: env.WIN_CSC_LINK == ''
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        run: echo "::warning::WIN_CSC_LINK is not set — this Windows build will be UNSIGNED. See the comment above this step in release.yml."
+
       - name: Set Windows Signing Certificate
         if: env.WIN_CSC_LINK != ''
         env:

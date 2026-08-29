@@ -484,9 +484,6 @@ export default function PromptsPage() {
                   <Wand2 className="size-3 text-primary" />
                   Insert Context Variables
                 </span>
-                <span className="text-[10px] text-muted-foreground">
-                  Click to insert at cursor position
-                </span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {DYNAMIC_VARIABLES.map((v) => (

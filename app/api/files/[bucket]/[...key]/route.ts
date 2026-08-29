@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { isPublicBucket, readObject, verifyObjectToken } from "@/lib/db/storage";
 import { withRoute } from "@/lib/log/route";
+import { repairDriftedAvatarUrl } from "@/lib/actions/auth";
 
 // Serves objects that used to come from Supabase Storage URLs.
 //
@@ -23,9 +24,13 @@ const CONTENT_TYPES: Record<string, string> = {
   ".webp": "image/webp",
   ".gif": "image/gif",
   ".svg": "image/svg+xml",
+  ".avif": "image/avif",
   ".ico": "image/x-icon",
   ".bmp": "image/bmp",
   ".tiff": "image/tiff",
+  ".tif": "image/tiff",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
 };
 
 function contentTypeFor(key: string): string {
@@ -48,7 +53,15 @@ export const GET = withRoute("/api/files/[bucket]/[...key]", async (
     ? [rawSegments]
     : [];
 
-  const rawKey = segments.map(decodeURIComponent).join("/");
+  const rawKey = segments
+    .map((s) => {
+      try {
+        return decodeURIComponent(s);
+      } catch {
+        return s;
+      }
+    })
+    .join("/");
   const key = rawKey.replace(/^\/+/, "");
 
   // Reject traversal before the value reaches the filesystem layer.
@@ -84,13 +97,23 @@ export const GET = withRoute("/api/files/[bucket]/[...key]", async (
 
   try {
     const { buffer: buf, resolvedKey } = await readObject(bucket, key);
-    return new Response(new Blob([new Uint8Array(buf)]), {
+
+    if (bucket === "avatar" && resolvedKey !== key) {
+      // readObject fell back to a same-basename file with a different
+      // extension than the DB's avatar_url names (see
+      // lib/actions/auth.ts's repairDriftedAvatarUrl for why that can
+      // happen). Fire-and-forget: never delays or fails the response
+      // that's already being served below.
+      void repairDriftedAvatarUrl(key, resolvedKey);
+    }
+
+    return new Response(new Uint8Array(buf), {
       status: 200,
       headers: {
         "Content-Type": contentTypeFor(resolvedKey),
         "Content-Length": String(buf.length),
         "Cache-Control": isPublicBucket(bucket)
-          ? "public, max-age=0, must-revalidate"
+          ? "public, max-age=86400, stale-while-revalidate=604800"
           : "private, no-store",
       },
     });

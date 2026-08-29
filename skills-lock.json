@@ -157,6 +157,24 @@
       "skillPath": "skills/minimalist-skill/SKILL.md",
       "computedHash": "7e88897e0371184e97a82b8d9ef080323c13f21eb067b58ef71eb05173a08ac2"
     },
+    "neon": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon/SKILL.md",
+      "computedHash": "5fb186c8c506a7949eafac81d3d15f4361dcfd60b9560e674340fe45d85b923b"
+    },
+    "neon-auth-nextjs": {
+      "source": "neondatabase/neon-js",
+      "sourceType": "github",
+      "skillPath": "skills/neon-auth-nextjs/SKILL.md",
+      "computedHash": "deda78e0c4a8aec583251507beb3427cd5e26b4c1f896b1a981a650af6da292c"
+    },
+    "neon-postgres": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres/SKILL.md",
+      "computedHash": "af5d7593c2c45b33c8860b37fd470dcc40027972420ebd06311c1263296fd0a5"
+    },
     "pick-ui-library": {
       "source": "emilkowalski/skills",
       "sourceType": "github",

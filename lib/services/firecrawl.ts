@@ -5,6 +5,7 @@
 
 import { fetchWithLog } from "@/lib/log/fetch";
 import { moduleLogger } from "@/lib/log";
+import { validatePublicUrl } from "@/lib/security/ssrf";
 
 const svcLog = moduleLogger("services.firecrawl");
 
@@ -41,6 +42,14 @@ export async function scrapeWithFirecrawl(
   url: string,
   apiKey?: string
 ): Promise<FirecrawlJobResult> {
+  const validation = validatePublicUrl(url);
+  if (!validation.valid) {
+    return {
+      success: false,
+      error: validation.error || "Invalid URL or target not allowed",
+    };
+  }
+
   const fcApiKey = apiKey || process.env.FIRECRAWL_API_KEY;
   const startTime = Date.now();
 

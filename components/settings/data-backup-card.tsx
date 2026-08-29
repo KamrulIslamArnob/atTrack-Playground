@@ -95,7 +95,7 @@ export function DataBackupCard() {
     try {
       const data = await exportAllJobsData();
       const dateStr = new Date().toISOString().split("T")[0];
-      downloadJsonFile(data, `attrack-jobs-backup-${dateStr}.json`);
+      downloadJsonFile(data, `betterjob-jobs-backup-${dateStr}.json`);
       toast.success(`Exported ${data.count} jobs`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Couldn't export jobs");
@@ -123,7 +123,7 @@ export function DataBackupCard() {
     try {
       const data = await exportCrmData();
       const dateStr = new Date().toISOString().split("T")[0];
-      downloadJsonFile(data, `attrack-crm-backup-${dateStr}.json`);
+      downloadJsonFile(data, `betterjob-crm-backup-${dateStr}.json`);
       toast.success("CRM data exported");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Couldn't export CRM data");
@@ -151,7 +151,7 @@ export function DataBackupCard() {
     try {
       const data = await exportLinksData();
       const dateStr = new Date().toISOString().split("T")[0];
-      downloadJsonFile(data, `attrack-links-backup-${dateStr}.json`);
+      downloadJsonFile(data, `betterjob-links-backup-${dateStr}.json`);
       toast.success("Links exported");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Couldn't export links");

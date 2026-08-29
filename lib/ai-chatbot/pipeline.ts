@@ -535,7 +535,7 @@ export async function executeAgent(
     .filter((t): t is NonNullable<typeof t> => t !== undefined && isSourceAllowed(t.sourceId, ctx.input.enabledSourceIds));
 
   // Read-only: hide write/delete tools from the model entirely so it cannot even propose them.
-  const permissionMode = (ctx.input.permissionMode as string) ?? "bypass";
+  const permissionMode = (ctx.input.permissionMode as string) ?? "ask";
   const agentTools =
     permissionMode === "readonly"
       ? rawAgentTools.filter((t) => t.name !== "write_database" && t.name !== "delete_database")

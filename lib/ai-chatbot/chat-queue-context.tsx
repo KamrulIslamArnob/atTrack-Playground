@@ -237,6 +237,14 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
         approval: null,
       }));
 
+      let structuredThinkingAcc = "";
+      let rawContentAcc = "";
+      let sourcesAcc: string[] = [];
+      let toolStepsAcc: ToolExecutionStep[] = [];
+      let streamError: string | null = null;
+      const assistantId = uid();
+      let updatedHistory: Message[] = [];
+
       try {
         // Read latest session state from localStorage mirror
         const cached = readCache();
@@ -251,8 +259,7 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
           experimental_attachments: attachments,
         };
 
-        const assistantId = uid();
-        const updatedHistory = [...history, userMsg];
+        updatedHistory = [...history, userMsg];
         const isFirstMessage = history.length === 0;
         const newTitle = isFirstMessage ? generateSessionTitle(userPrompt) : session?.title || "New Chat";
 
@@ -302,16 +309,19 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!res.ok || !res.body) {
-          throw new Error(`Chat API error (${res.status}): ${res.statusText}`);
+          let errorDetail = "";
+          try {
+            const errorJson = await res.json();
+            if (errorJson && typeof errorJson.error === "string") {
+              errorDetail = errorJson.error;
+            }
+          } catch {}
+          const statusMsg = errorDetail || `Chat API error (${res.status}): ${res.statusText || "Request failed"}`;
+          throw new Error(statusMsg);
         }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let structuredThinkingAcc = "";
-        let rawContentAcc = "";
-        let sourcesAcc: string[] = [];
-        let toolStepsAcc: ToolExecutionStep[] = [];
-        let streamError: string | null = null;
         let buffer = "";
 
         while (true) {
@@ -509,11 +519,11 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
             void persistSession(errSession).catch((e) => console.error("Failed to persist session:", e));
           }
           task.status = "failed";
-          task.error = streamError;
+          task.error = streamError || undefined;
           updateStreamState(sessionId, (s) => ({
             ...s,
             status: "error",
-            error: streamError,
+            error: streamError || undefined,
             streamText: errorContent,
             thinking: structuredThinkingAcc || "",
           }));
@@ -566,15 +576,55 @@ export function ChatQueueProvider({ children }: { children: React.ReactNode }) {
           task.status = "cancelled";
           updateStreamState(sessionId, (s) => ({ ...s, status: "idle" }));
         } else {
-          const errorMsg = err instanceof Error ? err.message : String(err);
+          const rawError = err instanceof Error ? err.message : String(err);
+          const cleanedError = cleanAiErrorMessage(rawError);
+          const { content: partialContent, thinking: partialThinking } = extractThinkingAndContent(
+            rawContentAcc,
+            structuredThinkingAcc
+          );
+          const errorContent = partialContent.trim()
+            ? `${partialContent}\n\n⚠️ ${cleanedError || rawError}`
+            : `⚠️ ${cleanedError || rawError}`;
+
+          const assistantErrorMsg: Message = {
+            id: assistantId,
+            role: "assistant",
+            content: errorContent,
+            thinking: partialThinking || structuredThinkingAcc || undefined,
+            sources: sourcesAcc,
+            toolSteps: toolStepsAcc,
+            createdAt: new Date().toISOString(),
+          };
+
+          const cachedSessions = readCache();
+          const sessionToSaveErr = cachedSessions.find((s) => s.id === sessionId);
+          if (sessionToSaveErr) {
+            const existingMsgs = sessionToSaveErr.messages || [];
+            const hasAssistantId = existingMsgs.some((m) => m.id === assistantId);
+            const errorHistory = hasAssistantId
+              ? existingMsgs.map((m) => (m.id === assistantId ? assistantErrorMsg : m))
+              : [...updatedHistory.filter((m) => m.id !== assistantId), assistantErrorMsg];
+
+            const errSession: ChatSession = {
+              ...sessionToSaveErr,
+              messages: errorHistory,
+              updatedAt: new Date().toISOString(),
+            };
+            const finalSessionsErr = cachedSessions.map((s) => (s.id === sessionId ? errSession : s));
+            writeCache(finalSessionsErr);
+            void persistSession(errSession).catch((e) => console.error("Failed to persist session error state:", e));
+          }
+
           task.status = "failed";
-          task.error = errorMsg;
+          task.error = cleanedError || rawError;
           updateStreamState(sessionId, (s) => ({
             ...s,
             status: "error",
-            error: errorMsg,
+            error: cleanedError || rawError,
+            streamText: errorContent,
+            thinking: structuredThinkingAcc || "",
           }));
-          toast.error(`Chat error in session: ${errorMsg}`);
+          toast.error(cleanedError || rawError);
         }
       } finally {
         // Clean up ONLY this task, release controller, and drain remaining tasks

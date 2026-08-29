@@ -7,6 +7,9 @@ import { WindowTitlebar } from "@/components/window-titlebar";
 import { DashboardMainContent } from "@/components/dashboard-main-content";
 
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
+import { LicenseActivationScreen } from "@/components/license/license-activation-screen";
+import { LicenseHeartbeatMonitor } from "@/components/license/license-heartbeat-monitor";
+import { getLicenseState } from "@/lib/actions/license";
 
 export default async function DashboardLayout({
   children,
@@ -53,13 +56,29 @@ export default async function DashboardLayout({
     redirect("/admin");
   }
 
+  // Mandatory activation gate: nothing past the titlebar renders until this
+  // device has redeemed a free license key (lib/actions/license.ts). There
+  // is no skip and no free-usage grace period — see components/license/
+  // license-activation-screen.tsx.
+  const { activated } = await getLicenseState();
+  if (!activated) {
+    return (
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-background p-3 md:p-0">
+        <WindowTitlebar />
+        <LicenseActivationScreen />
+      </div>
+    );
+  }
+
   const showOnboarding = !profile?.onboarded_at && profile?.role !== "admin";
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background p-3 md:p-0">
       <WindowTitlebar />
+      <LicenseHeartbeatMonitor />
 
       <DashboardHeader user={user} avatarUrl={profile?.avatar_url} fullName={profile?.full_name} role={profile?.role} showRawDatabase={Boolean(profile?.show_raw_database)} />
+
 
       <div className="flex flex-1 w-full overflow-hidden min-h-0 min-w-0">
         <div className="hidden md:block shrink-0 h-full relative z-30">

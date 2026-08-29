@@ -181,12 +181,12 @@ export function WorkspaceConnectionDrawer({
           animate={{ width: "auto", opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-          className="relative z-20 flex h-full w-[340px] max-w-[85vw] shrink-0 flex-col overflow-hidden bg-card/90 backdrop-blur-xl md:w-[350px] lg:w-[370px]"
+          className="relative z-20 flex h-full w-[340px] max-w-[85vw] shrink-0 flex-col overflow-hidden border-l border-border/80 bg-muted/40 backdrop-blur-xl md:w-[350px] lg:w-[370px]"
         >
           {/* Header */}
-          <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-border/40 bg-muted/10">
+          <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-border/60 bg-muted/60">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-background/80 border border-border/60 text-muted-foreground shadow-2xs">
                 <Database className="size-3.5" />
               </div>
               <span className="text-sm font-semibold text-foreground truncate">
@@ -194,7 +194,7 @@ export function WorkspaceConnectionDrawer({
               </span>
               <Badge
                 variant="outline"
-                className="border-border/60 bg-muted/50 text-[10px] font-medium text-muted-foreground px-2 py-0.5"
+                className="border-border/70 bg-background/80 text-[10px] font-medium text-muted-foreground px-2 py-0.5 shadow-2xs"
               >
                 {activeCount} / {sources.length} Active
               </Badge>
@@ -203,7 +203,7 @@ export function WorkspaceConnectionDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-colors cursor-pointer"
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-background/80 hover:text-foreground active:scale-95 transition-colors cursor-pointer"
               title="Close panel"
             >
               <X className="size-4" />
@@ -220,7 +220,7 @@ export function WorkspaceConnectionDrawer({
 
               return (
                 <div key={category} className="space-y-2">
-                  <div className="px-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
+                  <div className="px-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                     {CATEGORY_LABELS[category]}
                   </div>
                   <div className="space-y-2">
@@ -235,18 +235,18 @@ export function WorkspaceConnectionDrawer({
                         <div
                           key={source.id}
                           className={cn(
-                            "rounded-xl border p-3 transition-colors",
+                            "rounded-xl border p-3 transition-colors shadow-2xs",
                             enabled
-                              ? "border-border bg-card"
-                              : "border-border/50 bg-muted/20 opacity-75 hover:opacity-100"
+                              ? "border-border/80 bg-card shadow-xs"
+                              : "border-border/50 bg-card/40 opacity-75 hover:opacity-100 hover:bg-card/70"
                           )}
                         >
                           <div className="flex items-start justify-between gap-2.5">
                             <div className="flex min-w-0 items-start gap-2.5">
                               <div
                                 className={cn(
-                                  "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors",
-                                  enabled ? "bg-muted text-foreground" : "bg-muted/50 text-muted-foreground"
+                                  "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors border",
+                                  enabled ? "bg-muted/70 border-border/60 text-foreground" : "bg-muted/40 border-border/40 text-muted-foreground"
                                 )}
                               >
                                 <Icon className="size-3.5" />

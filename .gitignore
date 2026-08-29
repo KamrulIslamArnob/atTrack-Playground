@@ -60,6 +60,13 @@ next-env.d.ts
 .data/
 *.key
 
+# SQLite write-ahead log and shared-memory sidecars. These are rewritten on
+# every connection, so versioning them produces churn and diffs that mean
+# nothing. (.data-test/atTrack/attrack.db itself is already tracked as a
+# fixture; only its transient sidecars are excluded here.)
+*.db-wal
+*.db-shm
+
 # User uploaded/sample resume PDFs with personal data
 public/resume/*.pdf
 public/resume/**/*.pdf
@@ -135,3 +142,6 @@ debug.log
 
 # pdf.js worker, copied out of node_modules by scripts/copy-pdf-worker.js on install
 public/pdf.worker.min.mjs
+
+# Standalone sibling project — separate codebase/deploy, own git history later
+/Better Job - Website/

@@ -1,8 +1,8 @@
 {
-  "name": "atTrack",
+  "name": "betterjob",
   "version": "0.1.0",
   "description": "Personal career workspace for managing job applications, documents, interviews, and AI-assisted preparation.",
-  "author": "atTrack",
+  "author": "BetterJob",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,9 +19,9 @@
     "postinstall": "node scripts/copy-pdf-worker.js",
     "icons:build": "node scripts/generate-desktop-icons.js",
     "electron:dev": "node scripts/prepare-electron-build.js && electron electron/main.js",
-    "electron:build:win": "node scripts/prepare-electron-build.js && electron-builder --win --publish never",
-    "electron:build:mac": "node scripts/prepare-electron-build.js && electron-builder --mac --publish never",
-    "electron:build:all": "node scripts/prepare-electron-build.js && electron-builder --win --mac --publish never",
+    "electron:build:win": "node scripts/prepare-electron-build.js && node scripts/electron-build-retry.js --win --publish never",
+    "electron:build:mac": "node scripts/prepare-electron-build.js && node scripts/electron-build-retry.js --mac --publish never",
+    "electron:build:all": "node scripts/prepare-electron-build.js && node scripts/electron-build-retry.js --win --mac --publish never",
     "electron:release": "node scripts/prepare-electron-build.js && electron-builder --win --mac --publish always"
   },
   "dependencies": {

@@ -15,7 +15,14 @@ const STORAGE_KEY = "attrack_composer_settings_v1";
 
 const DEFAULT_SETTINGS: ComposerSettings = {
   reasoningEffort: "max",
-  permissionMode: "bypass",
+  // "ask" — not "bypass" — is the safe-by-default floor: a new install (or
+  // any session that hasn't touched this toggle) stages writes/deletes for
+  // an explicit Allow/Deny instead of auto-executing them. Users who want
+  // full autonomy can still opt into Bypass from the composer toolbar; they
+  // just don't start there. (Deletes now stage regardless of mode — see
+  // lib/ai/connectors/staging.ts — but keeping this "ask" too means an
+  // out-of-the-box install also confirms writes, not just deletes.)
+  permissionMode: "ask",
   executionTarget: "local",
   isContinuousDictation: false,
 };

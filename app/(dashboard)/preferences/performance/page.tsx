@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function PerformanceRedirectPage() {
-  redirect("/preferences");
+  redirect("/settings?tab=performance");
 }

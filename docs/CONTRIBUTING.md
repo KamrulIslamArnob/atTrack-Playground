@@ -62,7 +62,7 @@ If you accidentally commit a real secret or private data, rotate/revoke it immed
 | Schema/source-of-truth files | `lib/db/schema.sql`, `lib/db/sqlite.ts`, `lib/db/meta.ts` |
 | Public docs | `docs/` |
 | Public assets | `public/` assets intended for distribution |
-| Configuration | `tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `electron-builder.json` |
+| Configuration | `tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `electron-builder.js` |
 
 ## Development standards
 

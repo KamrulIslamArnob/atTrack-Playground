@@ -217,7 +217,7 @@ export async function moveCard(jobId: string, listId: string, targetIndex: numbe
   // Ownership check on the card itself.
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, title")
+    .select("id, title, list_id")
     .eq("id", jobId)
     .eq("user_id", userId)
     .single();

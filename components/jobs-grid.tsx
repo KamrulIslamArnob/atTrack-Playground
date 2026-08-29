@@ -1,11 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import {
-  X, Mail, ChevronsUpDown, GripVertical, MoveLeft, MoveRight, Palette, Trash2, Briefcase, Building2, Laptop, Banknote, CircleDot, Calendar } from "lucide-react";
+  X,
+  Mail,
+  ChevronsUpDown,
+  GripVertical,
+  MoveLeft,
+  MoveRight,
+  Palette,
+  Trash2,
+  Briefcase,
+  Building2,
+  Laptop,
+  Banknote,
+  CircleDot,
+  Calendar,
+  ArrowUpDown,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger, PopoverTitle } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLinkIcon } from "@/components/ui/external-link";
 import { ArrowUpIcon } from "@/components/ui/arrow-up";
 import { ArrowDownIcon } from "@/components/ui/arrow-down";
@@ -67,8 +86,6 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = JOB_STATUS_LABELS;
-
-const statusOptions = ["saved", "interested", "preparing"];
 
 function matchBadgeClass(score: number) {
   if (score >= 80) return "bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-400";
@@ -140,6 +157,26 @@ type SortKey =
 
 type SortDir = "asc" | "desc";
 
+export interface SortRule {
+  key: SortKey;
+  dir: SortDir;
+}
+
+function getSortDirectionLabel(key: SortKey, dir: SortDir): string {
+  switch (key) {
+    case "match_score":
+      return dir === "desc" ? "High to low" : "Low to high";
+    case "date":
+      return dir === "desc" ? "Newest" : "Oldest";
+    case "salary_range":
+      return dir === "desc" ? "Highest" : "Lowest";
+    case "status":
+      return dir === "asc" ? "Pipeline order" : "Reverse order";
+    default:
+      return dir === "asc" ? "A → Z" : "Z → A";
+  }
+}
+
 interface ColumnDef {
   key: SortKey;
   label: string;
@@ -190,6 +227,26 @@ const COLOR_PALETTE = [
   { name: "Soft Slate", value: "rgba(241, 245, 249, 0.6)" },
 ];
 
+function parseSalaryValue(salary: string | null): number | null {
+  if (!salary) return null;
+  const match = salary.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+  return match ? parseFloat(match[1]) : null;
+}
+
+const STATUS_ORDER: Record<string, number> = {
+  saved: 1,
+  interested: 2,
+  preparing: 3,
+  applied: 4,
+  screening: 5,
+  interview: 6,
+  assessment: 7,
+  offer: 8,
+  accepted: 9,
+  rejected: 10,
+  archived: 11,
+};
+
 function sortValue(row: Row, key: SortKey): string | number | null {
   switch (key) {
     case "title":
@@ -202,12 +259,14 @@ function sortValue(row: Row, key: SortKey): string | number | null {
       return row.job.employment_type || null;
     case "work_location":
       return row.job.work_location || null;
-    case "salary_range":
-      return row.job.salary_range || null;
+    case "salary_range": {
+      const num = parseSalaryValue(row.job.salary_range);
+      return num !== null ? num : row.job.salary_range || null;
+    }
     case "match_score":
       return row.job.match_score;
     case "status":
-      return statusLabels[row.displayStatus] ?? row.displayStatus;
+      return STATUS_ORDER[row.displayStatus] ?? (statusLabels[row.displayStatus] ?? row.displayStatus);
     case "date":
       return row.dateValue;
   }
@@ -224,17 +283,24 @@ function compareRows(a: Row, b: Row, key: SortKey, dir: SortDir): number {
   if (typeof av === "number" && typeof bv === "number") {
     return dir === "asc" ? av - bv : bv - av;
   }
-  const cmp = String(av).localeCompare(String(bv));
+  const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
   return dir === "asc" ? cmp : -cmp;
+}
+
+function compareRowsMulti(a: Row, b: Row, rules: SortRule[]): number {
+  for (const rule of rules) {
+    const cmp = compareRows(a, b, rule.key, rule.dir);
+    if (cmp !== 0) return cmp;
+  }
+  return 0;
 }
 
 interface SortHeaderProps {
   label: string;
   columnKey: SortKey;
   icon?: React.ComponentType<{ className?: string }>;
-  sortKey: SortKey | null;
-  sortDir: SortDir;
-  onSort: (key: SortKey) => void;
+  sortRules: SortRule[];
+  onSort: (key: SortKey, isShift: boolean) => void;
   className?: string;
   isDragging?: boolean;
   isDragOver?: boolean;
@@ -253,8 +319,7 @@ function SortHeader({
   label,
   columnKey,
   icon: Icon,
-  sortKey,
-  sortDir,
+  sortRules,
   onSort,
   className,
   isDragging,
@@ -268,7 +333,10 @@ function SortHeader({
   onContextMenu,
   onResizeStart,
 }: SortHeaderProps) {
-  const active = sortKey === columnKey;
+  const ruleIndex = sortRules.findIndex((r) => r.key === columnKey);
+  const activeRule = ruleIndex !== -1 ? sortRules[ruleIndex] : null;
+  const priority = ruleIndex !== -1 ? ruleIndex + 1 : null;
+  const isMulti = sortRules.length > 1;
 
   return (
     <th
@@ -299,22 +367,34 @@ function SortHeader({
         </span>
         <button
           type="button"
-          onClick={() => onSort(columnKey)}
+          onClick={(e) => onSort(columnKey, e.shiftKey)}
+          title={
+            activeRule
+              ? `Sorted #${priority} (${activeRule.dir === "asc" ? "Ascending" : "Descending"}). Click to toggle, Shift+Click to modify multi-sort.`
+              : "Click to sort. Shift+Click to add multi-sort."
+          }
           className={cn(
-            "group/btn inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 -mx-1.5 rounded-md transition-all duration-200 ease-out hover:scale-[1.04] active:scale-95 hover:bg-lime-500/10 hover:text-green-800 dark:hover:text-lime-400 truncate",
-            active ? "text-foreground font-bold" : "text-muted-foreground"
+            "group/btn inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 -mx-1.5 rounded-md transition-all duration-150 ease-out hover:scale-[1.03] active:scale-95 hover:bg-muted hover:text-foreground truncate cursor-pointer",
+            activeRule ? "text-foreground font-bold" : "text-muted-foreground"
           )}
         >
           {Icon && (
-            <Icon className="size-3.5 shrink-0 opacity-70 group-hover/btn:opacity-100 group-hover/btn:scale-110 group-hover/btn:-rotate-6 group-hover/btn:text-green-800 dark:group-hover/btn:text-lime-400 transition-all duration-200" />
+            <Icon className="size-3.5 shrink-0 opacity-70 group-hover/btn:opacity-100 group-hover/btn:scale-110 group-hover/btn:-rotate-6 group-hover/btn:text-foreground transition-all duration-150" />
           )}
           <span>{label}</span>
-          {active ? (
-            sortDir === "asc" ? (
-              <ArrowUpIcon className="size-3 shrink-0" aria-hidden="true" />
-            ) : (
-              <ArrowDownIcon className="size-3 shrink-0" aria-hidden="true" />
-            )
+          {activeRule ? (
+            <span className="inline-flex items-center gap-1">
+              {isMulti && (
+                <span className="inline-flex size-3.5 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary leading-none">
+                  {priority}
+                </span>
+              )}
+              {activeRule.dir === "asc" ? (
+                <ArrowUpIcon className="size-3 shrink-0 text-primary" aria-hidden="true" />
+              ) : (
+                <ArrowDownIcon className="size-3 shrink-0 text-primary" aria-hidden="true" />
+              )}
+            </span>
           ) : (
             <ChevronsUpDown className="size-3 shrink-0 opacity-30 group-hover/btn:opacity-60" aria-hidden="true" />
           )}
@@ -331,6 +411,172 @@ function SortHeader({
         title="Drag to resize column width"
       />
     </th>
+  );
+}
+
+interface JobsSortPopoverProps {
+  sortRules: SortRule[];
+  columnOrder: SortKey[];
+  columnDefMap: Map<SortKey, ColumnDef>;
+  onAddRule: (key?: SortKey) => void;
+  onUpdateRule: (index: number, partial: Partial<SortRule>) => void;
+  onRemoveRule: (key: SortKey) => void;
+  onClearAll: () => void;
+}
+
+function JobsSortPopover({
+  sortRules,
+  columnOrder,
+  columnDefMap,
+  onAddRule,
+  onUpdateRule,
+  onRemoveRule,
+  onClearAll,
+}: JobsSortPopoverProps) {
+  const availableColumns = useMemo(() => {
+    const usedKeys = new Set(sortRules.map((r) => r.key));
+    return columnOrder.filter((k) => !usedKeys.has(k));
+  }, [columnOrder, sortRules]);
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98] cursor-pointer",
+          sortRules.length > 0 && "border-primary/40 bg-primary/5 text-foreground font-semibold"
+        )}
+      >
+        <ArrowUpDown className="size-3.5 text-muted-foreground" />
+        <span>Sort</span>
+        {sortRules.length > 0 && (
+          <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+            {sortRules.length}
+          </span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 sm:w-96 p-3.5 space-y-3 shadow-lg">
+        <div className="flex items-center justify-between border-b border-border/80 pb-2">
+          <PopoverTitle className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <ArrowUpDown className="size-3.5 text-primary" />
+            <span>Sort rules</span>
+          </PopoverTitle>
+          {sortRules.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              className="text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+
+        {sortRules.length === 0 ? (
+          <div className="py-3 text-center text-xs text-muted-foreground">
+            <p>No active sorting rules.</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+              Click a column header or add a rule below.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            {sortRules.map((rule, idx) => {
+              const currentDef = columnDefMap.get(rule.key);
+              return (
+                <div key={rule.key} className="flex items-center gap-2 text-xs">
+                  <span className="w-14 shrink-0 text-[11px] font-medium text-muted-foreground text-right">
+                    {idx === 0 ? "Sort by" : "Then by"}
+                  </span>
+
+                  {/* Column Select */}
+                  <div className="flex-1 min-w-0">
+                    <Select
+                      value={rule.key}
+                      onValueChange={(val) => {
+                        if (val) onUpdateRule(idx, { key: val as SortKey });
+                      }}
+                    >
+                      <SelectTrigger size="sm" className="w-full h-8 text-xs bg-background border-border">
+                        <SelectValue>
+                          <span className="truncate">{currentDef?.label ?? rule.key}</span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {columnOrder
+                          .filter((k) => k === rule.key || !sortRules.some((r) => r.key === k))
+                          .map((key) => {
+                            const col = columnDefMap.get(key);
+                            return (
+                              <SelectItem key={key} value={key} className="text-xs">
+                                {col?.label ?? key}
+                              </SelectItem>
+                            );
+                          })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Direction Select */}
+                  <div className="w-28 shrink-0">
+                    <Select
+                      value={rule.dir}
+                      onValueChange={(val) => {
+                        if (val === "asc" || val === "desc") onUpdateRule(idx, { dir: val });
+                      }}
+                    >
+                      <SelectTrigger size="sm" className="w-full h-8 text-xs bg-background border-border">
+                        <SelectValue>
+                          <span className="truncate">
+                            {getSortDirectionLabel(rule.key, rule.dir)}
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="asc" className="text-xs">
+                          {getSortDirectionLabel(rule.key, "asc")}
+                        </SelectItem>
+                        <SelectItem value="desc" className="text-xs">
+                          {getSortDirectionLabel(rule.key, "desc")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Remove rule button */}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveRule(rule.key)}
+                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0 cursor-pointer"
+                    title="Remove rule"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Add rule button */}
+        <div className="pt-1 border-t border-border/80 flex items-center justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={availableColumns.length === 0}
+            onClick={() => onAddRule()}
+            className="h-7 text-xs gap-1 cursor-pointer"
+          >
+            <Plus className="size-3.5" />
+            <span>Add sort</span>
+          </Button>
+
+          <span className="text-[10px] text-muted-foreground">
+            Shift + click headers for multi-sort
+          </span>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -353,10 +599,7 @@ export function JobsGrid({
 }: JobsGridProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState(initialSearch);
-  const [statusFilter, setStatusFilter] = useState(initialStatus);
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortRules, setSortRules] = useState<SortRule[]>([]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -393,6 +636,22 @@ export function JobsGrid({
   // Hydrate from localStorage on client load
   useEffect(() => {
     try {
+      const savedRules = localStorage.getItem("attrack_jobs_sort_rules");
+      if (savedRules) {
+        const parsed = JSON.parse(savedRules);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(
+            (r) =>
+              r &&
+              typeof r.key === "string" &&
+              (r.dir === "asc" || r.dir === "desc") &&
+              DEFAULT_COLUMN_KEYS.includes(r.key as SortKey)
+          ) as SortRule[];
+          if (valid.length > 0) {
+            setSortRules(valid);
+          }
+        }
+      }
       const savedOrder = localStorage.getItem("attrack_jobs_column_order");
       if (savedOrder) {
         const parsed = JSON.parse(savedOrder) as SortKey[];
@@ -451,35 +710,89 @@ export function JobsGrid({
     [router, searchParams]
   );
 
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Save rules to localStorage helper
+  const saveSortRules = useCallback((rules: SortRule[]) => {
+    setSortRules(rules);
+    try {
+      if (rules.length > 0) {
+        localStorage.setItem("attrack_jobs_sort_rules", JSON.stringify(rules));
+      } else {
+        localStorage.removeItem("attrack_jobs_sort_rules");
+      }
+    } catch {}
+  }, []);
 
-  const handleSearch = useCallback(
-    (value: string) => {
-      setSearch(value);
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = setTimeout(() => {
-        updateParams("search", value);
-      }, 300);
-    },
-    [updateParams]
-  );
+  const addSortRule = useCallback((key?: SortKey) => {
+    setSortRules((prev) => {
+      const targetKey =
+        key ||
+        columnOrder.find((k) => !prev.some((r) => r.key === k)) ||
+        DEFAULT_COLUMN_KEYS.find((k) => !prev.some((r) => r.key === k));
+      if (!targetKey) return prev;
+      const updated = [...prev, { key: targetKey, dir: DEFAULT_DIR[targetKey] }];
+      saveSortRules(updated);
+      return updated;
+    });
+  }, [columnOrder, saveSortRules]);
 
-  const handleStatusChange = useCallback(
-    (value: string) => {
-      setStatusFilter(value);
-      updateParams("status", value);
-    },
-    [updateParams]
-  );
+  const updateSortRule = useCallback((index: number, partial: Partial<SortRule>) => {
+    setSortRules((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const updated = [...prev];
+      updated[index] = { ...updated[index], ...partial };
+      saveSortRules(updated);
+      return updated;
+    });
+  }, [saveSortRules]);
 
-  const handleHeaderSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(DEFAULT_DIR[key]);
-    }
-  };
+  const removeSortRule = useCallback((key: SortKey) => {
+    setSortRules((prev) => {
+      const updated = prev.filter((r) => r.key !== key);
+      saveSortRules(updated);
+      return updated;
+    });
+  }, [saveSortRules]);
+
+  const clearAllSortRules = useCallback(() => {
+    saveSortRules([]);
+  }, [saveSortRules]);
+
+  const handleHeaderSort = useCallback((key: SortKey, isShift: boolean) => {
+    setSortRules((prev) => {
+      const existingIndex = prev.findIndex((r) => r.key === key);
+
+      if (isShift) {
+        if (existingIndex !== -1) {
+          const current = prev[existingIndex];
+          if (current.dir === "asc") {
+            const updated = [...prev];
+            updated[existingIndex] = { key, dir: "desc" };
+            saveSortRules(updated);
+            return updated;
+          } else {
+            const updated = prev.filter((r) => r.key !== key);
+            saveSortRules(updated);
+            return updated;
+          }
+        } else {
+          const updated = [...prev, { key, dir: DEFAULT_DIR[key] }];
+          saveSortRules(updated);
+          return updated;
+        }
+      } else {
+        if (prev.length === 1 && prev[0].key === key) {
+          const newDir: SortDir = prev[0].dir === "asc" ? "desc" : "asc";
+          const updated = [{ key, dir: newDir }];
+          saveSortRules(updated);
+          return updated;
+        } else {
+          const updated = [{ key, dir: DEFAULT_DIR[key] }];
+          saveSortRules(updated);
+          return updated;
+        }
+      }
+    });
+  }, [saveSortRules]);
 
   // Column Resizing Handler with high-performance RAF and deferred localStorage persistence
   const handleResizeStart = (e: React.MouseEvent, columnKey: SortKey) => {
@@ -653,9 +966,9 @@ export function JobsGrid({
 
   const rows = useMemo(() => {
     const enriched = jobs.map(enrichJob);
-    if (!sortKey) return enriched;
-    return [...enriched].sort((a, b) => compareRows(a, b, sortKey, sortDir));
-  }, [jobs, sortKey, sortDir]);
+    if (sortRules.length === 0) return enriched;
+    return [...enriched].sort((a, b) => compareRowsMulti(a, b, sortRules));
+  }, [jobs, sortRules]);
 
   // Lookup map for column definition
   const columnDefMap = useMemo(() => {
@@ -673,7 +986,7 @@ export function JobsGrid({
           <div className="flex items-center gap-1.5 flex-wrap">
             <Link
               href={`/jobs/${job.id}`}
-              className="font-semibold hover:text-green-800 dark:hover:text-lime-400 transition-all duration-200 ease-out hover:translate-x-0.5 inline-block"
+              className="font-semibold hover:text-primary transition-colors inline-block"
             >
               {job.title}
             </Link>
@@ -762,72 +1075,118 @@ export function JobsGrid({
 
   return (
     <div className="space-y-4">
-      {/* Active filters & Table Customization actions — these remain here,
-          the search/filter/pagination controls are now in <JobsToolbar>. */}
-
       {/* Active filters & Table Customization actions */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {hasActiveFilters ? (
-          <div className="flex items-center gap-2">
-            {initialSearch && (
-              <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
-                &quot;{initialSearch}&quot;
-                <button onClick={() => { setSearch(""); updateParams("search", ""); }} className="ml-0.5">
-                  <X className="size-3 text-lime-900 dark:text-lime-300" />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Advanced Sort Popover */}
+          <JobsSortPopover
+            sortRules={sortRules}
+            columnOrder={columnOrder}
+            columnDefMap={columnDefMap}
+            onAddRule={addSortRule}
+            onUpdateRule={updateSortRule}
+            onRemoveRule={removeSortRule}
+            onClearAll={clearAllSortRules}
+          />
+
+          {/* Search filter pill */}
+          {initialSearch && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground border border-border/70">
+              &quot;{initialSearch}&quot;
+              <button
+                onClick={() => updateParams("search", "")}
+                className="ml-0.5 text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+
+          {/* Status filter pill */}
+          {initialStatus !== "all" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground border border-border/70 capitalize">
+              {statusLabels[initialStatus] ?? initialStatus}
+              <button
+                onClick={() => updateParams("status", "all")}
+                className="ml-0.5 text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+
+          {/* Multi-sort active chips */}
+          {sortRules.map((rule, idx) => {
+            const col = columnDefMap.get(rule.key);
+            if (!col) return null;
+            const dirLabel = getSortDirectionLabel(rule.key, rule.dir);
+            return (
+              <span
+                key={rule.key}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary border border-primary/20"
+              >
+                {sortRules.length > 1 && (
+                  <span className="flex size-3.5 items-center justify-center rounded-full bg-primary/25 text-[9px] font-bold text-primary">
+                    {idx + 1}
+                  </span>
+                )}
+                <span className="text-primary/70">{col.label}:</span>
+                <span className="font-semibold">{dirLabel}</span>
+                <button
+                  type="button"
+                  onClick={() => removeSortRule(rule.key)}
+                  className="ml-0.5 text-primary/70 hover:text-primary cursor-pointer"
+                  title={`Remove ${col.label} sort`}
+                >
+                  <X className="size-3" />
                 </button>
               </span>
-            )}
-            {initialStatus !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-2xl border border-lime-500/50 bg-lime-400/25 px-2.5 py-1 text-xs font-semibold text-lime-950 capitalize dark:border-lime-400/40 dark:bg-lime-500/20 dark:text-lime-200">
-                {statusLabels[initialStatus] ?? initialStatus}
-                <button onClick={() => handleStatusChange("all")} className="ml-0.5">
-                  <X className="size-3 text-lime-900 dark:text-lime-300" />
-                </button>
-              </span>
-            )}
+            );
+          })}
+
+          {/* Clear all if filters or sorts active */}
+          {(hasActiveFilters || sortRules.length > 0) && (
             <button
               onClick={() => {
-                setSearch("");
+                clearAllSortRules();
                 router.push("/jobs");
               }}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
             >
               Clear all
             </button>
-          </div>
-        ) : (
-          <div />
-        )}
+          )}
+        </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground ml-auto">
           {Object.keys(columnWidths).length > 0 && (
             <button
               onClick={resetColumnWidths}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               title="Reset column widths to default"
             >
               <RotateCCWIcon className="size-3" />
-              Reset Widths
+              Reset widths
             </button>
           )}
           {(Object.keys(columnColors).length > 0 || Object.keys(rowColors).length > 0) && (
             <button
               onClick={resetAllColors}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
               title="Reset all custom column and row colors"
             >
               <RotateCCWIcon className="size-3" />
-              Reset Colors
+              Reset colors
             </button>
           )}
           {JSON.stringify(columnOrder) !== JSON.stringify(DEFAULT_COLUMN_KEYS) && (
             <button
               onClick={resetColumnOrder}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               title="Reset column order to default"
             >
               <RotateCCWIcon className="size-3" />
-              Reset Columns
+              Reset columns
             </button>
           )}
         </div>
@@ -853,8 +1212,7 @@ export function JobsGrid({
                       label={col.label}
                       columnKey={key}
                       icon={col.icon}
-                      sortKey={sortKey}
-                      sortDir={sortDir}
+                      sortRules={sortRules}
                       onSort={handleHeaderSort}
                       className={col.className}
                       isDragging={draggedCol === key}
@@ -923,7 +1281,7 @@ export function JobsGrid({
                           target="_blank"
                           rel="noreferrer"
                           aria-label="Open application link"
-                          className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-green-800 dark:hover:text-lime-400 hover:bg-muted active:scale-95"
+                          className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-primary hover:bg-muted active:scale-95 cursor-pointer"
                         >
                           <ExternalLinkIcon className="size-3.5 transition-transform duration-150 ease-out group-hover/ext:translate-x-0.5 group-hover/ext:-translate-y-0.5" />
                         </a>
@@ -932,7 +1290,7 @@ export function JobsGrid({
                         <a
                           href={`mailto:${job.application_email}`}
                           aria-label="Email application contact"
-                          className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-green-800 dark:hover:text-lime-400 hover:bg-muted active:scale-95"
+                          className="group/ext inline-flex p-1 rounded-md text-muted-foreground/50 transition-all duration-150 ease-out hover:text-primary hover:bg-muted active:scale-95 cursor-pointer"
                         >
                           <Mail className="size-3.5 transition-transform duration-150 ease-out group-hover/ext:scale-110" />
                         </a>
@@ -951,6 +1309,63 @@ export function JobsGrid({
               onClick={(e) => e.stopPropagation()}
               className="fixed z-50 min-w-[240px] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-xl animate-in fade-in-50 zoom-in-95"
             >
+              {/* Quick Sort Section */}
+              <div className="mb-2 pb-2 border-b border-border space-y-1">
+                <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
+                  Sort
+                </span>
+                <div className="space-y-0.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleHeaderSort(contextMenu.columnKey, false);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <ArrowUpIcon className="size-3" />
+                    Sort {columnDefMap.get(contextMenu.columnKey)?.label} Ascending
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSortRules([{ key: contextMenu.columnKey, dir: "desc" }]);
+                      saveSortRules([{ key: contextMenu.columnKey, dir: "desc" }]);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <ArrowDownIcon className="size-3" />
+                    Sort {columnDefMap.get(contextMenu.columnKey)?.label} Descending
+                  </button>
+                  {sortRules.some((r) => r.key === contextMenu.columnKey) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeSortRule(contextMenu.columnKey);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-2 py-1 text-xs rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <X className="size-3" />
+                      Remove from sort
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleHeaderSort(contextMenu.columnKey, true);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Plus className="size-3" />
+                      Add to multi-sort (Shift+Click)
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Column Header section */}
               <div className="mb-2 pb-2 border-b border-border space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-semibold text-foreground">
@@ -1106,10 +1521,10 @@ export function JobsGrid({
                     resetColumnOrder();
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+                  className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <RotateCCWIcon className="size-3" />
-                  Reset Column Order
+                  Reset column order
                 </button>
                 {Object.keys(columnWidths).length > 0 && (
                   <button
@@ -1117,10 +1532,10 @@ export function JobsGrid({
                       resetColumnWidths();
                       setContextMenu(null);
                     }}
-                    className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+                    className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <RotateCCWIcon className="size-3" />
-                    Reset Column Widths
+                    Reset column widths
                   </button>
                 )}
                 <button
@@ -1128,10 +1543,10 @@ export function JobsGrid({
                     resetAllColors();
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-destructive/80 hover:text-destructive flex items-center gap-1.5 transition-colors"
+                  className="w-full text-left px-2 py-1 text-xs rounded hover:bg-muted text-destructive/80 hover:text-destructive flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Trash2 className="size-3" />
-                  Clear All Table Colors
+                  Clear all table colors
                 </button>
               </div>
             </div>
