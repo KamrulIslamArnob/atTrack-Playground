@@ -69,8 +69,51 @@ jobs:
       - name: Prepare Standalone Build
         run: node scripts/prepare-electron-build.js
 
+      # Goes through electron-build-retry.js rather than electron-builder
+      # directly so CI and local builds behave identically — it retries the
+      # transient Windows unlink/rename file-lock that otherwise fails a run
+      # outright. `--publish never` because the update feed is the R2 bucket
+      # below, not GitHub Releases; electron-builder's `generic` provider can
+      # write app-update.yml but cannot upload.
       - name: Build Electron Windows App (.exe)
-        run: npx electron-builder --win --publish always
+        run: node scripts/electron-build-retry.js --win --publish never
+
+      # ── Upload update artifacts to Cloudflare R2 ─────────────────────────
+      # This is the feed the installed app actually polls. latest.yml is the
+      # manifest electron-updater reads first: without it the app can never
+      # discover a new version, so a missing upload here is a silent failure
+      # rather than a loud one — hence the explicit checks.
+      - name: Upload update artifacts to Cloudflare R2
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${R2_ACCOUNT_ID:-}" ] || [ -z "${R2_BUCKET:-}" ]; then
+            echo "::error::R2 secrets are not configured. Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID and R2_BUCKET in repo secrets — without them the released app cannot self-update."
+            exit 1
+          fi
+
+          if [ ! -f release/latest.yml ]; then
+            echo "::error::release/latest.yml is missing — electron-updater has nothing to read. Check that the electron-builder publish config is present."
+            exit 1
+          fi
+
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          uploaded=0
+          for f in release/*.exe release/*.blockmap release/latest*.yml; do
+            [ -e "$f" ] || continue
+            echo "Uploading $(basename "$f")"
+            aws s3 cp "$f" "s3://${R2_BUCKET}/$(basename "$f")" --endpoint-url "$endpoint"
+            uploaded=$((uploaded + 1))
+          done
+
+          echo "Uploaded $uploaded artifact(s) to R2."
 
       # ── Publish GitHub Release ───────────────────────────────────────────
       - name: Publish GitHub Release

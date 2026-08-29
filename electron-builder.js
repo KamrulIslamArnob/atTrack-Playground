@@ -10,11 +10,26 @@ module.exports = {
     buildResources: "build",
   },
   files: ["electron/**/*", "package.json", "build/icons/**/*"],
+  // Update feed. The repo is private, and electron-updater cannot read a
+  // private repo's GitHub Releases without a token shipped inside the app —
+  // anyone who installed it could extract that token and read the whole repo.
+  // So the installer and its update metadata go to a public Cloudflare R2
+  // bucket and the app checks there instead: the repo stays private and no
+  // credential is ever bundled.
+  //
+  // `generic` is a download-only provider. electron-builder writes an
+  // app-update.yml pointing at this URL but cannot upload to it, so CI builds
+  // with `--publish never` and uploads the artifacts to R2 explicitly over R2's
+  // S3-compatible API (see .github/workflows/release.yml). The credentials for
+  // that upload live only in GitHub Actions secrets, never in the app.
+  //
+  // UPDATE_FEED_URL overrides this so a staging bucket can be pointed at
+  // without editing the config.
   publish: {
-    provider: "github",
-    owner: "KamrulIslamArnob",
-    repo: "atTrack-Playground",
-    releaseType: "release",
+    provider: "generic",
+    url:
+      process.env.UPDATE_FEED_URL ||
+      "https://pub-f7779030e419465497d9f0d556d7aac4.r2.dev",
   },
   // Windows-only fix for a well-documented electron-builder/Windows bug:
   // by default electron-builder re-downloads the Electron distribution zip
